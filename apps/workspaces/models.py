@@ -19,6 +19,9 @@ class Workspace(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
+    class Meta:
+        db_table = 'workspaces'
+
 
 class SageIntacctCredential(models.Model):
     """
@@ -32,6 +35,9 @@ class SageIntacctCredential(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
+    class Meta:
+        db_table = 'sage_intacct_credentials'
+
 
 class FyleCredential(models.Model):
     """
@@ -42,3 +48,6 @@ class FyleCredential(models.Model):
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'fyle_credentials'

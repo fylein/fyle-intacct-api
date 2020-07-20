@@ -46,4 +46,16 @@ class Migration(migrations.Migration):
                 ('workspace', models.OneToOneField(help_text='Reference to Workspace model', on_delete=django.db.models.deletion.PROTECT, to='workspaces.Workspace')),
             ],
         ),
+        migrations.AlterModelTable(
+            name='FyleCredential',
+            table='fyle_credentials',
+        ),
+        migrations.AlterModelTable(
+            name='SageIntacctCredential',
+            table='sage_intacct_credentials',
+        ),
+        migrations.AlterModelTable(
+            name='Workspace',
+            table='workspaces',
+        ),
     ]

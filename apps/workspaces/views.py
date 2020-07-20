@@ -227,6 +227,13 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                     workspace=workspace
                 )
             else:
+                SageIntacctSDK(
+                    sender_id=sender_id,
+                    sender_password=sender_password,
+                    user_id=si_user_id,
+                    company_id=si_company_id,
+                    user_password=si_user_password
+                )
                 sage_intacct_credentials.si_user_id = si_user_id
                 sage_intacct_credentials.si_company_id = si_company_id
                 sage_intacct_credentials.si_user_password = si_user_password
@@ -265,7 +272,9 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             )
 
     def delete(self, request, **kwargs):
-        """Delete credentials"""
+        """
+        Delete credentials
+        """
         workspace_id = kwargs['workspace_id']
         SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
 

@@ -190,6 +190,7 @@ FYLE_CLIENT_ID = os.environ.get('FYLE_CLIENT_ID')
 FYLE_CLIENT_SECRET = os.environ.get('FYLE_CLIENT_SECRET')
 FYLE_BASE_URL = os.environ.get('FYLE_BASE_URL')
 FYLE_JOBS_URL = os.environ.get('FYLE_JOBS_URL')
+
 # Sage Intacct Settings
 SI_SENDER_ID = os.environ.get('SI_SENDER_ID')
 SI_SENDER_PASSWORD = os.environ.get('SI_SENDER_PASSWORD')
