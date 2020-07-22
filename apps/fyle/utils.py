@@ -204,20 +204,17 @@ class FyleConnector:
 
         return project_attributes
 
-    def get_attachments(self, expense_ids: List[str], expense_numbers: List[str]):
+    def get_attachments(self, expense_ids: List[str]):
         """
         Get attachments against expense_ids
         """
         attachments = []
         if expense_ids:
-            index = 0
             for expense_id in expense_ids:
                 attachment = self.connection.Expenses.get_attachments(expense_id)
                 if attachment['data']:
                     attachment = attachment['data'][0]
-                    attachment['expense_number'] = expense_numbers[index]
                     attachments.append(attachment)
-                    index = index + 1
             return attachments
 
         return []
