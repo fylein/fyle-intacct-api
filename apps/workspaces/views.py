@@ -1,5 +1,3 @@
-import json
-
 from django.conf import settings
 
 from django.contrib.auth import get_user_model
@@ -196,6 +194,17 @@ class ConnectSageIntacctView(viewsets.ViewSet):
     """
     Sage Intacct Connect View
     """
+    def get_or_create_attachments_folder(self, sage_intacct_connection):
+        """
+        Get or Create attachments folder in Sage Intacct
+        """
+        attachment_folder = sage_intacct_connection.attachments.get_folder(field='name', value='FyleAttachments')
+        if attachment_folder['listtype'] == 'supdocfolder':
+            data = {
+                'supdocfoldername': 'FyleAttachments'
+            }
+            sage_intacct_connection.attachments.create_attachments_folder(data)
+
     def post(self, request, **kwargs):
         """
         Post of Sage Intacct Credentials
@@ -208,17 +217,19 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             workspace = Workspace.objects.get(pk=workspace_id)
 
             sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
+            sender_id = settings.SI_SENDER_ID
+            sender_password = settings.SI_SENDER_PASSWORD
 
             if not sage_intacct_credentials:
-                sender_id = settings.SI_SENDER_ID
-                sender_password = settings.SI_SENDER_PASSWORD
-                SageIntacctSDK(
+                sage_intacct_connection = SageIntacctSDK(
                     sender_id=sender_id,
                     sender_password=sender_password,
                     user_id=si_user_id,
                     company_id=si_company_id,
                     user_password=si_user_password
                 )
+
+                self.get_or_create_attachments_folder(sage_intacct_connection)
 
                 sage_intacct_credentials = SageIntacctCredential.objects.create(
                     si_user_id=si_user_id,
@@ -260,7 +271,9 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             )
         except sage_intacct_exc.WrongParamsError as e:
             return Response(
-                json.loads(e.response),
+                {
+                    'message': e.response
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
         except sage_intacct_exc.InternalServerError:
