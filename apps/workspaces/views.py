@@ -16,8 +16,10 @@ from fyle_rest_auth.models import AuthToken
 
 from fyle_intacct_api.utils import assert_valid
 
-from .models import Workspace, FyleCredential, SageIntacctCredential
-from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer
+from .models import Workspace, FyleCredential, SageIntacctCredential, WorkspaceGeneralSettings
+from .utils import create_or_update_general_settings
+from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
+    WorkSpaceGeneralSettingsSerializer
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -212,6 +214,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
         try:
             si_user_id = request.data.get('si_user_id')
             si_company_id = request.data.get('si_company_id')
+            si_company_name = request.data.get('si_company_name')
             si_user_password = request.data.get('si_user_password')
             workspace_id = kwargs['workspace_id']
             workspace = Workspace.objects.get(pk=workspace_id)
@@ -234,6 +237,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                 sage_intacct_credentials = SageIntacctCredential.objects.create(
                     si_user_id=si_user_id,
                     si_company_id=si_company_id,
+                    si_company_name=si_company_name,
                     si_user_password=si_user_password,
                     workspace=workspace
                 )
@@ -247,6 +251,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                 )
                 sage_intacct_credentials.si_user_id = si_user_id
                 sage_intacct_credentials.si_company_id = si_company_id
+                sage_intacct_credentials.si_company_name = si_company_name
                 sage_intacct_credentials.si_user_password = si_user_password
 
                 sage_intacct_credentials.save()
@@ -312,6 +317,48 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             return Response(
                 data={
                     'message': 'Sage Intacct Credentials not found in this workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class GeneralSettingsView(viewsets.ViewSet):
+    """
+    General Settings
+    """
+    serializer_class = WorkSpaceGeneralSettingsSerializer
+    queryset = WorkspaceGeneralSettings.objects.all()
+
+    def post(self, request, *args, **kwargs):
+        """
+        Post workspace general settings
+        """
+        general_settings_payload = request.data
+
+        assert_valid(general_settings_payload is not None, 'Request body is empty')
+
+        workspace_id = kwargs['workspace_id']
+
+        general_settings = create_or_update_general_settings(general_settings_payload, workspace_id)
+        return Response(
+            data=self.serializer_class(general_settings).data,
+            status=status.HTTP_200_OK
+        )
+
+    def get(self, request, *args, **kwargs):
+        """
+        Get workspace general settings
+        """
+        try:
+            general_settings = self.queryset.get(workspace_id=kwargs['workspace_id'])
+            return Response(
+                data=self.serializer_class(general_settings).data,
+                status=status.HTTP_200_OK
+            )
+        except WorkspaceGeneralSettings.DoesNotExist:
+            return Response(
+                {
+                    'message': 'General Settings does not exist in workspace'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )

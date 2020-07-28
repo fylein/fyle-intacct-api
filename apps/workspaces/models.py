@@ -23,6 +23,21 @@ class Workspace(models.Model):
         db_table = 'workspaces'
 
 
+class WorkspaceGeneralSettings(models.Model):
+    """
+    Workspace General Settings
+    """
+    id = models.AutoField(primary_key=True, help_text='Unique Id to identify a workspace')
+    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    reimbursable_expenses_object = models.CharField(max_length=50, \
+        help_text='Mapping Settings ( BILL / EXPENSE_REPORT )')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'general_settings'
+
+
 class SageIntacctCredential(models.Model):
     """
     Table to store Sage Intacct credentials
@@ -30,6 +45,7 @@ class SageIntacctCredential(models.Model):
     id = models.AutoField(primary_key=True)
     si_user_id = models.TextField(help_text='Stores Sage Intacct user id')
     si_company_id = models.TextField(help_text='Stores Sage Intacct company id')
+    si_company_name = models.TextField(help_text='Stores Sage Intacct company name')
     si_user_password = models.TextField(help_text='Stores Sage Intacct user password')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')

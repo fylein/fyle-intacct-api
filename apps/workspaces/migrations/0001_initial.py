@@ -30,6 +30,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('si_user_id', models.TextField(help_text='Stores Sage Intacct user id')),
                 ('si_company_id', models.TextField(help_text='Stores Sage Intacct company id')),
+                ('si_company_name', models.TextField(help_text='Stores Sage Intacct company name')),
                 ('si_user_password', models.TextField(help_text='Stores Sage Intacct user password')),
                 ('created_at', models.DateTimeField(auto_now_add=True, help_text='Created at datetime')),
                 ('updated_at', models.DateTimeField(auto_now=True, help_text='Updated at datetime')),
@@ -46,6 +47,16 @@ class Migration(migrations.Migration):
                 ('workspace', models.OneToOneField(help_text='Reference to Workspace model', on_delete=django.db.models.deletion.PROTECT, to='workspaces.Workspace')),
             ],
         ),
+        migrations.CreateModel(
+            name='WorkspaceGeneralSettings',
+            fields=[
+                ('id', models.AutoField(help_text='Unique Id to identify a workspace', primary_key=True, serialize=False)),
+                ('reimbursable_expenses_object', models.CharField(help_text='Mapping Settings ( BILLS / EXPENSE_REPORT )', max_length=50)),
+                ('created_at', models.DateTimeField(auto_now_add=True, help_text='Created at')),
+                ('updated_at', models.DateTimeField(auto_now=True, help_text='Updated at')),
+                ('workspace', models.OneToOneField(help_text='Reference to Workspace model', on_delete=django.db.models.deletion.PROTECT, to='workspaces.Workspace')),
+            ],
+        ),
         migrations.AlterModelTable(
             name='FyleCredential',
             table='fyle_credentials',
@@ -57,5 +68,9 @@ class Migration(migrations.Migration):
         migrations.AlterModelTable(
             name='Workspace',
             table='workspaces',
+        ),
+        migrations.AlterModelTable(
+            name='WorkspaceGeneralSettings',
+            table='general_settings',
         ),
     ]

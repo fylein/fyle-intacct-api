@@ -37,7 +37,7 @@ class ExpenseGroupView(generics.ListCreateAPIView):
         elif state == 'READY':
             return ExpenseGroup.objects.filter(
                 workspace_id=self.kwargs['workspace_id'],
-                vendorbill__isnull=True,
+                bill__isnull=True,
                 expensereport__isnull=True,
             ).order_by('-updated_at')
 
