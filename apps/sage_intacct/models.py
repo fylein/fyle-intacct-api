@@ -279,8 +279,6 @@ class ExpenseReportLineitem(models.Model):
             category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
-            project = lineitem.project
-
             account: Mapping = Mapping.objects.filter(
                 destination_type='ACCOUNT',
                 source_type='CATEGORY',
@@ -295,26 +293,9 @@ class ExpenseReportLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            project_mapping: Mapping = Mapping.objects.filter(
-                destination_type='PROJECT',
-                source_type='PROJECT',
-                source__value=project,
-                workspace_id=expense_group.workspace_id
-            ).first()
-
-            department: Mapping = Mapping.objects.filter(
-                destination_type='DEPARTMENT',
-                source_type='PROJECT',
-                source__value=project,
-                workspace_id=expense_group.workspace_id
-            ).first()
-
-            location: Mapping = Mapping.objects.filter(
-                destination_type='LOCATION',
-                source_type='PROJECT',
-                source__value=project,
-                workspace_id=expense_group.workspace_id
-            ).first()
+            project_id = get_project_id_or_none(expense_group, lineitem)
+            department_id = get_department_id_or_none(expense_group, lineitem)
+            location_id = get_location_id_or_none(expense_group, lineitem)
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
@@ -322,9 +303,9 @@ class ExpenseReportLineitem(models.Model):
                 defaults={
                     'gl_account_number': account.destination.destination_id if account else None,
                     'expense_type_id': expense_type.destination.destination_id if expense_type else None,
-                    'project_id': project_mapping.destination.destination_id if project_mapping else None,
-                    'department_id': department.destination.destination_id if department else None,
-                    'location_id': location.destination.destination_id if location else None,
+                    'project_id': project_id,
+                    'department_id': department_id,
+                    'location_id': location_id,
                     'spent_at': lineitem.spent_at,
                     'amount': lineitem.amount
                 }
