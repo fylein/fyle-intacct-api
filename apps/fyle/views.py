@@ -240,6 +240,45 @@ class ProjectView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+
+class CostCenterView(generics.ListCreateAPIView):
+    """
+    Cost Center view
+    """
+
+    serializer_class = ExpenseAttributeSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return ExpenseAttribute.objects.filter(
+            attribute_type='COST_CENTER', workspace_id=self.kwargs['workspace_id']).order_by('value')
+
+    def post(self, request, *args, **kwargs):
+        """
+        Get cost center from Fyle
+        """
+        try:
+            active_only = request.GET.get('active_only', False)
+            fyle_credentials = FyleCredential.objects.get(
+                workspace_id=kwargs['workspace_id'])
+
+            fyle_connector = FyleConnector(fyle_credentials.refresh_token, kwargs['workspace_id'])
+
+            cost_center_attributes = fyle_connector.sync_cost_centers(active_only=active_only)
+
+            return Response(
+                data=self.serializer_class(cost_center_attributes, many=True).data,
+                status=status.HTTP_200_OK
+            )
+        except FyleCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Fyle credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 class UserProfileView(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
