@@ -310,32 +310,6 @@ def create_expense_report(expense_group, task_log):
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log)
-        # logger.error(exception.response)
-        # sage_intacct_errors = literal_eval(exception.response)['error']
-        # errors = []
-
-        # if isinstance(sage_intacct_errors, list):
-        #     for error in sage_intacct_errors:
-        #         errors.append({
-        #             'expense_group_id': expense_group.id,
-        #             'short_description': error['description'] if error['description'] else '-',
-        #             'long_description': error['description2'] if error['description2'] else '-',
-        #             'correction': error['correction'] if error['correction'] else '-'
-        #         })
-
-        # elif isinstance(sage_intacct_errors, dict):
-        #     error = sage_intacct_errors
-        #     errors.append({
-        #         'expense_group_id': expense_group.id,
-        #         'short_description': error['description'] if error['description'] else '-',
-        #         'long_description': error['description2'] if error['description2'] else '-',
-        #         'correction': error['correction'] if error['correction'] else '-'
-        #     })
-
-        # task_log.status = 'FAILED'
-        # task_log.detail = None
-        # task_log.sage_intacct_errors = errors
-        # task_log.save(update_fields=['sage_intacct_errors', 'detail', 'status'])
 
     except Exception:
         error = traceback.format_exc()
@@ -410,32 +384,6 @@ def create_bill(expense_group, task_log):
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log)
-        # logger.error(exception.response)
-        # sage_intacct_errors = literal_eval(exception.response)['error']
-        # errors = []
-
-        # if isinstance(sage_intacct_errors, list):
-        #     for error in sage_intacct_errors:
-        #         errors.append({
-        #             'expense_group_id': expense_group.id,
-        #             'short_description': error['description'] if error['description'] else '-',
-        #             'long_description': error['description2'] if error['description2'] else '-',
-        #             'correction': error['correction'] if error['correction'] else '-'
-        #         })
-
-        # elif isinstance(sage_intacct_errors, dict):
-        #     error = sage_intacct_errors
-        #     errors.append({
-        #         'expense_group_id': expense_group.id,
-        #         'short_description': error['description'] if error['description'] else '-',
-        #         'long_description': error['description2'] if error['description2'] else '-',
-        #         'correction': error['correction'] if error['correction'] else '-'
-        #     })
-
-        # task_log.status = 'FAILED'
-        # task_log.detail = None
-        # task_log.sage_intacct_errors = errors
-        # task_log.save(update_fields=['sage_intacct_errors', 'detail', 'status'])
 
     except Exception:
         error = traceback.format_exc()
