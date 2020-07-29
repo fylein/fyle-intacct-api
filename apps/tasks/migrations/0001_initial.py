@@ -36,6 +36,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelTable(
             name='TaskLog',
-            table='task_log',
+            table='task_logs',
         ),
     ]

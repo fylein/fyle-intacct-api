@@ -16,7 +16,7 @@ Including another URLconf
 from django.urls import path
 
 from .views import UserProfileView, ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView, \
-    ExpenseView, EmployeeView, CategoryView, ProjectView
+    ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView
 
 urlpatterns = [
     path('user/', UserProfileView.as_view()),
@@ -26,5 +26,6 @@ urlpatterns = [
     path('expense_groups/<int:expense_group_id>/expenses/', ExpenseView.as_view()),
     path('employees/', EmployeeView.as_view()),
     path('categories/', CategoryView.as_view()),
-    path('projects/', ProjectView.as_view())
+    path('projects/', ProjectView.as_view()),
+    path('cost_centers/', CostCenterView.as_view())
 ]

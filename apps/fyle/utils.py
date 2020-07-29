@@ -204,6 +204,27 @@ class FyleConnector:
 
         return project_attributes
 
+    def sync_cost_centers(self, active_only: bool):
+        """
+        Get cost centers from fyle
+        """
+        cost_centers = self.connection.CostCenters.get(active_only=active_only)['data']
+
+        cost_center_attributes = []
+
+        for cost_center in cost_centers:
+            cost_center_attributes.append({
+                'attribute_type': 'COST_CENTER',
+                'display_name': 'Cost Center',
+                'value': cost_center['name'],
+                'source_id': cost_center['id']
+            })
+
+        cost_center_attributes = ExpenseAttribute.bulk_upsert_expense_attributes(
+            cost_center_attributes, self.workspace_id)
+
+        return cost_center_attributes
+
     def get_attachments(self, expense_ids: List[str]):
         """
         Get attachments against expense_ids
