@@ -17,8 +17,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False)),
                 ('employee_email', models.EmailField(help_text='Email id of the Fyle employee', max_length=255)),
-                ('category', models.CharField(blank=True, help_text='Fyle Expense Category', max_length=255, null=True)),
-                ('sub_category', models.CharField(blank=True, help_text='Fyle Expense Sub-Category', max_length=255, null=True)),
+                ('category', models.CharField(blank=True, help_text='Fyle Expense Category', \
+                    max_length=255, null=True)),
+                ('sub_category', models.CharField(blank=True, help_text='Fyle Expense Sub-Category', \
+                    max_length=255, null=True)),
                 ('project', models.CharField(blank=True, help_text='Project', max_length=255, null=True)),
                 ('expense_id', models.CharField(help_text='Expense ID', max_length=255, unique=True)),
                 ('expense_number', models.CharField(help_text='Expense Number', max_length=255)),
@@ -32,7 +34,8 @@ class Migration(migrations.Migration):
                 ('exported', models.BooleanField(default=False, help_text='Expense exported or not')),
                 ('state', models.CharField(help_text='Expense state', max_length=255)),
                 ('vendor', models.CharField(blank=True, help_text='Vendor', max_length=255, null=True)),
-                ('cost_center', models.CharField(blank=True, help_text='Fyle Expense Cost Center', max_length=255, null=True)),
+                ('cost_center', models.CharField(blank=True, help_text='Fyle Expense Cost Center', \
+                    max_length=255, null=True)),
                 ('purpose', models.TextField(blank=True, help_text='Purpose', null=True)),
                 ('report_id', models.CharField(help_text='Report ID', max_length=255)),
                 ('spent_at', models.DateTimeField(help_text='Expense spent at', null=True)),
@@ -48,12 +51,15 @@ class Migration(migrations.Migration):
             name='ExpenseGroup',
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('fyle_group_id', models.CharField(help_text='fyle expense group id report id, etc', max_length=255, unique=True)),
-                ('description', django.contrib.postgres.fields.jsonb.JSONField(help_text='Description', max_length=255, null=True)),
+                ('fyle_group_id', models.CharField(help_text='fyle expense group id report id, etc', \
+                    max_length=255, unique=True)),
+                ('description', django.contrib.postgres.fields.jsonb.JSONField(help_text='Description', \
+                    max_length=255, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True, help_text='Created at')),
                 ('updated_at', models.DateTimeField(auto_now=True, help_text='Updated at')),
                 ('expenses', models.ManyToManyField(help_text='Expenses under this Expense Group', to='fyle.Expense')),
-                ('workspace', models.ForeignKey(help_text='To which workspace this expense group belongs to', on_delete=django.db.models.deletion.PROTECT, to='workspaces.Workspace')),
+                ('workspace', models.ForeignKey(help_text='To which workspace this expense group belongs to', \
+                    on_delete=django.db.models.deletion.PROTECT, to='workspaces.Workspace')),
             ],
         ),
         migrations.AlterModelTable(
