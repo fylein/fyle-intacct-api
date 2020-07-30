@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from rest_framework.views import status
 from rest_framework import generics
 from rest_framework.response import Response
@@ -36,9 +38,8 @@ class ExpenseGroupView(generics.ListCreateAPIView):
 
         elif state == 'READY':
             return ExpenseGroup.objects.filter(
-                workspace_id=self.kwargs['workspace_id'],
-                bill__isnull=True,
-                expensereport__isnull=True
+                Q(tasklog__isnull=True) | Q(tasklog__status='FAILED'),
+                workspace_id=self.kwargs['workspace_id']
             ).order_by('-updated_at')
 
     def post(self, request, *args, **kwargs):
