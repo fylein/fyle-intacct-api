@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'apps.workspaces',
     'apps.fyle',
     'apps.sage_intacct',
-    'apps.tasks'
+    'apps.tasks',
+    'apps.mappings'
 ]
 
 MIDDLEWARE = [

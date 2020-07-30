@@ -25,9 +25,10 @@ urlpatterns = [
     path('<int:workspace_id>/credentials/fyle/', ConnectFyleView.as_view({'get': 'get'})),
     path('<int:workspace_id>/credentials/fyle/delete/', ConnectFyleView.as_view({'post': 'delete'})),
     path('<int:workspace_id>/credentials/sage_intacct/delete/', ConnectSageIntacctView.as_view({'post': 'delete'})),
-    path('<int:workspace_id>/credentials/sage_intacct/', ConnectSageIntacctView.as_view({'post': 'post', 'get': 'get'})),
+    path('<int:workspace_id>/credentials/sage_intacct/', \
+        ConnectSageIntacctView.as_view({'post': 'post', 'get': 'get'})),
     path('<int:workspace_id>/fyle/', include('apps.fyle.urls')),
     path('<int:workspace_id>/sage_intacct/', include('apps.sage_intacct.urls')),
-    path('<int:workspace_id>/mappings/', include('fyle_accounting_mappings.urls')),
+    path('<int:workspace_id>/mappings/', include('apps.mappings.urls')),
     path('<int:workspace_id>/tasks/', include('apps.tasks.urls'))
 ]

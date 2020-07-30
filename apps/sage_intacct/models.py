@@ -6,15 +6,18 @@ from django.db import models
 from fyle_accounting_mappings.models import Mapping, MappingSetting
 
 from apps.fyle.models import ExpenseGroup, Expense
+from apps.mappings.models import GeneralMapping
 
 
-def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
+def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
+    project_id = None
+    if general_mappings and general_mappings.default_project_id:
+        project_id = general_mappings.default_project_id
+
     project_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='PROJECT'
     ).first()
-
-    project_id = None
 
     if project_setting:
         source_value = None
@@ -35,13 +38,15 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
             project_id = mapping.destination.destination_id
     return project_id
 
-def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
+def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
+    department_id = None
+    if general_mappings and general_mappings.default_department_id:
+        department_id = general_mappings.default_department_id
+
     department_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='DEPARTMENT'
     ).first()
-
-    department_id = None
 
     if department_setting:
         source_value = None
@@ -62,13 +67,15 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
             department_id = mapping.destination.destination_id
     return department_id
 
-def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
+def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
+    location_id = None
+    if general_mappings and general_mappings.default_location_id:
+        location_id = general_mappings.default_location_id
+
     location_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='LOCATION'
     ).first()
-
-    location_id = None
 
     if location_setting:
         source_value = None
@@ -159,6 +166,7 @@ class BillLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         bill = Bill.objects.get(expense_group=expense_group)
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
 
         bill_lineitem_objects = []
 
@@ -180,9 +188,9 @@ class BillLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            project_id = get_project_id_or_none(expense_group, lineitem)
-            department_id = get_department_id_or_none(expense_group, lineitem)
-            location_id = get_location_id_or_none(expense_group, lineitem)
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
@@ -272,6 +280,7 @@ class ExpenseReportLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         expense_report = ExpenseReport.objects.get(expense_group=expense_group)
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
 
         expense_report_lineitem_objects = []
 
@@ -293,9 +302,9 @@ class ExpenseReportLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            project_id = get_project_id_or_none(expense_group, lineitem)
-            department_id = get_department_id_or_none(expense_group, lineitem)
-            location_id = get_location_id_or_none(expense_group, lineitem)
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
