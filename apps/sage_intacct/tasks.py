@@ -195,24 +195,10 @@ def __validate_expense_group(expense_group: ExpenseGroup):
     for lineitem in expenses:
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
-        project = lineitem.project if lineitem.project else None
-        cost_center = lineitem.cost_center if lineitem.cost_center else None
 
         account = Mapping.objects.filter(
             source_type='CATEGORY',
             source__value=category,
-            workspace_id=expense_group.workspace_id
-        ).first()
-
-        project_mapping = Mapping.objects.filter(
-            source_type='PROJECT',
-            source__value=project,
-            workspace_id=expense_group.workspace_id
-        ).first()
-
-        cost_center_mapping = Mapping.objects.filter(
-            source_type='COST_CENTER',
-            source__value=cost_center,
             workspace_id=expense_group.workspace_id
         ).first()
 
@@ -223,28 +209,6 @@ def __validate_expense_group(expense_group: ExpenseGroup):
                 'value': category,
                 'type': 'Category Mapping',
                 'message': 'Category Mapping not found'
-            })
-
-        row = row + 1
-
-        if project and not project_mapping:
-            bulk_errors.append({
-                'row': row,
-                'expense_group_id': expense_group.id,
-                'value': project,
-                'type': 'Project Mapping',
-                'message': 'Project Mapping not found'
-            })
-
-        row = row + 1
-
-        if cost_center and not cost_center_mapping:
-            bulk_errors.append({
-                'row': row,
-                'expense_group_id': expense_group.id,
-                'value': cost_center,
-                'type': 'Cost Center Mapping',
-                'message': 'Cost Center Mapping not found'
             })
 
         row = row + 1
