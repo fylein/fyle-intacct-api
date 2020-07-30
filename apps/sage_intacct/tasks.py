@@ -139,27 +139,30 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], use
         task_log.task_id = created_job['id']
         task_log.save()
 
-def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog):
+def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.error(exception.response)
     sage_intacct_errors = literal_eval(exception.response)['error']
+    error_msg = 'Error while creating'
     errors = []
 
     if isinstance(sage_intacct_errors, list):
         for error in sage_intacct_errors:
             errors.append({
                 'expense_group_id': expense_group.id,
-                'short_description': error['description'] if error['description'] else '-',
-                'long_description': error['description2'] if error['description2'] else '-',
-                'correction': error['correction'] if error['correction'] else '-'
+                'short_description': error['description'] if error['description'] else export_type,
+                'long_description': error['description2'] if error['description2'] \
+                    else '{0} {1}'.format(error_msg, export_type),
+                'correction': error['correction'] if error['correction'] else 'Not available'
             })
 
     elif isinstance(sage_intacct_errors, dict):
         error = sage_intacct_errors
         errors.append({
             'expense_group_id': expense_group.id,
-            'short_description': error['description'] if error['description'] else '-',
-            'long_description': error['description2'] if error['description2'] else '-',
-            'correction': error['correction'] if error['correction'] else '-'
+            'short_description': error['description'] if error['description'] else export_type,
+            'long_description': error['description2'] if error['description2'] \
+                else '{0} {1}'.format(error_msg, export_type),
+            'correction': error['correction'] if error['correction'] else 'Not available'
         })
 
     task_log.status = 'FAILED'
@@ -309,7 +312,7 @@ def create_expense_report(expense_group, task_log):
         task_log.save(update_fields=['detail', 'status'])
 
     except WrongParamsError as exception:
-        handle_sage_intacct_errors(exception, expense_group, task_log)
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
     except Exception:
         error = traceback.format_exc()
@@ -383,7 +386,7 @@ def create_bill(expense_group, task_log):
         task_log.save(update_fields=['detail', 'status'])
 
     except WrongParamsError as exception:
-        handle_sage_intacct_errors(exception, expense_group, task_log)
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
     except Exception:
         error = traceback.format_exc()
