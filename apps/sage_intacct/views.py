@@ -258,9 +258,6 @@ class ExpenseReportView(generics.ListCreateAPIView):
     Create Expense Report
     """
     serializer_class = ExpenseReportSerializer
-    # TODO: remove this off later - did this to reach fyle jobs on local without access token
-    authentication_classes = []
-    permission_classes = []
 
     def get_queryset(self):
         return ExpenseReport.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
@@ -308,9 +305,6 @@ class BillView(generics.ListCreateAPIView):
     Create Bill
     """
     serializer_class = ExpenseReportSerializer
-    # TODO: remove this off later - did this to reach fyle jobs on local without access token
-    authentication_classes = []
-    permission_classes = []
 
     def get_queryset(self):
         return ExpenseReport.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
