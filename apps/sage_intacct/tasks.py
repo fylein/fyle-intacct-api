@@ -1,7 +1,6 @@
 import logging
 import traceback
 from typing import List
-from ast import literal_eval
 
 from django.conf import settings
 from django.db import transaction
@@ -141,9 +140,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], use
 
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.error(exception.response)
-    print('1',type(exception.response))
-    print('2',type(exception.response)['error'])
-    sage_intacct_errors = literal_eval(exception.response)['error']
+    sage_intacct_errors = exception.response['error']
     error_msg = 'Error while creating'
     errors = []
 
