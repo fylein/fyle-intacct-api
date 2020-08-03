@@ -10,6 +10,6 @@ fyle_accounting_mappings==0.2.0
 fyle-rest-auth==0.4.0
 fylesdk==0.20.0
 psycopg2-binary==2.8.4
-sageintacctsdk==0.3.0
+sageintacctsdk==0.3.1
 requests==2.22.0
 six==1.13.0

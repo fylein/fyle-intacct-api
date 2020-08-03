@@ -166,7 +166,11 @@ class BillLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         bill = Bill.objects.get(expense_group=expense_group)
-        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+
+        try:
+            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        except GeneralMapping.DoesNotExist:
+            general_mappings = None
 
         bill_lineitem_objects = []
 
@@ -280,7 +284,11 @@ class ExpenseReportLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         expense_report = ExpenseReport.objects.get(expense_group=expense_group)
-        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+
+        try:
+            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        except GeneralMapping.DoesNotExist:
+            general_mappings = None
 
         expense_report_lineitem_objects = []
 
