@@ -38,7 +38,7 @@ class ExpenseGroupView(generics.ListCreateAPIView):
 
         elif state == 'READY':
             return ExpenseGroup.objects.filter(
-                Q(tasklog__isnull=True) | Q(tasklog__status='FAILED'),
+                Q(tasklog__isnull=True) | Q(tasklog__status='FAILED') | Q(tasklog__status='FATAL'),
                 workspace_id=self.kwargs['workspace_id']
             ).order_by('-updated_at')
 

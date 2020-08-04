@@ -166,7 +166,8 @@ class BillLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         bill = Bill.objects.get(expense_group=expense_group)
-        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+
+        general_mappings = GeneralMapping.objects.filter(workspace_id=expense_group.workspace_id).first()
 
         bill_lineitem_objects = []
 
@@ -280,7 +281,8 @@ class ExpenseReportLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         expense_report = ExpenseReport.objects.get(expense_group=expense_group)
-        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+
+        general_mappings = GeneralMapping.objects.filter(workspace_id=expense_group.workspace_id).first()
 
         expense_report_lineitem_objects = []
 
