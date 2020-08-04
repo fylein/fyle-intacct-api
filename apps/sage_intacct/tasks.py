@@ -141,16 +141,16 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], use
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.error(exception.response)
     sage_intacct_errors = exception.response['error']
-    error_msg = 'Error while creating'
+    error_msg = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
     errors = []
 
     if isinstance(sage_intacct_errors, list):
         for error in sage_intacct_errors:
             errors.append({
                 'expense_group_id': expense_group.id,
-                'short_description': error['description'] if error['description'] else export_type,
+                'short_description': error['description'] if error['description'] else '{0} error'.format(export_type),
                 'long_description': error['description2'] if error['description2'] \
-                    else '{0} {1}'.format(error_msg, export_type),
+                    else error_msg,
                 'correction': error['correction'] if error['correction'] else 'Not available'
             })
 
@@ -158,9 +158,9 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
         error = sage_intacct_errors
         errors.append({
             'expense_group_id': expense_group.id,
-            'short_description': error['description'] if error['description'] else export_type,
+            'short_description': error['description'] if error['description'] else '{0} error'.format(export_type),
             'long_description': error['description2'] if error['description2'] \
-                else '{0} {1}'.format(error_msg, export_type),
+                else error_msg,
             'correction': error['correction'] if error['correction'] else 'Not available'
         })
 
