@@ -28,6 +28,8 @@ DEBUG = True if os.environ.get('DEBUG') == 'True' else False
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',')
 
+ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+
 # Application definition
 
 INSTALLED_APPS = [

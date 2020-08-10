@@ -1,6 +1,8 @@
 from typing import List, Dict
 from datetime import datetime
 
+from cryptography.fernet import Fernet
+
 from django.conf import settings
 
 from fyle_accounting_mappings.models import DestinationAttribute
@@ -19,13 +21,16 @@ class SageIntacctConnector:
     def __init__(self, credentials_object: SageIntacctCredential, workspace_id: int):
         sender_id = settings.SI_SENDER_ID
         sender_password = settings.SI_SENDER_PASSWORD
+        encryption_key = settings.ENCRYPTION_KEY
+        cipher_suite = Fernet(encryption_key)
+        decrypted_password = cipher_suite.decrypt(credentials_object.si_user_password.encode('utf-8')).decode('utf-8')
 
         self.connection = SageIntacctSDK(
             sender_id=sender_id,
             sender_password=sender_password,
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
-            user_password=credentials_object.si_user_password
+            user_password=decrypted_password
         )
 
         self.workspace_id = workspace_id
