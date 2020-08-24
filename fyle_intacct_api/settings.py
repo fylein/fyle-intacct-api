@@ -126,6 +126,13 @@ LOGGING = {
     },
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'auth_cache',
+    }
+}
+
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 if os.environ.get('DATABASE_URL', ''):
@@ -197,5 +204,6 @@ FYLE_JOBS_URL = os.environ.get('FYLE_JOBS_URL')
 # Sage Intacct Settings
 SI_SENDER_ID = os.environ.get('SI_SENDER_ID')
 SI_SENDER_PASSWORD = os.environ.get('SI_SENDER_PASSWORD')
+CACHE_EXPIRY = 900
 
 CORS_ORIGIN_ALLOW_ALL = True
