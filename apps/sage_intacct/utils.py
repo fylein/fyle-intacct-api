@@ -287,11 +287,11 @@ class SageIntacctConnector:
         """
         return self.connection.bills.update_attachment(recordno=object_key, supdocid=supdocid)
 
-    def post_attachments(self, attachments: List[Dict], claim_number: str):
+    def post_attachments(self, attachments: List[Dict], supdoc_id: str):
         """
         Post attachments to Sage Intacct
         :param attachments: attachment[dict()]
-        :param claim_number: claim number of the expense group
+        :param supdoc_id: supdoc id
         :return: supdocid in sage intacct
         """
 
@@ -310,7 +310,7 @@ class SageIntacctConnector:
                 attachment_number = attachment_number + 1
 
             data = {
-                'supdocid': claim_number,
+                'supdocid': supdoc_id,
                 'supdocfoldername': 'FyleAttachments',
                 'attachments': {
                     'attachment': attachments_list
@@ -320,6 +320,6 @@ class SageIntacctConnector:
             created_attachment = self.connection.attachments.post(data)
 
             if created_attachment['status'] == 'success' and created_attachment['key']:
-                return claim_number
+                return supdoc_id
 
             return False

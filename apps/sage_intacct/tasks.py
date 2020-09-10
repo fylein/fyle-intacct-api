@@ -36,7 +36,8 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
         fyle_connector = FyleConnector(fyle_credentials.refresh_token, expense_group.workspace_id)
         claim_number = expense_group.description.get('claim_number')
         attachments = fyle_connector.get_attachments(expense_ids)
-        return sage_intacct_connection.post_attachments(attachments, claim_number)
+        supdoc_id = '{0}-{1}'.format(key, claim_number)
+        return sage_intacct_connection.post_attachments(attachments, supdoc_id)
     except Exception:
         error = traceback.format_exc()
         logger.error(
