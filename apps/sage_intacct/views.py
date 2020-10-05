@@ -12,9 +12,10 @@ from apps.tasks.models import TaskLog
 from apps.workspaces.models import SageIntacctCredential
 
 from .utils import SageIntacctConnector
-from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation
-from .models import ExpenseReport
-from .serializers import ExpenseReportSerializer
+from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
+    create_charge_card_transaction, schedule_charge_card_transaction_creation
+from .models import ExpenseReport, Bill, ChargeCardTransaction
+from .serializers import ExpenseReportSerializer, BillSerializer, ChargeCardTransactionSerializer
 
 
 class EmployeeView(generics.ListCreateAPIView):
@@ -70,7 +71,7 @@ class VendorView(generics.ListCreateAPIView):
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
             sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-            vendors = sage_intacct_connector.sync_vendors()
+            vendors = sage_intacct_connector.sync_vendors(workspace_id=self.kwargs['workspace_id'])
 
             return Response(
                 data=self.serializer_class(vendors, many=True).data,
@@ -104,7 +105,7 @@ class AccountView(generics.ListCreateAPIView):
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
             sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-            accounts = sage_intacct_connector.sync_accounts()
+            accounts = sage_intacct_connector.sync_accounts(kwargs['workspace_id'])
 
             return Response(
                 data=self.serializer_class(accounts, many=True).data,
@@ -186,6 +187,39 @@ class ExpenseTypeView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+
+class ChargeCardAccountView(generics.ListCreateAPIView):
+    """
+    Charge Card Account view
+    """
+    serializer_class = DestinationAttributeSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return DestinationAttribute.objects.filter(
+            attribute_type='CHARGE_CARD_ACCOUNT', workspace_id=self.kwargs['workspace_id']).order_by('value')
+
+    def post(self, request, *args, **kwargs):
+        """
+        Get Charge Card Account from Sage Intacct
+        """
+        try:
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
+            sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+
+            charge_card_account = sage_intacct_connector.sync_charge_card_accounts()
+
+            return Response(
+                data=self.serializer_class(charge_card_account, many=True).data,
+                status=status.HTTP_200_OK
+            )
+        except SageIntacctCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Sage Intacct credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 class ProjectView(generics.ListCreateAPIView):
     """
     Project view
@@ -304,10 +338,10 @@ class BillView(generics.ListCreateAPIView):
     """
     Create Bill
     """
-    serializer_class = ExpenseReportSerializer
+    serializer_class = BillSerializer
 
     def get_queryset(self):
-        return ExpenseReport.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
+        return Bill.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
             .order_by('-updated_at')
 
     def post(self, request, *args, **kwargs):
@@ -340,6 +374,53 @@ class BillScheduleView(generics.CreateAPIView):
         expense_group_ids = request.data.get('expense_group_ids', [])
 
         schedule_bills_creation(
+            kwargs['workspace_id'], expense_group_ids, request.user)
+
+        return Response(
+            status=status.HTTP_200_OK
+        )
+
+
+class ChargeCardTransactionsView(generics.ListCreateAPIView):
+    """
+    Create Charge Card Transactions
+    """
+    serializer_class = ChargeCardTransactionSerializer
+
+    def get_queryset(self):
+        return ChargeCardTransaction.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
+            .order_by('-updated_at')
+
+    def post(self, request, *args, **kwargs):
+        """
+        Create Charge Card Transaction from expense group
+        """
+        expense_group_id = request.data.get('expense_group_id')
+        task_log_id = request.data.get('task_log_id')
+
+        assert_valid(expense_group_id is not None, 'expense group id not found')
+        assert_valid(task_log_id is not None, 'Task Log id not found')
+
+        expense_group = ExpenseGroup.objects.get(pk=expense_group_id)
+        task_log = TaskLog.objects.get(pk=task_log_id)
+
+        create_charge_card_transaction(expense_group, task_log)
+
+        return Response(
+            data={},
+            status=status.HTTP_200_OK
+        )
+
+
+class ChargeCardTransactionsScheduleView(generics.CreateAPIView):
+    """
+    Schedule Charge Card Transaction create
+    """
+
+    def post(self, request, *args, **kwargs):
+        expense_group_ids = request.data.get('expense_group_ids', [])
+
+        schedule_charge_card_transaction_creation(
             kwargs['workspace_id'], expense_group_ids, request.user)
 
         return Response(

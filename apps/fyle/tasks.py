@@ -55,7 +55,7 @@ def schedule_expense_group_creation(workspace_id: int, user: str):
     task_log.task_id = created_job['id']
     task_log.save()
 
-def create_expense_groups(workspace_id: int, state: List[str], task_log: TaskLog):
+def create_expense_groups(workspace_id: int, state: List[str], fund_source: List[str], task_log: TaskLog):
     """
     Create expense groups
     :param task_log: Task log object
@@ -65,7 +65,7 @@ def create_expense_groups(workspace_id: int, state: List[str], task_log: TaskLog
     :return: task log
     """
 
-    async_create_expense_groups(workspace_id, state, task_log)
+    async_create_expense_groups(workspace_id, state, fund_source, task_log)
 
     task_log.detail = {
         'message': 'Creating expense groups'
@@ -74,7 +74,7 @@ def create_expense_groups(workspace_id: int, state: List[str], task_log: TaskLog
 
     return task_log
 
-def async_create_expense_groups(workspace_id: int, state: List[str], task_log: TaskLog):
+def async_create_expense_groups(workspace_id: int, state: List[str], fund_source: List[str], task_log: TaskLog):
     try:
         with transaction.atomic():
 
@@ -96,12 +96,13 @@ def async_create_expense_groups(workspace_id: int, state: List[str], task_log: T
 
             expenses = fyle_connector.get_expenses(
                 state=state,
+                fund_source=fund_source,
                 updated_at=updated_at
             )
 
             expense_objects = Expense.create_expense_objects(expenses)
 
-            expense_group_objects = ExpenseGroup.create_expense_groups_by_report_id(
+            expense_group_objects = ExpenseGroup.create_expense_groups_by_report_id_fund_source(
                 expense_objects, workspace_id
             )
 

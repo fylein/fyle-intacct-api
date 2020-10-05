@@ -9,9 +9,10 @@ from fyle_accounting_mappings.models import DestinationAttribute
 
 from sageintacctsdk import SageIntacctSDK
 
-from apps.workspaces.models import SageIntacctCredential
+from apps.workspaces.models import SageIntacctCredential, WorkspaceGeneralSettings
 
-from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem
+from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, \
+    ChargeCardTransaction, ChargeCardTransactionLineitem
 
 
 class SageIntacctConnector:
@@ -37,11 +38,14 @@ class SageIntacctConnector:
 
         credentials_object.save()
 
-    def sync_accounts(self):
+    def sync_accounts(self, workspace_id):
         """
         Get accounts
         """
         accounts = self.connection.accounts.get_all()
+        general_settings = None
+        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
+            workspace_id=workspace_id).first()
 
         account_attributes = []
 
@@ -52,6 +56,14 @@ class SageIntacctConnector:
                 'value': account['TITLE'],
                 'destination_id': account['ACCOUNTNO']
             })
+
+            if general_settings and general_settings.corporate_credit_card_expenses_object:
+                account_attributes.append({
+                    'attribute_type': 'CCC_ACCOUNT',
+                    'display_name': 'Credit Card Account',
+                    'value': account['TITLE'],
+                    'destination_id': account['ACCOUNTNO']
+                })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             account_attributes, self.workspace_id)
@@ -95,6 +107,26 @@ class SageIntacctConnector:
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             expense_types_attributes, self.workspace_id)
+        return account_attributes
+
+    def sync_charge_card_accounts(self):
+        """
+        Get charge card accounts
+        """
+        charge_card_accounts = self.connection.charge_card_accounts.get_all()
+
+        charge_card_accounts_attributes = []
+
+        for charge_card_account in charge_card_accounts:
+            charge_card_accounts_attributes.append({
+                'attribute_type': 'CHARGE_CARD_ACCOUNT',
+                'display_name': 'Charge Card Account',
+                'value': charge_card_account['CARDNUM'],
+                'destination_id': charge_card_account['CARDID']
+            })
+
+        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
+            charge_card_accounts_attributes, self.workspace_id)
         return account_attributes
 
     def sync_projects(self):
@@ -157,13 +189,16 @@ class SageIntacctConnector:
             employee_attributes, self.workspace_id)
         return account_attributes
 
-    def sync_vendors(self):
+    def sync_vendors(self, workspace_id: str):
         """
         Get vendors
         """
         vendors = self.connection.vendors.get_all()
 
         vendor_attributes = []
+        general_settings = None
+        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
+            workspace_id=workspace_id).first()
 
         for vendor in vendors:
             vendor_attributes.append({
@@ -172,6 +207,14 @@ class SageIntacctConnector:
                 'value': vendor['NAME'],
                 'destination_id': vendor['VENDORID']
             })
+
+            if general_settings and general_settings.corporate_credit_card_expenses_object == 'BILL':
+                vendor_attributes.append({
+                    'attribute_type': 'CHARGE_CARD_ACCOUNT',
+                    'display_name': 'Charge Card Account',
+                    'value': vendor['NAME'],
+                    'destination_id': vendor['VENDORID']
+                })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             vendor_attributes, self.workspace_id)
@@ -214,6 +257,7 @@ class SageIntacctConnector:
             'state': 'Submitted',
             'description': '{0} - {1}'.format(expense_report.description['claim_number'], \
                 expense_report.description['employee_email']),
+            'memo': expense_report.memo,
             'expenses': {
                 'expense': expsense_payload
             }
@@ -245,6 +289,7 @@ class SageIntacctConnector:
             'WHENCREATED': current_date,
             'VENDORID': bill.vendor_id,
             'RECORDID': '{0} - {1}'.format(bill.description['claim_number'], bill.description['employee_email']),
+            'DOCNUMBER': bill.memo,
             'WHENDUE': current_date,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
@@ -252,6 +297,43 @@ class SageIntacctConnector:
         }
 
         return bill_payload
+
+    def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
+        charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]) -> Dict:
+        """
+        Create a charge card transaction
+        :param charge_card_transaction: ChargeCardTransaction object extracted from database
+        :param charge_card_transaction_lineitems: ChargeCardTransactionLineitem objects extracted from database
+        :return: constructed charge_card_transaction
+        """
+        charge_card_transaction_payload = []
+        for lineitem in charge_card_transaction_lineitems:
+            expense = {
+                'glaccountno': lineitem.gl_account_number,
+                'paymentamount': lineitem.amount,
+                'locationid': lineitem.location_id,
+                'departmentid': lineitem.department_id,
+                'projectid': lineitem.project_id
+            }
+
+            charge_card_transaction_payload.append(expense)
+
+        charge_card_transaction_payload = {
+            'chargecardid': charge_card_transaction.charge_card_id,
+            'paymentdate': {
+                'year': datetime.today().year,
+                'month': datetime.today().month,
+                'day': datetime.today().day
+            },
+            'referenceno': charge_card_transaction.memo,
+            'description': '{0} - {1}'.format(charge_card_transaction.description['claim_number'], \
+                charge_card_transaction.description['employee_email']),
+            'ccpayitems': {
+                'ccpayitem': charge_card_transaction_payload
+            }
+        }
+
+        return charge_card_transaction_payload
 
     def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: List[ExpenseReportLineitem]):
         """
@@ -268,6 +350,17 @@ class SageIntacctConnector:
         bill_payload = self.__construct_bill(bill, bill_lineitems)
         created_bill = self.connection.bills.post(bill_payload)
         return created_bill
+
+    def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
+        charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]):
+        """
+        Post charge card transaction to Sage Intacct
+        """
+        created_charge_card_transaction_payload = self.__construct_charge_card_transaction\
+            (charge_card_transaction, charge_card_transaction_lineitems)
+        created_charge_card_transaction = self.connection.charge_card_transactions.post\
+            (created_charge_card_transaction_payload)
+        return created_charge_card_transaction
 
     def update_expense_report(self, object_key, supdocid: str):
         """
@@ -286,6 +379,15 @@ class SageIntacctConnector:
         :return: response from sage intacct
         """
         return self.connection.bills.update_attachment(recordno=object_key, supdocid=supdocid)
+
+    def update_charge_card_transaction(self, object_key, supdocid: str):
+        """
+        Map posted attachment with Sage Intacct Object
+        :param object_key: charge card transaction key
+        :param supdocid: attachments id
+        :return: response from sage intacct
+        """
+        return self.connection.charge_card_transactions.update_attachment(key=object_key, supdocid=supdocid)
 
     def post_attachments(self, attachments: List[Dict], supdoc_id: str):
         """

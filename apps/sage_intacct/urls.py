@@ -14,19 +14,23 @@ Including another URLconf
 """
 from django.urls import path
 
-from .views import EmployeeView, VendorView, AccountView, ExpenseTypeView, DepartmentView, ProjectView, \
-    LocationView, ExpenseReportView, ExpenseReportScheduleView, BillView, BillScheduleView
+from .views import EmployeeView, VendorView, AccountView, ExpenseTypeView, ChargeCardAccountView, DepartmentView, \
+    ProjectView, LocationView, ExpenseReportView, ExpenseReportScheduleView, BillView, BillScheduleView, \
+    ChargeCardTransactionsView, ChargeCardTransactionsScheduleView
 
 urlpatterns = [
     path('employees/', EmployeeView.as_view()),
     path('vendors/', VendorView.as_view()),
     path('accounts/', AccountView.as_view()),
     path('expense_types/', ExpenseTypeView.as_view()),
+    path('charge_card_accounts/', ChargeCardAccountView.as_view()),
     path('departments/', DepartmentView.as_view()),
     path('projects/', ProjectView.as_view()),
     path('locations/', LocationView.as_view()),
     path('expense_reports/', ExpenseReportView.as_view()),
     path('expense_reports/trigger/', ExpenseReportScheduleView.as_view()),
     path('bills/', BillView.as_view()),
-    path('bills/trigger/', BillScheduleView.as_view())
+    path('bills/trigger/', BillScheduleView.as_view()),
+    path('charge_card_transactions/', ChargeCardTransactionsView.as_view()),
+    path('charge_card_transactions/trigger/', ChargeCardTransactionsScheduleView.as_view())
 ]
