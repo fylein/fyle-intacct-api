@@ -311,8 +311,8 @@ class SageIntacctConnector:
             expense = {
                 'glaccountno': lineitem.gl_account_number,
                 'paymentamount': lineitem.amount,
-                'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
+                'locationid': lineitem.location_id,
                 'projectid': lineitem.project_id
             }
 

@@ -5,8 +5,6 @@ from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting
 
-from fyle_intacct_api.exceptions import BulkError
-
 from apps.fyle.models import ExpenseGroup, Expense
 from apps.mappings.models import GeneralMapping
 
@@ -124,8 +122,6 @@ class Bill(models.Model):
         """
         description = expense_group.description
 
-        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = Mapping.objects.get(
                 source_type='EMPLOYEE',
@@ -135,7 +131,12 @@ class Bill(models.Model):
             ).destination.destination_id
 
         elif expense_group.fund_source == 'CCC':
-            vendor_id = general_mappings.default_ccc_vendor_id
+            vendor_id = Mapping.objects.get(
+                source_type='EMPLOYEE',
+                destination_type='CHARGE_CARD_ACCOUNT',
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).destination.destination_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
@@ -190,12 +191,21 @@ class BillLineitem(models.Model):
             category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
-            account: Mapping = Mapping.objects.filter(
-                destination_type='ACCOUNT',
-                source_type='CATEGORY',
-                source__value=category,
-                workspace_id=expense_group.workspace_id
-            ).first()
+            if expense_group.fund_source == 'PERSONAL':
+                account: Mapping = Mapping.objects.filter(
+                    destination_type='ACCOUNT',
+                    source_type='CATEGORY',
+                    source__value=category,
+                    workspace_id=expense_group.workspace_id
+                ).first()
+
+            elif expense_group.fund_source == 'CCC':
+                account: Mapping = Mapping.objects.filter(
+                    destination_type='CCC_ACCOUNT',
+                    source_type='CATEGORY',
+                    source__value=category,
+                    workspace_id=expense_group.workspace_id
+                ).first()
 
             expense_type: Mapping = Mapping.objects.filter(
                 destination_type='EXPENSE_TYPE',
@@ -371,25 +381,17 @@ class ChargeCardTransaction(models.Model):
         :return: ChargeCardTransaction object
         """
         description = expense_group.description
-        try:
-            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        except GeneralMapping.DoesNotExist:
-            general_mappings_error = []
-            general_mappings_error.append({
-                'row': None,
-                'expense_group_id': expense_group.id,
-                'value': expense_group.description.get('employee_email'),
-                'type': 'General Mapping',
-                'message': 'General mapping not found'
-            })
-
-            raise BulkError('General Mappings are missing', general_mappings_error)
 
         if expense_group.fund_source == 'CCC':
             charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
                 expense_group=expense_group,
                 defaults={
-                    'charge_card_id': general_mappings.default_charge_card_id,
+                    'charge_card_id': Mapping.objects.get(
+                        source_type='EMPLOYEE',
+                        destination_type='CHARGE_CARD_ACCOUNT',
+                        source__value=description.get('employee_email'),
+                        workspace_id=expense_group.workspace_id
+                    ).destination.destination_id,
                     'description': description,
                     'memo': expense_group.fyle_group_id
                 }
@@ -439,7 +441,7 @@ class ChargeCardTransactionLineitem(models.Model):
                 lineitem.category, lineitem.sub_category)
 
             account: Mapping = Mapping.objects.filter(
-                destination_type='ACCOUNT',
+                destination_type='CCC_ACCOUNT',
                 source_type='CATEGORY',
                 source__value=category,
                 workspace_id=expense_group.workspace_id

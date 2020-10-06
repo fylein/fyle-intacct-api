@@ -226,59 +226,44 @@ def __validate_expense_group(expense_group: ExpenseGroup):
     general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.get(
         workspace_id=expense_group.workspace_id)
 
-    general_mapping = None
-    try:
-        general_mapping = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-    except GeneralMapping.DoesNotExist:
-        bulk_errors.append({
-            'row': None,
-            'expense_group_id': expense_group.id,
-            'value': expense_group.description.get('employee_email'),
-            'type': 'General Mapping',
-            'message': 'General Mapping not found'
-        })
-
-
-    if general_settings.corporate_credit_card_expenses_object and \
-        general_settings.corporate_credit_card_expenses_object == 'BILL' and \
-        expense_group.fund_source == 'CCC':
-        if general_mapping:
-            if not(general_mapping.default_ccc_vendor_id or general_mapping.default_ccc_vendor_name):
-                bulk_errors.append({
-                    'row': None,
-                    'expense_group_id': expense_group.id,
-                    'value': expense_group.description.get('employee_email'),
-                    'type': 'General Mapping',
-                    'message': 'Default Credit Card Vendor not found'
-                })
-
-    elif general_settings.corporate_credit_card_expenses_object and \
-        general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' and \
-        expense_group.fund_source == 'CCC':
-        if general_mapping:
-            if not(general_mapping.default_charge_card_id or general_mapping.default_charge_card_name):
-                bulk_errors.append({
-                    'row': None,
-                    'expense_group_id': expense_group.id,
-                    'value': expense_group.description.get('employee_email'),
-                    'type': 'General Mapping',
-                    'message': 'Default Credit Card not found'
-                })
+    if general_settings.corporate_credit_card_expenses_object:
+        try:
+            GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        except GeneralMapping.DoesNotExist:
+            bulk_errors.append({
+                'row': None,
+                'expense_group_id': expense_group.id,
+                'value': expense_group.description.get('employee_email'),
+                'type': 'General Mapping',
+                'message': 'General Mapping not found'
+            })
 
     try:
-        Mapping.objects.get(
-            Q(destination_type='VENDOR') | Q(destination_type='EMPLOYEE'),
-            source_type='EMPLOYEE',
-            source__value=expense_group.description.get('employee_email'),
-            workspace_id=expense_group.workspace_id
-        )
+        if expense_group.fund_source == 'PERSONAL':
+            error_message = 'Employee mapping not found'
+            Mapping.objects.get(
+                Q(destination_type='VENDOR') | Q(destination_type='EMPLOYEE'),
+                source_type='EMPLOYEE',
+                source__value=expense_group.description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            )
+
+        elif expense_group.fund_source == 'CCC':
+            error_message = 'Credit Card Employee mapping not found'
+            Mapping.objects.get(
+                destination_type='CHARGE_CARD_ACCOUNT',
+                source_type='EMPLOYEE',
+                source__value=expense_group.description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            )
+
     except Mapping.DoesNotExist:
         bulk_errors.append({
             'row': None,
             'expense_group_id': expense_group.id,
             'value': expense_group.description.get('employee_email'),
             'type': 'Employee Mapping',
-            'message': 'Employee mapping not found'
+            'message': error_message
         })
 
     expenses = expense_group.expenses.all()
@@ -287,11 +272,23 @@ def __validate_expense_group(expense_group: ExpenseGroup):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        account = Mapping.objects.filter(
-            source_type='CATEGORY',
-            source__value=category,
-            workspace_id=expense_group.workspace_id
-        ).first()
+        if expense_group.fund_source == 'PERSONAL':
+            error_message = 'Category Mapping Not Found'
+            account = Mapping.objects.filter(
+                Q(destination_type='ACCOUNT') | Q(destination_type='EXPENSE_TYPE'),
+                source_type='CATEGORY',
+                source__value=category,
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+        elif expense_group.fund_source == 'CCC':
+            error_message = 'Credit Card Expense Account Mapping Not Found'
+            account = Mapping.objects.filter(
+                source_type='CATEGORY',
+                source__value=category,
+                destination_type='CCC_ACCOUNT',
+                workspace_id=expense_group.workspace_id
+            ).first()
 
         if category and not account:
             bulk_errors.append({
@@ -299,7 +296,7 @@ def __validate_expense_group(expense_group: ExpenseGroup):
                 'expense_group_id': expense_group.id,
                 'value': category,
                 'type': 'Category Mapping',
-                'message': 'Category Mapping not found'
+                'message': error_message
             })
 
         row = row + 1
@@ -466,7 +463,7 @@ def create_charge_card_transaction(expense_group, task_log):
 
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-            created_charge_card_transaction = sage_intacct_connection.post_expense_report(\
+            created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(\
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
