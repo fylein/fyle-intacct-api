@@ -223,6 +223,18 @@ def __validate_expense_group(expense_group: ExpenseGroup):
     bulk_errors = []
     row = 0
 
+    general_mapping = None
+    try:
+        general_mapping = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+    except GeneralMapping.DoesNotExist:
+        bulk_errors.append({
+            'row': None,
+            'expense_group_id': expense_group.id,
+            'value': 'general mappings',
+            'type': 'General Mappings',
+            'message': 'General mappings not found'
+        })
+
     general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.get(
         workspace_id=expense_group.workspace_id)
 
@@ -240,7 +252,7 @@ def __validate_expense_group(expense_group: ExpenseGroup):
 
     try:
         if expense_group.fund_source == 'PERSONAL':
-            error_message = 'Employee mapping not found'
+            error_message = 'Employee Mapping not found'
             Mapping.objects.get(
                 Q(destination_type='VENDOR') | Q(destination_type='EMPLOYEE'),
                 source_type='EMPLOYEE',
@@ -249,13 +261,24 @@ def __validate_expense_group(expense_group: ExpenseGroup):
             )
 
         elif expense_group.fund_source == 'CCC':
-            error_message = 'Credit Card Employee mapping not found'
-            Mapping.objects.get(
-                destination_type='CHARGE_CARD_ACCOUNT',
-                source_type='EMPLOYEE',
-                source__value=expense_group.description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            )
+            if general_settings.corporate_credit_card_expenses_object == 'BILL':
+                if general_mapping and not general_mapping.default_ccc_vendor_id:
+                    bulk_errors.append({
+                        'row': None,
+                        'expense_group_id': expense_group.id,
+                        'value': expense_group.description.get('employee_email'),
+                        'type': 'General Mapping',
+                        'message': 'Default Credit Card Vendor not found'
+                    })
+
+            elif general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+                error_message = 'Charge Card Account mapping not found'
+                Mapping.objects.get(
+                    Q(source_type='EMPLOYEE') | Q(source_type='VENDOR'),
+                    destination_type='CHARGE_CARD_ACCOUNT',
+                    source__value=expense_group.description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                )
 
     except Mapping.DoesNotExist:
         bulk_errors.append({

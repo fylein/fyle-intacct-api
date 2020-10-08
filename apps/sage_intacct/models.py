@@ -121,6 +121,7 @@ class Bill(models.Model):
         :return: bill object
         """
         description = expense_group.description
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = Mapping.objects.get(
@@ -131,12 +132,7 @@ class Bill(models.Model):
             ).destination.destination_id
 
         elif expense_group.fund_source == 'CCC':
-            vendor_id = Mapping.objects.get(
-                source_type='EMPLOYEE',
-                destination_type='CHARGE_CARD_ACCOUNT',
-                source__value=description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            ).destination.destination_id
+            vendor_id = general_mappings.default_ccc_vendor_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
