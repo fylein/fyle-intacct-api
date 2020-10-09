@@ -275,7 +275,7 @@ def __validate_expense_group(expense_group: ExpenseGroup):
                 error_message = 'Charge Card Account mapping not found'
                 Mapping.objects.get(
                     Q(source_type='EMPLOYEE') | Q(source_type='VENDOR'),
-                    destination_type='CHARGE_CARD_ACCOUNT',
+                    destination_type='CHARGE_CARD_NUMBER',
                     source__value=expense_group.description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
                 )

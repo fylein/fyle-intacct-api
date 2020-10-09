@@ -197,7 +197,7 @@ class ChargeCardAccountView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return DestinationAttribute.objects.filter(
-            attribute_type='CHARGE_CARD_ACCOUNT', workspace_id=self.kwargs['workspace_id']).order_by('value')
+            attribute_type='CHARGE_CARD_NUMBER', workspace_id=self.kwargs['workspace_id']).order_by('value')
 
     def post(self, request, *args, **kwargs):
         """

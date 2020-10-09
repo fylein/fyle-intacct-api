@@ -119,7 +119,7 @@ class SageIntacctConnector:
 
         for charge_card_account in charge_card_accounts:
             charge_card_accounts_attributes.append({
-                'attribute_type': 'CHARGE_CARD_ACCOUNT',
+                'attribute_type': 'CHARGE_CARD_NUMBER',
                 'display_name': 'Charge Card Account',
                 'value': charge_card_account['CARDNUM'],
                 'destination_id': charge_card_account['CARDID']
@@ -210,7 +210,7 @@ class SageIntacctConnector:
 
             if general_settings and general_settings.corporate_credit_card_expenses_object == 'BILL':
                 vendor_attributes.append({
-                    'attribute_type': 'CHARGE_CARD_ACCOUNT',
+                    'attribute_type': 'CHARGE_CARD_NUMBER',
                     'display_name': 'Charge Card Account',
                     'value': vendor['NAME'],
                     'destination_id': vendor['VENDORID']

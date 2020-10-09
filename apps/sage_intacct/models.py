@@ -384,7 +384,7 @@ class ChargeCardTransaction(models.Model):
                 defaults={
                     'charge_card_id': Mapping.objects.get(
                         source_type='EMPLOYEE',
-                        destination_type='CHARGE_CARD_ACCOUNT',
+                        destination_type='CHARGE_CARD_NUMBER',
                         source__value=description.get('employee_email'),
                         workspace_id=expense_group.workspace_id
                     ).destination.destination_id,
