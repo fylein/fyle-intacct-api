@@ -58,16 +58,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='ExpenseReport',
             name='memo',
-            field=models.CharField(help_text='Sage Intacct memo', max_length=255),
+            field=models.CharField(help_text='Sage Intacct memo', max_length=255, null=True),
         ),
         migrations.AddField(
             model_name='Bill',
             name='memo',
-            field=models.CharField(help_text='Sage Intacct docnumber', max_length=255),
+            field=models.CharField(help_text='Sage Intacct docnumber', max_length=255, null=True),
         ),
         migrations.AddField(
             model_name='ChargeCardTransaction',
             name='memo',
-            field=models.CharField(help_text='Sage Intacct referenceno', max_length=255),
+            field=models.CharField(help_text='Sage Intacct referenceno', max_length=255, null=True),
         ),
     ]
