@@ -272,13 +272,14 @@ def __validate_expense_group(expense_group: ExpenseGroup):
                     })
 
             elif general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
-                error_message = 'Charge Card Account mapping not found'
-                Mapping.objects.get(
-                    Q(source_type='EMPLOYEE') | Q(source_type='VENDOR'),
-                    destination_type='CHARGE_CARD_NUMBER',
-                    source__value=expense_group.description.get('employee_email'),
-                    workspace_id=expense_group.workspace_id
-                )
+                if general_mapping and not general_mapping.default_charge_card_id:
+                    bulk_errors.append({
+                        'row': None,
+                        'expense_group_id': expense_group.id,
+                        'value': expense_group.description.get('employee_email'),
+                        'type': 'General Mapping',
+                        'message': 'Default Charge Card not found'
+                    })
 
     except Mapping.DoesNotExist:
         bulk_errors.append({

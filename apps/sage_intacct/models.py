@@ -379,15 +379,26 @@ class ChargeCardTransaction(models.Model):
         description = expense_group.description
 
         if expense_group.fund_source == 'CCC':
+            charge_card_id = None
+            mapping: Mapping = Mapping.objects.filter(
+                source_type='EMPLOYEE',
+                destination_type='CHARGE_CARD_NUMBER',
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+            if mapping:
+                charge_card_id = mapping.destination.destination_id
+
+            else:
+                general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+                if general_mappings.default_charge_card_id:
+                    charge_card_id = general_mappings.default_charge_card_id
+
             charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
                 expense_group=expense_group,
                 defaults={
-                    'charge_card_id': Mapping.objects.get(
-                        source_type='EMPLOYEE',
-                        destination_type='CHARGE_CARD_NUMBER',
-                        source__value=description.get('employee_email'),
-                        workspace_id=expense_group.workspace_id
-                    ).destination.destination_id,
+                    'charge_card_id': charge_card_id,
                     'description': description,
                     'memo': expense_group.fyle_group_id
                 }
