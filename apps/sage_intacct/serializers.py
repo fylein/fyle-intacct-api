@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from .models import Bill, BillLineitem, ExpenseReport, ExpenseReportLineitem
+from .models import Bill, BillLineitem, ExpenseReport, ExpenseReportLineitem, \
+    ChargeCardTransaction, ChargeCardTransactionLineitem
 
 
 class BillSerializer(serializers.ModelSerializer):
@@ -36,4 +37,22 @@ class ExpenseReportLineitemsSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = ExpenseReportLineitem
+        fields = '__all__'
+
+
+class ChargeCardTransactionSerializer(serializers.ModelSerializer):
+    """
+    Sage Intacct ChargeCardTransaction serializer
+    """
+    class Meta:
+        model = ChargeCardTransaction
+        fields = '__all__'
+
+
+class ChargeCardTransactionLineitemsSerializer(serializers.ModelSerializer):
+    """
+    Sage Intacct ChargeCardTransaction Lineitems serializer
+    """
+    class Meta:
+        model = ChargeCardTransactionLineitem
         fields = '__all__'

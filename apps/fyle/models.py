@@ -92,6 +92,7 @@ class ExpenseGroup(models.Model):
     """
     id = models.AutoField(primary_key=True)
     fyle_group_id = models.CharField(max_length=255, help_text='fyle expense group id report id, etc')
+    fund_source = models.CharField(max_length=255, help_text='Expense fund source')
     workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT,
                                   help_text='To which workspace this expense group belongs to')
     expenses = models.ManyToManyField(Expense, help_text="Expenses under this Expense Group")
@@ -104,12 +105,13 @@ class ExpenseGroup(models.Model):
         db_table = 'expense_groups'
 
     @staticmethod
-    def create_expense_groups_by_report_id(expense_objects: List[Expense], workspace_id):
+    def create_expense_groups_by_report_id_fund_source(expense_objects: List[Expense], workspace_id):
         """
-        Group expense by report_id
+        Group expense by and fund_source
         """
         expense_groups = groupby(
-            expense_objects, lambda expense: (expense.report_id, expense.employee_email, expense.claim_number)
+            expense_objects, lambda expense: (expense.report_id, expense.employee_email, expense.claim_number, \
+                expense.fund_source)
         )
 
         expense_group_objects = []
@@ -118,14 +120,16 @@ class ExpenseGroup(models.Model):
             report_id = expense_group[0]
             employee_email = expense_group[1]
             claim_number = expense_group[2]
+            fund_source = expense_group[3]
 
-            expense_ids = Expense.objects.filter(report_id=report_id).values_list(
+            expense_ids = Expense.objects.filter(report_id=report_id, fund_source=fund_source).values_list(
                 'id', flat=True
             )
 
             expense_group_object, _ = ExpenseGroup.objects.update_or_create(
-                fyle_group_id=report_id,
+                fyle_group_id='{0} - {1}'.format(report_id, fund_source.lower()),
                 workspace_id=workspace_id,
+                fund_source=fund_source,
                 defaults={
                     'description': {
                         'employee_email': employee_email,

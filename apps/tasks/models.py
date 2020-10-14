@@ -3,7 +3,7 @@ from django.contrib.postgres.fields import JSONField
 
 from apps.workspaces.models import Workspace
 from apps.fyle.models import ExpenseGroup
-from apps.sage_intacct.models import Bill, ExpenseReport
+from apps.sage_intacct.models import Bill, ExpenseReport, ChargeCardTransaction
 
 
 def get_default():
@@ -18,7 +18,7 @@ class TaskLog(models.Model):
     """
     id = models.AutoField(primary_key=True)
     workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
-    type = models.CharField(max_length=50, help_text='Task type (FETCH_EXPENSES / CREATE_BILL / CREATE_EXPENSE)')
+    type = models.CharField(max_length=50, help_text='Task type (FETCH_EXPENSES / CREATE_BILL / CREATE_EXPENSE_REPORT / CREATE_CHARGE_CARD_TRANSACTION)')
     task_id = models.CharField(max_length=255, null=True, help_text='Fyle Jobs task reference')
     expense_group = models.ForeignKey(ExpenseGroup, on_delete=models.PROTECT,
                                       null=True, help_text='Reference to Expense group')
@@ -26,6 +26,8 @@ class TaskLog(models.Model):
         help_text='Reference to Bill', null=True)
     expense_report = models.ForeignKey(ExpenseReport, on_delete=models.PROTECT, \
         help_text='Reference to ExpenseReport', null=True)
+    charge_card_transaction = models.ForeignKey(ChargeCardTransaction, on_delete=models.PROTECT, \
+        help_text='Reference to ChargeCardTransaction', null=True)
     status = models.CharField(max_length=255, help_text='Task Status')
     detail = JSONField(help_text='Task Response', null=True, default=get_default)
     sage_intacct_errors = JSONField(help_text='Sage Intacct Errors', null=True)

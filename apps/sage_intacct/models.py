@@ -105,6 +105,7 @@ class Bill(models.Model):
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
     vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
     description = models.TextField(help_text='Sage Intacct Bill Description')
+    memo = models.CharField(max_length=255, help_text='Sage Intacct docnumber', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -120,17 +121,25 @@ class Bill(models.Model):
         :return: bill object
         """
         description = expense_group.description
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+
+        if expense_group.fund_source == 'PERSONAL':
+            vendor_id = Mapping.objects.get(
+                source_type='EMPLOYEE',
+                destination_type='VENDOR',
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).destination.destination_id
+
+        elif expense_group.fund_source == 'CCC':
+            vendor_id = general_mappings.default_ccc_vendor_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
             defaults={
-                'vendor_id': Mapping.objects.get(
-                    source_type='EMPLOYEE',
-                    destination_type='VENDOR',
-                    source__value=description.get('employee_email'),
-                    workspace_id=expense_group.workspace_id
-                ).destination.destination_id,
-                'description': description
+                'vendor_id': vendor_id,
+                'description': description,
+                'memo': expense_group.fyle_group_id
             }
         )
         return bill_object
@@ -167,7 +176,10 @@ class BillLineitem(models.Model):
         expenses = expense_group.expenses.all()
         bill = Bill.objects.get(expense_group=expense_group)
 
-        general_mappings = GeneralMapping.objects.filter(workspace_id=expense_group.workspace_id).first()
+        try:
+            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        except GeneralMapping.DoesNotExist:
+            general_mappings = None
 
         bill_lineitem_objects = []
 
@@ -175,12 +187,21 @@ class BillLineitem(models.Model):
             category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
-            account: Mapping = Mapping.objects.filter(
-                destination_type='ACCOUNT',
-                source_type='CATEGORY',
-                source__value=category,
-                workspace_id=expense_group.workspace_id
-            ).first()
+            if expense_group.fund_source == 'PERSONAL':
+                account: Mapping = Mapping.objects.filter(
+                    destination_type='ACCOUNT',
+                    source_type='CATEGORY',
+                    source__value=category,
+                    workspace_id=expense_group.workspace_id
+                ).first()
+
+            elif expense_group.fund_source == 'CCC':
+                account: Mapping = Mapping.objects.filter(
+                    destination_type='CCC_ACCOUNT',
+                    source_type='CATEGORY',
+                    source__value=category,
+                    workspace_id=expense_group.workspace_id
+                ).first()
 
             expense_type: Mapping = Mapping.objects.filter(
                 destination_type='EXPENSE_TYPE',
@@ -220,6 +241,7 @@ class ExpenseReport(models.Model):
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
     employee_id = models.CharField(max_length=255, help_text='Sage Intacct Employee ID')
     description = models.TextField(help_text='Sage Intacct ExpenseReport Description')
+    memo = models.CharField(max_length=255, help_text='Sage Intacct memo', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -236,18 +258,20 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
 
-        expense_report_object, _ = ExpenseReport.objects.update_or_create(
-            expense_group=expense_group,
-            defaults={
-                'employee_id': Mapping.objects.get(
-                    source_type='EMPLOYEE',
-                    destination_type='EMPLOYEE',
-                    source__value=description.get('employee_email'),
-                    workspace_id=expense_group.workspace_id
-                ).destination.destination_id,
-                'description': description
-            }
-        )
+        if expense_group.fund_source == 'PERSONAL':
+            expense_report_object, _ = ExpenseReport.objects.update_or_create(
+                expense_group=expense_group,
+                defaults={
+                    'employee_id': Mapping.objects.get(
+                        source_type='EMPLOYEE',
+                        destination_type='EMPLOYEE',
+                        source__value=description.get('employee_email'),
+                        workspace_id=expense_group.workspace_id
+                    ).destination.destination_id,
+                    'description': description,
+                    'memo': expense_group.fyle_group_id
+                }
+            )
         return expense_report_object
 
 
@@ -264,7 +288,7 @@ class ExpenseReportLineitem(models.Model):
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     memo = models.CharField(help_text='Sage Intacct lineitem description', max_length=255, null=True)
-    amount = models.FloatField(help_text='Bill amount')
+    amount = models.FloatField(help_text='Expense amount')
     spent_at = models.DateTimeField(help_text='Spent at')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -282,7 +306,10 @@ class ExpenseReportLineitem(models.Model):
         expenses = expense_group.expenses.all()
         expense_report = ExpenseReport.objects.get(expense_group=expense_group)
 
-        general_mappings = GeneralMapping.objects.filter(workspace_id=expense_group.workspace_id).first()
+        try:
+            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        except GeneralMapping.DoesNotExist:
+            general_mappings = None
 
         expense_report_lineitem_objects = []
 
@@ -325,3 +352,124 @@ class ExpenseReportLineitem(models.Model):
             expense_report_lineitem_objects.append(expense_report_lineitem_object)
 
         return expense_report_lineitem_objects
+
+class ChargeCardTransaction(models.Model):
+    """
+    Sage Intacct Charge Card Transaction
+    """
+    id = models.AutoField(primary_key=True)
+    expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
+    charge_card_id = models.CharField(max_length=255, help_text='Sage Intacct Charge Card ID')
+    description = models.TextField(help_text='Sage Intacct Charge Card Transaction Description')
+    memo = models.CharField(max_length=255, help_text='Sage Intacct referenceno', null=True)
+    supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'charge_card_transactions'
+
+    @staticmethod
+    def create_charge_card_transaction(expense_group: ExpenseGroup):
+        """
+        Create create charge card transaction
+        :param expense_group: ExpenseGroup
+        :return: ChargeCardTransaction object
+        """
+        description = expense_group.description
+
+        if expense_group.fund_source == 'CCC':
+            charge_card_id = None
+            mapping: Mapping = Mapping.objects.filter(
+                source_type='EMPLOYEE',
+                destination_type='CHARGE_CARD_NUMBER',
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+            if mapping:
+                charge_card_id = mapping.destination.destination_id
+
+            else:
+                general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+                if general_mappings.default_charge_card_id:
+                    charge_card_id = general_mappings.default_charge_card_id
+
+            charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
+                expense_group=expense_group,
+                defaults={
+                    'charge_card_id': charge_card_id,
+                    'description': description,
+                    'memo': expense_group.fyle_group_id
+                }
+            )
+
+        return charge_card_transaction_object
+
+
+class ChargeCardTransactionLineitem(models.Model):
+    """
+    Sage Intacct Charge Card Transaction Lineitem
+    """
+    id = models.AutoField(primary_key=True)
+    charge_card_transaction = models.ForeignKey(ChargeCardTransaction, on_delete=models.PROTECT, \
+        help_text='Reference to ChargeCardTransaction')
+    expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
+    gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
+    project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
+    location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
+    department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
+    amount = models.FloatField(help_text='Charge Card Transaction amount')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'charge_card_transaction_lineitems'
+
+    @staticmethod
+    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup):
+        """
+        Create expense report lineitems
+        :param expense_group: expense group
+        :return: lineitems objects
+        """
+        expenses = expense_group.expenses.all()
+        charge_card_transaction = ChargeCardTransaction.objects.get(expense_group=expense_group)
+
+        try:
+            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        except GeneralMapping.DoesNotExist:
+            general_mappings = None
+
+        charge_card_transaction_lineitem_objects = []
+
+        for lineitem in expenses:
+            category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+                lineitem.category, lineitem.sub_category)
+
+            account: Mapping = Mapping.objects.filter(
+                destination_type='CCC_ACCOUNT',
+                source_type='CATEGORY',
+                source__value=category,
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+
+            charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
+                charge_card_transaction=charge_card_transaction,
+                expense_id=lineitem.id,
+                defaults={
+                    'gl_account_number': account.destination.destination_id if account else None,
+                    'project_id': project_id,
+                    'department_id': department_id,
+                    'location_id': location_id,
+                    'amount': lineitem.amount
+                }
+            )
+
+            charge_card_transaction_lineitem_objects.append(charge_card_transaction_lineitem_object)
+
+        return charge_card_transaction_lineitem_objects

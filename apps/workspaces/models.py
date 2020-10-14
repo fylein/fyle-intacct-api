@@ -31,6 +31,8 @@ class WorkspaceGeneralSettings(models.Model):
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     reimbursable_expenses_object = models.CharField(max_length=50, \
         help_text='Mapping Settings ( BILL / EXPENSE_REPORT )')
+    corporate_credit_card_expenses_object = models.CharField(max_length=50, \
+        help_text='Mapping Settings ( BILL / CHARGE_CARD_TRANSACTION )', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 

@@ -132,13 +132,16 @@ class FyleConnector:
 
         return self._get_request(api_url, params)
 
-    def get_expenses(self, state: List[str], updated_at: List[str]):
+    def get_expenses(self, state: List[str], fund_source: List[str], updated_at: List[str]):
         """
         Get expenses from fyle
         """
-        expenses = self.connection.Expenses.get_all(state=state, updated_at=updated_at)
+        expenses = self.connection.Expenses.get_all(state=state, fund_source=fund_source, updated_at=updated_at)
+        expenses = list(filter(lambda expense: expense['amount'] > 0, expenses))
         expenses = list(
-            filter(lambda expense: expense['reimbursable'], expenses))
+            filter(lambda expense: not (not expense['reimbursable'] and expense['fund_source'] == 'PERSONAL'),
+                   expenses))
+
         return expenses
 
     def sync_employees(self):
