@@ -1,6 +1,7 @@
 import logging
 import traceback
 from typing import List
+from datetime import datetime
 
 from django.conf import settings
 from django.db import transaction
@@ -364,6 +365,9 @@ def create_expense_report(expense_group, task_log):
 
             task_log.save(update_fields=['detail', 'expense_report', 'status'])
 
+            expense_group.exported_at = datetime.now()
+            expense_group.save()
+
     except SageIntacctCredential.DoesNotExist:
         logger.exception(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
@@ -438,6 +442,9 @@ def create_bill(expense_group, task_log):
 
             task_log.save(update_fields=['detail', 'bill', 'status'])
 
+            expense_group.exported_at = datetime.now()
+            expense_group.save()
+
     except SageIntacctCredential.DoesNotExist:
         logger.exception(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
@@ -510,6 +517,9 @@ def create_charge_card_transaction(expense_group, task_log):
             task_log.status = 'COMPLETE'
 
             task_log.save(update_fields=['detail', 'charge_card_transaction', 'status'])
+
+            expense_group.exported_at = datetime.now()
+            expense_group.save()
 
     except SageIntacctCredential.DoesNotExist:
         logger.exception(
