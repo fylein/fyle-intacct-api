@@ -31,5 +31,5 @@ urlpatterns = [
     path('<int:workspace_id>/sage_intacct/', include('apps.sage_intacct.urls')),
     path('<int:workspace_id>/mappings/', include('apps.mappings.urls')),
     path('<int:workspace_id>/tasks/', include('apps.tasks.urls')),
-    path('ready/', ReadyView.as_view())
+    path('ready/', ReadyView.as_view({'get': 'get'}))
 ]
