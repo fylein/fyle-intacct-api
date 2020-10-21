@@ -328,6 +328,28 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             )
 
 
+class ReadyView(viewsets.ViewSet):
+    """
+    Ready call
+    """
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        """
+        Ready call
+        """
+
+        Workspace.objects.raw('Select 1 from workspaces')
+
+        return Response(
+            data={
+                'message': 'Ready'
+            },
+            status=status.HTTP_200_OK
+        )
+
+
 class GeneralSettingsView(viewsets.ViewSet):
     """
     General Settings
