@@ -6,6 +6,7 @@ from datetime import datetime
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from django_q.tasks import Chain
 
 from sageintacctsdk.exceptions import WrongParamsError
 
@@ -44,33 +45,22 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
     except Exception:
         error = traceback.format_exc()
         logger.error(
-            'Attachment failed for expense group id %s / workspace id %s \n Error: %s',
-            expense_group.id, expense_group.workspace_id, error
+            'Attachment failed for expense group id %s / workspace id %s Error: %s',
+            expense_group.id, expense_group.workspace_id, {'error': error}
         )
 
-def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str], user):
+def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule expense reports creation
     :param expense_group_ids: List of expense group ids
     :param workspace_id: workspace id
-    :param user: user email
     :return: None
     """
-    if expense_group_ids:
-        expense_groups = ExpenseGroup.objects.filter(
-            workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True
-        ).all()
-    else:
-        expense_groups = ExpenseGroup.objects.filter(
-            workspace_id=workspace_id, expensereport__id__isnull=True
-        ).all()
+    expense_groups = ExpenseGroup.objects.filter(
+        workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True
+    ).all()
 
-    fyle_credentials = FyleCredential.objects.get(
-        workspace_id=workspace_id)
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-    fyle_sdk_connection = fyle_connector.connection
-    jobs = fyle_sdk_connection.Jobs
-    user_profile = fyle_sdk_connection.Employees.get_my_profile()['data']
+    chain = Chain(cached=True)
 
     for expense_group in expense_groups:
         task_log, _ = TaskLog.objects.update_or_create(
@@ -81,43 +71,25 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
                 'type': 'CREATING_EXPENSE_REPORTS'
             }
         )
-        created_job = jobs.trigger_now(
-            callback_url='{0}{1}'.format(settings.API_URL, \
-                '/workspaces/{0}/sage_intacct/expense_reports/'.format(workspace_id)),
-            callback_method='POST', object_id=task_log.id, payload={
-                'expense_group_id': expense_group.id,
-                'task_log_id': task_log.id
-            }, job_description='Create Expense Report: Workspace id - {0}, user - {1}, expense group id - {2}'.format(
-                workspace_id, user, expense_group.id
-            ),
-            org_user_id=user_profile['id']
-        )
-        task_log.task_id = created_job['id']
+
+        chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log)
         task_log.save()
 
-def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], user):
+    if chain.length():
+        chain.run()
+
+def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule bill creation
     :param expense_group_ids: List of expense group ids
     :param workspace_id: workspace id
-    :param user: user email
     :return: None
     """
-    if expense_group_ids:
-        expense_groups = ExpenseGroup.objects.filter(
-            workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True
-        ).all()
-    else:
-        expense_groups = ExpenseGroup.objects.filter(
-            workspace_id=workspace_id, bill__id__isnull=True
-        ).all()
+    expense_groups = ExpenseGroup.objects.filter(
+        workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True
+    ).all()
 
-    fyle_credentials = FyleCredential.objects.get(
-        workspace_id=workspace_id)
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-    fyle_sdk_connection = fyle_connector.connection
-    jobs = fyle_sdk_connection.Jobs
-    user_profile = fyle_sdk_connection.Employees.get_my_profile()['data']
+    chain = Chain(cached=True)
 
     for expense_group in expense_groups:
         task_log, _ = TaskLog.objects.update_or_create(
@@ -128,43 +100,25 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], use
                 'type': 'CREATING_BILLS'
             }
         )
-        created_job = jobs.trigger_now(
-            callback_url='{0}{1}'.format(settings.API_URL, \
-                '/workspaces/{0}/sage_intacct/bills/'.format(workspace_id)),
-            callback_method='POST', object_id=task_log.id, payload={
-                'expense_group_id': expense_group.id,
-                'task_log_id': task_log.id
-            }, job_description='Create Bill: Workspace id - {0}, user - {1}, expense group id - {2}'.format(
-                workspace_id, user, expense_group.id
-            ),
-            org_user_id=user_profile['id']
-        )
-        task_log.task_id = created_job['id']
+
+        chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log)
         task_log.save()
 
-def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: List[str], user):
+    if chain.length():
+        chain.run()
+
+def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule charge card transaction creation
     :param expense_group_ids: List of expense group ids
     :param workspace_id: workspace id
-    :param user: user email
     :return: None
     """
-    if expense_group_ids:
-        expense_groups = ExpenseGroup.objects.filter(
-            workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True
-        ).all()
-    else:
-        expense_groups = ExpenseGroup.objects.filter(
-            workspace_id=workspace_id, chargecardtransaction__id__isnull=True
-        ).all()
+    expense_groups = ExpenseGroup.objects.filter(
+        workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True
+    ).all()
 
-    fyle_credentials = FyleCredential.objects.get(
-        workspace_id=workspace_id)
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-    fyle_sdk_connection = fyle_connector.connection
-    jobs = fyle_sdk_connection.Jobs
-    user_profile = fyle_sdk_connection.Employees.get_my_profile()['data']
+    chain = Chain(cached=True)
 
     for expense_group in expense_groups:
         task_log, _ = TaskLog.objects.update_or_create(
@@ -175,19 +129,12 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
                 'type': 'CREATING_CHARGE_CARD_TRANSACTIONS'
             }
         )
-        created_job = jobs.trigger_now(
-            callback_url='{0}{1}'.format(settings.API_URL, \
-                '/workspaces/{0}/sage_intacct/charge_card_transactions/'.format(workspace_id)),
-            callback_method='POST', object_id=task_log.id, payload={
-                'expense_group_id': expense_group.id,
-                'task_log_id': task_log.id
-            },
-            job_description='Create Charge Card Transactions: Workspace id - {0}, user - {1}, expense group id - {2}'\
-                .format(workspace_id, user, expense_group.id),
-            org_user_id=user_profile['id']
-        )
-        task_log.task_id = created_job['id']
+
+        chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log)
         task_log.save()
+
+    if chain.length():
+        chain.run()
 
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.error(exception.response)
@@ -355,8 +302,8 @@ def create_expense_report(expense_group, task_log):
                 except Exception:
                     error = traceback.format_exc()
                     logger.error(
-                        'Updating Attachment failed for expense group id %s / workspace id %s \n Error: %s',
-                        expense_group.id, expense_group.workspace_id, error
+                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                        expense_group.id, expense_group.workspace_id, {'error': error}
                     )
 
             task_log.detail = created_expense_report
@@ -401,7 +348,7 @@ def create_expense_report(expense_group, task_log):
         }
         task_log.status = 'FATAL'
         task_log.save(update_fields=['detail', 'status'])
-        logger.exception('Something unexpected happened workspace_id: %s\n%s', task_log.workspace_id, error)
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
 def create_bill(expense_group, task_log):
@@ -432,8 +379,8 @@ def create_bill(expense_group, task_log):
                 except Exception:
                     error = traceback.format_exc()
                     logger.error(
-                        'Updating Attachment failed for expense group id %s / workspace id %s \n Error: %s',
-                        expense_group.id, expense_group.workspace_id, error
+                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                        expense_group.id, expense_group.workspace_id, {'error': error}
                     )
 
             task_log.detail = created_bill
@@ -478,7 +425,7 @@ def create_bill(expense_group, task_log):
         }
         task_log.status = 'FATAL'
         task_log.save(update_fields=['detail', 'status'])
-        logger.exception('Something unexpected happened workspace_id: %s\n%s', task_log.workspace_id, error)
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 def create_charge_card_transaction(expense_group, task_log):
     try:
@@ -508,8 +455,8 @@ def create_charge_card_transaction(expense_group, task_log):
                 except Exception:
                     error = traceback.format_exc()
                     logger.error(
-                        'Updating Attachment failed for expense group id %s / workspace id %s \n Error: %s',
-                        expense_group.id, expense_group.workspace_id, error
+                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                        expense_group.id, expense_group.workspace_id, {'error': error}
                     )
 
             task_log.detail = created_charge_card_transaction
@@ -554,4 +501,4 @@ def create_charge_card_transaction(expense_group, task_log):
         }
         task_log.status = 'FATAL'
         task_log.save(update_fields=['detail', 'status'])
-        logger.exception('Something unexpected happened workspace_id: %s\n%s', task_log.workspace_id, error)
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)

@@ -18,10 +18,11 @@ from fyle_rest_auth.models import AuthToken
 
 from fyle_intacct_api.utils import assert_valid
 
-from .models import Workspace, FyleCredential, SageIntacctCredential, WorkspaceGeneralSettings
+from .models import Workspace, FyleCredential, SageIntacctCredential, WorkspaceGeneralSettings, WorkspaceSchedule
 from .utils import create_or_update_general_settings
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
-    WorkSpaceGeneralSettingsSerializer
+    WorkSpaceGeneralSettingsSerializer, WorkspaceScheduleSerializer
+from .tasks import schedule_sync
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -387,6 +388,52 @@ class GeneralSettingsView(viewsets.ViewSet):
             return Response(
                 {
                     'message': 'General Settings does not exist in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ScheduleView(viewsets.ViewSet):
+    """
+    Schedule View
+    """
+    def post(self, request, **kwargs):
+        """
+        Post Settings
+        """
+        schedule_enabled = request.data.get('schedule_enabled')
+        assert_valid(schedule_enabled is not None, 'Schedule enabled cannot be null')
+
+        hours = request.data.get('hours')
+        assert_valid(hours is not None, 'Hours cannot be left empty')
+
+        next_run = request.data.get('next_run')
+        assert_valid(next_run is not None, 'next_run value cannot be empty')
+
+        schedule_settings = schedule_sync(
+            workspace_id=kwargs['workspace_id'],
+            schedule_enabled=schedule_enabled,
+            hours=hours,
+            next_run=next_run
+        )
+
+        return Response(
+            data=WorkspaceScheduleSerializer(schedule_settings).data,
+            status=status.HTTP_200_OK
+        )
+
+    def get(self, *args, **kwargs):
+        try:
+            schedule = WorkspaceSchedule.objects.get(workspace_id=kwargs['workspace_id'])
+
+            return Response(
+                data=WorkspaceScheduleSerializer(schedule).data,
+                status=status.HTTP_200_OK
+            )
+        except WorkspaceSchedule.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Schedule settings does not exist in workspace'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
