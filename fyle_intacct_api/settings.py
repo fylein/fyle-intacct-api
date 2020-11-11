@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # Installed Apps
     'rest_framework',
     'corsheaders',
+    'django_q',
     'fyle_rest_auth',
     'fyle_accounting_mappings',
 
@@ -66,6 +67,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'fyle_intacct_api.logging_middleware.ErrorHandlerMiddleware',
 ]
 
 ROOT_URLCONF = 'fyle_intacct_api.urls'
@@ -107,23 +109,53 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = 'fyle_intacct_api.wsgi.application'
 
+SERVICE_NAME = os.environ.get('SERVICE_NAME')
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} %s {asctime} {module} {message} ' % SERVICE_NAME,
+            'style': '{',
+        },
+        'requests': {
+            'format': 'request {levelname} %s {asctime} {message}' % SERVICE_NAME,
+            'style': '{'
+        }
+    },
     'handlers': {
-        'console': {
+        'debug_logs': {
             'class': 'logging.StreamHandler',
-            'stream': sys.stderr
+            'stream': sys.stdout,
+            'formatter': 'verbose'
+        },
+        'request_logs': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+            'formatter': 'requests'
         },
     },
     'loggers': {
-        'django.request': {
-            'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': False,
+        'django': {
+            'handlers': ['request_logs'],
+            'propagate': True,
         },
-    },
+        'django.request': {
+            'handlers': ['request_logs'],
+            'propagate': False
+        },
+        'fyle_intacct_api': {
+            'handlers': ['debug_logs'],
+            'level': 'ERROR',
+            'propagate': False
+        },
+        'apps': {
+            'handlers': ['debug_logs'],
+            'level': 'ERROR',
+            'propagate': False
+        }
+    }
 }
 
 CACHES = {
@@ -131,6 +163,14 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
         'LOCATION': 'auth_cache',
     }
+}
+
+Q_CLUSTER = {
+    'name': 'fyle_intacct_api',
+    'compress': True,
+    'save_limit': 0,
+    'orm': 'default',
+    'ack_failures': True
 }
 
 # Database

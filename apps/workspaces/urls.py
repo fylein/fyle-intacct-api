@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.urls import path, include
 
-from .views import WorkspaceView, ConnectFyleView, ConnectSageIntacctView, GeneralSettingsView, ReadyView
+from .views import WorkspaceView, ConnectFyleView, ConnectSageIntacctView, GeneralSettingsView, ReadyView, ScheduleView
 
 urlpatterns = [
     path('', WorkspaceView.as_view({'get': 'get', 'post': 'post'})),
@@ -31,5 +31,6 @@ urlpatterns = [
     path('<int:workspace_id>/sage_intacct/', include('apps.sage_intacct.urls')),
     path('<int:workspace_id>/mappings/', include('apps.mappings.urls')),
     path('<int:workspace_id>/tasks/', include('apps.tasks.urls')),
-    path('ready/', ReadyView.as_view({'get': 'get'}))
+    path('ready/', ReadyView.as_view({'get': 'get'})),
+    path('<int:workspace_id>/schedule/', ScheduleView.as_view({'post': 'post', 'get': 'get'}))
 ]

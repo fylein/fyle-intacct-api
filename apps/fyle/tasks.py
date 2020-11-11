@@ -5,8 +5,9 @@ from datetime import datetime
 
 from django.conf import settings
 from django.db import transaction
+from django_q.tasks import async_task
 
-from apps.workspaces.models import FyleCredential, Workspace
+from apps.workspaces.models import FyleCredential, Workspace, WorkspaceGeneralSettings
 from apps.tasks.models import TaskLog
 
 from .models import Expense, ExpenseGroup
@@ -16,43 +17,25 @@ from .serializers import ExpenseGroupSerializer
 logger = logging.getLogger(__name__)
 
 
-def schedule_expense_group_creation(workspace_id: int, user: str):
+def schedule_expense_group_creation(workspace_id: int):
     """
     Schedule Expense group creation
     :param workspace_id: Workspace id
-    :param user: User email
     :return: None
     """
-    fyle_credentials = FyleCredential.objects.get(
-        workspace_id=workspace_id)
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-    fyle_sdk_connection = fyle_connector.connection
-
-    jobs = fyle_sdk_connection.Jobs
-    user_profile = fyle_sdk_connection.Employees.get_my_profile()['data']
-
     task_log = TaskLog.objects.create(
         workspace_id=workspace_id,
         type='FETCHING_EXPENSES',
         status='IN_PROGRESS'
     )
 
-    created_job = jobs.trigger_now(
-        callback_url='{0}{1}'.format(
-            settings.API_URL,
-            '/workspaces/{0}/fyle/expense_groups/'.format(workspace_id)
-        ),
-        callback_method='POST',
-        object_id=task_log.id,
-        payload={
-            'task_log_id': task_log.id
-        },
-        job_description='Fetch expenses: Workspace id - {0}, user - {1}'.format(
-            workspace_id, user
-        ),
-        org_user_id=user_profile['id']
-    )
-    task_log.task_id = created_job['id']
+    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
+
+    fund_source = ['PERSONAL']
+    if general_settings.corporate_credit_card_expenses_object:
+        fund_source.append('CCC')
+
+    async_task('apps.fyle.tasks.create_expense_groups', workspace_id, ['PAYMENT_PROCESSING'], fund_source, task_log)
     task_log.save()
 
 def create_expense_groups(workspace_id: int, state: List[str], fund_source: List[str], task_log: TaskLog):
@@ -127,4 +110,4 @@ def async_create_expense_groups(workspace_id: int, state: List[str], fund_source
         }
         task_log.status = 'FATAL'
         task_log.save(update_fields=['detail', 'status'])
-        logger.exception('Something unexpected happened workspace_id: %s\n%s', task_log.workspace_id, error)
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
