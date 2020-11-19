@@ -121,7 +121,7 @@ class SageIntacctConnector:
             charge_card_accounts_attributes.append({
                 'attribute_type': 'CHARGE_CARD_NUMBER',
                 'display_name': 'Charge Card Account',
-                'value': charge_card_account['CARDNUM'],
+                'value': charge_card_account['CARDID'],
                 'destination_id': charge_card_account['CARDID']
             })
 
