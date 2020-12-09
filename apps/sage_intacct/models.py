@@ -1,11 +1,13 @@
 """
 Sage Intacct models
 """
+from datetime import datetime
+
 from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting
 
-from apps.fyle.models import ExpenseGroup, Expense
+from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
 
 
@@ -20,12 +22,13 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
     ).first()
 
     if project_setting:
-        source_value = None
-
         if project_setting.source_field == 'PROJECT':
             source_value = lineitem.project
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=project_setting.source_field,
@@ -49,12 +52,13 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
     ).first()
 
     if department_setting:
-        source_value = None
-
         if department_setting.source_field == 'PROJECT':
             source_value = lineitem.project
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=department_setting.source_field,
@@ -78,12 +82,13 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     ).first()
 
     if location_setting:
-        source_value = None
-
         if location_setting.source_field == 'PROJECT':
             source_value = lineitem.project
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=location_setting.source_field,
@@ -96,6 +101,22 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             location_id = mapping.destination.destination_id
     return location_id
 
+def get_transaction_date(expense_group: ExpenseGroup) -> str:
+    if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
+        return expense_group.description['spent_at']
+    elif 'approved_at' in expense_group.description and expense_group.description['approved_at']:
+        return expense_group.description['approved_at']
+    elif 'verified_at' in expense_group.description and expense_group.description['verified_at']:
+        return expense_group.description['verified_at']
+
+    return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+
+def get_expense_purpose(lineitem, category) -> str:
+    expense_purpose = ', purpose - {0}'.format(lineitem.purpose) if lineitem.purpose else ''
+    spent_at = ' spent on {0} '.format(lineitem.spent_at.date()) if lineitem.spent_at else ''
+    return 'Expense by {0} against category {1}{2}with claim number - {3}{4}'.format(
+        lineitem.employee_email, category, spent_at, lineitem.claim_number, expense_purpose)
+
 
 class Bill(models.Model):
     """
@@ -107,6 +128,7 @@ class Bill(models.Model):
     description = models.TextField(help_text='Sage Intacct Bill Description')
     memo = models.CharField(max_length=255, help_text='Sage Intacct docnumber', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
+    transaction_date = models.DateTimeField(help_text='Bill transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -139,7 +161,10 @@ class Bill(models.Model):
             defaults={
                 'vendor_id': vendor_id,
                 'description': description,
-                'memo': expense_group.fyle_group_id
+                'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
+                expense_group.fund_source == 'PERSONAL' else
+                'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'transaction_date': get_transaction_date(expense_group)
             }
         )
         return bill_object
@@ -159,7 +184,6 @@ class BillLineitem(models.Model):
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     memo = models.CharField(help_text='Sage Intacct lineitem description', max_length=255, null=True)
     amount = models.FloatField(help_text='Bill amount')
-    spent_at = models.DateTimeField(help_text='Spent at')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -223,8 +247,8 @@ class BillLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': department_id,
                     'location_id': location_id,
-                    'spent_at': lineitem.spent_at,
-                    'amount': lineitem.amount
+                    'amount': lineitem.amount,
+                    'memo': get_expense_purpose(lineitem, category)
                 }
             )
 
@@ -243,6 +267,7 @@ class ExpenseReport(models.Model):
     description = models.TextField(help_text='Sage Intacct ExpenseReport Description')
     memo = models.CharField(max_length=255, help_text='Sage Intacct memo', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
+    transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -269,7 +294,10 @@ class ExpenseReport(models.Model):
                         workspace_id=expense_group.workspace_id
                     ).destination.destination_id,
                     'description': description,
-                    'memo': expense_group.fyle_group_id
+                    'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
+                    expense_group.fund_source == 'PERSONAL' else
+                    'Credit card expenses by {0}'.format(description.get('employee_email')),
+                    'transaction_date': get_transaction_date(expense_group),
                 }
             )
         return expense_report_object
@@ -289,7 +317,7 @@ class ExpenseReportLineitem(models.Model):
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     memo = models.CharField(help_text='Sage Intacct lineitem description', max_length=255, null=True)
     amount = models.FloatField(help_text='Expense amount')
-    spent_at = models.DateTimeField(help_text='Spent at')
+    transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -344,8 +372,9 @@ class ExpenseReportLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': department_id,
                     'location_id': location_id,
-                    'spent_at': lineitem.spent_at,
-                    'amount': lineitem.amount
+                    'transaction_date': get_transaction_date(expense_group),
+                    'amount': lineitem.amount,
+                    'memo': get_expense_purpose(lineitem, category)
                 }
             )
 
@@ -363,6 +392,7 @@ class ChargeCardTransaction(models.Model):
     description = models.TextField(help_text='Sage Intacct Charge Card Transaction Description')
     memo = models.CharField(max_length=255, help_text='Sage Intacct referenceno', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
+    transaction_date = models.DateTimeField(help_text='Safe Intacct Charge Card transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -400,7 +430,10 @@ class ChargeCardTransaction(models.Model):
                 defaults={
                     'charge_card_id': charge_card_id,
                     'description': description,
-                    'memo': expense_group.fyle_group_id
+                    'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
+                    expense_group.fund_source == 'PERSONAL' else
+                    'Credit card expenses by {0}'.format(description.get('employee_email')),
+                    'transaction_date': get_transaction_date(expense_group)
                 }
             )
 
@@ -419,6 +452,7 @@ class ChargeCardTransactionLineitem(models.Model):
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
+    memo = models.CharField(help_text='Sage Intacct lineitem description', max_length=255, null=True)
     amount = models.FloatField(help_text='Charge Card Transaction amount')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -466,7 +500,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': department_id,
                     'location_id': location_id,
-                    'amount': lineitem.amount
+                    'amount': lineitem.amount,
+                    'memo': get_expense_purpose(lineitem, category)
                 }
             )
 

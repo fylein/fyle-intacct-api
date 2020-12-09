@@ -18,6 +18,8 @@ from fyle_rest_auth.models import AuthToken
 
 from fyle_intacct_api.utils import assert_valid
 
+from apps.fyle.models import ExpenseGroupSettings
+
 from .models import Workspace, FyleCredential, SageIntacctCredential, WorkspaceGeneralSettings, WorkspaceSchedule
 from .utils import create_or_update_general_settings
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
@@ -51,6 +53,8 @@ class WorkspaceView(viewsets.ViewSet):
             workspace.user.add(User.objects.get(user_id=request.user))
         else:
             workspace = Workspace.objects.create(name=org_name, fyle_org_id=org_id)
+
+            ExpenseGroupSettings.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 
