@@ -230,14 +230,15 @@ class SageIntacctConnector:
         """
         expsense_payload = []
         for lineitem in expense_report_lineitems:
+            transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
                     if lineitem.expense_type_id else lineitem.gl_account_number,
                 'amount': lineitem.amount,
                 'expensedate': {
-                    'year': datetime.strftime(lineitem.spent_at, '%Y'),
-                    'month': datetime.strftime(lineitem.spent_at, '%m'),
-                    'day': datetime.strftime(lineitem.spent_at, '%d')
+                    'year': transaction_date.year,
+                    'month': transaction_date.month,
+                    'day': transaction_date.day
                 },
                 'memo': lineitem.memo,
                 'locationid': lineitem.location_id,
@@ -247,17 +248,16 @@ class SageIntacctConnector:
 
             expsense_payload.append(expense)
 
+        transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
         expense_report_payload = {
             'employeeid': expense_report.employee_id,
             'datecreated': {
-                'year': datetime.today().year,
-                'month': datetime.today().month,
-                'day': datetime.today().day
+                'year': transaction_date.year,
+                'month': transaction_date.month,
+                'day': transaction_date.day
             },
             'state': 'Submitted',
-            'description': '{0} - {1}'.format(expense_report.description['claim_number'], \
-                expense_report.description['employee_email']),
-            'memo': expense_report.memo,
+            'description': expense_report.memo,
             'expenses': {
                 'expense': expsense_payload
             }
@@ -277,6 +277,7 @@ class SageIntacctConnector:
             expense = {
                 'ACCOUNTNO': lineitem.gl_account_number,
                 'TRX_AMOUNT': lineitem.amount,
+                'ENTRYDESCRIPTION': lineitem.memo,
                 'LOCATIONID': lineitem.location_id,
                 'DEPARTMENTID': lineitem.department_id,
                 'PROJECTID': lineitem.project_id
@@ -284,12 +285,15 @@ class SageIntacctConnector:
 
             bill_lineitems_payload.append(expense)
 
+        transaction_date = datetime.strptime(bill.transaction_date, '%Y-%m-%dT%H:%M:%S')
+        transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
         current_date = '{0}/{1}/{2}'.format(datetime.today().month, datetime.today().day, datetime.today().year)
+
         bill_payload = {
-            'WHENCREATED': current_date,
+            'WHENCREATED': transaction_date,
             'VENDORID': bill.vendor_id,
             'RECORDID': '{0} - {1}'.format(bill.description['claim_number'], bill.description['employee_email']),
-            'DOCNUMBER': bill.memo,
+            'DESCRIPTION': bill.memo,
             'WHENDUE': current_date,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
@@ -310,6 +314,7 @@ class SageIntacctConnector:
         for lineitem in charge_card_transaction_lineitems:
             expense = {
                 'glaccountno': lineitem.gl_account_number,
+                'description': lineitem.memo,
                 'paymentamount': lineitem.amount,
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
@@ -318,12 +323,13 @@ class SageIntacctConnector:
 
             charge_card_transaction_payload.append(expense)
 
+        transaction_date = datetime.strptime(charge_card_transaction.transaction_date, '%Y-%m-%dT%H:%M:%S')
         charge_card_transaction_payload = {
             'chargecardid': charge_card_transaction.charge_card_id,
             'paymentdate': {
-                'year': datetime.today().year,
-                'month': datetime.today().month,
-                'day': datetime.today().day
+                'year': transaction_date.year,
+                'month': transaction_date.month,
+                'day': transaction_date.day
             },
             'referenceno': charge_card_transaction.memo,
             'description': '{0} - {1}'.format(charge_card_transaction.description['claim_number'], \

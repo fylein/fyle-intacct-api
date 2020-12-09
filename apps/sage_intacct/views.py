@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from rest_framework.response import Response
 from rest_framework.views import status
 from rest_framework import generics
@@ -15,7 +17,8 @@ from .utils import SageIntacctConnector
 from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
     create_charge_card_transaction, schedule_charge_card_transaction_creation
 from .models import ExpenseReport, Bill, ChargeCardTransaction
-from .serializers import ExpenseReportSerializer, BillSerializer, ChargeCardTransactionSerializer
+from .serializers import ExpenseReportSerializer, BillSerializer, ChargeCardTransactionSerializer, \
+    SageIntacctFieldSerializer
 
 
 class EmployeeView(generics.ListCreateAPIView):
@@ -426,3 +429,17 @@ class ChargeCardTransactionsScheduleView(generics.CreateAPIView):
         return Response(
             status=status.HTTP_200_OK
         )
+
+
+class SageIntacctFieldsView(generics.ListAPIView):
+    pagination_class = None
+    serializer_class = SageIntacctFieldSerializer
+
+    def get_queryset(self):
+        attributes = DestinationAttribute.objects.filter(
+            ~Q(attribute_type='EMPLOYEE') & ~Q(attribute_type='VENDOR') & ~Q(attribute_type='CHARGE_CARD_NUMBER') &
+            ~Q(attribute_type='EXPENSE_TYPE') & ~Q(attribute_type='ACCOUNT') & ~Q(attribute_type='CCC_ACCOUNT'),
+            workspace_id=self.kwargs['workspace_id']
+        ).values('attribute_type', 'display_name').distinct()
+
+        return attributes

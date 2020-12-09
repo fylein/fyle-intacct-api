@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from fyle_accounting_mappings.models import DestinationAttribute
+
 from .models import Bill, BillLineitem, ExpenseReport, ExpenseReportLineitem, \
     ChargeCardTransaction, ChargeCardTransactionLineitem
 
@@ -56,3 +58,12 @@ class ChargeCardTransactionLineitemsSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChargeCardTransactionLineitem
         fields = '__all__'
+
+
+class SageIntacctFieldSerializer(serializers.ModelSerializer):
+    """
+    Expense Fields Serializer
+    """
+    class Meta:
+        model = DestinationAttribute
+        fields = ['attribute_type', 'display_name']
