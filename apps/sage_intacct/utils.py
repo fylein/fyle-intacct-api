@@ -292,8 +292,7 @@ class SageIntacctConnector:
         bill_payload = {
             'WHENCREATED': transaction_date,
             'VENDORID': bill.vendor_id,
-            'RECORDID': '{0} - {1}'.format(bill.description['claim_number'], bill.description['employee_email']),
-            'DESCRIPTION': bill.memo,
+            'RECORDID': bill.memo,
             'WHENDUE': current_date,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
@@ -331,9 +330,7 @@ class SageIntacctConnector:
                 'month': transaction_date.month,
                 'day': transaction_date.day
             },
-            'referenceno': charge_card_transaction.memo,
-            'description': '{0} - {1}'.format(charge_card_transaction.description['claim_number'], \
-                charge_card_transaction.description['employee_email']),
+            'description': charge_card_transaction.memo,
             'ccpayitems': {
                 'ccpayitem': charge_card_transaction_payload
             }
