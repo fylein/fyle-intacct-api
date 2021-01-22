@@ -26,8 +26,6 @@ services:
       SI_SENDER_ID: 
       SI_SENDER_PASSWORD: 
       
-
-
   qcluster:
     build: ./
     entrypoint: python manage.py qcluster
