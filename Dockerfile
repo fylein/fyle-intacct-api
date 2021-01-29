@@ -16,7 +16,7 @@ COPY . /fyle-intacct-api/
 WORKDIR /fyle-intacct-api
 
 # Do linting checks
-RUN pylint --load-plugins pylint_django==2.3.0 --rcfile=.pylintrc **/**.py
+RUN pylint --load-plugins pylint_django --rcfile=.pylintrc **/**.py
 
 # Expose development port
 EXPOSE 8000
