@@ -31,6 +31,12 @@ class MappingUtils:
             assert_valid('default_ccc_vendor_id' in general_mapping and general_mapping['default_ccc_vendor_id'],
                          'default ccc vendor id field is blank')
 
+        if general_settings.import_projects:
+            assert_valid('default_item_name' in general_mapping and general_mapping['default_item_name'],
+                         'default item name field is blank')
+            assert_valid('default_item_id' in general_mapping and general_mapping['default_item_id'],
+                         'default item id field is blank')
+
         general_mapping, _ = GeneralMapping.objects.update_or_create(
             workspace_id=self.__workspace_id,
             defaults={
@@ -53,7 +59,11 @@ class MappingUtils:
                 'default_ccc_vendor_name': general_mapping.get('default_ccc_vendor_name') \
                     if general_mapping.get('default_ccc_vendor_name') else None,
                 'default_ccc_vendor_id': general_mapping.get('default_ccc_vendor_id') \
-                    if general_mapping.get('default_ccc_vendor_id') else None
+                    if general_mapping.get('default_ccc_vendor_id') else None,    
+                'default_item_name': general_mapping.get('default_item_name') \
+                    if general_mapping.get('default_item_name') else None,
+                'default_item_id': general_mapping.get('default_item_id') \
+                    if general_mapping.get('default_item_id') else None
             }
         )
 

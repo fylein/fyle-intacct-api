@@ -35,7 +35,6 @@ def schedule_expense_group_creation(workspace_id: int):
         fund_source.append('CCC')
 
     async_task('apps.fyle.tasks.create_expense_groups', workspace_id, fund_source, task_log)
-    task_log.save()
 
 def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: TaskLog):
     """

@@ -223,6 +223,75 @@ class ChargeCardAccountView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class CustomerView(generics.ListCreateAPIView):
+    """
+    Customer view
+    """
+    serializer_class = DestinationAttributeSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return DestinationAttribute.objects.filter(
+            attribute_type='CUSTOMER', workspace_id=self.kwargs['workspace_id']).order_by('value')
+
+    def post(self, request, *args, **kwargs):
+        """
+        Get customers from Sage Intacct
+        """
+        try:
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
+            sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+
+            customers = sage_intacct_connector.sync_customers()
+
+            return Response(
+                data=self.serializer_class(customers, many=True).data,
+                status=status.HTTP_200_OK
+            )
+        except SageIntacctCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Sage Intacct credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ItemView(generics.ListCreateAPIView):
+    """
+    Item view
+    """
+    serializer_class = DestinationAttributeSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return DestinationAttribute.objects.filter(
+            attribute_type='ITEM', workspace_id=self.kwargs['workspace_id']).order_by('value')
+
+    def post(self, request, *args, **kwargs):
+        """
+        Get items from Sage Intacct
+        """
+        try:
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
+            sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+
+            items = sage_intacct_connector.sync_items()
+
+            return Response(
+                data=self.serializer_class(items, many=True).data,
+                status=status.HTTP_200_OK
+            )
+        except SageIntacctCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Sage Intacct credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 class ProjectView(generics.ListCreateAPIView):
     """
     Project view
