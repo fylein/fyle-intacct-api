@@ -4,58 +4,73 @@ Django Rest Framework API for Fyle Sage Intacct Integration
 
 ### Setup
 
-* Rename setup_template.sh to setup.sh
+* Download and install Docker desktop for Mac from [here.](https://www.docker.com/products/docker-desktop)
+
+* If you're using a linux machine, please download docker according to the distrubution you're on.
+
+* Rename docker-compose.yml.template to docker-compose.yml
 
     ```
-    $ mv setup_template.sh setup.sh
+    $ mv docker-compose.yml.template docker-compose.yml
     ```
   
-* Setup environment variables in setup.sh
+* Setup environment variables in docker_compose.yml
 
-    ```bash
-    # Django Settings
-    export SECRET_KEY=YOUR DJANGO SECRET KEY
-    export ALLOWED_HOSTS=HOSTS SEPARATED BY COMMAS
-    export DEBUG=True
-    
-    # Database Settings
-    export DB_NAME=POSTGRES DB NAME
-    export DB_USER=POSTGRES DB USER
-    export DB_PASSWORD=POSTGRES DB PASSWORD
-    export DB_HOST=POSTGRES DB
-    export DB_PORT=POSTGRES DB PORT
-    
-    # Fyle Settings
-    export FYLE_BASE_URL=FYLE BASE URL
-    export FYLE_CLIENT_ID=FYLE CLIENT ID
-    export FYLE_CLIENT_SECRET=FYLE CLIENT SECRET
-    export FYLE_TOKEN_URI=FYLE TOKEN URI
-    
-    # Sage Intacct Settings
-    export SI_SENDER_ID=SAGE INTACCT SENDER ID
-    export SI_SENDER_PASSWORD=SAGE INTACCT SENDER PASSWORD
+    ```yaml
+    environment: 
+      SECRET_KEY: thisisthedjangosecretkey
+      ENCRYPTION_KEY: 
+      ALLOWED_HOSTS: "*"
+      DEBUG: "False"
+      API_URL: http://localhost:8000/api
+      DATABASE_URL: postgres://postgres:postgres@db:5432/intacct_db
+      FYLE_BASE_URL: 
+      FYLE_CLIENT_ID: 
+      FYLE_CLIENT_SECRET: 
+      FYLE_TOKEN_URI: 
+      FYLE_JOBS_URL: 
+      SI_SENDER_ID: 
+      SI_SENDER_PASSWORD: 
    ```
-
-* Install the requirements
-
-    ```
-    pip install -r requirements.txt
-    ```
-
-* Run the migrations
+  
+* Build docker images
 
     ```
-    python manage.py migrate
+    docker-compose build api qcluster
     ```
 
-* Create superuser
+* Run docker containers
 
     ```
-    python mange.py createsuperuser
+    docker-compose up -d db api qcluster
     ```
 
-* run the development server
+* The database can be accessed by this command, on password prompt type `postgres`
 
     ```
-    bash run.sh
+    docker-compose run db psql -h db -U postgres intacct_db
+    ```
+
+* To tail the logs a service you can do
+    
+    ```
+    docker-compose logs -f <api / qcluster>
+    ```
+
+* To stop the containers
+
+    ```
+    docker-compose stop api qcluster
+    ```
+
+* To restart any containers - `would usually be needed with qcluster after you make any code changes`
+
+    ```
+    docker-compose restart qcluster
+    ```
+
+* To run bash inside any container for purpose of debugging do
+
+    ```
+    docker-compose exec api /bin/bash
     ```
