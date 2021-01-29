@@ -103,17 +103,17 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             location_id = mapping.destination.destination_id
     return location_id
 
-def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, project_id: str):
+def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
     customer_id = None
 
     if project_id:
-        customer = DestinationAttribute.objects.filter(
+        project = DestinationAttribute.objects.filter(
             attribute_type='PROJECT',
             destination_id=project_id,
             workspace_id=expense_group.workspace_id
         ).first()
-        if customer:
-            customer_id = customer.detail['CUSTOMERID']
+        if project:
+            customer_id = project.detail['CUSTOMERID']
 
     return customer_id
 
@@ -267,7 +267,7 @@ class BillLineitem(models.Model):
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, lineitem, project_id)
+            customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
@@ -400,7 +400,7 @@ class ExpenseReportLineitem(models.Model):
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, lineitem, project_id)
+            customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
@@ -536,7 +536,7 @@ class ChargeCardTransactionLineitem(models.Model):
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, lineitem, project_id)
+            customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(

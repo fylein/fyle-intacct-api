@@ -148,32 +148,13 @@ class SageIntacctConnector:
                 'display_name': 'project',
                 'value': project['NAME'],
                 'destination_id': project['PROJECTID'],
+                'active': True if project['STATUS'] == 'active' else False,
                 'detail': detail
             })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             project_attributes, self.workspace_id)
         return account_attributes
-
-    def sync_customers(self):
-        """
-        Get customers
-        """
-        customers = self.connection.customers.get_all()
-
-        customer_attributes = []
-
-        for customer in customers:
-            customer_attributes.append({
-                'attribute_type': 'CUSTOMER',
-                'display_name': 'customer',
-                'value': customer['NAME'],
-                'destination_id': customer['CUSTOMERID']
-            })
-
-        attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            customer_attributes, self.workspace_id)
-        return attributes
 
     def sync_items(self):
         """
@@ -373,7 +354,7 @@ class SageIntacctConnector:
                 'locationid': lineitem.location_id,
                 'projectid': lineitem.project_id,
                 'customerid': lineitem.customer_id,
-                'itemid': lineitem.item_id,
+                'itemid': lineitem.item_id
             }
 
             charge_card_transaction_payload.append(expense)

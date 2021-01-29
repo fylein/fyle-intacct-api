@@ -2,8 +2,6 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import status
 
-from django.db.models import Q
-
 from fyle_intacct_api.utils import assert_valid
 
 from .models import TaskLog
