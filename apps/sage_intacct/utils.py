@@ -352,8 +352,8 @@ class SageIntacctConnector:
                 'paymentamount': lineitem.amount,
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
-                'projectid': lineitem.project_id,
                 'customerid': lineitem.customer_id,
+                'projectid': lineitem.project_id,
                 'itemid': lineitem.item_id
             }
 
