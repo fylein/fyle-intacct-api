@@ -111,7 +111,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
             attribute_type='PROJECT',
             destination_id=project_id,
             workspace_id=expense_group.workspace_id
-        ).first()
+        ).order_by('-updated_at').first()
         if project and project.detail:
             customer_id = project.detail['CUSTOMERID']
 
