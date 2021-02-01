@@ -112,7 +112,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
             destination_id=project_id,
             workspace_id=expense_group.workspace_id
         ).first()
-        if project:
+        if project and project.detail:
             customer_id = project.detail['CUSTOMERID']
 
     return customer_id
