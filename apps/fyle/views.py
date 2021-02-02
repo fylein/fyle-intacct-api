@@ -223,7 +223,7 @@ class ProjectView(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Get categories from Fyle
+        Get projects from Fyle
         """
         try:
             fyle_credentials = FyleCredential.objects.get(
