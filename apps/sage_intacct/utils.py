@@ -138,16 +138,45 @@ class SageIntacctConnector:
         project_attributes = []
 
         for project in projects:
+            detail = {
+                'CUSTOMERID': project['CUSTOMERID'],
+                'CUSTOMERNAME': project['CUSTOMERNAME']
+            }
+
             project_attributes.append({
                 'attribute_type': 'PROJECT',
                 'display_name': 'project',
                 'value': project['NAME'],
-                'destination_id': project['PROJECTID']
+                'destination_id': project['PROJECTID'],
+                'active': True if project['STATUS'] == 'active' else False,
+                'detail': detail
             })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             project_attributes, self.workspace_id)
         return account_attributes
+
+    def sync_items(self):
+        """
+        Get items
+        """
+        items = self.connection.items.get_all()
+
+        item_attributes = []
+
+        for item in items:
+            # remove this check when we are mapping Fyle Categories with Sage Intacct Items
+            if item['ITEMTYPE'] == 'Non-Inventory':
+                item_attributes.append({
+                    'attribute_type': 'ITEM',
+                    'display_name': 'item',
+                    'value': item['NAME'],
+                    'destination_id': item['ITEMID']
+                })
+
+        attributes = DestinationAttribute.bulk_upsert_destination_attributes(
+            item_attributes, self.workspace_id)
+        return attributes
 
     def sync_locations(self):
         """
@@ -243,7 +272,10 @@ class SageIntacctConnector:
                 'memo': lineitem.memo,
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
-                'projectid': lineitem.project_id
+                'projectid': lineitem.project_id,
+                'customerid': lineitem.customer_id,
+                'itemid': lineitem.item_id,
+                'billable': lineitem.billable
             }
 
             expsense_payload.append(expense)
@@ -280,7 +312,10 @@ class SageIntacctConnector:
                 'ENTRYDESCRIPTION': lineitem.memo,
                 'LOCATIONID': lineitem.location_id,
                 'DEPARTMENTID': lineitem.department_id,
-                'PROJECTID': lineitem.project_id
+                'PROJECTID': lineitem.project_id,
+                'CUSTOMERID': lineitem.customer_id,
+                'ITEMID': lineitem.item_id,
+                'BILLABLE': lineitem.billable
             }
 
             bill_lineitems_payload.append(expense)
@@ -317,7 +352,9 @@ class SageIntacctConnector:
                 'paymentamount': lineitem.amount,
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
-                'projectid': lineitem.project_id
+                'customerid': lineitem.customer_id,
+                'projectid': lineitem.project_id,
+                'itemid': lineitem.item_id
             }
 
             charge_card_transaction_payload.append(expense)
@@ -405,13 +442,13 @@ class SageIntacctConnector:
             attachments_list = []
             for attachment in attachments:
                 attachment_type = attachment['filename'].split('.')[1]
-                attachmentToAppend = {
+                attachment_to_append = {
                     'attachmentname': '{0} - {1}'.format(attachment['expense_id'], attachment_number),
                     'attachmenttype': attachment_type,
                     'attachmentdata': attachment['content']
                 }
 
-                attachments_list.append(attachmentToAppend)
+                attachments_list.append(attachment_to_append)
                 attachment_number = attachment_number + 1
 
             data = {
