@@ -24,12 +24,18 @@ class MappingUtils:
             assert_valid('default_charge_card_id' in general_mapping and general_mapping['default_charge_card_id'],
                          'default charge card id field is blank')
 
-        elif general_settings.corporate_credit_card_expenses_object and \
+        if general_settings.corporate_credit_card_expenses_object and \
             general_settings.corporate_credit_card_expenses_object == 'BILL':
             assert_valid('default_ccc_vendor_name' in general_mapping and general_mapping['default_ccc_vendor_name'],
                          'default ccc vendor name field is blank')
             assert_valid('default_ccc_vendor_id' in general_mapping and general_mapping['default_ccc_vendor_id'],
                          'default ccc vendor id field is blank')
+        
+        if general_settings.sync_fyle_to_sage_payments:
+            assert_valid('payment_account_name' in general_mapping and general_mapping['payment_account_name'],
+                         'payment account name field is blank')
+            assert_valid('payment_account_id' in general_mapping and general_mapping['payment_account_id'],
+                         'payment account id field is blank')
 
         general_mapping, _ = GeneralMapping.objects.update_or_create(
             workspace_id=self.__workspace_id,
@@ -38,6 +44,10 @@ class MappingUtils:
                     if general_mapping.get('default_location_name') else None,
                 'default_location_id': general_mapping.get('default_location_id') \
                     if general_mapping.get('default_location_id') else None,
+                'payment_account_name': general_mapping.get('payment_account_name') \
+                    if general_mapping.get('payment_account_name') else None,
+                'payment_account_id': general_mapping.get('payment_account_id') \
+                    if general_mapping.get('payment_account_id') else None,
                 'default_department_name': general_mapping.get('default_department_name') \
                     if general_mapping.get('default_department_name') else None,
                 'default_department_id': general_mapping.get('default_department_id') \
