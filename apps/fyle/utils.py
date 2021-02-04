@@ -9,6 +9,7 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from apps.fyle.models import Reimbursement
 import requests
 
+
 class FyleConnector:
     """
     Fyle utility functions
@@ -296,4 +297,3 @@ class FyleConnector:
         Process Reimbursements in bulk.
         """
         return self.connection.Reimbursements.post(reimbursement_ids)
-        

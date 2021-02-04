@@ -15,7 +15,8 @@ from apps.workspaces.models import SageIntacctCredential
 
 from .utils import SageIntacctConnector
 from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
-    create_charge_card_transaction, schedule_charge_card_transaction_creation
+    create_charge_card_transaction, schedule_charge_card_transaction_creation, create_ap_payment,\
+    create_sage_intacct_reimbursement
 from .models import ExpenseReport, Bill, ChargeCardTransaction
 from .serializers import ExpenseReportSerializer, BillSerializer, ChargeCardTransactionSerializer, \
     SageIntacctFieldSerializer
@@ -223,6 +224,42 @@ class ChargeCardAccountView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class PaymentAccountView(generics.ListCreateAPIView):
+    """
+    Payment Account view
+    """
+    serializer_class = DestinationAttributeSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return DestinationAttribute.objects.filter(
+            attribute_type='PAYMENT_ACCOUNT', workspace_id=self.kwargs['workspace_id']).order_by('value')
+
+    def post(self, request, *args, **kwargs):
+        """
+        Get Payment Accounts from Sage Intacct
+        """
+        try:
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
+            sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+
+            payment_accounts = sage_intacct_connector.sync_payment_accounts()
+
+            return Response(
+                data=self.serializer_class(payment_accounts, many=True).data,
+                status=status.HTTP_200_OK
+            )
+        except SageIntacctCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Sage Intacct credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
 class ProjectView(generics.ListCreateAPIView):
     """
     Project view
@@ -255,6 +292,7 @@ class ProjectView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
 
 class LocationView(generics.ListCreateAPIView):
     """
@@ -443,3 +481,35 @@ class SageIntacctFieldsView(generics.ListAPIView):
         ).values('attribute_type', 'display_name').distinct()
 
         return attributes
+
+
+class APPaymentView(generics.CreateAPIView):
+    """
+    Create AP Payment View
+    """
+    def post(self, request, *args, **kwargs):
+        """
+        Create AP Payment
+        """
+        create_ap_payment(workspace_id=self.kwargs['workspace_id'])
+
+        return Response(
+            data={},
+            status=status.HTTP_200_OK
+        )
+
+
+class ReimbursementView(generics.ListCreateAPIView):
+    """
+    Create Sage Intacct Reimbursements View
+    """
+    def post(self, request, *args, **kwargs):
+        """
+        Create Sage Intacct Reimbursements View
+        """
+        create_sage_intacct_reimbursement(workspace_id=self.kwargs['workspace_id'])
+
+        return Response(
+            data={},
+            status=status.HTTP_200_OK
+        )

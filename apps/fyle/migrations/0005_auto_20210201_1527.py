@@ -14,8 +14,8 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='expense',
-            name='paid_on_sage',
-            field=models.BooleanField(default=False, help_text='Expense Payment status on SAGE'),
+            name='paid_on_sage_intacct',
+            field=models.BooleanField(default=False, help_text='Expense Payment status on Sage Intacct'),
         ),
         migrations.CreateModel(
             name='Reimbursement',

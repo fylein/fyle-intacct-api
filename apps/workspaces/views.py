@@ -229,7 +229,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
             sender_id = settings.SI_SENDER_ID
             sender_password = settings.SI_SENDER_PASSWORD
-            encryption_key = settings.ENCRYPTION_KEY
+            encryption_key = Fernet.generate_key()
 
             cipher_suite = Fernet(encryption_key)
             encrypted_password = cipher_suite.encrypt(str.encode(si_user_password)).decode('utf-8')
@@ -249,7 +249,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                     si_user_id=si_user_id,
                     si_company_id=si_company_id,
                     si_company_name=si_company_name,
-                    si_user_password=encrypted_password,
+                    si_user_password=si_user_password,
                     workspace=workspace
                 )
             else:
@@ -263,7 +263,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                 sage_intacct_credentials.si_user_id = si_user_id
                 sage_intacct_credentials.si_company_id = si_company_id
                 sage_intacct_credentials.si_company_name = si_company_name
-                sage_intacct_credentials.si_user_password = encrypted_password
+                sage_intacct_credentials.si_user_password = si_user_password
 
                 sage_intacct_credentials.save()
 
