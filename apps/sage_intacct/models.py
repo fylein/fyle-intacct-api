@@ -5,10 +5,12 @@ from datetime import datetime
 
 from django.db import models
 
-from fyle_accounting_mappings.models import Mapping, MappingSetting
+from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
 
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
+
+from apps.workspaces.models import WorkspaceGeneralSettings
 
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
@@ -103,6 +105,30 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             location_id = mapping.destination.destination_id
     return location_id
 
+def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
+    customer_id = None
+
+    if project_id:
+        project = DestinationAttribute.objects.filter(
+            attribute_type='PROJECT',
+            destination_id=project_id,
+            workspace_id=expense_group.workspace_id
+        ).order_by('-updated_at').first()
+        if project and project.detail:
+            customer_id = project.detail['CUSTOMERID']
+
+    return customer_id
+
+def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
+    item_id = None
+
+    if lineitem.billable:
+        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.get(
+            workspace_id=expense_group.workspace_id)
+        if general_settings.import_projects:
+            item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
+
+    return item_id
 
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
     if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
@@ -188,8 +214,11 @@ class BillLineitem(models.Model):
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
+    customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
+    item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     memo = models.CharField(help_text='Sage Intacct lineitem description', max_length=255, null=True)
     amount = models.FloatField(help_text='Bill amount')
+    billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -243,6 +272,8 @@ class BillLineitem(models.Model):
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+            customer_id = get_customer_id_or_none(expense_group, project_id)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
@@ -253,7 +284,10 @@ class BillLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': department_id,
                     'location_id': location_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
                     'amount': lineitem.amount,
+                    'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_expense_purpose(lineitem, category)
                 }
             )
@@ -323,8 +357,11 @@ class ExpenseReportLineitem(models.Model):
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
+    customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
+    item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     memo = models.CharField(help_text='Sage Intacct lineitem description', max_length=255, null=True)
     amount = models.FloatField(help_text='Expense amount')
+    billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -370,6 +407,8 @@ class ExpenseReportLineitem(models.Model):
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+            customer_id = get_customer_id_or_none(expense_group, project_id)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
@@ -380,8 +419,11 @@ class ExpenseReportLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': department_id,
                     'location_id': location_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
                     'transaction_date': get_transaction_date(expense_group),
                     'amount': lineitem.amount,
+                    'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_expense_purpose(lineitem, category)
                 }
             )
@@ -461,6 +503,8 @@ class ChargeCardTransactionLineitem(models.Model):
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
+    customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
+    item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     memo = models.CharField(help_text='Sage Intacct lineitem description', max_length=255, null=True)
     amount = models.FloatField(help_text='Charge Card Transaction amount')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
@@ -500,6 +544,8 @@ class ChargeCardTransactionLineitem(models.Model):
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+            customer_id = get_customer_id_or_none(expense_group, project_id)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,
@@ -509,6 +555,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': department_id,
                     'location_id': location_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
                     'amount': lineitem.amount,
                     'memo': get_expense_purpose(lineitem, category)
                 }

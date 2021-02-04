@@ -21,6 +21,8 @@ class GeneralMapping(models.Model):
     default_charge_card_id = models.CharField(max_length=255, help_text='Default charge card ID', null=True)
     default_ccc_vendor_name = models.CharField(max_length=255, help_text='Default ccc vendor name', null=True)
     default_ccc_vendor_id = models.CharField(max_length=255, help_text='Default ccc vendor ID', null=True)
+    default_item_name = models.CharField(max_length=255, help_text='Default item name', null=True)
+    default_item_id = models.CharField(max_length=255, help_text='Default item ID', null=True)
     payment_account_id = models.CharField(max_length=255, help_text='Sage Intacct Payment Account id', null=True)
     payment_account_name = models.CharField(max_length=255, help_text='Sage Intacct Payment Account name', null=True)
     workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
