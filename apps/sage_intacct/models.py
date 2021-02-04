@@ -562,7 +562,7 @@ class Payment(models.Model):
         payment_object, _ = Payment.objects.update_or_create(
             expense_group=expense_group,
             defaults={
-                'private_note': 'Payment for Bill by {0}'.format(description.get('employee_email'))
+                'private_note': 'Payment for Bill by {0}'.format(description.get('employee_email')),
                 'vendor_id': vendor_id,
                 'amount': total_amount,
                 'currency': expense.currency,
@@ -574,3 +574,4 @@ class Payment(models.Model):
         )
 
         return payment_object
+        

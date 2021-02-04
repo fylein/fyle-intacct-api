@@ -692,3 +692,4 @@ def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
 
         if schedule:
             schedule.delete()
+            
