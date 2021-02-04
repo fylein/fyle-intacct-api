@@ -4,6 +4,7 @@ from typing import List
 from datetime import datetime
 
 from django.db import transaction
+from django_q.models import Schedule
 from django.db.models import Q
 from django_q.tasks import Chain
 
@@ -13,14 +14,14 @@ from fyle_accounting_mappings.models import Mapping
 
 from fyle_intacct_api.exceptions import BulkError
 
-from apps.fyle.models import ExpenseGroup
+from apps.fyle.models import ExpenseGroup, Reimbursement
 from apps.tasks.models import TaskLog
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, WorkspaceGeneralSettings
 from apps.fyle.utils import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, \
-    ChargeCardTransaction, ChargeCardTransactionLineitem
+    ChargeCardTransaction, ChargeCardTransactionLineitem, Payment
 from .utils import SageIntacctConnector
 
 logger = logging.getLogger(__name__)
@@ -500,3 +501,194 @@ def create_charge_card_transaction(expense_group, task_log):
         task_log.status = 'FATAL'
         task_log.save(update_fields=['detail', 'status'])
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+
+
+def check_expenses_reimbursement_status(expenses):
+    all_expenses_paid = True
+
+    for expense in expenses:
+        reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
+
+        if reimbursement.state != 'COMPLETE':
+            all_expenses_paid = False
+    
+    return all_expenses_paid
+
+
+def create_payment(workspace_id):
+    fyle_credentials =  FyleCredential.objects.get(workspace_id=workspace_id)
+    
+    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
+
+    fyle_connector.sync_reimbursements()
+   
+    bills: List[Bill] = Bill.objects.filter(
+        payment_synced=False, expense_group__workspace_id=workspace_id,
+        expense_group__fund_source='PERSONAL'
+    ).all()
+
+    if bills:
+        for bill in bills:
+            expense_group_reimbursement_status =  check_expenses_reimbursement_status(
+                bill.expense_group.expenses.all())
+            if expense_group_reimbursement_status:
+                task_log, _ = TaskLog.objects.update_or_create(
+                    workspace_id=workspace_id,
+                    task_id='PAYMENT_{}'.format(bill.expense_group.id),
+                    defaults={
+                        'status': 'IN_PROGRESS',
+                        'type': 'CREATING_BILL_PAYMENT'
+                    }
+                )
+
+                try:
+                    with transaction.atomic():
+
+                        payment_object = Payment.create_payment(bill.expense_group)
+
+                        sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+                        sage_connection = SageIntacctConnector(sage_credentials, workspace_id)
+
+                        created_payment = qbo_connection.post_bill_payment(
+                            payment_object
+                        )
+
+                        bill.payment_synced = True
+                        bill.paid_on_sage = True
+                        bill.save(update_fields=['payment_synced','paid_on_qbo'])
+
+                        task_log.detail = created_payment
+                        task_log.payment = payment_object
+                        task_log.status = 'COMPLETE'
+
+                        task_log.save(update_fields=['detail', 'payment', 'status'])
+
+                
+                except SageIntacctCredential.DoesNotExist:
+                    logger.error(
+                        'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
+                        workspace_id,
+                        bill.expense_group
+                    )
+                    detail = {
+                        'expense_group_id': bill.expense_group,
+                        'message': 'Sage-Intacct Account not connected'
+                    }
+                    task_log.status = 'FAILED'
+                    task_log.detail = detail
+
+                    task_log.save(update_fields=['detail', 'status'])
+                
+                except BulkError as exception:
+                    logger.error(exception.response)
+                    detail = exception.response
+                    task_log.status = 'FAILED'
+                    task_log.detail = detail
+
+                    task_log.save(update_fields=['detail', 'status'])
+
+                except WrongParamsError as exception:
+                    logger.error(exception.response)
+                    detail = json.loads(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = detail
+
+                    task_log.save(update_fields=['detail', 'status'])
+
+                except Exception:
+                    error = traceback.format_exc()
+                    task_log.detail = {
+                        'error': error
+                    }
+                    task_log.status = 'FATAL'
+                    task_log.save(update_fields=['detail', 'status'])
+                    logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+
+
+def schedule_payment_creation(sync_fyle_to_sage_payments, workspace_id):
+    general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    if general_mappings:
+        if sync_fyle_to_sage_payments and general_mappings.payment_account_id:
+            start_datetime = datetime.now()
+            schedule, _ = Schedule.objects.update_or_create(
+                func='apps.sage_intacct.tasks.create_payment',
+                args='{}'.format(workspace_id),
+                defaults = {
+                    'schedule_type': Schedule.MINUTES,
+                    'minutes': 24 * 60,
+                    'next_run': start_datetime
+                }
+            )
+
+        if not sync_fyle_to_sage_payments:
+            schedule: Schedule = Schedule.objects.filter(
+                func='apps.xero.tasks.create_payment',
+                args='{}'.format(workspace_id)
+            ).first()
+
+            if schedule:
+                schedule.delete()
+
+
+def get_all_sage_object_ids(sage_objects):
+    sage_object_details = {}
+
+    expense_group_ids =  [sage_object.expense_group_id for sage_object in sage_objects]
+
+    task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
+
+    for task_log in task_logs:
+        sage_object_details[task_log.expense_group.id] = {
+            'expense_group': task_log.expense_group,
+            'sage_object_id': task_log.detail['apbill']['RECORDNO']
+        }
+
+    return sage_object_details
+
+
+def check_sage_object_status(workspace_id):
+    sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    sage_conection = SageIntacctConnector(sage_credentials, workspace_id)
+
+    bills = Bill.objects.filter(
+        expense_group__workspace_id=workspace_id, paid_on_sage=False, expense_group__fund_source='PERSONAL'
+    ).all()
+
+    if bills:
+        bill_ids = get_all_sage_object_ids(bills)
+
+        for bill in bills:
+            bill_object = sage_conection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
+
+            if bill_object['APPYMTDETAILS']['APPYMTDETAIL']:
+                line_items = BillLineitem.objects.filter(bill_id=bill.id)
+                for line_item in line_items:
+                    expense = line_item.expense
+                    expense.paid_on_sage = True
+                    expense.payment_synced = True
+                    expense.save(update_fields=['paid_on_sage','payment_synced'])
+
+
+
+def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
+    if sync_sage_to_fyle_payments:
+        start_datetime = datetime.now()
+        schedule, _ = Schedule.objects.update_or_create(
+            func='apps.sage_intacct.tasks.check_sage_object_status',
+            args='{}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': start_datetime
+            }
+        )
+    else:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.sage_intacct.tasks.check_qbo_object_status',
+            args='{}'.format(workspace_id)
+        ).first()
+
+        if schedule:
+            schedule.delete()

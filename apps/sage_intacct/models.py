@@ -129,6 +129,8 @@ class Bill(models.Model):
     memo = models.CharField(max_length=255, help_text='Sage Intacct docnumber', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Bill transaction date', null=True)
+    payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
+    paid_on_sage = models.BooleanField(help_text='Payment status in sage', default=False)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -508,3 +510,67 @@ class ChargeCardTransactionLineitem(models.Model):
             charge_card_transaction_lineitem_objects.append(charge_card_transaction_lineitem_object)
 
         return charge_card_transaction_lineitem_objects
+
+
+class Payment(models.Model):
+    """
+    Sage Payments
+    """ 
+    id = models.AutoField(primary_key=True)
+    expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
+    private_note = models.TextField(help_text='description')
+    vendor_id = models.CharField(max_length=255, help_text='Sage vendor id')
+    payment_account = models.CharField(max_length=255, help_text='Payment Account/Financial Entity')
+    amount = models.FloatField(help_text='Payment amount')
+    payment_method = models.CharField(help_text='Payment Methods')
+    bill_payment_number = models.CharField(max_length=255)
+    payment_date = models.CharField(help_text='Payment Date For Transaction')
+    currency = models.CharField(max_length=255, help_text='Payment Currency')
+    created_at = models.DateField(auto_now=True, help_text='Created at')
+    updated_at = models.DateField(auto_now=True, help_text='Updated at')
+
+
+    class Meta:
+        db_table = 'payments'
+    
+    @staticmethod
+    def create_payment(expense_group: ExpenseGroup):
+        """
+        Create AP payments
+        :param expense_group: expense group
+        :return: payment object
+        """
+
+        description = expense_group.description
+
+        expense = expense_group.expenses.first()
+
+        expenses: List[Expense] = expense_group.expenses.all()
+
+        total_amount = 0
+        for expenses in expenses:
+            total_amount = total_amount + expense.amount
+        
+        vendor_id = Mapping.object.get(
+            source_type='EMPLOYEE',
+            destination_type='VENDOR',
+            source__value=description.get('employee_email')
+            workspace_id=expense_group.workspace_id
+        ).destination.destination_id
+
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        payment_object, _ = Payment.objects.update_or_create(
+            expense_group=expense_group,
+            defaults={
+                'private_note': 'Payment for Bill by {0}'.format(description.get('employee_email'))
+                'vendor_id': vendor_id,
+                'amount': total_amount,
+                'currency': expense.currency,
+                'payment_account': general_mappings.payment_account_id,
+                'transaction_date': get_transaction_date(expense_group),
+                'payment_method': 'Cash',
+                'bill_payment_number': ''
+            }
+        )
+
+        return payment_object

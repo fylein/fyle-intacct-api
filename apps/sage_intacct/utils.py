@@ -12,7 +12,7 @@ from sageintacctsdk import SageIntacctSDK
 from apps.workspaces.models import SageIntacctCredential, WorkspaceGeneralSettings
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, \
-    ChargeCardTransaction, ChargeCardTransactionLineitem
+    ChargeCardTransaction, ChargeCardTransactionLineitem, Payment
 
 
 class SageIntacctConnector:
@@ -353,6 +353,13 @@ class SageIntacctConnector:
         bill_payload = self.__construct_bill(bill, bill_lineitems)
         created_bill = self.connection.bills.post(bill_payload)
         return created_bill
+    
+    def get_bill(self, bill_id):
+        """
+        GET bill from SAGE
+        """
+        bill = self.connection.bills.get_by_id(bill_id)
+        return bill
 
     def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
         charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]):
@@ -428,3 +435,25 @@ class SageIntacctConnector:
                 return supdoc_id
 
             return False
+
+    @staticmethod
+    def __construct_bill_payment(payment: Payment) -> Dict:
+        """
+        Create a bill payment
+        :param payment: bill_payment object extracted from database
+        :return: constructed bill payment
+        """
+
+        payment_payload = {
+            'FINANCIALENTITY': payment.payment_account,
+            'PAYMENTMETHOD': payment.payment_method,
+            'VENDORID': payment.vendor_id,
+            'DESCRIPTION': payment.private_note,
+            'PAYMENTDATE': payment.payment_date,
+            'APPYMTDETAILS': {
+                'APPYMTDETAIL' : [
+                    'RECORDKEY': ,
+                    'TRX_PAYMENTAMOUNT': payment.amount.
+                ]
+            }
+        }
