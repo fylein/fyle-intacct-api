@@ -229,7 +229,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
             sender_id = settings.SI_SENDER_ID
             sender_password = settings.SI_SENDER_PASSWORD
-            encryption_key = Fernet.generate_key()
+            encryption_key = settings.ENCRYPTION_KEY
 
             cipher_suite = Fernet(encryption_key)
             encrypted_password = cipher_suite.encrypt(str.encode(si_user_password)).decode('utf-8')
@@ -240,7 +240,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                     sender_password=sender_password,
                     user_id=si_user_id,
                     company_id=si_company_id,
-                    user_password=si_user_password
+                    user_password=encrypted_password
                 )
 
                 self.get_or_create_attachments_folder(sage_intacct_connection)
@@ -263,7 +263,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                 sage_intacct_credentials.si_user_id = si_user_id
                 sage_intacct_credentials.si_company_id = si_company_id
                 sage_intacct_credentials.si_company_name = si_company_name
-                sage_intacct_credentials.si_user_password = si_user_password
+                sage_intacct_credentials.si_user_password = encrypted_password
 
                 sage_intacct_credentials.save()
 

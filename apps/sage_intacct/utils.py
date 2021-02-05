@@ -33,7 +33,7 @@ class SageIntacctConnector:
             sender_password=sender_password,
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
-            user_password=credentials_object.si_user_password
+            user_password=decrypted_password
         )
 
         self.workspace_id = workspace_id
