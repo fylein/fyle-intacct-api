@@ -420,6 +420,13 @@ class SageIntacctConnector:
         """
         bill = self.connection.bills.get(field='RECORDNO', value=bill_id)
         return bill
+    
+    def get_expense_report(self, expense_report_id):
+        """
+        GET expense reports from SAGE
+        """
+        expense_report = self.connection.expense_reports.get(field= 'RECORDNO', value=expense_report_id)
+        return expense_report
 
     def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
                                      charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]):
