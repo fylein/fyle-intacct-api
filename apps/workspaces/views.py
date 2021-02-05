@@ -240,7 +240,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                     sender_password=sender_password,
                     user_id=si_user_id,
                     company_id=si_company_id,
-                    user_password=encrypted_password
+                    user_password=si_user_password
                 )
 
                 self.get_or_create_attachments_folder(sage_intacct_connection)
@@ -249,7 +249,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                     si_user_id=si_user_id,
                     si_company_id=si_company_id,
                     si_company_name=si_company_name,
-                    si_user_password=si_user_password,
+                    si_user_password=encrypted_password,
                     workspace=workspace
                 )
             else:
