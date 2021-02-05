@@ -13,11 +13,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='generalmapping',
             name='payment_account_id',
-            field=models.CharField(help_text='Sage Payment Account id', max_length=255, null=True),
+            field=models.CharField(help_text='Sage Intacct Payment Account id', max_length=255, null=True),
         ),
         migrations.AddField(
             model_name='generalmapping',
             name='payment_account_name',
-            field=models.CharField(help_text='Sage Payment Account name', max_length=255, null=True),
+            field=models.CharField(help_text='Sage Intacct Payment Account name', max_length=255, null=True),
         ),
     ]

@@ -3,7 +3,7 @@ from django.contrib.postgres.fields import JSONField
 
 from apps.workspaces.models import Workspace
 from apps.fyle.models import ExpenseGroup
-from apps.sage_intacct.models import Bill, ExpenseReport, ChargeCardTransaction, Payment
+from apps.sage_intacct.models import Bill, ExpenseReport, ChargeCardTransaction, APPayment, SageIntacctReimbursement
 
 
 def get_default():
@@ -28,7 +28,9 @@ class TaskLog(models.Model):
         help_text='Reference to ExpenseReport', null=True)
     charge_card_transaction = models.ForeignKey(ChargeCardTransaction, on_delete=models.PROTECT, \
         help_text='Reference to ChargeCardTransaction', null=True)
-    payment = models.ForeignKey(Payment, on_delete=models.PROTECT, help_text='Reference to Payment', null=True)
+    ap_payment = models.ForeignKey(APPayment, on_delete=models.PROTECT, help_text='Reference to AP Payment', null=True)
+    sage_intacct_reimbursement = models.ForeignKey(SageIntacctReimbursement, on_delete=models.PROTECT,
+                                                   help_text='Reference to Sage Intacct Reimbursement', null=True)
     status = models.CharField(max_length=255, help_text='Task Status')
     detail = JSONField(help_text='Task Response', null=True, default=get_default)
     sage_intacct_errors = JSONField(help_text='Sage Intacct Errors', null=True)

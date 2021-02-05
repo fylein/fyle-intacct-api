@@ -1,7 +1,8 @@
+import json
 import logging
 import traceback
 from typing import List
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db import transaction
 from django_q.models import Schedule
@@ -14,14 +15,15 @@ from fyle_accounting_mappings.models import Mapping
 
 from fyle_intacct_api.exceptions import BulkError
 
-from apps.fyle.models import ExpenseGroup, Reimbursement
+from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, WorkspaceGeneralSettings
 from apps.fyle.utils import FyleConnector
 
-from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, \
-    ChargeCardTransaction, ChargeCardTransactionLineitem, Payment
+from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement,\
+    SageIntacctReimbursementLineitem
 from .utils import SageIntacctConnector
 
 logger = logging.getLogger(__name__)
@@ -47,6 +49,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
             'Attachment failed for expense group id %s / workspace id %s Error: %s',
             expense_group.id, expense_group.workspace_id, {'error': error}
         )
+
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
@@ -77,6 +80,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
     if chain.length():
         chain.run()
 
+
 def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule bill creation
@@ -106,6 +110,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
     if chain.length():
         chain.run()
 
+
 def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule charge card transaction creation
@@ -134,6 +139,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
 
     if chain.length():
         chain.run()
+
 
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.error(exception.response)
@@ -165,6 +171,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     task_log.detail = None
     task_log.sage_intacct_errors = errors
     task_log.save(update_fields=['sage_intacct_errors', 'detail', 'status'])
+
 
 def __validate_expense_group(expense_group: ExpenseGroup):
     bulk_errors = []
@@ -275,6 +282,7 @@ def __validate_expense_group(expense_group: ExpenseGroup):
     if bulk_errors:
         raise BulkError('Mappings are missing', bulk_errors)
 
+
 def create_expense_report(expense_group, task_log):
     try:
         with transaction.atomic():
@@ -289,10 +297,10 @@ def create_expense_report(expense_group, task_log):
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
             created_expense_report = sage_intacct_connection.post_expense_report(expense_report_object, \
-                expense_report_lineitems_objects)
+                                                                                 expense_report_lineitems_objects)
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
-                created_expense_report['key'], expense_group)
+                                                     created_expense_report['key'], expense_group)
             if created_attachment_id:
                 try:
                     sage_intacct_connection.update_expense_report(created_expense_report['key'], created_attachment_id)
@@ -364,15 +372,15 @@ def create_bill(expense_group, task_log):
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
             created_bill = sage_intacct_connection.post_bill(bill_object, \
-                bill_lineitems_objects)
+                                                             bill_lineitems_objects)
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
-                created_bill['data']['apbill']['RECORDNO'], expense_group)
+                                                     created_bill['data']['apbill']['RECORDNO'], expense_group)
 
             if created_attachment_id:
                 try:
                     sage_intacct_connection.update_bill(created_bill['data']['apbill']['RECORDNO'], \
-                        created_attachment_id)
+                                                        created_attachment_id)
                     bill_object.supdoc_id = created_attachment_id
                     bill_object.save(update_fields=['supdoc_id'])
                 except Exception:
@@ -426,6 +434,7 @@ def create_bill(expense_group, task_log):
         task_log.save(update_fields=['detail', 'status'])
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
+
 def create_charge_card_transaction(expense_group, task_log):
     try:
         with transaction.atomic():
@@ -433,21 +442,21 @@ def create_charge_card_transaction(expense_group, task_log):
 
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
-            charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem.\
+            charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
                 create_charge_card_transaction_lineitems(expense_group)
 
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
 
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-            created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(\
+            created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction( \
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
-                created_charge_card_transaction['key'], expense_group)
+                                                     created_charge_card_transaction['key'], expense_group)
             if created_attachment_id:
                 try:
-                    sage_intacct_connection.update_charge_card_transaction(\
+                    sage_intacct_connection.update_charge_card_transaction( \
                         created_charge_card_transaction['key'], created_attachment_id)
                     charge_card_transaction_object.supdoc_id = created_attachment_id
                     charge_card_transaction_object.save(update_fields=['supdoc_id'])
@@ -511,17 +520,17 @@ def check_expenses_reimbursement_status(expenses):
 
         if reimbursement.state != 'COMPLETE':
             all_expenses_paid = False
-    
+
     return all_expenses_paid
 
 
-def create_payment(workspace_id):
-    fyle_credentials =  FyleCredential.objects.get(workspace_id=workspace_id)
-    
+def create_ap_payment(workspace_id):
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+
     fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
 
     fyle_connector.sync_reimbursements()
-   
+
     bills: List[Bill] = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
         expense_group__fund_source='PERSONAL'
@@ -529,7 +538,7 @@ def create_payment(workspace_id):
 
     if bills:
         for bill in bills:
-            expense_group_reimbursement_status =  check_expenses_reimbursement_status(
+            expense_group_reimbursement_status = check_expenses_reimbursement_status(
                 bill.expense_group.expenses.all())
             if expense_group_reimbursement_status:
                 task_log, _ = TaskLog.objects.update_or_create(
@@ -537,34 +546,41 @@ def create_payment(workspace_id):
                     task_id='PAYMENT_{}'.format(bill.expense_group.id),
                     defaults={
                         'status': 'IN_PROGRESS',
-                        'type': 'CREATING_BILL_PAYMENT'
+                        'type': 'CREATING_AP_PAYMENT'
                     }
                 )
 
                 try:
                     with transaction.atomic():
 
-                        payment_object = Payment.create_payment(bill.expense_group)
+                        ap_payment_object = APPayment.create_ap_payment(bill.expense_group)
 
-                        sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+                        bill_task_log = TaskLog.objects.get(expense_group=bill.expense_group)
 
-                        sage_connection = SageIntacctConnector(sage_credentials, workspace_id)
+                        record_key = bill_task_log.detail['data']['apbill']['RECORDNO']
 
-                        created_payment = qbo_connection.post_bill_payment(
-                            payment_object
+                        ap_payment_lineitems_objects = APPaymentLineitem.create_ap_payment_lineitems(
+                            ap_payment_object.expense_group, record_key
+                        )
+
+                        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+                        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+
+                        created_ap_payment = sage_intacct_connection.post_ap_payment(
+                            ap_payment_object, ap_payment_lineitems_objects
                         )
 
                         bill.payment_synced = True
-                        bill.paid_on_sage = True
-                        bill.save(update_fields=['payment_synced','paid_on_qbo'])
+                        bill.paid_on_sage_intacct = True
+                        bill.save(update_fields=['payment_synced', 'paid_on_sage_intacct'])
 
-                        task_log.detail = created_payment
-                        task_log.payment = payment_object
+                        task_log.detail = created_ap_payment
+                        task_log.ap_payment = ap_payment_object
                         task_log.status = 'COMPLETE'
 
-                        task_log.save(update_fields=['detail', 'payment', 'status'])
+                        task_log.save(update_fields=['detail', 'ap_payment', 'status'])
 
-                
                 except SageIntacctCredential.DoesNotExist:
                     logger.error(
                         'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
@@ -579,7 +595,7 @@ def create_payment(workspace_id):
                     task_log.detail = detail
 
                     task_log.save(update_fields=['detail', 'status'])
-                
+
                 except BulkError as exception:
                     logger.error(exception.response)
                     detail = exception.response
@@ -603,27 +619,153 @@ def create_payment(workspace_id):
                     }
                     task_log.status = 'FATAL'
                     task_log.save(update_fields=['detail', 'status'])
-                    logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+                    logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
+                                 task_log.detail)
 
 
-def schedule_payment_creation(sync_fyle_to_sage_payments, workspace_id):
+def schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments, workspace_id):
     general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
     if general_mappings:
-        if sync_fyle_to_sage_payments and general_mappings.payment_account_id:
+        if sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id:
             start_datetime = datetime.now()
             schedule, _ = Schedule.objects.update_or_create(
-                func='apps.sage_intacct.tasks.create_payment',
+                func='apps.sage_intacct.tasks.create_ap_payment',
                 args='{}'.format(workspace_id),
-                defaults = {
+                defaults={
                     'schedule_type': Schedule.MINUTES,
                     'minutes': 24 * 60,
                     'next_run': start_datetime
                 }
             )
 
-        if not sync_fyle_to_sage_payments:
+        if not sync_fyle_to_sage_intacct_payments:
             schedule: Schedule = Schedule.objects.filter(
-                func='apps.sage_intacct.tasks.create_payment',
+                func='apps.sage_intacct.tasks.create_ap_payment',
+                args='{}'.format(workspace_id)
+            ).first()
+
+            if schedule:
+                schedule.delete()
+
+
+def create_sage_intacct_reimbursement(workspace_id):
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+
+    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
+
+    fyle_connector.sync_reimbursements()
+
+    expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
+        payment_synced=False, expense_group__workspace_id=workspace_id,
+        expense_group__fund_source='PERSONAL'
+    ).all()
+
+    if expense_reports:
+        for expense_report in expense_reports:
+            expense_group_reimbursement_status = check_expenses_reimbursement_status(
+                expense_report.expense_group.expenses.all())
+            if expense_group_reimbursement_status:
+                task_log, _ = TaskLog.objects.update_or_create(
+                    workspace_id=workspace_id,
+                    task_id='PAYMENT_{}'.format(expense_report.expense_group.id),
+                    defaults={
+                        'status': 'IN_PROGRESS',
+                        'type': 'CREATING_REIMBURSEMENT'
+                    }
+                )
+
+                try:
+                    with transaction.atomic():
+
+                        sage_intacct_reimbursement_object = SageIntacctReimbursement.\
+                            create_sage_intacct_reimbursement(expense_report.expense_group)
+
+                        expense_report_task_log = TaskLog.objects.get(expense_group=expense_report.expense_group)
+
+                        record_key = expense_report_task_log.detail['key']
+
+                        sage_intacct_reimbursement_lineitems_objects = SageIntacctReimbursementLineitem.\
+                            create_sage_intacct_reimbursement_lineitems(sage_intacct_reimbursement_object.expense_group,
+                                                                        record_key)
+
+                        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+                        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+
+                        created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
+                            sage_intacct_reimbursement_object, sage_intacct_reimbursement_lineitems_objects
+                        )
+
+                        expense_report.payment_synced = True
+                        expense_report.paid_on_sage_intacct = True
+                        expense_report.save(update_fields=['payment_synced', 'paid_on_sage_intacct'])
+
+                        task_log.detail = created__sage_intacct_reimbursement
+                        task_log.sage_intacct_reimbursement = sage_intacct_reimbursement_object
+                        task_log.status = 'COMPLETE'
+
+                        task_log.save(update_fields=['detail', 'sage_intacct_reimbursement', 'status'])
+
+                except SageIntacctCredential.DoesNotExist:
+                    logger.error(
+                        'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
+                        workspace_id,
+                        expense_report.expense_group
+                    )
+                    detail = {
+                        'expense_group_id': expense_report.expense_group,
+                        'message': 'Sage-Intacct Account not connected'
+                    }
+                    task_log.status = 'FAILED'
+                    task_log.detail = detail
+
+                    task_log.save(update_fields=['detail', 'status'])
+
+                except BulkError as exception:
+                    logger.error(exception.response)
+                    detail = exception.response
+                    task_log.status = 'FAILED'
+                    task_log.detail = detail
+
+                    task_log.save(update_fields=['detail', 'status'])
+
+                except WrongParamsError as exception:
+                    logger.error(exception.response)
+                    detail = json.loads(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = detail
+
+                    task_log.save(update_fields=['detail', 'status'])
+
+                except Exception:
+                    error = traceback.format_exc()
+                    task_log.detail = {
+                        'error': error
+                    }
+                    task_log.status = 'FATAL'
+                    task_log.save(update_fields=['detail', 'status'])
+                    logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
+                                 task_log.detail)
+
+
+def schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payments, workspace_id):
+    general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    if general_mappings:
+        if sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id:
+            start_datetime = datetime.now()
+            schedule, _ = Schedule.objects.update_or_create(
+                func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
+                args='{}'.format(workspace_id),
+                defaults={
+                    'schedule_type': Schedule.MINUTES,
+                    'minutes': 24 * 60,
+                    'next_run': start_datetime
+                }
+            )
+
+        if not sync_fyle_to_sage_intacct_payments:
+            schedule: Schedule = Schedule.objects.filter(
+                func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
                 args='{}'.format(workspace_id)
             ).first()
 
@@ -634,19 +776,20 @@ def schedule_payment_creation(sync_fyle_to_sage_payments, workspace_id):
 def get_all_sage_bill_ids(sage_objects):
     sage_bill_details = {}
 
-    expense_group_ids =  [sage_object.expense_group_id for sage_object in sage_objects]
+    expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]
 
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
-
+    
     for task_log in task_logs:
-        sage_object_details[task_log.expense_group.id] = {
+        print(task_log.detail)
+        sage_bill_details[task_log.expense_group.id] = {
             'expense_group': task_log.expense_group,
-            'sage_object_id': task_log.detail['apbill']['RECORDNO']
+            'sage_object_id': task_log.detail['data']['apbill']['RECORDNO']
         }
 
     return sage_bill_details
 
-def get_all_sage_expense_report_ids(sage_object):
+def get_all_sage_expense_report_ids(sage_objects):
     sage_expense_report_details = {}
 
     expense_group_ids =  [sage_object.expense_group_id for sage_object in sage_objects]
@@ -654,59 +797,59 @@ def get_all_sage_expense_report_ids(sage_object):
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
 
     for task_log in task_logs:
-        sage_object_details[task_log.expense_group.id] = {
+        sage_expense_report_details[task_log.expense_group.id] = {
             'expense_group': task_log.expense_group,
-            'sage_object_id': task_log.detail['apbill']['key']
+            'sage_object_id': task_log.detail['key']
         }
     return sage_expense_report_details
 
 def check_sage_object_status(workspace_id):
     sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
-    sage_conection = SageIntacctConnector(sage_credentials, workspace_id)
+    sage_connection = SageIntacctConnector(sage_credentials, workspace_id)
 
     bills = Bill.objects.filter(
-        expense_group__workspace_id=workspace_id, paid_on_sage=False, expense_group__fund_source='PERSONAL'
+        expense_group__workspace_id=workspace_id, paid_on_sage_intacct=False, expense_group__fund_source='PERSONAL'
     ).all()
 
     expense_reports = ExpenseReport.objects.filter(
-        expense_group__workspace_id=workspace_id, paid_on_sage=False, expense_group__fund_source='PERSONAL'
+        expense_group__workspace_id=workspace_id, paid_on_sage_intacct=False, expense_group__fund_source='PERSONAL'
     ).all()
 
     if bills:
         bill_ids = get_all_sage_bill_ids(bills)
 
         for bill in bills:
-            bill_object = sage_conection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
+            bill_object = sage_connection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
 
             if bill_object['apbill']:
                 line_items = BillLineitem.objects.filter(bill_id=bill.id)
                 for line_item in line_items:
                     expense = line_item.expense
-                    expense.paid_on_sage = True
-                    expense.save(update_fields=['paid_on_sage'])
+                    expense.paid_on_sage_intacct = True
+                    expense.save(update_fields=['paid_on_sage_intacct'])
 
-                bill.paid_on_sage = True
+                bill.paid_on_sage_intacct = True
                 bill.payment_synced = True
-                bill.save(update_fields=['paid_on_sage','payment_synced'])
+                bill.save(update_fields=['paid_on_sage_intacct','payment_synced'])
     
     if expense_reports:
         expense_report_ids = get_all_sage_expense_report_ids(expense_reports)
 
-         for expense_report in expense_reports:
-            expense_report_object = netsuite_connection.get_expense_report(
+        for expense_report in expense_reports:
+            expense_report_object = sage_connection.get_expense_report(
                 expense_report_ids[expense_report.expense_group.id]['key'])
 
-            if expense_report_object['apbill']:
-                line_items = ExpenseReportLineItem.objects.filter(expense_report_id=expense_report.id)
+            if expense_report_object:
+                line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
                 for line_item in line_items:
                     expense = line_item.expense
-                    expense.paid_on_sage = True
-                    expense.save(update_fields=['paid_on_sage'])
+                    expense.paid_on_sage_intacct = True
+                    expense.save(update_fields=['paid_on_sage_intacct'])
 
-                expense_report.paid_on_sage = True
+                expense_report.paid_on_sage_intacct = True
                 expense_report.payment_synced = True
-                expense_report.save(update_fields=['paid_on_sage', 'payment_synced'])
+                expense_report.save(update_fields=['paid_on_sage_intacct', 'payment_synced'])
 
 def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
     if sync_sage_to_fyle_payments:
@@ -744,7 +887,7 @@ def process_reimbursements(workspace_id):
     if reimbursements:
         for reimbursement in reimbursements:
             expenses = Expense.objects.filter(settlement_id=reimbursement.settlement_id, fund_source='PERSONAL').all()
-            paid_expenses = expenses.filter(paid_on_qbo=True)
+            paid_expenses = expenses.filter(paid_on_sage_intacct=True)
 
             all_expense_paid = False
             if len(expenses):
@@ -758,8 +901,8 @@ def process_reimbursements(workspace_id):
         fyle_connector.sync_reimbursements()
 
 
-def schedule_reimbursements_sync(sync_sage_to_fyle_payments, workspace_id):
-    if sync_qbo_to_fyle_payments:
+def schedule_reimbursements_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
+    if sync_sage_intacct_to_fyle_payments:
         start_datetime = datetime.now() + timedelta(hours=12)
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.sage_intacct.tasks.process_reimbursements',

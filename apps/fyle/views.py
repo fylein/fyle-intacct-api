@@ -223,16 +223,15 @@ class ProjectView(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Get categories from Fyle
+        Get projects from Fyle
         """
         try:
-            active_only = request.GET.get('active_only', False)
             fyle_credentials = FyleCredential.objects.get(
                 workspace_id=kwargs['workspace_id'])
 
             fyle_connector = FyleConnector(fyle_credentials.refresh_token, kwargs['workspace_id'])
 
-            project_attributes = fyle_connector.sync_projects(active_only=active_only)
+            project_attributes = fyle_connector.sync_projects()
 
             return Response(
                 data=self.serializer_class(project_attributes, many=True).data,

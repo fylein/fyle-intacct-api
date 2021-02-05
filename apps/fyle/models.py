@@ -14,7 +14,6 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.workspaces.models import Workspace
 
-
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
     'fund_source', 'vendor', 'category', 'project', 'cost_center',
@@ -26,10 +25,12 @@ ALLOWED_FORM_INPUT = {
     'export_date_type': ['current_date', 'approved_at', 'spent_at', 'verified_at']
 }
 
+
 def _format_date(date_string: str) -> str:
     if date_string:
         date_string = dateutil.parser.parse(date_string).strftime('%Y-%m-%dT00:00:00.000Z')
     return date_string
+
 
 def get_default_expense_group_fields():
     return ['employee_email', 'report_id', 'claim_number', 'fund_source']
@@ -57,6 +58,7 @@ class Expense(models.Model):
     foreign_currency = models.CharField(null=True, max_length=5, help_text='Foreign Currency')
     settlement_id = models.CharField(max_length=255, help_text='Settlement ID', null=True)
     reimbursable = models.BooleanField(default=False, help_text='Expense reimbursable or not')
+    billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     exported = models.BooleanField(default=False, help_text='Expense exported or not')
     state = models.CharField(max_length=255, help_text='Expense state')
     vendor = models.CharField(max_length=255, null=True, blank=True, help_text='Vendor')
@@ -72,7 +74,7 @@ class Expense(models.Model):
     fund_source = models.CharField(max_length=255, help_text='Expense fund source')
     verified_at = models.DateTimeField(help_text='Report verified at', null=True)
     custom_properties = JSONField(null=True)
-    paid_on_sage = models.BooleanField(help_text='Expense Payment status on SAGE', default=False)
+    paid_on_sage_intacct = models.BooleanField(help_text='Expense Payment status on Sage Intacct', default=False)
 
     class Meta:
         db_table = 'expenses'
@@ -109,6 +111,7 @@ class Expense(models.Model):
                     'foreign_currency': expense['foreign_currency'],
                     'settlement_id': expense['settlement_id'],
                     'reimbursable': expense['reimbursable'],
+                    'billable': expense['billable'] if expense['billable'] else False,
                     'exported': expense['exported'],
                     'state': expense['state'],
                     'vendor': expense['vendor'],
@@ -301,6 +304,7 @@ class ExpenseGroup(models.Model):
 
         return expense_group_objects
 
+
 class Reimbursement(models.Model):
     """
     Reimbursements
@@ -335,4 +339,3 @@ class Reimbursement(models.Model):
                 })
             reimbursement_attributes.append(reimbursement_attribute)
         return reimbursement_attributes
-        
