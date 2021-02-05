@@ -595,7 +595,7 @@ class APPayment(models.Model):
 
         expense = expense_group.expenses.first()
 
-        vendor_id = Mapping.object.get(
+        vendor_id = Mapping.objects.get(
             source_type='EMPLOYEE',
             destination_type='VENDOR',
             source__value=description.get('employee_email'),
@@ -686,7 +686,7 @@ class SageIntacctReimbursement(models.Model):
 
         description = expense_group.description
 
-        employee_id = Mapping.object.get(
+        employee_id = Mapping.objects.get(
             source_type='EMPLOYEE',
             destination_type='EMPLOYEE',
             source__value=description.get('employee_email'),

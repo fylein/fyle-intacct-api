@@ -535,9 +535,8 @@ class SageIntacctConnector:
         Post AP Payment to Sage Intacct
         """
         ap_payment_payload = self.__construct_ap_payment(ap_payment, ap_payment_lineitems)
-        print('AP Payment Payload - ', ap_payment_payload)
-        # created_ap_payment = self.connection.ap_payments.post(ap_payment_payload)
-        # return created_ap_payment
+        created_ap_payment = self.connection.ap_payments.post(ap_payment_payload)
+        return created_ap_payment
 
     @staticmethod
     def __construct_sage_intacct__reimbursement(reimbursement: SageIntacctReimbursement,
@@ -559,18 +558,20 @@ class SageIntacctConnector:
 
             reimbursement_lineitems_payload.append(reimbursement_detail)
 
-        current_date = '{0}/{1}/{2}'.format(datetime.today().month, datetime.today().day, datetime.today().year)
-
         reimbursement_payload = {
             'bankaccountid': reimbursement.account_id,
             'employeeid': reimbursement.employee_id,
             'memo': reimbursement.memo,
             'paymentmethod': 'Cash',
-            'paymentdescription': reimbursement.payment_description,
-            'paymentdate': current_date,
+            'paymentdate': {
+                'year': datetime.now().strftime('%Y'),
+                'month': datetime.now().strftime('%m'),
+                'day': datetime.now().strftime('%d')
+            },
             'eppaymentrequestitems': {
                 'eppaymentrequestitem': reimbursement_lineitems_payload
-            }
+            },
+            'paymentdescription': reimbursement.payment_description
         }
 
         return reimbursement_payload
@@ -581,6 +582,5 @@ class SageIntacctConnector:
         Post Reimbursement to Sage Intacct
         """
         reimbursement_payload = self.__construct_sage_intacct__reimbursement(reimbursement, reimbursement_lineitems)
-        print('Reimbursement Payload - ', reimbursement_payload)
-        # created_reimbursement = self.connection.reimbursements.post(reimbursement_payload)
-        # return created_reimbursement
+        created_reimbursement = self.connection.reimbursements.post(reimbursement_payload)
+        return created_reimbursement
