@@ -11,7 +11,7 @@ from sageintacctsdk import SageIntacctSDK
 
 from apps.workspaces.models import SageIntacctCredential, WorkspaceGeneralSettings
 
-from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction,\
+from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
     SageIntacctReimbursementLineitem
 
@@ -420,12 +420,12 @@ class SageIntacctConnector:
         """
         bill = self.connection.bills.get(field='RECORDNO', value=bill_id)
         return bill
-    
+
     def get_expense_report(self, expense_report_id):
         """
         GET expense reports from SAGE
         """
-        expense_report = self.connection.expense_reports.get(field= 'RECORDNO', value=expense_report_id)
+        expense_report = self.connection.expense_reports.get(field='RECORDNO', value=expense_report_id)
         return expense_report
 
     def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
@@ -546,8 +546,8 @@ class SageIntacctConnector:
         return created_ap_payment
 
     @staticmethod
-    def __construct_sage_intacct__reimbursement(reimbursement: SageIntacctReimbursement,
-                                  reimbursement_lineitems: List[SageIntacctReimbursementLineitem]) -> Dict:
+    def __construct_sage_intacct_reimbursement(reimbursement: SageIntacctReimbursement,
+                                               reimbursement_lineitems: List[SageIntacctReimbursementLineitem]) -> Dict:
         """
         Create a Reimbursement
         :param reimbursement: Reimbursement object extracted from database
@@ -588,6 +588,6 @@ class SageIntacctConnector:
         """
         Post Reimbursement to Sage Intacct
         """
-        reimbursement_payload = self.__construct_sage_intacct__reimbursement(reimbursement, reimbursement_lineitems)
+        reimbursement_payload = self.__construct_sage_intacct_reimbursement(reimbursement, reimbursement_lineitems)
         created_reimbursement = self.connection.reimbursements.post(reimbursement_payload)
         return created_reimbursement

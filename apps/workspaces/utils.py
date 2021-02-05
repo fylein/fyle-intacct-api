@@ -3,8 +3,8 @@ from typing import Dict
 from apps.mappings.tasks import schedule_projects_creation
 
 from .models import WorkspaceGeneralSettings
-from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_objects_status_sync,\
-    schedule_sage_intacct_reimbursement_creation, schedule_reimbursements_sync
+from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync,\
+    schedule_sage_intacct_reimbursement_creation, schedule_fyle_reimbursements_sync
 
 
 def create_or_update_general_settings(general_settings_payload: Dict, workspace_id):
@@ -32,12 +32,12 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
 
     schedule_sage_intacct_reimbursement_creation(general_settings.sync_fyle_to_sage_intacct_payments, workspace_id)
 
-    schedule_sage_objects_status_sync(
+    schedule_sage_intacct_objects_status_sync(
         sync_sage_to_fyle_payments=general_settings.sync_sage_intacct_to_fyle_payments,
         workspace_id=workspace_id
     )
 
-    schedule_reimbursements_sync(
+    schedule_fyle_reimbursements_sync(
         sync_sage_intacct_to_fyle_payments=general_settings.sync_sage_intacct_to_fyle_payments,
         workspace_id=workspace_id
     )

@@ -17,7 +17,7 @@ from django.urls import path
 from .views import EmployeeView, VendorView, AccountView, ExpenseTypeView, ChargeCardAccountView, DepartmentView, \
     ProjectView, LocationView, ExpenseReportView, ExpenseReportScheduleView, BillView, BillScheduleView, \
     ChargeCardTransactionsView, ChargeCardTransactionsScheduleView, SageIntacctFieldsView, ItemView, APPaymentView,\
-    ReimbursementView, PaymentAccountView, ReimburseSagePaymentsView
+    ReimbursementView, PaymentAccountView, FyleReimbursementsView
 
 urlpatterns = [
     path('employees/', EmployeeView.as_view()),
@@ -36,9 +36,8 @@ urlpatterns = [
     path('charge_card_transactions/', ChargeCardTransactionsView.as_view()),
     path('charge_card_transactions/trigger/', ChargeCardTransactionsScheduleView.as_view()),
     path('sage_intacct_fields/', SageIntacctFieldsView.as_view()),
-    path('bill_payment_accounts/', PaymentAccountView.as_view()),
     path('items/', ItemView.as_view()),
     path('ap_payments/', APPaymentView.as_view()),
     path('reimbursements/', ReimbursementView.as_view()),
-    path('payment_reimbursements/', ReimburseSagePaymentsView.as_view())
+    path('fyle_reimbursements/', FyleReimbursementsView.as_view())
 ]

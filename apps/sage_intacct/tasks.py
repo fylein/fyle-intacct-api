@@ -22,7 +22,7 @@ from apps.workspaces.models import SageIntacctCredential, FyleCredential, Worksp
 from apps.fyle.utils import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
-    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement,\
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
     SageIntacctReimbursementLineitem
 from .utils import SageIntacctConnector
 
@@ -773,40 +773,41 @@ def schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payme
                 schedule.delete()
 
 
-def get_all_sage_bill_ids(sage_objects):
-    sage_bill_details = {}
+def get_all_sage_intacct_bill_ids(sage_objects):
+    sage_intacct_bill_details = {}
 
     expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]
 
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
-    
+
     for task_log in task_logs:
-        print(task_log.detail)
-        sage_bill_details[task_log.expense_group.id] = {
+        sage_intacct_bill_details[task_log.expense_group.id] = {
             'expense_group': task_log.expense_group,
             'sage_object_id': task_log.detail['data']['apbill']['RECORDNO']
         }
 
-    return sage_bill_details
+    return sage_intacct_bill_details
 
-def get_all_sage_expense_report_ids(sage_objects):
-    sage_expense_report_details = {}
 
-    expense_group_ids =  [sage_object.expense_group_id for sage_object in sage_objects]
+def get_all_sage_intacct_expense_report_ids(sage_objects):
+    sage_intacct_expense_report_details = {}
+
+    expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]
 
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
 
     for task_log in task_logs:
-        sage_expense_report_details[task_log.expense_group.id] = {
+        sage_intacct_expense_report_details[task_log.expense_group.id] = {
             'expense_group': task_log.expense_group,
             'sage_object_id': task_log.detail['key']
         }
-    return sage_expense_report_details
+    return sage_intacct_expense_report_details
 
-def check_sage_object_status(workspace_id):
-    sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
-    sage_connection = SageIntacctConnector(sage_credentials, workspace_id)
+def check_sage_intacct_object_status(workspace_id):
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
 
     bills = Bill.objects.filter(
         expense_group__workspace_id=workspace_id, paid_on_sage_intacct=False, expense_group__fund_source='PERSONAL'
@@ -817,12 +818,12 @@ def check_sage_object_status(workspace_id):
     ).all()
 
     if bills:
-        bill_ids = get_all_sage_bill_ids(bills)
+        bill_ids = get_all_sage_intacct_bill_ids(bills)
 
         for bill in bills:
-            bill_object = sage_connection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
+            bill_object = sage_intacct_connection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
 
-            if bill_object['apbill']:
+            if bill_object['apbill']['STATE'] == 'Paid':
                 line_items = BillLineitem.objects.filter(bill_id=bill.id)
                 for line_item in line_items:
                     expense = line_item.expense
@@ -831,16 +832,16 @@ def check_sage_object_status(workspace_id):
 
                 bill.paid_on_sage_intacct = True
                 bill.payment_synced = True
-                bill.save(update_fields=['paid_on_sage_intacct','payment_synced'])
-    
+                bill.save(update_fields=['paid_on_sage_intacct', 'payment_synced'])
+
     if expense_reports:
-        expense_report_ids = get_all_sage_expense_report_ids(expense_reports)
-        
+        expense_report_ids = get_all_sage_intacct_expense_report_ids(expense_reports)
+
         for expense_report in expense_reports:
-            expense_report_object = sage_connection.get_expense_report(
+            expense_report_object = sage_intacct_connection.get_expense_report(
                 expense_report_ids[expense_report.expense_group_id]['sage_object_id'])
 
-            if expense_report_object:
+            if expense_report_object['STATE'] == 'Paid':
                 line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
                 for line_item in line_items:
                     expense = line_item.expense
@@ -851,11 +852,12 @@ def check_sage_object_status(workspace_id):
                 expense_report.payment_synced = True
                 expense_report.save(update_fields=['paid_on_sage_intacct', 'payment_synced'])
 
-def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
+
+def schedule_sage_intacct_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
     if sync_sage_to_fyle_payments:
         start_datetime = datetime.now()
         schedule, _ = Schedule.objects.update_or_create(
-            func='apps.sage_intacct.tasks.check_sage_object_status',
+            func='apps.sage_intacct.tasks.check_sage_intacct_object_status',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -865,7 +867,7 @@ def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
         )
     else:
         schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.tasks.check_sage_object_status',
+            func='apps.sage_intacct.tasks.check_sage_intacct_object_status',
             args='{}'.format(workspace_id)
         ).first()
 
@@ -873,7 +875,7 @@ def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
             schedule.delete()
 
 
-def process_reimbursements(workspace_id):
+def process_fyle_reimbursements(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
     fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
@@ -901,11 +903,11 @@ def process_reimbursements(workspace_id):
         fyle_connector.sync_reimbursements()
 
 
-def schedule_reimbursements_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
+def schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
     if sync_sage_intacct_to_fyle_payments:
         start_datetime = datetime.now() + timedelta(hours=12)
         schedule, _ = Schedule.objects.update_or_create(
-            func='apps.sage_intacct.tasks.process_reimbursements',
+            func='apps.sage_intacct.tasks.process_fyle_reimbursements',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -915,7 +917,7 @@ def schedule_reimbursements_sync(sync_sage_intacct_to_fyle_payments, workspace_i
         )
     else:
         schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.tasks.process_reimbursements',
+            func='apps.sage_intacct.tasks.process_fyle_reimbursements',
             args='{}'.format(workspace_id)
         ).first()
 

@@ -16,6 +16,7 @@ from .models import Expense, ExpenseGroup, ExpenseGroupSettings
 from .serializers import ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer, \
     ExpenseGroupSettingsSerializer
 
+
 class ExpenseGroupView(generics.ListCreateAPIView):
     """
     List Fyle Expenses

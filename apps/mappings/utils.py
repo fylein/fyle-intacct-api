@@ -1,5 +1,6 @@
 from typing import Dict
 
+from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_reimbursement_creation
 from apps.workspaces.models import WorkspaceGeneralSettings
 from fyle_intacct_api.utils import assert_valid
 
@@ -77,5 +78,17 @@ class MappingUtils:
                 if general_mapping.get('default_item_id') else None
             }
         )
+
+        if general_settings.reimbursable_expenses_object == 'BILL':
+            schedule_ap_payment_creation(
+                sync_fyle_to_sage_intacct_payments=general_settings.sync_fyle_to_sage_intacct_payments,
+                workspace_id=self.__workspace_id
+            )
+
+        if general_settings.reimbursable_expenses_object == 'EXPENSE_REPORT':
+            schedule_sage_intacct_reimbursement_creation(
+                sync_fyle_to_sage_intacct_payments=general_settings.sync_fyle_to_sage_intacct_payments,
+                workspace_id=self.__workspace_id
+            )
 
         return general_mapping

@@ -16,7 +16,7 @@ from apps.workspaces.models import SageIntacctCredential
 from .utils import SageIntacctConnector
 from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
     create_charge_card_transaction, schedule_charge_card_transaction_creation, create_ap_payment, \
-    create_sage_intacct_reimbursement, check_sage_object_status, process_reimbursements
+    create_sage_intacct_reimbursement, check_sage_intacct_object_status, process_fyle_reimbursements
 from .models import ExpenseReport, Bill, ChargeCardTransaction
 from .serializers import ExpenseReportSerializer, BillSerializer, ChargeCardTransactionSerializer, \
     SageIntacctFieldSerializer
@@ -515,7 +515,8 @@ class SageIntacctFieldsView(generics.ListAPIView):
         ).values('attribute_type', 'display_name').distinct()
 
         return attributes
-        
+
+
 class APPaymentView(generics.CreateAPIView):
     """
     Create AP Payment View
@@ -548,16 +549,16 @@ class ReimbursementView(generics.ListCreateAPIView):
         )
 
 
-class ReimburseSagePaymentsView(generics.ListCreateAPIView):
+class FyleReimbursementsView(generics.ListCreateAPIView):
     """
-    Reimburse Sage Payments View
+    Create Fyle Reimbursements View
     """
     def post(self, request, *args, **kwargs):
         """
         Process Reimbursements in Fyle
         """
-        check_sage_object_status(workspace_id=self.kwargs['workspace_id'])
-        process_reimbursements(workspace_id=self.kwargs['workspace_id'])
+        check_sage_intacct_object_status(workspace_id=self.kwargs['workspace_id'])
+        process_fyle_reimbursements(workspace_id=self.kwargs['workspace_id'])
 
         return Response(
             data={},
