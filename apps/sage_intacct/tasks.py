@@ -623,7 +623,7 @@ def schedule_payment_creation(sync_fyle_to_sage_payments, workspace_id):
 
         if not sync_fyle_to_sage_payments:
             schedule: Schedule = Schedule.objects.filter(
-                func='apps.xero.tasks.create_payment',
+                func='apps.sage_intacct.tasks.create_payment',
                 args='{}'.format(workspace_id)
             ).first()
 
@@ -631,8 +631,8 @@ def schedule_payment_creation(sync_fyle_to_sage_payments, workspace_id):
                 schedule.delete()
 
 
-def get_all_sage_object_ids(sage_objects):
-    sage_object_details = {}
+def get_all_sage_bill_ids(sage_objects):
+    sage_bill_details = {}
 
     expense_group_ids =  [sage_object.expense_group_id for sage_object in sage_objects]
 
@@ -644,8 +644,21 @@ def get_all_sage_object_ids(sage_objects):
             'sage_object_id': task_log.detail['apbill']['RECORDNO']
         }
 
-    return sage_object_details
+    return sage_bill_details
 
+def get_all_sage_expense_report_ids(sage_object):
+    sage_expense_report_details = {}
+
+    expense_group_ids =  [sage_object.expense_group_id for sage_object in sage_objects]
+
+    task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
+
+    for task_log in task_logs:
+        sage_object_details[task_log.expense_group.id] = {
+            'expense_group': task_log.expense_group,
+            'sage_object_id': task_log.detail['apbill']['key']
+        }
+    return sage_expense_report_details
 
 def check_sage_object_status(workspace_id):
     sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -656,21 +669,44 @@ def check_sage_object_status(workspace_id):
         expense_group__workspace_id=workspace_id, paid_on_sage=False, expense_group__fund_source='PERSONAL'
     ).all()
 
+    expense_reports = ExpenseReport.objects.filter(
+        expense_group__workspace_id=workspace_id, paid_on_sage=False, expense_group__fund_source='PERSONAL'
+    ).all()
+
     if bills:
-        bill_ids = get_all_sage_object_ids(bills)
+        bill_ids = get_all_sage_bill_ids(bills)
 
         for bill in bills:
             bill_object = sage_conection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
 
-            if bill_object['APPYMTDETAILS']['APPYMTDETAIL']:
+            if bill_object['apbill']:
                 line_items = BillLineitem.objects.filter(bill_id=bill.id)
                 for line_item in line_items:
                     expense = line_item.expense
                     expense.paid_on_sage = True
-                    expense.payment_synced = True
-                    expense.save(update_fields=['paid_on_sage','payment_synced'])
+                    expense.save(update_fields=['paid_on_sage'])
 
+                bill.paid_on_sage = True
+                bill.payment_synced = True
+                bill.save(update_fields=['paid_on_sage','payment_synced'])
+    
+    if expense_reports:
+        expense_report_ids = get_all_sage_expense_report_ids(expense_reports)
 
+         for expense_report in expense_reports:
+            expense_report_object = netsuite_connection.get_expense_report(
+                expense_report_ids[expense_report.expense_group.id]['key'])
+
+            if expense_report_object['apbill']:
+                line_items = ExpenseReportLineItem.objects.filter(expense_report_id=expense_report.id)
+                for line_item in line_items:
+                    expense = line_item.expense
+                    expense.paid_on_sage = True
+                    expense.save(update_fields=['paid_on_sage'])
+
+                expense_report.paid_on_sage = True
+                expense_report.payment_synced = True
+                expense_report.save(update_fields=['paid_on_sage', 'payment_synced'])
 
 def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
     if sync_sage_to_fyle_payments:
@@ -686,10 +722,59 @@ def schedule_sage_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
         )
     else:
         schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.tasks.check_qbo_object_status',
+            func='apps.sage_intacct.tasks.check_sage_object_status',
             args='{}'.format(workspace_id)
         ).first()
 
         if schedule:
             schedule.delete()
-            
+
+
+def process_reimbursements(workspace_id):
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+
+    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
+
+    fyle_connector.sync_reimbursements()
+
+    reimbursements = Reimbursement.objects.filter(state='PENDING', workspace_id=workspace_id).all()
+
+    reimbursement_ids = []
+
+    if reimbursements:
+        for reimbursement in reimbursements:
+            expenses = Expense.objects.filter(settlement_id=reimbursement.settlement_id, fund_source='PERSONAL').all()
+            paid_expenses = expenses.filter(paid_on_qbo=True)
+
+            all_expense_paid = False
+            if len(expenses):
+                all_expense_paid = len(expenses) == len(paid_expenses)
+
+            if all_expense_paid:
+                reimbursement_ids.append(reimbursement.reimbursement_id)
+
+    if reimbursement_ids:
+        fyle_connector.post_reimbursement(reimbursement_ids)
+        fyle_connector.sync_reimbursements()
+
+
+def schedule_reimbursements_sync(sync_sage_to_fyle_payments, workspace_id):
+    if sync_qbo_to_fyle_payments:
+        start_datetime = datetime.now() + timedelta(hours=12)
+        schedule, _ = Schedule.objects.update_or_create(
+            func='apps.sage_intacct.tasks.process_reimbursements',
+            args='{}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': start_datetime
+            }
+        )
+    else:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.sage_intacct.tasks.process_reimbursements',
+            args='{}'.format(workspace_id)
+        ).first()
+
+        if schedule:
+            schedule.delete()

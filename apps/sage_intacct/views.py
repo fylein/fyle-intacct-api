@@ -15,7 +15,7 @@ from apps.workspaces.models import SageIntacctCredential
 
 from .utils import SageIntacctConnector
 from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
-    create_charge_card_transaction, schedule_charge_card_transaction_creation
+    create_charge_card_transaction, schedule_charge_card_transaction_creation, check_sage_object_status, process_reimbursements
 from .models import ExpenseReport, Bill, ChargeCardTransaction
 from .serializers import ExpenseReportSerializer, BillSerializer, ChargeCardTransactionSerializer, \
     SageIntacctFieldSerializer
@@ -443,3 +443,76 @@ class SageIntacctFieldsView(generics.ListAPIView):
         ).values('attribute_type', 'display_name').distinct()
 
         return attributes
+
+
+
+
+class PaymentAccountView(generics.ListCreateAPIView):
+    """
+    BillPaymentAccount view
+    """
+    serializer_class = DestinationAttributeSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return DestinationAttribute.objects.filter(
+            attribute_type='BANK_ACCOUNT', workspace_id=self.kwargs['workspace_id']).order_by('value')
+
+    def post(self, request, *args, **kwargs):
+        """
+        Get bill payment accounts from SAGE
+        """
+        try:
+            sage_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
+
+            sage_connector = SageIntacctConnector(sage_credentials, workspace_id=kwargs['workspace_id'])
+
+            accounts = sage_connector.sync_accounts(account_type='Bank')
+
+            return Response(
+                data=self.serializer_class(accounts, many=True).data,
+                status=status.HTTP_200_OK
+            )
+
+        except SageIntacctCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'QBO credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ReimburseSagePaymentsView(generics.ListCreateAPIView):
+    """
+    Reimburse Sage Payments View
+    """
+    def post(self, request, *args, **kwargs):
+        """
+        Process Reimbursements in Fyle
+        """
+        check_sage_object_status(workspace_id=self.kwargs['workspace_id'])
+        process_reimbursements(workspace_id=self.kwargs['workspace_id'])
+
+        return Response(
+            data={},
+            status=status.HTTP_200_OK
+        )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

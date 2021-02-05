@@ -2,7 +2,7 @@
 Sage Intacct models
 """
 from datetime import datetime
-
+from typing import List
 from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting
@@ -41,6 +41,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
             project_id = mapping.destination.destination_id
     return project_id
 
+
 def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     department_id = None
     if general_mappings and general_mappings.default_department_id:
@@ -70,6 +71,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         if mapping:
             department_id = mapping.destination.destination_id
     return department_id
+
 
 def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     location_id = None
@@ -101,6 +103,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             location_id = mapping.destination.destination_id
     return location_id
 
+
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
     if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
         return expense_group.description['spent_at']
@@ -110,6 +113,7 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
         return expense_group.description['verified_at']
 
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+
 
 def get_expense_purpose(lineitem, category) -> str:
     expense_purpose = ', purpose - {0}'.format(lineitem.purpose) if lineitem.purpose else ''
@@ -270,6 +274,8 @@ class ExpenseReport(models.Model):
     memo = models.CharField(max_length=255, help_text='Sage Intacct memo', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
+    paid_on_sage = models.BooleanField(help_text='Payment Status in SAGE', default=False)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -384,6 +390,7 @@ class ExpenseReportLineitem(models.Model):
 
         return expense_report_lineitem_objects
 
+
 class ChargeCardTransaction(models.Model):
     """
     Sage Intacct Charge Card Transaction
@@ -448,7 +455,7 @@ class ChargeCardTransactionLineitem(models.Model):
     """
     id = models.AutoField(primary_key=True)
     charge_card_transaction = models.ForeignKey(ChargeCardTransaction, on_delete=models.PROTECT, \
-        help_text='Reference to ChargeCardTransaction')
+                                                help_text='Reference to ChargeCardTransaction')
     expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
@@ -515,24 +522,23 @@ class ChargeCardTransactionLineitem(models.Model):
 class Payment(models.Model):
     """
     Sage Payments
-    """ 
+    """
     id = models.AutoField(primary_key=True)
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
     private_note = models.TextField(help_text='description')
     vendor_id = models.CharField(max_length=255, help_text='Sage vendor id')
     payment_account = models.CharField(max_length=255, help_text='Payment Account/Financial Entity')
     amount = models.FloatField(help_text='Payment amount')
-    payment_method = models.CharField(help_text='Payment Methods')
+    payment_method = models.CharField(max_length=255, help_text='Payment Methods')
     bill_payment_number = models.CharField(max_length=255)
-    payment_date = models.CharField(help_text='Payment Date For Transaction')
+    payment_date = models.CharField(max_length=255, help_text='Payment Date For Transaction')
     currency = models.CharField(max_length=255, help_text='Payment Currency')
     created_at = models.DateField(auto_now=True, help_text='Created at')
     updated_at = models.DateField(auto_now=True, help_text='Updated at')
 
-
     class Meta:
         db_table = 'payments'
-    
+
     @staticmethod
     def create_payment(expense_group: ExpenseGroup):
         """
@@ -550,12 +556,12 @@ class Payment(models.Model):
         total_amount = 0
         for expenses in expenses:
             total_amount = total_amount + expense.amount
-        
+
         vendor_id = Mapping.object.get(
             source_type='EMPLOYEE',
             destination_type='VENDOR',
-            source__value=description.get('employee_email')
-            workspace_id=expense_group.workspace_id
+            source__value=description.get('employee_email'),
+            workspace_id=expense_group.workspace_id,
         ).destination.destination_id
 
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
@@ -574,4 +580,3 @@ class Payment(models.Model):
         )
 
         return payment_object
-        

@@ -358,7 +358,7 @@ class SageIntacctConnector:
         """
         GET bill from SAGE
         """
-        bill = self.connection.bills.get_by_id(bill_id)
+        bill = self.connection.bills.get(field='RECORDNO', value=bill_id)
         return bill
 
     def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
@@ -451,10 +451,7 @@ class SageIntacctConnector:
             'DESCRIPTION': payment.private_note,
             'PAYMENTDATE': payment.payment_date,
             'APPYMTDETAILS': {
-                'APPYMTDETAIL' : [
-                    'RECORDKEY': ,
-                    'TRX_PAYMENTAMOUNT': payment.amount.
-                ]
+
             }
         }
         
