@@ -773,7 +773,7 @@ def schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payme
                 schedule.delete()
 
 
-def get_all_sage_intacct_bill_ids(sage_objects):
+def get_all_sage_intacct_bill_ids(sage_objects: Bill):
     sage_intacct_bill_details = {}
 
     expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]
@@ -789,7 +789,7 @@ def get_all_sage_intacct_bill_ids(sage_objects):
     return sage_intacct_bill_details
 
 
-def get_all_sage_intacct_expense_report_ids(sage_objects):
+def get_all_sage_intacct_expense_report_ids(sage_objects: ExpenseReport):
     sage_intacct_expense_report_details = {}
 
     expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]

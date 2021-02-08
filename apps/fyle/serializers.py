@@ -43,12 +43,3 @@ class ExpenseFieldSerializer(serializers.ModelSerializer):
         model = ExpenseAttribute
         fields = ['attribute_type', 'display_name']
 
-
-class ReimbursementSerializer(serializers.ModelSerializer):
-    """
-    Reimbursement serializer
-    """
-
-    class Meta:
-        model = Reimbursement
-        fields = '__all__'

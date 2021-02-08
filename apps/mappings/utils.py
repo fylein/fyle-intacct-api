@@ -26,7 +26,7 @@ class MappingUtils:
             assert_valid('default_charge_card_id' in general_mapping and general_mapping['default_charge_card_id'],
                          'default charge card id field is blank')
 
-        if general_settings.corporate_credit_card_expenses_object and \
+        elif general_settings.corporate_credit_card_expenses_object and \
                 general_settings.corporate_credit_card_expenses_object == 'BILL':
             assert_valid('default_ccc_vendor_name' in general_mapping and general_mapping['default_ccc_vendor_name'],
                          'default ccc vendor name field is blank')

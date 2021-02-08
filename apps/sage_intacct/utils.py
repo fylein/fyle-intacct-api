@@ -414,9 +414,9 @@ class SageIntacctConnector:
         created_bill = self.connection.bills.post(bill_payload)
         return created_bill
 
-    def get_bill(self, bill_id):
+    def get_bill(self, bill_id: str):
         """
-        GET bill from SAGE
+        GET bill from SAGE Intacct
         """
         bill = self.connection.bills.get(field='RECORDNO', value=bill_id)
         return bill
