@@ -511,6 +511,7 @@ class SageIntacctFieldsView(generics.ListAPIView):
         attributes = DestinationAttribute.objects.filter(
             ~Q(attribute_type='EMPLOYEE') & ~Q(attribute_type='VENDOR') & ~Q(attribute_type='CHARGE_CARD_NUMBER') &
             ~Q(attribute_type='EXPENSE_TYPE') & ~Q(attribute_type='ACCOUNT') & ~Q(attribute_type='CCC_ACCOUNT'),
+            ~Q(attribute_type='PAYMENT_ACCOUNT'),
             workspace_id=self.kwargs['workspace_id']
         ).values('attribute_type', 'display_name').distinct()
 
