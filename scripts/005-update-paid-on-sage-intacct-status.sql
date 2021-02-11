@@ -1,4 +1,4 @@
--- Script to set paid_on_sage_intacct as True for existing bills, expense reports and expenses
+-- Script to set paid_on_sage_intacct and payment_synced as True for existing bills, expense reports and expenses
 rollback;
 begin;
 
@@ -16,3 +16,13 @@ where expense_reports.paid_on_sage_intacct = False;
 update expenses
 set paid_on_sage_intacct = True
 where expenses.paid_on_sage_intacct = False;
+
+-- payment_synced status for bills
+update bills
+set payment_synced = True
+where bills.payment_synced = False;
+
+-- payment_synced status for bills
+update expense_reports
+set payment_synced = True
+where expense_reports.payment_synced = False;
