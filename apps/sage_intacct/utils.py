@@ -11,14 +11,16 @@ from sageintacctsdk import SageIntacctSDK
 
 from apps.workspaces.models import SageIntacctCredential, WorkspaceGeneralSettings
 
-from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, \
-    ChargeCardTransaction, ChargeCardTransactionLineitem
+from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
+    SageIntacctReimbursementLineitem
 
 
 class SageIntacctConnector:
     """
     Sage Intacct utility functions
     """
+
     def __init__(self, credentials_object: SageIntacctCredential, workspace_id: int):
         sender_id = settings.SI_SENDER_ID
         sender_password = settings.SI_SENDER_PASSWORD
@@ -127,6 +129,26 @@ class SageIntacctConnector:
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             charge_card_accounts_attributes, self.workspace_id)
+        return account_attributes
+
+    def sync_payment_accounts(self):
+        """
+        Get Payment accounts
+        """
+        payment_accounts = self.connection.checking_accounts.get_all()['checkingaccount']
+
+        payment_accounts_attributes = []
+
+        for payment_account in payment_accounts:
+            payment_accounts_attributes.append({
+                'attribute_type': 'PAYMENT_ACCOUNT',
+                'display_name': 'Payment Account',
+                'value': payment_account['BANKNAME'],
+                'destination_id': payment_account['BANKACCOUNTID']
+            })
+
+        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
+            payment_accounts_attributes, self.workspace_id)
         return account_attributes
 
     def sync_projects(self):
@@ -250,7 +272,7 @@ class SageIntacctConnector:
         return account_attributes
 
     def __construct_expense_report(self, expense_report: ExpenseReport, \
-        expense_report_lineitems: List[ExpenseReportLineitem]) -> Dict:
+                                   expense_report_lineitems: List[ExpenseReportLineitem]) -> Dict:
         """
         Create a expense report
         :param expense_report: ExpenseReport object extracted from database
@@ -337,7 +359,8 @@ class SageIntacctConnector:
         return bill_payload
 
     def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
-        charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]) -> Dict:
+                                            charge_card_transaction_lineitems: List[
+                                                ChargeCardTransactionLineitem]) -> Dict:
         """
         Create a charge card transaction
         :param charge_card_transaction: ChargeCardTransaction object extracted from database
@@ -391,14 +414,28 @@ class SageIntacctConnector:
         created_bill = self.connection.bills.post(bill_payload)
         return created_bill
 
+    def get_bill(self, bill_id: str):
+        """
+        GET bill from SAGE Intacct
+        """
+        bill = self.connection.bills.get(field='RECORDNO', value=bill_id)
+        return bill
+
+    def get_expense_report(self, expense_report_id):
+        """
+        GET expense reports from SAGE
+        """
+        expense_report = self.connection.expense_reports.get(field='RECORDNO', value=expense_report_id)
+        return expense_report
+
     def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
-        charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]):
+                                     charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]):
         """
         Post charge card transaction to Sage Intacct
         """
-        created_charge_card_transaction_payload = self.__construct_charge_card_transaction\
+        created_charge_card_transaction_payload = self.__construct_charge_card_transaction \
             (charge_card_transaction, charge_card_transaction_lineitems)
-        created_charge_card_transaction = self.connection.charge_card_transactions.post\
+        created_charge_card_transaction = self.connection.charge_card_transactions.post \
             (created_charge_card_transaction_payload)
         return created_charge_card_transaction
 
@@ -465,3 +502,92 @@ class SageIntacctConnector:
                 return supdoc_id
 
             return False
+
+    @staticmethod
+    def __construct_ap_payment(ap_payment: APPayment, ap_payment_lineitems: List[APPaymentLineitem]) -> Dict:
+        """
+        Create an AP Payment
+        :param ap_payment: APPayment object extracted from database
+        :param ap_payment_lineitems: APPaymentLineItem objects extracted from database
+        :return: constructed AP Payment
+        """
+
+        ap_payment_lineitems_payload = []
+
+        for lineitem in ap_payment_lineitems:
+            payment_detail = {
+                'RECORDKEY': lineitem.record_key,
+                'TRX_PAYMENTAMOUNT': lineitem.amount
+            }
+
+            ap_payment_lineitems_payload.append(payment_detail)
+
+        current_date = '{0}/{1}/{2}'.format(datetime.today().month, datetime.today().day, datetime.today().year)
+
+        ap_payment_payload = {
+            'FINANCIALENTITY': ap_payment.payment_account_id,
+            'PAYMENTMETHOD': 'Cash',
+            'VENDORID': ap_payment.vendor_id,
+            'DESCRIPTION': ap_payment.description,
+            'PAYMENTDATE': current_date,
+            'APPYMTDETAILS': {
+                'APPYMTDETAIL': ap_payment_lineitems_payload
+            }
+        }
+
+        return ap_payment_payload
+
+    def post_ap_payment(self, ap_payment: APPayment, ap_payment_lineitems: List[APPaymentLineitem]):
+        """
+        Post AP Payment to Sage Intacct
+        """
+        ap_payment_payload = self.__construct_ap_payment(ap_payment, ap_payment_lineitems)
+        created_ap_payment = self.connection.ap_payments.post(ap_payment_payload)
+        return created_ap_payment
+
+    @staticmethod
+    def __construct_sage_intacct_reimbursement(reimbursement: SageIntacctReimbursement,
+                                               reimbursement_lineitems: List[SageIntacctReimbursementLineitem]) -> Dict:
+        """
+        Create a Reimbursement
+        :param reimbursement: Reimbursement object extracted from database
+        :param reimbursement_lineitems: ReimbursementLineItem objects extracted from database
+        :return: constructed Reimbursement
+        """
+
+        reimbursement_lineitems_payload = []
+
+        for lineitem in reimbursement_lineitems:
+            reimbursement_detail = {
+                'key': lineitem.record_key,
+                'paymentamount': lineitem.amount
+            }
+
+            reimbursement_lineitems_payload.append(reimbursement_detail)
+
+        reimbursement_payload = {
+            'bankaccountid': reimbursement.account_id,
+            'employeeid': reimbursement.employee_id,
+            'memo': reimbursement.memo,
+            'paymentmethod': 'Cash',
+            'paymentdate': {
+                'year': datetime.now().strftime('%Y'),
+                'month': datetime.now().strftime('%m'),
+                'day': datetime.now().strftime('%d')
+            },
+            'eppaymentrequestitems': {
+                'eppaymentrequestitem': reimbursement_lineitems_payload
+            },
+            'paymentdescription': reimbursement.payment_description
+        }
+
+        return reimbursement_payload
+
+    def post_sage_intacct_reimbursement(self, reimbursement: SageIntacctReimbursement,
+                                        reimbursement_lineitems: List[SageIntacctReimbursementLineitem]):
+        """
+        Post Reimbursement to Sage Intacct
+        """
+        reimbursement_payload = self.__construct_sage_intacct_reimbursement(reimbursement, reimbursement_lineitems)
+        created_reimbursement = self.connection.reimbursements.post(reimbursement_payload)
+        return created_reimbursement
