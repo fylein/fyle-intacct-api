@@ -2,7 +2,7 @@
 Sage Intacct models
 """
 from datetime import datetime
-
+from typing import List
 from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
@@ -43,6 +43,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
             project_id = mapping.destination.destination_id
     return project_id
 
+
 def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     department_id = None
     if general_mappings and general_mappings.default_department_id:
@@ -72,6 +73,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         if mapping:
             department_id = mapping.destination.destination_id
     return department_id
+
 
 def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     location_id = None
@@ -138,6 +140,7 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
 
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
+
 def get_expense_purpose(lineitem, category) -> str:
     expense_purpose = ', purpose - {0}'.format(lineitem.purpose) if lineitem.purpose else ''
     spent_at = ' spent on {0} '.format(lineitem.spent_at.date()) if lineitem.spent_at else ''
@@ -156,6 +159,8 @@ class Bill(models.Model):
     memo = models.CharField(max_length=255, help_text='Sage Intacct docnumber', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Bill transaction date', null=True)
+    payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
+    paid_on_sage_intacct = models.BooleanField(help_text='Payment status in Sage Intacct', default=False)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -303,6 +308,8 @@ class ExpenseReport(models.Model):
     memo = models.CharField(max_length=255, help_text='Sage Intacct memo', null=True)
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
+    paid_on_sage_intacct = models.BooleanField(help_text='Payment status in Sage Intacct', default=False)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -425,6 +432,7 @@ class ExpenseReportLineitem(models.Model):
 
         return expense_report_lineitem_objects
 
+
 class ChargeCardTransaction(models.Model):
     """
     Sage Intacct Charge Card Transaction
@@ -488,8 +496,8 @@ class ChargeCardTransactionLineitem(models.Model):
     Sage Intacct Charge Card Transaction Lineitem
     """
     id = models.AutoField(primary_key=True)
-    charge_card_transaction = models.ForeignKey(ChargeCardTransaction, on_delete=models.PROTECT, \
-        help_text='Reference to ChargeCardTransaction')
+    charge_card_transaction = models.ForeignKey(ChargeCardTransaction, on_delete=models.PROTECT,
+                                                help_text='Reference to ChargeCardTransaction')
     expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
@@ -557,3 +565,188 @@ class ChargeCardTransactionLineitem(models.Model):
             charge_card_transaction_lineitem_objects.append(charge_card_transaction_lineitem_object)
 
         return charge_card_transaction_lineitem_objects
+
+
+class APPayment(models.Model):
+    """
+    Sage Intacct AP Payments
+    """
+    id = models.AutoField(primary_key=True)
+    expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
+    payment_account_id = models.CharField(max_length=255, help_text='Sage Intacct Payment Account ID')
+    vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
+    description = models.TextField(help_text='Payment Description')
+    currency = models.CharField(max_length=255, help_text='AP Payment Currency')
+    created_at = models.DateField(auto_now=True, help_text='Created at')
+    updated_at = models.DateField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'ap_payments'
+
+    @staticmethod
+    def create_ap_payment(expense_group: ExpenseGroup):
+        """
+        Create AP Payments
+        :param expense_group: expense group
+        :return: AP Payment object
+        """
+
+        description = expense_group.description
+
+        expense = expense_group.expenses.first()
+        
+        vendor_id = Mapping.objects.get(
+            source_type='EMPLOYEE',
+            destination_type='VENDOR',
+            source__value=description.get('employee_email'),
+            workspace_id=expense_group.workspace_id
+        ).destination.destination_id
+
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+
+        ap_payment_object, _ = APPayment.objects.update_or_create(
+            expense_group=expense_group,
+            defaults={
+                'payment_account_id': general_mappings.payment_account_id,
+                'vendor_id': vendor_id,
+                'description': 'Payment for Bill by {0}'.format(description.get('employee_email')),
+                'currency': expense.currency
+            }
+        )
+
+        return ap_payment_object
+
+
+class APPaymentLineitem(models.Model):
+    """
+    Sage Intacct AP Payment LineItems
+    """
+    id = models.AutoField(primary_key=True)
+    ap_payment = models.ForeignKey(APPayment, on_delete=models.PROTECT, help_text='Reference to AP Payment')
+    amount = models.FloatField(help_text='AP Payment amount')
+    record_key = models.CharField(max_length=255, help_text='Sage Intacct Record Key')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'ap_payment_lineitems'
+
+    @staticmethod
+    def create_ap_payment_lineitems(expense_group: ExpenseGroup, record_key):
+        """
+        Create AP Payment lineitems
+        :param record_key:
+        :param expense_group: expense group
+        :return: lineitems objects
+        """
+        expenses = expense_group.expenses.all()
+        ap_payment = APPayment.objects.get(expense_group=expense_group)
+
+        ap_payment_lineitem_objects = []
+
+        total_amount = 0
+        for lineitem in expenses:
+            total_amount = total_amount + lineitem.amount
+
+        ap_payment_lineitem_object, _ = APPaymentLineitem.objects.update_or_create(
+            ap_payment=ap_payment,
+            record_key=record_key,
+            defaults={
+                'amount': total_amount,
+            }
+        )
+        ap_payment_lineitem_objects.append(ap_payment_lineitem_object)
+
+        return ap_payment_lineitem_objects
+
+
+class SageIntacctReimbursement(models.Model):
+    """
+    Sage Intacct Reimbursement
+    """
+    id = models.AutoField(primary_key=True)
+    expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
+    account_id = models.CharField(max_length=255, help_text='Sage Intacct Account ID')
+    employee_id = models.CharField(max_length=255, help_text='Sage Intacct Employee ID')
+    memo = models.TextField(help_text='Reimbursement Memo')
+    payment_description = models.TextField(help_text='Reimbursement Description')
+    created_at = models.DateField(auto_now=True, help_text='Created at')
+    updated_at = models.DateField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'sage_intacct_reimbursements'
+
+    @staticmethod
+    def create_sage_intacct_reimbursement(expense_group: ExpenseGroup):
+        """
+        Create Sage Intacct Reimbursements
+        :param expense_group: expense group
+        :return: Sage Intacct Reimbursement object
+        """
+
+        description = expense_group.description
+
+        employee_id = Mapping.objects.get(
+            source_type='EMPLOYEE',
+            destination_type='EMPLOYEE',
+            source__value=description.get('employee_email'),
+            workspace_id=expense_group.workspace_id
+        ).destination.destination_id
+
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+
+        sage_intacct_reimbursement_object, _ = SageIntacctReimbursement.objects.update_or_create(
+            expense_group=expense_group,
+            defaults={
+                'account_id': general_mappings.payment_account_id,
+                'employee_id': employee_id,
+                'memo': 'Payment for Expense Report by {0}'.format(description.get('employee_email')),
+                'payment_description': 'Payment for Expense Report by {0}'.format(description.get('employee_email'))
+            }
+        )
+
+        return sage_intacct_reimbursement_object
+
+
+class SageIntacctReimbursementLineitem(models.Model):
+    """
+    Sage Intacct Reimbursement LineItems
+    """
+    id = models.AutoField(primary_key=True)
+    sage_intacct_reimbursement = models.ForeignKey(SageIntacctReimbursement, on_delete=models.PROTECT,
+                                                   help_text='Reference to Sage Intacct Reimbursement')
+    amount = models.FloatField(help_text='Reimbursement amount')
+    record_key = models.CharField(max_length=255, help_text='Sage Intacct Record Key')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'sage_intacct_reimbursement_lineitems'
+
+    @staticmethod
+    def create_sage_intacct_reimbursement_lineitems(expense_group: ExpenseGroup, record_key):
+        """
+        Create Reimbursement lineitems
+        :param record_key:
+        :param expense_group: expense group
+        :return: lineitems objects
+        """
+        expenses = expense_group.expenses.all()
+        sage_intacct_reimbursement = SageIntacctReimbursement.objects.get(expense_group=expense_group)
+
+        sage_intacct_reimbursement_lineitem_objects = []
+
+        total_amount = 0
+        for lineitem in expenses:
+            total_amount = total_amount + lineitem.amount
+
+        sage_intacct_reimbursement_lineitem_object, _ = SageIntacctReimbursementLineitem.objects.update_or_create(
+            sage_intacct_reimbursement=sage_intacct_reimbursement,
+            record_key=record_key,
+            defaults={
+                'amount': total_amount,
+            }
+        )
+        sage_intacct_reimbursement_lineitem_objects.append(sage_intacct_reimbursement_lineitem_object)
+
+        return sage_intacct_reimbursement_lineitem_objects

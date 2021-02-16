@@ -16,12 +16,14 @@ from django.urls import path
 
 from .views import EmployeeView, VendorView, AccountView, ExpenseTypeView, ChargeCardAccountView, DepartmentView, \
     ProjectView, LocationView, ExpenseReportView, ExpenseReportScheduleView, BillView, BillScheduleView, \
-    ChargeCardTransactionsView, ChargeCardTransactionsScheduleView, SageIntacctFieldsView, ItemView
+    ChargeCardTransactionsView, ChargeCardTransactionsScheduleView, SageIntacctFieldsView, ItemView, APPaymentView,\
+    ReimbursementView, PaymentAccountView, FyleReimbursementsView
 
 urlpatterns = [
     path('employees/', EmployeeView.as_view()),
     path('vendors/', VendorView.as_view()),
     path('accounts/', AccountView.as_view()),
+    path('payment_accounts/', PaymentAccountView.as_view()),
     path('expense_types/', ExpenseTypeView.as_view()),
     path('charge_card_accounts/', ChargeCardAccountView.as_view()),
     path('departments/', DepartmentView.as_view()),
@@ -34,5 +36,8 @@ urlpatterns = [
     path('charge_card_transactions/', ChargeCardTransactionsView.as_view()),
     path('charge_card_transactions/trigger/', ChargeCardTransactionsScheduleView.as_view()),
     path('sage_intacct_fields/', SageIntacctFieldsView.as_view()),
-    path('items/', ItemView.as_view())
+    path('items/', ItemView.as_view()),
+    path('ap_payments/', APPaymentView.as_view()),
+    path('reimbursements/', ReimbursementView.as_view()),
+    path('fyle_reimbursements/', FyleReimbursementsView.as_view())
 ]
