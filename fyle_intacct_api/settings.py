@@ -247,6 +247,6 @@ FYLE_JOBS_URL = os.environ.get('FYLE_JOBS_URL')
 # Sage Intacct Settings
 SI_SENDER_ID = os.environ.get('SI_SENDER_ID')
 SI_SENDER_PASSWORD = os.environ.get('SI_SENDER_PASSWORD')
-CACHE_EXPIRY = 900
+CACHE_EXPIRY = 3600
 
 CORS_ORIGIN_ALLOW_ALL = True
