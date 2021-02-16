@@ -172,7 +172,8 @@ Q_CLUSTER = {
     'workers': 1,
     'queue_limit': 30,
     'orm': 'default',
-    'ack_failures': True
+    'ack_failures': True,
+    'poll': 1
 }
 
 # Database
