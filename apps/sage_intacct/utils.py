@@ -229,8 +229,9 @@ class SageIntacctConnector:
         employee_attributes = []
 
         for employee in employees:
+            print(employee)
             detail = {
-                'email': employee['DISPLAYCONTACT.EMAIL1'] if employee['DISPLAYCONTACT.EMAIL1'] else None
+                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None
             }
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
