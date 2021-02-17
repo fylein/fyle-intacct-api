@@ -230,7 +230,7 @@ class SageIntacctConnector:
 
         for employee in employees:
             detail = {
-                'email': employee['CONTACT_NAME'] if employee['email'] else None
+                'email': employee['DISPLAYCONTACT.EMAIL1'] if employee['DISPLAYCONTACT.EMAIL1'] else None
             }
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
@@ -257,7 +257,7 @@ class SageIntacctConnector:
 
         for vendor in vendors:
             detail = {
-                'email': vendor['email'] if vendor['email'] else None
+                'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
             }
             vendor_attributes.append({
                 'attribute_type': 'VENDOR',
