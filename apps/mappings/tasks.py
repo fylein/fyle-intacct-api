@@ -142,7 +142,7 @@ def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], map
             source__value=source.value,
             workspace_id=mapping_attributes['workspace_id']
         ).first()
-        print("mapping attribute", mapping_attributes)
+
         if not mapping:
             Mapping.create_or_update_mapping(
                 source_type='EMPLOYEE',
@@ -178,13 +178,11 @@ def construct_filters_employee_mappings(employee: DestinationAttribute, employee
     return filters
 
 def async_auto_map_employees(employee_mapping_preference: str, workspace_id: str):
-    print("second log")
     mapping_setting = MappingSetting.objects.filter(
         ~Q(destination_field='CHARGE_CARD_NUMBER'),
         source_field='EMPLOYEE', workspace_id=workspace_id
     ).first()
 
-    print(mapping_setting)
     destination_type = None
     if mapping_setting:
         destination_type = mapping_setting.destination_field
@@ -195,29 +193,24 @@ def async_auto_map_employees(employee_mapping_preference: str, workspace_id: str
 
     for employee in employee_attributes:
         filters = construct_filters_employee_mappings(employee, employee_mapping_preference)
-
         if filters:
-            filter['auto_mapped'] = False
+            filters['auto_mapped'] = False
             source_attribute = filter_expense_attributes(workspace_id, **filters)
-
+            
         mapping_attributes = {
             'destination_type': destination_type,
             'destination_value': employee.value,
             'destination_id': employee.destination_id,
             'workspace_id': workspace_id
         }
-        print("nilesh1")
-        print("source_attribure", source_attribute)
-        print("filter", mapping_attributes)
         auto_create_employee_mappings(source_attribute, mapping_attributes)                       
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: str):
-    print("first log")
     Schedule.objects.create(
         func='apps.mappings.tasks.async_auto_map_employees',
         args='"{0}", {1}'.format(employee_mapping_preference, workspace_id),
         schedule_type=Schedule.ONCE,
-        next_run=datetime.now() + timedelta(minutes=5)
+        next_run=datetime.now()
     )
 
 def async_auto_map_ccc_account(default_ccc_account_name: str, default_ccc_account_id: str, workspace_id: str):
