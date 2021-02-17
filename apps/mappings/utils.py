@@ -90,5 +90,5 @@ class MappingUtils:
                 sync_fyle_to_sage_intacct_payments=general_settings.sync_fyle_to_sage_intacct_payments,
                 workspace_id=self.__workspace_id
             )
-
+        
         return general_mapping

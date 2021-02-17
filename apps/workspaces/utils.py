@@ -1,6 +1,6 @@
 from typing import Dict
 
-from apps.mappings.tasks import schedule_projects_creation
+from apps.mappings.tasks import schedule_projects_creation, schedule_auto_map_employees
 
 from .models import WorkspaceGeneralSettings
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync,\
@@ -15,6 +15,10 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
     :return:
     """
 
+    if 'auto_map_employees' in general_settings_payload and general_settings_payload['auto_map_employees']:
+        assert_valid(general_settings_payload['auto_map_employees'] in ['EMAIL', 'NAME', 'EMPLOYEE_CODE'],
+                    'auto_map_employees can have only EMAIL / NAME / EMPLOYEE_CODE')
+
     general_settings, _ = WorkspaceGeneralSettings.objects.update_or_create(
         workspace_id=workspace_id,
         defaults={
@@ -22,7 +26,8 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
             'corporate_credit_card_expenses_object': general_settings_payload['corporate_credit_card_expenses_object'],
             'import_projects': general_settings_payload['import_projects'],
             'sync_fyle_to_sage_intacct_payments': general_settings_payload['sync_fyle_to_sage_intacct_payments'],
-            'sync_sage_intacct_to_fyle_payments': general_settings_payload['sync_sage_intacct_to_fyle_payments']
+            'sync_sage_intacct_to_fyle_payments': general_settings_payload['sync_sage_intacct_to_fyle_payments'],
+            #'auto_map_employees': general_settings_payload['auto_map_employees']
         }
     )
 
@@ -41,5 +46,8 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
         sync_sage_intacct_to_fyle_payments=general_settings.sync_sage_intacct_to_fyle_payments,
         workspace_id=workspace_id
     )
+
+    #if general_settings_payload['auto_map_employees']:
+    #   schedule_auto_map_employees(general_settings_payload['auto_map_employees'], workspace_id)
    
     return general_settings
