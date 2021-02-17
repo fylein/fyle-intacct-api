@@ -27,7 +27,7 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
             'import_projects': general_settings_payload['import_projects'],
             'sync_fyle_to_sage_intacct_payments': general_settings_payload['sync_fyle_to_sage_intacct_payments'],
             'sync_sage_intacct_to_fyle_payments': general_settings_payload['sync_sage_intacct_to_fyle_payments'],
-            #'auto_map_employees': general_settings_payload['auto_map_employees']
+            'auto_map_employees': general_settings_payload['auto_map_employees']
         }
     )
 
@@ -47,7 +47,7 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
         workspace_id=workspace_id
     )
 
-    #if general_settings_payload['auto_map_employees']:
-    #   schedule_auto_map_employees(general_settings_payload['auto_map_employees'], workspace_id)
+    if general_settings_payload['auto_map_employees']:
+       schedule_auto_map_employees(general_settings_payload['auto_map_employees'], workspace_id)
    
     return general_settings
