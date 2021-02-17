@@ -214,3 +214,24 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
         schedule_type=Schedule.ONCE,
         next_run=datetime.now() + timedelta(minutes=5)
     )
+
+def async_auto_map_ccc_account(default_ccc_account_name: str, default_ccc_account_id: str, workspace_id: str):
+    source_attributes = filter_expense_attributes(workspace_id)
+
+    mapping_attributes = {
+        'destination_type': 'CREDIT_CARD_ACCOUNT',
+        'destination_value': default_ccc_account_name,
+        'destination_id': default_ccc_account_id,
+        'workspace_id': workspace_id
+    }
+
+    auto_create_employee_mappings(source_attributes, mapping_attributes)
+
+
+def schedule_auto_map_ccc_employees(default_ccc_account_name: str, default_ccc_account_id: str, workspace_id: str):
+    Schedule.objects.create(
+        func='apps.mappings.tasks.async_auto_map_ccc_account',
+        args='"{0}", "{1}", {2}'.format(default_ccc_account_name, default_ccc_account_id, workspace_id),
+        schedule_type=Schedule.ONCE,
+        next_run=datetime.now() + timedelta(minutes=5)
+    )

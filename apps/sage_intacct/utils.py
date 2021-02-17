@@ -229,11 +229,15 @@ class SageIntacctConnector:
         employee_attributes = []
 
         for employee in employees:
+            detail = {
+                'email': employee['CONTACT_NAME'] if employee['email'] else None
+            }
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
                 'display_name': 'employee',
                 'value': employee['CONTACT_NAME'],
-                'destination_id': employee['EMPLOYEEID']
+                'destination_id': employee['EMPLOYEEID'],
+                'detail':detail
             })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
@@ -252,11 +256,15 @@ class SageIntacctConnector:
             workspace_id=workspace_id).first()
 
         for vendor in vendors:
+            detail = {
+                'email': vendor['email'] if vendor['email'] else None
+            }
             vendor_attributes.append({
                 'attribute_type': 'VENDOR',
                 'display_name': 'vendor',
                 'value': vendor['NAME'],
-                'destination_id': vendor['VENDORID']
+                'destination_id': vendor['VENDORID'],
+                'detail': detail
             })
 
             if general_settings and general_settings.corporate_credit_card_expenses_object == 'BILL':
@@ -264,7 +272,8 @@ class SageIntacctConnector:
                     'attribute_type': 'CHARGE_CARD_NUMBER',
                     'display_name': 'Charge Card Account',
                     'value': vendor['NAME'],
-                    'destination_id': vendor['VENDORID']
+                    'destination_id': vendor['VENDORID'],
+                    'detail': detail
                 })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(

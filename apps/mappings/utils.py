@@ -5,6 +5,7 @@ from apps.workspaces.models import WorkspaceGeneralSettings
 from fyle_intacct_api.utils import assert_valid
 
 from .models import GeneralMapping
+from .tasks import schedule_auto_map_ccc_employees
 
 
 class MappingUtils:
@@ -45,7 +46,7 @@ class MappingUtils:
             assert_valid('payment_account_id' in general_mapping and general_mapping['payment_account_id'],
                          'payment account id field is blank')
 
-        general_mapping, _ = GeneralMapping.objects.update_or_create(
+        general_mapping_object, _ = GeneralMapping.objects.update_or_create(
             workspace_id=self.__workspace_id,
             defaults={
                 'default_location_name': general_mapping.get('default_location_name')
@@ -91,4 +92,8 @@ class MappingUtils:
                 workspace_id=self.__workspace_id
             )
         
-        return general_mapping
+        if general_mapping_object.default_ccc_vendor_name:
+            schedule_auto_map_ccc_employees(general_mapping_object.default_ccc_vendor_name,
+                                           general_mapping_object.default_ccc_vendor_id, self.__workspace_id)
+        
+        return general_mapping_object
