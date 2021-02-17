@@ -92,8 +92,8 @@ class MappingUtils:
                 workspace_id=self.__workspace_id
             )
         
-        if general_mapping_object.default_ccc_vendor_name:
-            schedule_auto_map_ccc_employees(general_mapping_object.default_ccc_vendor_name,
-                                           general_mapping_object.default_ccc_vendor_id, self.__workspace_id)
+        if general_mapping_object.default_charge_card_name:
+            schedule_auto_map_ccc_employees(general_mapping_object.default_charge_card_name,
+                                           general_mapping_object.default_charge_card_id, self.__workspace_id)
         
         return general_mapping_object
