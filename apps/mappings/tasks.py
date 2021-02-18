@@ -196,7 +196,6 @@ def async_auto_map_employees(employee_mapping_preference: str, workspace_id: str
         if filters:
             filters['auto_mapped'] = False
             source_attribute = filter_expense_attributes(workspace_id, **filters)
-            
         mapping_attributes = {
             'destination_type': destination_type,
             'destination_value': employee.value,
@@ -217,7 +216,7 @@ def async_auto_map_ccc_account(default_ccc_account_name: str, default_ccc_accoun
     source_attributes = filter_expense_attributes(workspace_id)
 
     mapping_attributes = {
-        'destination_type': 'CREDIT_CARD_ACCOUNT',
+        'destination_type': 'CHARGE_CARD_NUMBER',
         'destination_value': default_ccc_account_name,
         'destination_id': default_ccc_account_id,
         'workspace_id': workspace_id
@@ -231,5 +230,5 @@ def schedule_auto_map_ccc_employees(default_ccc_account_name: str, default_ccc_a
         func='apps.mappings.tasks.async_auto_map_ccc_account',
         args='"{0}", "{1}", {2}'.format(default_ccc_account_name, default_ccc_account_id, workspace_id),
         schedule_type=Schedule.ONCE,
-        next_run=datetime.now() + timedelta(minutes=5)
+        next_run=datetime.now()
     )
