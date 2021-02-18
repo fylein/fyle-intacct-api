@@ -182,7 +182,6 @@ def async_auto_map_employees(employee_mapping_preference: str, workspace_id: str
         ~Q(destination_field='CHARGE_CARD_NUMBER'),
         source_field='EMPLOYEE', workspace_id=workspace_id
     ).first()
-
     destination_type = None
     if mapping_setting:
         destination_type = mapping_setting.destination_field
