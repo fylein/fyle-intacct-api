@@ -132,6 +132,8 @@ def schedule_projects_creation(import_projects, workspace_id):
             schedule.delete()
 
 def filter_expense_attributes(workspace_id: str, **filters):
+    print(filters)
+    print(workspace_id)
     return ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', workspace_id=workspace_id, **filters).all()
 
 def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], mapping_attributes: dict):
@@ -188,7 +190,7 @@ def async_auto_map_employees(employee_mapping_preference: str, workspace_id: str
 
     source_attribute = []
     employee_attributes = DestinationAttribute.objects.filter(attribute_type=destination_type,
-                                                              workspace_id=workspace_id)
+                                                              workspace_id=workspace_id).all()
 
     for employee in employee_attributes:
         filters = construct_filters_employee_mappings(employee, employee_mapping_preference)
@@ -208,12 +210,12 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
         func='apps.mappings.tasks.async_auto_map_employees',
         args='"{0}", {1}'.format(employee_mapping_preference, workspace_id),
         schedule_type=Schedule.ONCE,
-        next_run=datetime.now()
+        next_run=datetime.now() + timedelta(minutes=5)
     )
 
 def async_auto_map_ccc_account(default_ccc_account_name: str, default_ccc_account_id: str, workspace_id: str):
     source_attributes = filter_expense_attributes(workspace_id)
-
+    
     mapping_attributes = {
         'destination_type': 'CHARGE_CARD_NUMBER',
         'destination_value': default_ccc_account_name,
@@ -224,10 +226,10 @@ def async_auto_map_ccc_account(default_ccc_account_name: str, default_ccc_accoun
     auto_create_employee_mappings(source_attributes, mapping_attributes)
 
 
-def schedule_auto_map_ccc_employees(default_ccc_account_name: str, default_ccc_account_id: str, workspace_id: str):
+def schedule_auto_map_ccc_employees(default_charge_card_name: str, default_charge_card_id: str, workspace_id: str):
     Schedule.objects.create(
         func='apps.mappings.tasks.async_auto_map_ccc_account',
-        args='"{0}", "{1}", {2}'.format(default_ccc_account_name, default_ccc_account_id, workspace_id),
+        args='"{0}", "{1}", {2}'.format(default_charge_card_name, default_charge_card_id, workspace_id),
         schedule_type=Schedule.ONCE,
-        next_run=datetime.now()
+        next_run=datetime.now() + timedelta(minutes=5)
     )
