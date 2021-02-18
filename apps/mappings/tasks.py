@@ -132,8 +132,6 @@ def schedule_projects_creation(import_projects, workspace_id):
             schedule.delete()
 
 def filter_expense_attributes(workspace_id: str, **filters):
-    print(filters)
-    print(workspace_id)
     return ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', workspace_id=workspace_id, **filters).all()
 
 def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], mapping_attributes: dict):
