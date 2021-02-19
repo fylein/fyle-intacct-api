@@ -40,7 +40,7 @@ class WorkspaceGeneralSettings(models.Model):
     sync_sage_intacct_to_fyle_payments = models.BooleanField(default=False, help_text='Auto Sync Payments from Sage '
                                                                                       'Intacct to Fyle')
     auto_map_employees = models.CharField(max_length=50,
-                                         help_text='Auto Map Employees type from NetSuite to Fyle', null=True)
+                                         help_text='Auto Map Employees type from Sage Intacct to Fyle', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
