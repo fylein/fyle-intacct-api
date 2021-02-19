@@ -161,8 +161,8 @@ class SageIntacctConnector:
 
         for project in projects:
             detail = {
-                'CUSTOMERID': project['CUSTOMERID'],
-                'CUSTOMERNAME': project['CUSTOMERNAME']
+                'customer_id': project['CUSTOMERID'],
+                'customer_name': project['CUSTOMERNAME']
             }
 
             project_attributes.append({
