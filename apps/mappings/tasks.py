@@ -1,6 +1,6 @@
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from typing import List, Dict
 
@@ -8,7 +8,7 @@ from django_q.models import Schedule
 from django.db.models import Q
 
 from fylesdk import WrongParamsError
-from fyle_accounting_mappings.models import Mapping, ExpenseAttribute, DestinationAttribute
+from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute
 
 from apps.fyle.utils import FyleConnector
 from apps.sage_intacct.utils import SageIntacctConnector
@@ -87,6 +87,7 @@ def auto_create_project_mappings(workspace_id):
                 destination_type='PROJECT',
                 source_value=project.value,
                 destination_value=project.value,
+                destination_id=project.destination_id,
                 workspace_id=workspace_id
             )
             project_mappings.append(mapping)
@@ -130,3 +131,104 @@ def schedule_projects_creation(import_projects, workspace_id):
 
         if schedule:
             schedule.delete()
+
+def filter_expense_attributes(workspace_id: str, **filters):
+    return ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', workspace_id=workspace_id, **filters).all()
+
+def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], mapping_attributes: dict):
+    for source in source_attributes:
+        mapping = Mapping.objects.filter(
+            source_type='EMPLOYEE',
+            destination_type=mapping_attributes['destination_type'],
+            source__value=source.value,
+            workspace_id=mapping_attributes['workspace_id']
+        ).first()
+
+        if not mapping:
+            Mapping.create_or_update_mapping(
+                source_type='EMPLOYEE',
+                destination_type=mapping_attributes['destination_type'],
+                source_value=source.value,
+                destination_value=mapping_attributes['destination_value'],
+                destination_id=mapping_attributes['destination_id'],
+                workspace_id=mapping_attributes['workspace_id']
+            )
+
+            if mapping_attributes['destination_type'] != 'CHARGE_CARD_NUMBER':
+                source.auto_mapped = True
+                source.save(update_fields=['auto_mapped'])
+
+def construct_filters_employee_mappings(employee: DestinationAttribute, employee_mapping_preference: str):
+    filters = {}
+    if employee_mapping_preference == 'EMAIL':
+        if employee.detail and employee.detail['email']:
+            filters = {
+                'value__iexact': employee.detail['email']
+            }
+
+    elif employee_mapping_preference == 'NAME':
+        filters = {
+            'detail__full_name__iexact': employee.value
+        }
+
+    elif employee_mapping_preference == 'EMPLOYEE_CODE':
+        filters = {
+            'detail__employee_code__iexact': employee.value
+        }
+
+    return filters
+
+def async_auto_map_employees(employee_mapping_preference: str, workspace_id: str):
+    mapping_setting = MappingSetting.objects.filter(
+        ~Q(destination_field='CHARGE_CARD_NUMBER'),
+        source_field='EMPLOYEE', workspace_id=workspace_id
+    ).first()
+    destination_type = None
+    if mapping_setting:
+        destination_type = mapping_setting.destination_field
+
+    source_attribute = []
+    employee_attributes = DestinationAttribute.objects.filter(attribute_type=destination_type,
+                                                              workspace_id=workspace_id).all()
+
+    for employee in employee_attributes:
+        filters = construct_filters_employee_mappings(employee, employee_mapping_preference)
+        if filters:
+            filters['auto_mapped'] = False
+            source_attribute = filter_expense_attributes(workspace_id, **filters)
+        mapping_attributes = {
+            'destination_type': destination_type,
+            'destination_value': employee.value,
+            'destination_id': employee.destination_id,
+            'workspace_id': workspace_id
+        }
+        auto_create_employee_mappings(source_attribute, mapping_attributes)                       
+
+def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: str):
+    Schedule.objects.create(
+        func='apps.mappings.tasks.async_auto_map_employees',
+        args='"{0}", {1}'.format(employee_mapping_preference, workspace_id),
+        schedule_type=Schedule.ONCE,
+        next_run=datetime.now() + timedelta(minutes=5)
+    )
+
+def async_auto_map_ccc_account(default_ccc_account_name: str, default_ccc_account_id: str, workspace_id: str):
+    source_attributes = filter_expense_attributes(workspace_id)
+    
+    mapping_attributes = {
+        'destination_type': 'CHARGE_CARD_NUMBER',
+        'destination_value': default_ccc_account_name,
+        'destination_id': default_ccc_account_id,
+        'workspace_id': workspace_id
+    }
+
+    auto_create_employee_mappings(source_attributes, mapping_attributes)
+
+
+def schedule_auto_map_ccc_employees(default_charge_card_name: str, default_charge_card_id: str, workspace_id: str):
+    Schedule.objects.create(
+        func='apps.mappings.tasks.async_auto_map_ccc_account',
+        args='"{0}", "{1}", {2}'.format(default_charge_card_name, default_charge_card_id, workspace_id),
+        schedule_type=Schedule.ONCE,
+        next_run=datetime.now() + timedelta(minutes=5)
+    )
