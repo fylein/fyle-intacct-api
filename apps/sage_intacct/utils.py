@@ -1,5 +1,6 @@
 from typing import List, Dict
 from datetime import datetime
+import unidecode
 
 from cryptography.fernet import Fernet
 
@@ -55,7 +56,7 @@ class SageIntacctConnector:
             account_attributes.append({
                 'attribute_type': 'ACCOUNT',
                 'display_name': 'account',
-                'value': account['TITLE'],
+                'value': unidecode.unidecode(u'{0}'.format(account['TITLE'])),
                 'destination_id': account['ACCOUNTNO']
             })
 
@@ -63,7 +64,7 @@ class SageIntacctConnector:
                 account_attributes.append({
                     'attribute_type': 'CCC_ACCOUNT',
                     'display_name': 'Credit Card Account',
-                    'value': account['TITLE'],
+                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'])),
                     'destination_id': account['ACCOUNTNO']
                 })
 
@@ -103,8 +104,12 @@ class SageIntacctConnector:
             expense_types_attributes.append({
                 'attribute_type': 'EXPENSE_TYPE',
                 'display_name': 'Expense Types',
-                'value': expense_type['DESCRIPTION'],
-                'destination_id': expense_type['ACCOUNTLABEL']
+                'value': expense_type['DESCRIPTION'].replace('/', '-'),
+                'destination_id': expense_type['ACCOUNTLABEL'],
+                'detail': {
+                    'GL_ACCOUNT_NO':expense_type['GLACCOUNTNO'],
+                    'GL_ACCOUNT_TITLE':expense_type['GLACCOUNTTITLE']
+                }
             })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
