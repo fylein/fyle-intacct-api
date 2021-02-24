@@ -254,18 +254,21 @@ class SageIntacctConnector:
         :return Vendor Destination Attribute
         """
 
-        general_mappings = general_mappings = GeneralMapping.objects.get(workspace_id=employee.workspace_id)
+        general_mappings = GeneralMapping.objects.get(workspace_id=employee.workspace_id)
 
-        sage_intacct_display_name = vendor.detail['employee_code'] if (
-            auto_map_employee_preference == 'EMPLOYEE_CODE' and vendor.detail['employee_code']
-        ) else vendor.detail['full_name']
-
-        contact = {
-            'CONTACTNAME': sage_intacct_display_name,
-            'PRINTAS': sage_intacct_display_name
-        }
-
-        created_contact = self.connection.contacts.post(contact)
+        sage_intacct_display_name = employee.detail['employee_code'] if (
+            auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
+        ) else employee.detail['full_name']
+        try:
+            contact = {
+                'CONTACTNAME': sage_intacct_display_name,
+                'PRINTAS': sage_intacct_display_name,
+                'EMAIL1': employee.value
+            }
+            created_contact = self.connection.contacts.post(contact)
+        
+        except Exception as e:
+            pass
 
         employee = {
             'PERSONALINFO': {
@@ -274,15 +277,16 @@ class SageIntacctConnector:
             'LOCATIONID': general_mappings.default_location_id
         }
 
-        created_employee = self.connection.employees.post(employee)['PERSONALINFO']
+
+        created_employee = self.connection.employees.post(employee)['data']['employee']
 
         created_employee = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'EMPLOYEE',
             'display_name': 'employee',
             'value': sage_intacct_display_name,
-            'destination_id': created_employee['ID'],
+            'destination_id': created_employee['EMPLOYEEID'],
             'detail': {
-               'email': created_employee['EMAIL1']
+               'email': employee.value
             }
         }], self.workspace_id)[0]
 

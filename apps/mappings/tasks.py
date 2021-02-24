@@ -220,10 +220,10 @@ def async_auto_map_employees(workspace_id: int):
         }
         auto_create_employee_mappings(source_attribute, mapping_attributes)                       
 
-def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: str):
+def schedule_auto_map_employees(workspace_id: int):
     Schedule.objects.create(
         func='apps.mappings.tasks.async_auto_map_employees',
-        args='"{0}", {1}'.format(employee_mapping_preference, workspace_id),
+        args='{0}'.format(workspace_id),
         schedule_type=Schedule.ONCE,
         next_run=datetime.now() + timedelta(minutes=5)
     )
@@ -233,7 +233,7 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
         
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.async_auto_map_employees',
-            args='{0}'.format(workspace_id),
+            args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
                 'minutes': 24 * 60,

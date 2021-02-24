@@ -50,12 +50,12 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
             expense_group.id, expense_group.workspace_id, {'error': error}
         )
 
-def create_or_update_employee_mapping(expense_group: ExpenseGroup, qbo_connection: SageIntacctConnector,
+def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_connection: SageIntacctConnector,
                                      auto_map_employees_preference: str):
     try:
         Mapping.objects.get(
             Q(destination_type='VENDOR') | Q(destination_type='EMPLOYEE'),
-            source_field='EMPLOYEE',
+            source_type='EMPLOYEE',
             source__value=expense_group.description.get('employee_email'),
             workspace_id=expense_group.workspace_id
         )
@@ -74,7 +74,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, qbo_connectio
 
         try:
             if employee_mapping_setting == 'EMPLOYEE':
-                created_entity: DestinationAttribute = sage_intacct_connection.post_employee(
+                created_entity: DestinationAttribute = sage_intacct_connection.post_employees(
                     source_employee, auto_map_employees_preference
                 )
             else:
@@ -86,19 +86,20 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, qbo_connectio
                 source_type='EMPLOYEE',
                 source_value=expense_group.description.get('employee_email'),
                 destination_type=employee_mapping_setting,
-                destination_id=expense_group.destination_id,
+                destination_id=created_entity.destination_id,
                 destination_value=created_entity.value,
                 workspace_id=int(expense_group.workspace_id)
             )
             mapping.source.auto_mapped = True
             mapping.source.save(update_fields=['auto_mapped'])
+
         except WrongParamsError as exception:
             logger.error(exception.response)
 
-            error_response = json.loads(exception.response)['Fault']['Error'][0]
+            error_response = exception.response['error'][0]
 
             # This error code comes up when the vendor or employee already exists
-            if error_response['code'] == '6240':     
+            if error_response['errorno'] == 'PL05000104': 
                 sage_intacct_entity = DestinationAttribute.objects.filter(
                     value=source_employee.detail['full_name'],
                     workspace_id=expense_group.workspace_id,
@@ -352,13 +353,15 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
 
 
 def create_expense_report(expense_group, task_log):
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
-    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
-
-    if general_settings.auto_map_employees and general_settings.auto_create_destination_entity:
-        create_or_update_employee_mapping(expense_group, sage_intacct_connection, general_settings.auto_map_employees)
+    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
 
     try:
+        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
+
+        if general_settings.auto_map_employees and general_settings.auto_create_destination_entity:
+            create_or_update_employee_mapping(expense_group, sage_intacct_connection, general_settings.auto_map_employees)
+
         with transaction.atomic():
             __validate_expense_group(expense_group, general_settings)
 
