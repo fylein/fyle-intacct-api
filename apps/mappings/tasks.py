@@ -6,7 +6,6 @@ from typing import List, Dict
 
 from django_q.models import Schedule
 from django.db.models import Q
-import unidecode
 
 from fylesdk import WrongParamsError
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute
@@ -249,14 +248,14 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
     for category in categories:
         if category.value not in existing_category_names:
             payload.append({
-                'name': unidecode.unidecode(u'{0}'.format(category.value.replace('/', '-'))),
+                'name': category.value,
                 'code': category.destination_id,
-                'enabled': True if category.active is None else category.active
+                'enabled': category.active if category.active else None
             })
 
     return payload
 
-def upload_categories_to_fyle(workspace_id, reimbursable_expenses_object):
+def upload_categories_to_fyle(workspace_id: str, reimbursable_expenses_object: str):
     """
     Upload categories to Fyle
     """
@@ -280,7 +279,7 @@ def upload_categories_to_fyle(workspace_id, reimbursable_expenses_object):
         si_connection.sync_accounts(workspace_id)
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
-        )
+        ).all()
 
     fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)
 
@@ -301,8 +300,8 @@ def create_credit_card_category_mappings(reimbursable_expenses_object,
             source_type='CATEGORY',
             destination_type='CCC_ACCOUNT',
             source_value=destination.value,
-            destination_value=destination.detail['GL_ACCOUNT_TITLE'],
-            destination_id=destination.detail['GL_ACCOUNT_NO'],
+            destination_value=destination.detail['gl_account_title'],
+            destination_id=destination.detail['gl_account_no'],
             workspace_id=workspace_id
         )
     elif reimbursable_expenses_object == "BILL" and corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
@@ -340,8 +339,8 @@ def auto_create_category_mappings(workspace_id):
                 mapping = Mapping.create_or_update_mapping(
                     source_type='CATEGORY',
                     destination_type=reimbursable_destination_type,
-                    source_value=unidecode.unidecode(u'{0}'.format(category.value.replace('/', '-'))),
-                    destination_value=unidecode.unidecode(u'{0}'.format(category.value.replace('/', '-'))),
+                    source_value=category.value,
+                    destination_value=category.value,
                     destination_id=category.destination_id,
                     workspace_id=workspace_id,
                 )
@@ -353,8 +352,8 @@ def auto_create_category_mappings(workspace_id):
 
             except ExpenseAttribute.DoesNotExist:
                 detail = {
-                    'source_value': unidecode.unidecode(u'{0}'.format(category.value.replace('/', '-'))),
-                    'destination_value': unidecode.unidecode(u'{0}'.format(category.value.replace('/', '-'))),
+                    'source_value': category.value,
+                    'destination_value': category.value,
                     'destiantion_type': reimbursable_destination_type
                 }
                 logger.error(
