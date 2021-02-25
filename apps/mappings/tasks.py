@@ -250,12 +250,12 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
             payload.append({
                 'name': category.value,
                 'code': category.destination_id,
-                'enabled': category.active if category.active else None
+                'enabled': category.active
             })
 
     return payload
 
-def upload_categories_to_fyle(workspace_id: str, reimbursable_expenses_object: str):
+def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str):
     """
     Upload categories to Fyle
     """

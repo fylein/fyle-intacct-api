@@ -55,7 +55,7 @@ class SageIntacctConnector:
         for account in accounts:
             account_attributes.append({
                 'attribute_type': 'ACCOUNT',
-                'active': account['enabled'],
+                'active': account['enabled'] if 'enabled' in account else None,
                 'display_name': 'account',
                 'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                 'destination_id': account['ACCOUNTNO']
@@ -64,7 +64,7 @@ class SageIntacctConnector:
             if general_settings and general_settings.corporate_credit_card_expenses_object:
                 account_attributes.append({
                     'attribute_type': 'CCC_ACCOUNT',
-                    'active': account['enabled'],
+                    'active': account['enabled'] if 'enabled' in account else None,
                     'display_name': 'Credit Card Account',
                     'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO']
@@ -108,7 +108,7 @@ class SageIntacctConnector:
                 'display_name': 'Expense Types',
                 'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
                 'destination_id': expense_type['ACCOUNTLABEL'],
-                'active': expense_type['enabled'],
+                'active': expense_type['enabled'] if 'enabled' in expense_type else None,
                 'detail': {
                     'gl_account_no': expense_type['GLACCOUNTNO'],
                     'gl_account_title': expense_type['GLACCOUNTTITLE']
