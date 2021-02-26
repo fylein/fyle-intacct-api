@@ -240,8 +240,8 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
             args='{}'.format(workspace_id)
         ).first()
 
-    if schedule:
-        schedule.delete()       
+        if schedule:
+            schedule.delete()       
 
 
 def async_auto_map_ccc_account(workspace_id: int):
