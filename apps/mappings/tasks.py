@@ -194,7 +194,7 @@ def async_auto_map_employees(workspace_id: int):
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(credentials_object=sageintacct_credentials, workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
 
     fyle_connection.sync_employees()
 
@@ -220,13 +220,7 @@ def async_auto_map_employees(workspace_id: int):
         }
         auto_create_employee_mappings(source_attribute, mapping_attributes)                       
 
-def schedule_auto_map_employees(workspace_id: int):
-    Schedule.objects.create(
-        func='apps.mappings.tasks.async_auto_map_employees',
-        args='{0}'.format(workspace_id),
-        schedule_type=Schedule.ONCE,
-        next_run=datetime.now() + timedelta(minutes=5)
-    )
+def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
 
     if employee_mapping_preference:
         start_datetime = datetime.now()

@@ -52,6 +52,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
 
 def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_connection: SageIntacctConnector,
                                      auto_map_employees_preference: str):
+
     try:
         Mapping.objects.get(
             Q(destination_type='VENDOR') | Q(destination_type='EMPLOYEE'),
@@ -59,19 +60,19 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             source__value=expense_group.description.get('employee_email'),
             workspace_id=expense_group.workspace_id
         )
+
     except Mapping.DoesNotExist:
         employee_mapping_setting = MappingSetting.objects.filter(
             Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
             source_field='EMPLOYEE',
             workspace_id=expense_group.workspace_id
         ).first().destination_field
-
+        
         source_employee = ExpenseAttribute.objects.get(
             workspace_id=expense_group.workspace_id,
             attribute_type='EMPLOYEE',
             value=expense_group.description.get('employee_email')
         )
-
         try:
             if employee_mapping_setting == 'EMPLOYEE':
                 created_entity: DestinationAttribute = sage_intacct_connection.post_employees(
@@ -81,7 +82,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                 created_entity: DestinationAttribute = sage_intacct_connection.post_vendor(
                     source_employee, auto_map_employees_preference
                 )
-            
+
             mapping = Mapping.create_or_update_mapping(
                 source_type='EMPLOYEE',
                 source_value=expense_group.description.get('employee_email'),
@@ -100,6 +101,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
 
             # This error code comes up when the vendor or employee already exists
             if error_response['errorno'] == 'PL05000104': 
+
                 sage_intacct_entity = DestinationAttribute.objects.filter(
                     value=source_employee.detail['full_name'],
                     workspace_id=expense_group.workspace_id,
@@ -115,7 +117,6 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         destination_value=sage_intacct_entity.value,
                         workspace_id=int(expense_group.workspace_id)
                     )
-
                     mapping.source.auto_mapped = True
                     mapping.source.save(update_fields=['auto_mapped'])
 

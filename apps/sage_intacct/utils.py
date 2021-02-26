@@ -341,7 +341,7 @@ class SageIntacctConnector:
             auto_map_employee_preference == 'EMPLOYEE_CODE' and vendor.detail['employee_code']
         ) else vendor.detail['full_name']
 
-        vendor = {
+        vendor_payload = {
             'NAME': sage_intacct_display_name,
             'DISPLAYCONTACT': {
                 'PRINTAS': sage_intacct_display_name,
@@ -349,15 +349,16 @@ class SageIntacctConnector:
             }
         }
 
-        created_vendor = self.connection.vendors.post(vendor)
+        created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
+
 
         created_vendor = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'VENDOR',
             'display_name': 'vendor',
-            'value': created_vendor['NAME'],
-            'destination_id': created_vendor['id'],
+            'value': sage_intacct_display_name,
+            'destination_id': created_vendor['VENDORID'],
             'detail': {
-                'email': created_vendor['DISPLAYCONTACT']['EMAIL1']
+                'email': vendor.value
             }
         }], self.workspace_id)[0]
 
