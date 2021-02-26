@@ -329,6 +329,7 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
+            'currency': expense_report.currency,
             'expenses': {
                 'expense': expsense_payload
             }
@@ -368,6 +369,7 @@ class SageIntacctConnector:
             'VENDORID': bill.vendor_id,
             'RECORDID': bill.memo,
             'WHENDUE': current_date,
+            'CURRENCY': bill.currency,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
             }
@@ -408,6 +410,7 @@ class SageIntacctConnector:
                 'day': transaction_date.day
             },
             'description': charge_card_transaction.memo,
+            'currency': charge_card_transaction.currency,
             'ccpayitems': {
                 'ccpayitem': charge_card_transaction_payload
             }
