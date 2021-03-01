@@ -128,9 +128,14 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
     :param workspace_id: workspace id
     :return: None
     """
-    expense_groups = ExpenseGroup.objects.filter(
-        workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True
-    ).all()
+    if expense_group_ids:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True, exported_at__isnull=True
+        ).all()
+    else:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, expensereport__id__isnull=True, exported_at__isnull=True
+        ).all()
 
     chain = Chain(cached=True)
 
@@ -158,9 +163,14 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
     :param workspace_id: workspace id
     :return: None
     """
-    expense_groups = ExpenseGroup.objects.filter(
-        workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True
-    ).all()
+    if expense_group_ids:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True, exported_at__isnull=True
+        ).all()
+    else:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, bill__id__isnull=True, exported_at__isnull=True
+        ).all()
 
     chain = Chain(cached=True)
 
@@ -188,9 +198,14 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
     :param workspace_id: workspace id
     :return: None
     """
-    expense_groups = ExpenseGroup.objects.filter(
-        workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True
-    ).all()
+    if expense_group_ids:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True, exported_at__isnull=True
+        ).all()
+    else:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, chargecardtransaction__id__isnull=True, exported_at__isnull=True
+        ).all()
 
     chain = Chain(cached=True)
 

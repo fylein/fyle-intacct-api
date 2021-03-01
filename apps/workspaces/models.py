@@ -35,6 +35,7 @@ class WorkspaceGeneralSettings(models.Model):
     corporate_credit_card_expenses_object = models.CharField(max_length=50, \
         help_text='Mapping Settings ( BILL / CHARGE_CARD_TRANSACTION )', null=True)
     import_projects = models.BooleanField(default=False, help_text='Auto import projects to Fyle')
+    import_categories = models.BooleanField(default=False, help_text='Auto import caimport_categories to Fyle')
     sync_fyle_to_sage_intacct_payments = models.BooleanField(default=False, help_text='Auto Sync Payments from Fyle '
                                                                                       'to Sage Intacct')
     sync_sage_intacct_to_fyle_payments = models.BooleanField(default=False, help_text='Auto Sync Payments from Sage '
