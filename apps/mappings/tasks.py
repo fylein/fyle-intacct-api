@@ -244,10 +244,10 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
             schedule.delete()       
 
 
-def async_auto_map_ccc_account(workspace_id: int):
+def async_auto_map_charge_card_account(workspace_id: int):
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
-    default_ccc_account_id = general_mappings.default_charge_card_id
-    default_ccc_account_name = general_mappings.default_charge_card_name
+    default_charge_card_id = general_mappings.default_charge_card_id
+    default_charge_card_name = general_mappings.default_charge_card_name
     
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
@@ -258,22 +258,22 @@ def async_auto_map_ccc_account(workspace_id: int):
     
     mapping_attributes = {
         'destination_type': 'CHARGE_CARD_NUMBER',
-        'destination_value': default_ccc_account_name,
-        'destination_id': default_ccc_account_id,
+        'destination_value': default_charge_card_name,
+        'destination_id': default_charge_card_id,
         'workspace_id': workspace_id
     }
 
     auto_create_employee_mappings(source_attributes, mapping_attributes)
 
 
-def schedule_auto_map_ccc_employees(workspace_id: int):
+def schedule_auto_map_charge_card_employees(workspace_id: int):
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
 
     if general_settings.auto_map_employees:
         start_datetime = datetime.now()
 
         schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.async_auto_map_ccc_account',
+            func='apps.mappings.tasks.async_auto_map_charge_card_account',
             args='{0}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -281,9 +281,10 @@ def schedule_auto_map_ccc_employees(workspace_id: int):
                 'next_run': start_datetime + timedelta(minutes=5)
             }
         )
+
     else:
         schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.async_auto_map_ccc_account',
+            func='apps.mappings.tasks.async_auto_map_charge_card_account',
             args='{}'.format(workspace_id)
         ).first()
 
