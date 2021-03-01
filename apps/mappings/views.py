@@ -82,7 +82,7 @@ class AutoMapEmployeeView(generics.CreateAPIView):
             
             general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
             if general_mappings.default_charge_card_name:
-                chain.append('apps.mappings.tasks.async_auto_map_ccc_account', workspace_id)
+                chain.append('apps.mappings.tasks.async_auto_map_charge_card_account', workspace_id)
 
             chain.run()
 

@@ -201,7 +201,7 @@ def async_auto_map_employees(workspace_id: int):
     if destination_type == 'EMPLOYEE':
         sage_intacct_connection.sync_employees()
     else:
-        sage_intacct_connection.sync_vendors()
+        sage_intacct_connection.sync_vendors(workspace_id=workspace_id)
 
     source_attribute = []
     employee_attributes = DestinationAttribute.objects.filter(attribute_type=destination_type,
