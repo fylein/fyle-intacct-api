@@ -1,5 +1,6 @@
 from typing import List, Dict
 from datetime import datetime
+import unidecode
 
 from cryptography.fernet import Fernet
 
@@ -54,16 +55,18 @@ class SageIntacctConnector:
         for account in accounts:
             account_attributes.append({
                 'attribute_type': 'ACCOUNT',
+                'active': account['enabled'] if 'enabled' in account else None,
                 'display_name': 'account',
-                'value': account['TITLE'],
+                'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                 'destination_id': account['ACCOUNTNO']
             })
 
             if general_settings and general_settings.corporate_credit_card_expenses_object:
                 account_attributes.append({
                     'attribute_type': 'CCC_ACCOUNT',
+                    'active': account['enabled'] if 'enabled' in account else None,
                     'display_name': 'Credit Card Account',
-                    'value': account['TITLE'],
+                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO']
                 })
 
@@ -103,8 +106,13 @@ class SageIntacctConnector:
             expense_types_attributes.append({
                 'attribute_type': 'EXPENSE_TYPE',
                 'display_name': 'Expense Types',
-                'value': expense_type['DESCRIPTION'],
-                'destination_id': expense_type['ACCOUNTLABEL']
+                'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
+                'destination_id': expense_type['ACCOUNTLABEL'],
+                'active': expense_type['enabled'] if 'enabled' in expense_type else None,
+                'detail': {
+                    'gl_account_no': expense_type['GLACCOUNTNO'],
+                    'gl_account_title': expense_type['GLACCOUNTTITLE']
+                }
             })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
