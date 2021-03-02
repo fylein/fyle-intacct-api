@@ -267,22 +267,28 @@ class SageIntacctConnector:
         sage_intacct_display_name = employee.detail['employee_code'] if (
             auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
         ) else employee.detail['full_name']
+
+        name = employee.detail['full_name']
+
         try:
             contact = {
                 'CONTACTNAME': sage_intacct_display_name,
                 'PRINTAS': sage_intacct_display_name,
-                'EMAIL1': employee.value
+                'EMAIL1': employee.value,
+                'FIRSTNAME': name[0],
+                'LASTNAME': name[-1] if len(name) == 2 else None
             }
+
             created_contact = self.connection.contacts.post(contact)
         
         except Exception as e:
-            pass
+            logger.error(exception.response)
 
         employee = {
             'PERSONALINFO': {
                 'CONTACTNAME': sage_intacct_display_name
             },
-            'LOCATIONID': general_mappings.default_location_id
+            'LOCATIONID': general_mappings.default_location_id if general_mappings.default_location_id else None
         }
 
 
@@ -349,17 +355,25 @@ class SageIntacctConnector:
             auto_map_employee_preference == 'EMPLOYEE_CODE' and vendor.detail['employee_code']
         ) else vendor.detail['full_name']
 
+        name = vendor.detail['full_name'].split(" ")
+
         vendor_payload = {
             'NAME': sage_intacct_display_name,
             'DISPLAYCONTACT': {
                 'PRINTAS': sage_intacct_display_name,
-                'EMAIL1': vendor.value
+                'EMAIL1': vendor.value,
+                'FIRSTNAME': name[0],
+                'LASTNAME': name[-1] if len(name) == 2 else None
             }
         }
 
-        created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
+        get_vendor = self.connection.vendors.get(field='NAME', value=vendor_payload['NAME'])
 
-
+        if get_vendor['@count']=='0':
+            created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
+        else:
+            created_vendor = get_vendor['vendor']
+                
         created_vendor = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'VENDOR',
             'display_name': 'vendor',

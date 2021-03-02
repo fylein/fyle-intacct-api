@@ -252,10 +252,8 @@ def async_auto_map_charge_card_account(workspace_id: int):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
-
     source_attributes = fyle_connection.sync_employees()
-
-    
+        
     mapping_attributes = {
         'destination_type': 'CHARGE_CARD_NUMBER',
         'destination_value': default_charge_card_name,

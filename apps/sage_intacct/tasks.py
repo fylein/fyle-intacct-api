@@ -52,7 +52,6 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
 
 def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_connection: SageIntacctConnector,
                                      auto_map_employees_preference: str):
-
     try:
         Mapping.objects.get(
             Q(destination_type='VENDOR') | Q(destination_type='EMPLOYEE'),
@@ -536,13 +535,6 @@ def create_bill(expense_group, task_log):
 def create_charge_card_transaction(expense_group, task_log):
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
     try:
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
-        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
-
-        if general_settings.auto_map_employees and general_settings.auto_create_destination_entity:
-            create_or_update_employee_mapping(expense_group, sage_intacct_connection, general_settings.auto_map_employees)
-
-
         with transaction.atomic():
             __validate_expense_group(expense_group, general_settings)
 
