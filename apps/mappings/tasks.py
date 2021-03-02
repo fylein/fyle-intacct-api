@@ -12,7 +12,7 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttr
 
 from apps.fyle.utils import FyleConnector
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.workspaces.models import SageIntacctCredential, FyleCredential
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, WorkspaceGeneralSettings
 
 logger = logging.getLogger(__name__)
 
@@ -232,3 +232,169 @@ def schedule_auto_map_ccc_employees(default_charge_card_name: str, default_charg
         schedule_type=Schedule.ONCE,
         next_run=datetime.now() + timedelta(minutes=5)
     )
+
+def create_fyle_categories_payload(categories: List[DestinationAttribute], workspace_id: int):
+    """
+    Create Fyle Categories Payload from Sage Intacct Expense Types / Accounts
+    :param workspace_id: Workspace integer id
+    :param categories: Sage Intacct Categories / Accounts
+    :return: Fyle Categories Payload
+    """
+    payload = []
+
+    existing_category_names = ExpenseAttribute.objects.filter(
+        attribute_type='CATEGORY', workspace_id=workspace_id).values_list('value', flat=True)
+
+    for category in categories:
+        if category.value not in existing_category_names:
+            payload.append({
+                'name': category.value,
+                'code': category.destination_id,
+                'enabled': category.active
+            })
+
+    return payload
+
+def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str):
+    """
+    Upload categories to Fyle
+    """
+    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+    si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    fyle_connection = FyleConnector(
+        refresh_token=fyle_credentials.refresh_token,
+        workspace_id=workspace_id
+    )
+
+    si_connection = SageIntacctConnector(
+        credentials_object=si_credentials,
+        workspace_id=workspace_id
+    )
+    fyle_connection.sync_categories(False)
+
+    if reimbursable_expenses_object == 'EXPENSE_REPORT':
+        si_attributes: List[DestinationAttribute] = si_connection.sync_expense_types()
+    else:
+        si_connection.sync_accounts(workspace_id)
+        si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id, attribute_type='ACCOUNT'
+        ).all()
+
+    fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)
+
+    if fyle_payload:
+        fyle_connection.connection.Categories.post(fyle_payload)
+        fyle_connection.sync_categories(False)
+
+    return si_attributes
+
+def create_credit_card_category_mappings(reimbursable_expenses_object,
+                                         corporate_credit_card_expenses_object, workspace_id, destination):
+    """
+    Create credit card mappings
+    """
+
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' and corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
+        Mapping.create_or_update_mapping(
+            source_type='CATEGORY',
+            destination_type='CCC_ACCOUNT',
+            source_value=destination.value,
+            destination_value=destination.detail['gl_account_title'],
+            destination_id=destination.detail['gl_account_no'],
+            workspace_id=workspace_id
+        )
+    elif reimbursable_expenses_object == "BILL" and corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
+        Mapping.create_or_update_mapping(
+            source_type='CATEGORY',
+            destination_type='CCC_ACCOUNT',
+            source_value=destination.value,
+            destination_value=destination.value,
+            destination_id=destination.destination_id,
+            workspace_id=workspace_id
+        )
+
+def auto_create_category_mappings(workspace_id):
+    """
+    Create Category Mappings
+    :return: mappings
+    """
+    general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
+
+    reimbursable_expenses_object = general_settings.reimbursable_expenses_object
+    corporate_credit_card_expenses_object = general_settings.corporate_credit_card_expenses_object
+
+    category_mappings = []
+
+    if reimbursable_expenses_object == 'EXPENSE_REPORT':
+        reimbursable_destination_type = 'EXPENSE_TYPE'
+    else:
+        reimbursable_destination_type = 'ACCOUNT'
+
+    try:
+        fyle_categories = upload_categories_to_fyle(
+            workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
+        for category in fyle_categories:
+            try:
+                mapping = Mapping.create_or_update_mapping(
+                    source_type='CATEGORY',
+                    destination_type=reimbursable_destination_type,
+                    source_value=category.value,
+                    destination_value=category.value,
+                    destination_id=category.destination_id,
+                    workspace_id=workspace_id,
+                )
+                mapping.source.auto_mapped = True
+                mapping.source.save(update_fields=['auto_mapped'])
+                create_credit_card_category_mappings(
+                    reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
+                category_mappings.append(mapping)
+
+            except ExpenseAttribute.DoesNotExist:
+                detail = {
+                    'source_value': category.value,
+                    'destination_value': category.value,
+                    'destiantion_type': reimbursable_destination_type
+                }
+                logger.error(
+                    'Error while creating categories auto mapping workspace_id - %s %s',
+                    workspace_id, {'payload': detail}
+                )
+                raise ExpenseAttribute.DoesNotExist
+
+        return category_mappings
+    except WrongParamsError as exception:
+        logger.error(
+            'Error while creating categories workspace_id - %s in Fyle %s %s',
+            workspace_id, exception.message, {'error': exception.response}
+        )
+    except Exception:
+        error = traceback.format_exc()
+        error = {
+            'error': error
+        }
+        logger.error(
+            'Error while creating categories workspace_id - %s error: %s',
+            workspace_id, error
+        )
+
+def schedule_categories_creation(import_categories, workspace_id):
+    if import_categories:
+        start_datetime = datetime.now()
+        schedule, _ = Schedule.objects.update_or_create(
+            func='apps.mappings.tasks.auto_create_category_mappings',
+            args='{}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': start_datetime
+            }
+        )
+    else:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.mappings.tasks.auto_create_category_mappings',
+            args='{}'.format(workspace_id)
+        ).first()
+
+        if schedule:
+            schedule.delete()

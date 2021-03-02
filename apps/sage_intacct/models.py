@@ -157,6 +157,7 @@ class Bill(models.Model):
     vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
     description = models.TextField(help_text='Sage Intacct Bill Description')
     memo = models.CharField(max_length=255, help_text='Sage Intacct docnumber', null=True)
+    currency = models.CharField(max_length=5, help_text='Expense Report Currency')
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Bill transaction date', null=True)
     payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
@@ -175,6 +176,7 @@ class Bill(models.Model):
         :return: bill object
         """
         description = expense_group.description
+        expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
 
         if expense_group.fund_source == 'PERSONAL':
@@ -196,6 +198,7 @@ class Bill(models.Model):
                 'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
                 expense_group.fund_source == 'PERSONAL' else
                 'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
             }
         )
@@ -306,6 +309,7 @@ class ExpenseReport(models.Model):
     employee_id = models.CharField(max_length=255, help_text='Sage Intacct Employee ID')
     description = models.TextField(help_text='Sage Intacct ExpenseReport Description')
     memo = models.CharField(max_length=255, help_text='Sage Intacct memo', null=True)
+    currency = models.CharField(max_length=5, help_text='Expense Report Currency')
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
@@ -324,6 +328,7 @@ class ExpenseReport(models.Model):
         :return: expense report object
         """
         description = expense_group.description
+        expense = expense_group.expenses.first()
 
         if expense_group.fund_source == 'PERSONAL':
             expense_report_object, _ = ExpenseReport.objects.update_or_create(
@@ -339,6 +344,7 @@ class ExpenseReport(models.Model):
                     'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
                     expense_group.fund_source == 'PERSONAL' else
                     'Credit card expenses by {0}'.format(description.get('employee_email')),
+                    'currency': expense.currency,
                     'transaction_date': get_transaction_date(expense_group),
                 }
             )
@@ -442,6 +448,7 @@ class ChargeCardTransaction(models.Model):
     charge_card_id = models.CharField(max_length=255, help_text='Sage Intacct Charge Card ID')
     description = models.TextField(help_text='Sage Intacct Charge Card Transaction Description')
     memo = models.CharField(max_length=255, help_text='Sage Intacct referenceno', null=True)
+    currency = models.CharField(max_length=5, help_text='Expense Report Currency')
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Safe Intacct Charge Card transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
@@ -458,6 +465,7 @@ class ChargeCardTransaction(models.Model):
         :return: ChargeCardTransaction object
         """
         description = expense_group.description
+        expense = expense_group.expenses.first()
 
         if expense_group.fund_source == 'CCC':
             charge_card_id = None
@@ -484,6 +492,7 @@ class ChargeCardTransaction(models.Model):
                     'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
                     expense_group.fund_source == 'PERSONAL' else
                     'Credit card expenses by {0}'.format(description.get('employee_email')),
+                    'currency': expense.currency,
                     'transaction_date': get_transaction_date(expense_group)
                 }
             )
