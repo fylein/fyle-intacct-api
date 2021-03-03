@@ -98,11 +98,15 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
 
             error_response = exception.response['error'][0]
 
-            # This error code comes up when the vendor or employee already exists
+            # This error code comes up when the employee already exists
             if error_response['errorno'] == 'PL05000104': 
 
+                sage_intacct_display_name = employee.detail['employee_code'] if (
+                    auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
+                ) else employee.detail['full_name']
+
                 sage_intacct_entity = DestinationAttribute.objects.filter(
-                    value=source_employee.detail['full_name'],
+                    value=sage_intacct_display_name,
                     workspace_id=expense_group.workspace_id,
                     attribute_type=employee_mapping_setting
                 ).first()
@@ -118,6 +122,12 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                     )
                     mapping.source.auto_mapped = True
                     mapping.source.save(update_fields=['auto_mapped'])
+                else:
+                    logger.error(
+                        'Destination Attribute with value %s not found in workspace %s',
+                        source_employee.detail['full_name'],
+                        expense_group.workspace_id
+                    )
 
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
@@ -131,24 +141,28 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
         expense_groups = ExpenseGroup.objects.filter(
             workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True, exported_at__isnull=True
         ).all()
+    else:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, expensereport__id__isnull=True, exported_at__isnull=True
+        ).all()
 
-        chain = Chain(cached=True)
+    chain = Chain(cached=True)
 
-        for expense_group in expense_groups:
-            task_log, _ = TaskLog.objects.update_or_create(
-                workspace_id=expense_group.workspace_id,
-                expense_group=expense_group,
-                defaults={
-                    'status': 'IN_PROGRESS',
-                    'type': 'CREATING_EXPENSE_REPORTS'
-                }
-            )
+    for expense_group in expense_groups:
+        task_log, _ = TaskLog.objects.update_or_create(
+            workspace_id=expense_group.workspace_id,
+            expense_group=expense_group,
+            defaults={
+                'status': 'IN_PROGRESS',
+                'type': 'CREATING_EXPENSE_REPORTS'
+            }
+        )
 
-            chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log)
-            task_log.save()
+        chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log)
+        task_log.save()
 
-        if chain.length():
-            chain.run()
+    if chain.length():
+        chain.run()
 
 
 def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
@@ -162,24 +176,28 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
         expense_groups = ExpenseGroup.objects.filter(
             workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True, exported_at__isnull=True
         ).all()
+    else:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, bill__id__isnull=True, exported_at__isnull=True
+        ).all()
 
-        chain = Chain(cached=True)
+    chain = Chain(cached=True)
 
-        for expense_group in expense_groups:
-            task_log, _ = TaskLog.objects.update_or_create(
-                workspace_id=expense_group.workspace_id,
-                expense_group=expense_group,
-                defaults={
-                    'status': 'IN_PROGRESS',
-                    'type': 'CREATING_BILLS'
-                }
-            )
+    for expense_group in expense_groups:
+        task_log, _ = TaskLog.objects.update_or_create(
+            workspace_id=expense_group.workspace_id,
+            expense_group=expense_group,
+            defaults={
+                'status': 'IN_PROGRESS',
+                'type': 'CREATING_BILLS'
+            }
+        )
 
-            chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log)
-            task_log.save()
+        chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log)
+        task_log.save()
 
-        if chain.length():
-            chain.run()
+    if chain.length():
+        chain.run()
 
 
 def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: List[str]):
@@ -193,24 +211,28 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
         expense_groups = ExpenseGroup.objects.filter(
             workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True, exported_at__isnull=True
         ).all()
+    else:
+        expense_groups = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, chargecardtransaction__id__isnull=True, exported_at__isnull=True
+        ).all()
 
-        chain = Chain(cached=True)
+    chain = Chain(cached=True)
 
-        for expense_group in expense_groups:
-            task_log, _ = TaskLog.objects.update_or_create(
-                workspace_id=expense_group.workspace_id,
-                expense_group=expense_group,
-                defaults={
-                    'status': 'IN_PROGRESS',
-                    'type': 'CREATING_CHARGE_CARD_TRANSACTIONS'
-                }
-            )
+    for expense_group in expense_groups:
+        task_log, _ = TaskLog.objects.update_or_create(
+            workspace_id=expense_group.workspace_id,
+            expense_group=expense_group,
+            defaults={
+                'status': 'IN_PROGRESS',
+                'type': 'CREATING_CHARGE_CARD_TRANSACTIONS'
+            }
+        )
 
-            chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log)
-            task_log.save()
+        chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log)
+        task_log.save()
 
-        if chain.length():
-            chain.run()
+    if chain.length():
+        chain.run()
 
 
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
