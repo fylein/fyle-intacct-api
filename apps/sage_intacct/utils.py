@@ -298,9 +298,10 @@ class SageIntacctConnector:
                 'CONTACTNAME': sage_intacct_display_name
             },
             'EMPLOYEEID': sage_intacct_display_name,
-            'LOCATIONID': location.destination_id if location.destination_id \
-                 else general_mappings.default_location_id if general_mappings.default_location_id else None,
-            'DEPARTMENTID': department.destination_id if department else None
+            'LOCATIONID': location.destination_id if location \
+                 else general_mappings.default_location_id,
+            'DEPARTMENTID': department.destination_id if department \
+                 else general_mappings.default_department_id
         }
 
         created_employee = self.connection.employees.post(employee)['data']['employee']
