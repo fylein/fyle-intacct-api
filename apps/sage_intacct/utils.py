@@ -239,8 +239,11 @@ class SageIntacctConnector:
 
         for employee in employees:
             detail = {
-                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None
+                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None,
+                'full_name': employee['PERSONALINFO.PRINTAS'] if employee['PERSONALINFO.PRINTAS'] else None,
+                'employee_code': employee['EMPLOYEEID'] if employee['EMPLOYEEID'] else None
             }
+
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
                 'display_name': 'employee',
@@ -263,6 +266,10 @@ class SageIntacctConnector:
         """
 
         general_mappings = GeneralMapping.objects.get(workspace_id=employee.workspace_id)
+
+        location = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id, attribute_type='LOCATION',
+            value__iexact=employee.detail['location']).first()
 
         sage_intacct_display_name = employee.detail['employee_code'] if (
             auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
@@ -288,7 +295,8 @@ class SageIntacctConnector:
             'PERSONALINFO': {
                 'CONTACTNAME': sage_intacct_display_name
             },
-            'LOCATIONID': general_mappings.default_location_id if general_mappings.default_location_id else None
+            'LOCATIONID': location.destination_id if location.destination_id else general_mappings.default_location_id 
+            'DEPARTMENTID': employee.detail['department_id'] if employee.detail['department_id'] else general_mappings.default_department_id
         }
 
 
@@ -300,7 +308,9 @@ class SageIntacctConnector:
             'value': sage_intacct_display_name,
             'destination_id': created_employee['EMPLOYEEID'],
             'detail': {
-               'email': employee.value
+               'email': employee.value,
+               'full_name': name,
+               'employee_code': employee.detail['employee_code']
             }
         }], self.workspace_id)[0]
 
@@ -369,10 +379,13 @@ class SageIntacctConnector:
 
         get_vendor = self.connection.vendors.get(field='NAME', value=vendor_payload['NAME'])
 
-        if get_vendor['@count']=='0':
+        if get_vendor['@count'] == '0':
             created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
         else:
-            created_vendor = get_vendor['vendor']
+            if get_vendor['@count'] > '1':
+                created_vendor = get_vendor['vendor'][0]
+            else:
+                created_vendor = get_vendor['vendor']
                 
         created_vendor = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'VENDOR',
