@@ -241,7 +241,6 @@ class SageIntacctConnector:
             detail = {
                 'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None,
                 'full_name': employee['PERSONALINFO.PRINTAS'] if employee['PERSONALINFO.PRINTAS'] else None,
-                'employee_code': employee['EMPLOYEEID'] if employee['EMPLOYEEID'] else None
             }
 
             employee_attributes.append({
@@ -264,6 +263,9 @@ class SageIntacctConnector:
         :param vendor: vendor attribute to be created
         :return Vendor Destination Attribute
         """
+        department = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id, attribute_type='DEPARTMENT',
+            value__iexact=employee.detail['department']).first()
 
         general_mappings = GeneralMapping.objects.get(workspace_id=employee.workspace_id)
 
@@ -295,10 +297,11 @@ class SageIntacctConnector:
             'PERSONALINFO': {
                 'CONTACTNAME': sage_intacct_display_name
             },
-            'LOCATIONID': location.destination_id if location.destination_id else general_mappings.default_location_id,
-            'DEPARTMENTID': employee.detail['department_id'] if employee.detail['department_id'] else general_mappings.default_department_id
+            'EMPLOYEEID': sage_intacct_display_name,
+            'LOCATIONID': location.destination_id if location.destination_id \
+                 else general_mappings.default_location_id if general_mappings.default_location_id else None,
+            'DEPARTMENTID': department.destination_id if department else None
         }
-
 
         created_employee = self.connection.employees.post(employee)['data']['employee']
 
@@ -369,6 +372,7 @@ class SageIntacctConnector:
 
         vendor_payload = {
             'NAME': sage_intacct_display_name,
+            'VENDORID': sage_intacct_display_name,
             'DISPLAYCONTACT': {
                 'PRINTAS': sage_intacct_display_name,
                 'EMAIL1': vendor.value,
@@ -382,7 +386,7 @@ class SageIntacctConnector:
         if get_vendor['@count'] == '0':
             created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
         else:
-            if get_vendor['@count'] > '1':
+            if int(get_vendor['@count']) > 1:
                 created_vendor = get_vendor['vendor'][0]
             else:
                 created_vendor = get_vendor['vendor']

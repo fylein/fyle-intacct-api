@@ -99,7 +99,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             error_response = exception.response['error'][0]
 
             # This error code comes up when the employee already exists
-            if error_response['errorno'] == 'PL05000104': 
+            if error_response['errorno'] == 'BL34000061': 
 
                 sage_intacct_display_name = employee.detail['employee_code'] if (
                     auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
