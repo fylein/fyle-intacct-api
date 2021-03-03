@@ -295,7 +295,7 @@ class SageIntacctConnector:
             'PERSONALINFO': {
                 'CONTACTNAME': sage_intacct_display_name
             },
-            'LOCATIONID': location.destination_id if location.destination_id else general_mappings.default_location_id 
+            'LOCATIONID': location.destination_id if location.destination_id else general_mappings.default_location_id,
             'DEPARTMENTID': employee.detail['department_id'] if employee.detail['department_id'] else general_mappings.default_department_id
         }
 
