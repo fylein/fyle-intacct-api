@@ -411,6 +411,7 @@ class SageIntacctConnector:
             },
             'description': charge_card_transaction.memo,
             'currency': charge_card_transaction.currency,
+            'exchratetype': None,
             'ccpayitems': {
                 'ccpayitem': charge_card_transaction_payload
             }
