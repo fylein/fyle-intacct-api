@@ -72,6 +72,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             attribute_type='EMPLOYEE',
             value=expense_group.description.get('employee_email')
         )
+
         try:
             if employee_mapping_setting == 'EMPLOYEE':
                 created_entity: DestinationAttribute = sage_intacct_connection.post_employees(
@@ -101,9 +102,9 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             # This error code comes up when the employee already exists
             if error_response['errorno'] == 'BL34000061': 
 
-                sage_intacct_display_name = employee.detail['employee_code'] if (
-                    auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
-                ) else employee.detail['full_name']
+                sage_intacct_display_name = source_employee.detail['employee_code'] if (
+                    auto_map_employees_preference == 'EMPLOYEE_CODE' and source_employee.detail['employee_code']
+                ) else source_employee.detail['full_name']
 
                 sage_intacct_entity = DestinationAttribute.objects.filter(
                     value=sage_intacct_display_name,
