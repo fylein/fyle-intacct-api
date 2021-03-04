@@ -5,7 +5,7 @@ from apps.workspaces.models import WorkspaceGeneralSettings
 from fyle_intacct_api.utils import assert_valid
 
 from .models import GeneralMapping
-from .tasks import schedule_auto_map_ccc_employees
+from .tasks import schedule_auto_map_charge_card_employees
 
 
 class MappingUtils:
@@ -93,7 +93,6 @@ class MappingUtils:
             )
         
         if general_mapping_object.default_charge_card_name:
-            schedule_auto_map_ccc_employees(general_mapping_object.default_charge_card_name,
-                                           general_mapping_object.default_charge_card_id, self.__workspace_id)
+            schedule_auto_map_charge_card_employees(self.__workspace_id)
         
         return general_mapping_object
