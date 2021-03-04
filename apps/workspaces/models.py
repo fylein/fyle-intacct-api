@@ -42,6 +42,7 @@ class WorkspaceGeneralSettings(models.Model):
                                                                                       'Intacct to Fyle')
     auto_map_employees = models.CharField(max_length=50,
                                          help_text='Auto Map Employees type from Sage Intacct to Fyle', null=True)
+    auto_create_destination_entity = models.BooleanField(default=False, help_text='Auto create vendor / employee')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
