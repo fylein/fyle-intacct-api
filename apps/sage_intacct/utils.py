@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict
 from datetime import datetime
 import unidecode
@@ -17,6 +18,7 @@ from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, Ch
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
     SageIntacctReimbursementLineitem
 
+logger = logging.getLogger(__name__)
 
 class SageIntacctConnector:
     """
@@ -293,7 +295,7 @@ class SageIntacctConnector:
         except Exception as e:
             logger.error(exception.response)
 
-        employee = {
+        employee_payload = {
             'PERSONALINFO': {
                 'CONTACTNAME': sage_intacct_display_name
             },
@@ -304,7 +306,7 @@ class SageIntacctConnector:
                  else general_mappings.default_department_id
         }
 
-        created_employee = self.connection.employees.post(employee)['data']['employee']
+        created_employee = self.connection.employees.post(employee_payload)['data']['employee']
 
         created_employee = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'EMPLOYEE',
