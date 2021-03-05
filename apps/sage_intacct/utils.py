@@ -279,7 +279,7 @@ class SageIntacctConnector:
             auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
         ) else employee.detail['full_name']
 
-        name = employee.detail['full_name']
+        name = employee.detail['full_name'].split(" ")
 
         try:
             contact = {
