@@ -279,7 +279,7 @@ class SageIntacctConnector:
             auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
         ) else employee.detail['full_name']
 
-        name = employee.detail['full_name'].split(" ")
+        name = employee.detail['full_name'].split(' ')
 
         try:
             contact = {
@@ -371,7 +371,7 @@ class SageIntacctConnector:
             auto_map_employee_preference == 'EMPLOYEE_CODE' and vendor.detail['employee_code']
         ) else vendor.detail['full_name']
 
-        name = vendor.detail['full_name'].split(" ")
+        name = vendor.detail['full_name'].split(' ')
 
         vendor_payload = {
             'NAME': sage_intacct_display_name,
