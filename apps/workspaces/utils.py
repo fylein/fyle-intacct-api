@@ -1,6 +1,7 @@
 from typing import Dict
 
-from apps.mappings.tasks import schedule_projects_creation, schedule_auto_map_employees, schedule_categories_creation
+from apps.mappings.tasks import schedule_projects_creation, schedule_auto_map_employees, schedule_categories_creation, \
+    schedule_auto_map_charge_card_employees
 
 from .models import WorkspaceGeneralSettings
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync,\
@@ -56,5 +57,7 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
 
     
     schedule_auto_map_employees(general_settings_payload['auto_map_employees'], workspace_id)
+
+    schedule_auto_map_charge_card_employees(workspace_id)
    
     return general_settings

@@ -91,6 +91,11 @@ def auto_create_project_mappings(workspace_id):
                 destination_id=project.destination_id,
                 workspace_id=workspace_id
             )
+
+            mapping.source.auto_mapped = True
+            mapping.source.auto_created = True
+            mapping.source.save(update_fields=['auto_mapped', 'auto_created'])
+
             project_mappings.append(mapping)
 
         return project_mappings
