@@ -94,6 +94,9 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             mapping.source.auto_mapped = True
             mapping.source.save(update_fields=['auto_mapped'])
 
+            mapping.destination.auto_created = True
+            mapping.destination.save(update_fields=['auto_created'])
+
         except WrongParamsError as exception:
             logger.error(exception.response)
 
