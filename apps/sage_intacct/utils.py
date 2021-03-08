@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict
 from datetime import datetime
 import unidecode
@@ -6,7 +7,8 @@ from cryptography.fernet import Fernet
 
 from django.conf import settings
 
-from fyle_accounting_mappings.models import DestinationAttribute
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from apps.mappings.models import GeneralMapping
 
 from sageintacctsdk import SageIntacctSDK
 
@@ -16,6 +18,7 @@ from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, Ch
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
     SageIntacctReimbursementLineitem
 
+logger = logging.getLogger(__name__)
 
 class SageIntacctConnector:
     """
@@ -238,8 +241,10 @@ class SageIntacctConnector:
 
         for employee in employees:
             detail = {
-                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None
+                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None,
+                'full_name': employee['PERSONALINFO.PRINTAS'] if employee['PERSONALINFO.PRINTAS'] else None,
             }
+
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
                 'display_name': 'employee',
@@ -251,6 +256,72 @@ class SageIntacctConnector:
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             employee_attributes, self.workspace_id)
         return account_attributes
+
+    
+    def post_employees(self, employee: ExpenseAttribute, auto_map_employee_preference: str):
+        """
+        Create a Vendor on Sage Intacct
+        :param auto_map_employee_preference: Preference while doing automap of employees
+        :param vendor: vendor attribute to be created
+        :return Vendor Destination Attribute
+        """
+        department = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id, attribute_type='DEPARTMENT',
+            value__iexact=employee.detail['department']).first()
+
+        general_mappings = GeneralMapping.objects.get(workspace_id=employee.workspace_id)
+
+        location = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id, attribute_type='LOCATION',
+            value__iexact=employee.detail['location']).first()
+
+        sage_intacct_display_name = employee.detail['employee_code'] if (
+            auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
+        ) else employee.detail['full_name']
+
+        name = employee.detail['full_name'].split(' ')
+
+        try:
+            contact = {
+                'CONTACTNAME': sage_intacct_display_name,
+                'PRINTAS': sage_intacct_display_name,
+                'EMAIL1': employee.value,
+                'FIRSTNAME': name[0],
+                'LASTNAME': name[-1] if len(name) == 2 else None
+            }
+
+            created_contact = self.connection.contacts.post(contact)
+        
+        except Exception as e:
+            logger.error(e.response)
+
+        employee_payload = {
+            'PERSONALINFO': {
+                'CONTACTNAME': sage_intacct_display_name
+            },
+            'EMPLOYEEID': sage_intacct_display_name,
+            'LOCATIONID': location.destination_id if location \
+                 else general_mappings.default_location_id,
+            'DEPARTMENTID': department.destination_id if department \
+                 else general_mappings.default_department_id
+        }
+
+        created_employee = self.connection.employees.post(employee_payload)['data']['employee']
+
+        created_employee = DestinationAttribute.bulk_upsert_destination_attributes([{
+            'attribute_type': 'EMPLOYEE',
+            'display_name': 'employee',
+            'value': sage_intacct_display_name,
+            'destination_id': created_employee['EMPLOYEEID'],
+            'detail': {
+               'email': employee.value,
+               'full_name': name,
+               'employee_code': employee.detail['employee_code']
+            }
+        }], self.workspace_id)[0]
+
+        return created_employee
+
 
     def sync_vendors(self, workspace_id: str):
         """
@@ -287,6 +358,53 @@ class SageIntacctConnector:
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             vendor_attributes, self.workspace_id)
         return account_attributes
+    
+    def post_vendor(self, vendor: ExpenseAttribute, auto_map_employee_preference: str):
+        """
+        Create a Vendor on Sage Intacct
+        :param auto_map_employee_preference: Preference while doing automap of employees
+        :param vendor: vendor attribute to be created
+        :return Vendor Destination Attribute
+        """
+
+        sage_intacct_display_name = vendor.detail['employee_code'] if (
+            auto_map_employee_preference == 'EMPLOYEE_CODE' and vendor.detail['employee_code']
+        ) else vendor.detail['full_name']
+
+        name = vendor.detail['full_name'].split(' ')
+
+        vendor_payload = {
+            'NAME': sage_intacct_display_name,
+            'VENDORID': sage_intacct_display_name,
+            'DISPLAYCONTACT': {
+                'PRINTAS': sage_intacct_display_name,
+                'EMAIL1': vendor.value,
+                'FIRSTNAME': name[0],
+                'LASTNAME': name[-1] if len(name) == 2 else None
+            }
+        }
+
+        get_vendor = self.connection.vendors.get(field='NAME', value=vendor_payload['NAME'])
+
+        if get_vendor['@count'] == '0':
+            created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
+        else:
+            if int(get_vendor['@count']) > 1:
+                created_vendor = get_vendor['vendor'][0]
+            else:
+                created_vendor = get_vendor['vendor']
+                
+        created_vendor = DestinationAttribute.bulk_upsert_destination_attributes([{
+            'attribute_type': 'VENDOR',
+            'display_name': 'vendor',
+            'value': sage_intacct_display_name,
+            'destination_id': created_vendor['VENDORID'],
+            'detail': {
+                'email': vendor.value
+            }
+        }], self.workspace_id)[0]
+
+        return created_vendor
 
     def __construct_expense_report(self, expense_report: ExpenseReport, \
                                    expense_report_lineitems: List[ExpenseReportLineitem]) -> Dict:
