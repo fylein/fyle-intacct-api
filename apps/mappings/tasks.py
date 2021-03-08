@@ -401,7 +401,9 @@ def auto_create_category_mappings(workspace_id):
                     workspace_id=workspace_id,
                 )
                 mapping.source.auto_mapped = True
-                mapping.source.save(update_fields=['auto_mapped'])
+                mapping.source.auto_created = True
+                mapping.source.save(update_fields=['auto_mapped', 'auto_created'])
+
                 create_credit_card_category_mappings(
                     reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
                 category_mappings.append(mapping)
