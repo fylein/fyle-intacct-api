@@ -177,6 +177,11 @@ def construct_filters_employee_mappings(employee: DestinationAttribute, employee
             'detail__full_name__iexact': employee.value
         }
 
+    elif employee_mapping_preference == 'EMPLOYEE_CODE':
+        filters = {
+            'detail__employee_code__iexact': employee.value
+        }
+
     return filters
 
 def async_auto_map_employees(workspace_id: int):

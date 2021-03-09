@@ -20,8 +20,8 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
     assert_valid('auto_map_employees' in general_settings_payload, 'auto_map_employees field is missing')
 
     if general_settings_payload['auto_map_employees']:
-        assert_valid(general_settings_payload['auto_map_employees'] in ['EMAIL', 'NAME'],
-                    'auto_map_employees can have only EMAIL / NAME')
+        assert_valid(general_settings_payload['auto_map_employees'] in ['EMAIL', 'NAME', 'EMPLOYEE_CODE'],
+                    'auto_map_employees can have only EMAIL / NAME / EMPLOYEE_CODE')
 
     general_settings, _ = WorkspaceGeneralSettings.objects.update_or_create(
         workspace_id=workspace_id,
