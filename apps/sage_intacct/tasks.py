@@ -104,10 +104,8 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
 
             # This error code comes up when the employee already exists
             if error_response['errorno'] == 'BL34000061' or error_response['errorno'] == 'PL05000104': 
-                sage_intacct_display_name = source_employee.detail['employee_code'] if (
-                    auto_map_employees_preference == 'EMPLOYEE_CODE' and source_employee.detail['employee_code']
-                ) else source_employee.detail['full_name']
-
+                sage_intacct_display_name = source_employee.detail['full_name']
+                
                 sage_intacct_entity = DestinationAttribute.objects.filter(
                     value=sage_intacct_display_name,
                     workspace_id=expense_group.workspace_id,
