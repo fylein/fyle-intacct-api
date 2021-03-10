@@ -275,9 +275,7 @@ class SageIntacctConnector:
             workspace_id=self.workspace_id, attribute_type='LOCATION',
             value__iexact=employee.detail['location']).first()
 
-        sage_intacct_display_name = employee.detail['employee_code'] if (
-            auto_map_employee_preference == 'EMPLOYEE_CODE' and employee.detail['employee_code']
-        ) else employee.detail['full_name']
+        sage_intacct_display_name = employee.detail['full_name']
 
         name = employee.detail['full_name'].split(' ')
 
@@ -367,9 +365,7 @@ class SageIntacctConnector:
         :return Vendor Destination Attribute
         """
 
-        sage_intacct_display_name = vendor.detail['employee_code'] if (
-            auto_map_employee_preference == 'EMPLOYEE_CODE' and vendor.detail['employee_code']
-        ) else vendor.detail['full_name']
+        sage_intacct_display_name = vendor.detail['full_name']
 
         name = vendor.detail['full_name'].split(' ')
 

@@ -94,6 +94,9 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             mapping.source.auto_mapped = True
             mapping.source.save(update_fields=['auto_mapped'])
 
+            mapping.destination.auto_created = True
+            mapping.destination.save(update_fields=['auto_created'])
+
         except WrongParamsError as exception:
             logger.error(exception.response)
 
@@ -101,10 +104,8 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
 
             # This error code comes up when the employee already exists
             if error_response['errorno'] == 'BL34000061' or error_response['errorno'] == 'PL05000104': 
-                sage_intacct_display_name = source_employee.detail['employee_code'] if (
-                    auto_map_employees_preference == 'EMPLOYEE_CODE' and source_employee.detail['employee_code']
-                ) else source_employee.detail['full_name']
-
+                sage_intacct_display_name = source_employee.detail['full_name']
+                
                 sage_intacct_entity = DestinationAttribute.objects.filter(
                     value=sage_intacct_display_name,
                     workspace_id=expense_group.workspace_id,
