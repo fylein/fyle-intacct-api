@@ -87,9 +87,9 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                 }
             
             entity = DestinationAttribute.objects.filter(
-                    attribute_type='EMPLOYEE',
-                    workspace_id=expense_group.workspace_id,
-                    **filters
+                     attribute_type='EMPLOYEE',
+                     workspace_id=expense_group.workspace_id,
+                     **filters
                 ).first()
 
             if entity is None:
