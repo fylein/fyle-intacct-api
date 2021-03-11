@@ -91,7 +91,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                     workspace_id=expense_group.workspace_id,
                     **filters
                 ).first()
-            print(entity)
+
             if entity is None:
                 if employee_mapping_setting == 'EMPLOYEE':
                     entity: DestinationAttribute = sage_intacct_connection.post_employees(
