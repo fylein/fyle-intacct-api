@@ -76,12 +76,14 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
         try:
             if auto_map_employees_preference == 'EMAIL':
                 filters = {
-                    'detail__email__iexact': source_employee.value
+                    'detail__email__iexact': source_employee.value,
+                    'attribute_type': employee_mapping_setting
                 }
 
             elif auto_map_employees_preference == 'NAME':
                 filters = {
-                    'value__iexact': source_employee.detail['full_name']
+                    'value__iexact': source_employee.detail['full_name'],
+                    'attribute_type': employee_mapping_setting
                 }
             
             entity = DestinationAttribute.objects.filter(
@@ -89,7 +91,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                     workspace_id=expense_group.workspace_id,
                     **filters
                 ).first()
-
+            print(entity)
             if entity is None:
                 if employee_mapping_setting == 'EMPLOYEE':
                     entity: DestinationAttribute = sage_intacct_connection.post_employees(
