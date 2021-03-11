@@ -74,21 +74,38 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
         )
 
         try:
-            if employee_mapping_setting == 'EMPLOYEE':
-                created_entity: DestinationAttribute = sage_intacct_connection.post_employees(
-                    source_employee, auto_map_employees_preference
-                )
-            else:
-                created_entity: DestinationAttribute = sage_intacct_connection.post_vendor(
-                    source_employee, auto_map_employees_preference
-                )
+            if auto_map_employees_preference == 'EMAIL':
+                filters = {
+                    'detail__email__iexact': source_employee.value
+                }
+
+            elif auto_map_employees_preference == 'NAME':
+                filters = {
+                    'value__iexact': source_employee.detail['full_name']
+                }
+            
+            entity = DestinationAttribute.objects.filter(
+                    attribute_type='EMPLOYEE',
+                    workspace_id=expense_group.workspace_id,
+                    **filters
+                ).first()
+
+            if entity is None:
+                if employee_mapping_setting == 'EMPLOYEE':
+                    entity: DestinationAttribute = sage_intacct_connection.post_employees(
+                        source_employee, auto_map_employees_preference
+                    )
+                else:
+                    entity: DestinationAttribute = sage_intacct_connection.post_vendor(
+                        source_employee, auto_map_employees_preference
+                    )
 
             mapping = Mapping.create_or_update_mapping(
                 source_type='EMPLOYEE',
                 source_value=expense_group.description.get('employee_email'),
                 destination_type=employee_mapping_setting,
-                destination_id=created_entity.destination_id,
-                destination_value=created_entity.value,
+                destination_id=entity.destination_id,
+                destination_value=entity.value,
                 workspace_id=int(expense_group.workspace_id)
             )
             mapping.source.auto_mapped = True
@@ -129,7 +146,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         source_employee.detail['full_name'],
                         expense_group.workspace_id
                     )
-
+        
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
