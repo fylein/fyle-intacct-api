@@ -147,7 +147,6 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         expense_group.workspace_id
                     )
         
-
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule expense reports creation
