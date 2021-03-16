@@ -272,7 +272,7 @@ def async_auto_map_charge_card_account(workspace_id: int):
 def schedule_auto_map_charge_card_employees(workspace_id: int):
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
 
-    if general_settings.auto_map_employees:
+    if general_settings.auto_map_employees and general_settings.corporate_credit_card_expenses_object:
         start_datetime = datetime.now()
 
         schedule, _ = Schedule.objects.update_or_create(
