@@ -58,7 +58,7 @@ class SageIntacctConnector:
         for account in accounts:
             account_attributes.append({
                 'attribute_type': 'ACCOUNT',
-                'active': account['enabled'] if 'enabled' in account else None,
+                'active': True if account['STATUS'] == 'active' else None,
                 'display_name': 'account',
                 'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                 'destination_id': account['ACCOUNTNO']
@@ -67,7 +67,7 @@ class SageIntacctConnector:
             if general_settings and general_settings.corporate_credit_card_expenses_object:
                 account_attributes.append({
                     'attribute_type': 'CCC_ACCOUNT',
-                    'active': account['enabled'] if 'enabled' in account else None,
+                    'active': True if account['STATUS'] == 'active' else None,
                     'display_name': 'Credit Card Account',
                     'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO']
@@ -111,7 +111,7 @@ class SageIntacctConnector:
                 'display_name': 'Expense Types',
                 'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
                 'destination_id': expense_type['ACCOUNTLABEL'],
-                'active': expense_type['enabled'] if 'enabled' in expense_type else None,
+                'active': True if expense_type['STATUS'] == 'active' else None,
                 'detail': {
                     'gl_account_no': expense_type['GLACCOUNTNO'],
                     'gl_account_title': expense_type['GLACCOUNTTITLE']
@@ -146,7 +146,7 @@ class SageIntacctConnector:
         """
         Get Payment accounts
         """
-        payment_accounts = self.connection.checking_accounts.get_all()['checkingaccount']
+        payment_accounts = self.connection.checking_accounts.get_all()
 
         payment_accounts_attributes = []
 
@@ -250,7 +250,7 @@ class SageIntacctConnector:
                 'display_name': 'employee',
                 'value': employee['CONTACT_NAME'],
                 'destination_id': employee['EMPLOYEEID'],
-                'detail':detail
+                'detail': detail
             })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
