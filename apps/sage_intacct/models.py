@@ -144,7 +144,7 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
-def get_expense_purpose(workspace_id, lineitem, category) -> str:
+def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str) -> str:
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
     org_id = Workspace.objects.get(id=workspace_id).fyle_org_id
