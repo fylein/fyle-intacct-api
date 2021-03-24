@@ -144,3 +144,6 @@ local_run.sh
 
 #docker compose
 docker-compose.yml
+
+# Cache db
+cache.db
