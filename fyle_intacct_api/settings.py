@@ -197,6 +197,12 @@ else:
         }
     }
 
+DATABASES['cache_db'] = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': 'cache.db'
+}
+
+DATABASE_ROUTERS = ['fyle_intacct_api.cache_router.CacheRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
