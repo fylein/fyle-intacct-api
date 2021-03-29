@@ -94,7 +94,7 @@ def auto_create_project_mappings(workspace_id):
 
             mapping.source.auto_mapped = True
             mapping.source.auto_created = True
-            mapping.source.save(update_fields=['auto_mapped', 'auto_created'])
+            mapping.source.save()
 
             project_mappings.append(mapping)
 
@@ -162,7 +162,7 @@ def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], map
 
             if mapping_attributes['destination_type'] != 'CHARGE_CARD_NUMBER':
                 source.auto_mapped = True
-                source.save(update_fields=['auto_mapped'])
+                source.save()
 
 def construct_filters_employee_mappings(employee: DestinationAttribute, employee_mapping_preference: str):
     filters = {}
@@ -365,7 +365,7 @@ def create_credit_card_category_mappings(reimbursable_expenses_object,
             destination_id=destination.detail['gl_account_no'],
             workspace_id=workspace_id
         )
-    elif reimbursable_expenses_object == "BILL" and corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
+    elif reimbursable_expenses_object == 'BILL' and corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
         Mapping.create_or_update_mapping(
             source_type='CATEGORY',
             destination_type='CCC_ACCOUNT',
@@ -407,7 +407,7 @@ def auto_create_category_mappings(workspace_id):
                 )
                 mapping.source.auto_mapped = True
                 mapping.source.auto_created = True
-                mapping.source.save(update_fields=['auto_mapped', 'auto_created'])
+                mapping.source.save()
 
                 create_credit_card_category_mappings(
                     reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)

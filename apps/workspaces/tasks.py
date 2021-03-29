@@ -33,7 +33,7 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, next_ru
 
         ws_schedule.schedule = schedule
 
-        ws_schedule.save(update_fields=['enabled', 'start_datetime', 'interval_hours', 'schedule'])
+        ws_schedule.save()
 
     elif not schedule_enabled:
         schedule = ws_schedule.schedule
