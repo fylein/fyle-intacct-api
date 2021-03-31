@@ -411,14 +411,10 @@ class ScheduleView(viewsets.ViewSet):
         hours = request.data.get('hours')
         assert_valid(hours is not None, 'Hours cannot be left empty')
 
-        next_run = request.data.get('next_run')
-        assert_valid(next_run is not None, 'next_run value cannot be empty')
-
         schedule_settings = schedule_sync(
             workspace_id=kwargs['workspace_id'],
             schedule_enabled=schedule_enabled,
-            hours=hours,
-            next_run=next_run
+            hours=hours
         )
 
         return Response(
