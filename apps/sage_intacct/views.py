@@ -7,6 +7,8 @@ from rest_framework import generics
 from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 
+from sageintacctsdk.exceptions import InvalidTokenError
+
 from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroup
@@ -47,6 +49,15 @@ class EmployeeView(generics.ListCreateAPIView):
                 data=self.serializer_class(employees, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -81,6 +92,15 @@ class VendorView(generics.ListCreateAPIView):
                 data=self.serializer_class(vendors, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -115,6 +135,15 @@ class AccountView(generics.ListCreateAPIView):
                 data=self.serializer_class(accounts, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -149,6 +178,15 @@ class DepartmentView(generics.ListCreateAPIView):
                 data=self.serializer_class(departments, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -183,6 +221,15 @@ class ExpenseTypeView(generics.ListCreateAPIView):
                 data=self.serializer_class(expense_types, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -217,6 +264,15 @@ class ChargeCardAccountView(generics.ListCreateAPIView):
                 data=self.serializer_class(charge_card_account, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -251,6 +307,15 @@ class PaymentAccountView(generics.ListCreateAPIView):
                 data=self.serializer_class(payment_accounts, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -285,6 +350,15 @@ class ItemView(generics.ListCreateAPIView):
                 data=self.serializer_class(items, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -319,6 +393,15 @@ class ProjectView(generics.ListCreateAPIView):
                 data=self.serializer_class(projects, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
@@ -353,6 +436,15 @@ class LocationView(generics.ListCreateAPIView):
                 data=self.serializer_class(locations, many=True).data,
                 status=status.HTTP_200_OK
             )
+
+        except InvalidTokenError as error:
+            return Response(
+                data={
+                    'message': error.message
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
