@@ -110,10 +110,10 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                 workspace_id=int(expense_group.workspace_id)
             )
             mapping.source.auto_mapped = True
-            mapping.source.save(update_fields=['auto_mapped'])
+            mapping.source.save()
 
             mapping.destination.auto_created = True
-            mapping.destination.save(update_fields=['auto_created'])
+            mapping.destination.save()
 
         except WrongParamsError as exception:
             logger.error(exception.response)
@@ -140,7 +140,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         workspace_id=int(expense_group.workspace_id)
                     )
                     mapping.source.auto_mapped = True
-                    mapping.source.save(update_fields=['auto_mapped'])
+                    mapping.source.save()
                 else:
                     logger.error(
                         'Destination Attribute with value %s not found in workspace %s',
@@ -157,22 +157,26 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
     """
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
+            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
             workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True, exported_at__isnull=True
         ).all()
 
-        chain = Chain(cached=True)
+        chain = Chain()
 
         for expense_group in expense_groups:
-            task_log, _ = TaskLog.objects.update_or_create(
+            task_log, _ = TaskLog.objects.get_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_group=expense_group,
                 defaults={
-                    'status': 'IN_PROGRESS',
+                    'status': 'ENQUEUED',
                     'type': 'CREATING_EXPENSE_REPORTS'
                 }
             )
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
+                task_log.status = 'ENQUEUED'
+                task_log.save()
 
-            chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log)
+            chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log.id)
             task_log.save()
 
         if chain.length():
@@ -188,22 +192,26 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
+            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
             workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True, exported_at__isnull=True
         ).all()
 
-        chain = Chain(cached=True)
+        chain = Chain()
 
         for expense_group in expense_groups:
-            task_log, _ = TaskLog.objects.update_or_create(
+            task_log, _ = TaskLog.objects.get_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_group=expense_group,
                 defaults={
-                    'status': 'IN_PROGRESS',
+                    'status': 'ENQUEUED',
                     'type': 'CREATING_BILLS'
                 }
             )
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
+                task_log.status = 'ENQUEUED'
+                task_log.save()
 
-            chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log)
+            chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log.id)
             task_log.save()
 
         if chain.length():
@@ -219,22 +227,26 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
     """
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
+            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
             workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True, exported_at__isnull=True
         ).all()
 
-        chain = Chain(cached=True)
+        chain = Chain()
 
         for expense_group in expense_groups:
-            task_log, _ = TaskLog.objects.update_or_create(
+            task_log, _ = TaskLog.objects.get_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_group=expense_group,
                 defaults={
-                    'status': 'IN_PROGRESS',
+                    'status': 'ENQUEUED',
                     'type': 'CREATING_CHARGE_CARD_TRANSACTIONS'
                 }
             )
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
+                task_log.status = 'ENQUEUED'
+                task_log.save()
 
-            chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log)
+            chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log.id)
             task_log.save()
 
         if chain.length():
@@ -270,7 +282,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     task_log.status = 'FAILED'
     task_log.detail = None
     task_log.sage_intacct_errors = errors
-    task_log.save(update_fields=['sage_intacct_errors', 'detail', 'status'])
+    task_log.save()
 
 
 def __validate_expense_group(expense_group: ExpenseGroup, general_settings: WorkspaceGeneralSettings):
@@ -383,7 +395,14 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def create_expense_report(expense_group, task_log):
+def create_expense_report(expense_group, task_log_id):
+    task_log = TaskLog.objects.get(id=task_log_id)
+    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+        task_log.status = 'IN_PROGRESS'
+        task_log.save()
+    else:
+        return
+
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
 
     try:
@@ -413,7 +432,7 @@ def create_expense_report(expense_group, task_log):
                 try:
                     sage_intacct_connection.update_expense_report(created_expense_report['key'], created_attachment_id)
                     expense_report_object.supdoc_id = created_attachment_id
-                    expense_report_object.save(update_fields=['supdoc_id'])
+                    expense_report_object.save()
                 except Exception:
                     error = traceback.format_exc()
                     logger.error(
@@ -425,7 +444,7 @@ def create_expense_report(expense_group, task_log):
             task_log.expense_report = expense_report_object
             task_log.status = 'COMPLETE'
 
-            task_log.save(update_fields=['detail', 'expense_report', 'status'])
+            task_log.save()
 
             expense_group.exported_at = datetime.now()
             expense_group.save()
@@ -443,7 +462,7 @@ def create_expense_report(expense_group, task_log):
         task_log.status = 'FAILED'
         task_log.detail = detail
 
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
 
     except BulkError as exception:
         logger.error(exception.response)
@@ -451,7 +470,7 @@ def create_expense_report(expense_group, task_log):
         task_log.status = 'FAILED'
         task_log.detail = detail
 
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
@@ -462,11 +481,18 @@ def create_expense_report(expense_group, task_log):
             'error': error
         }
         task_log.status = 'FATAL'
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def create_bill(expense_group, task_log):
+def create_bill(expense_group, task_log_id):
+    task_log = TaskLog.objects.get(id=task_log_id)
+    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+        task_log.status = 'IN_PROGRESS'
+        task_log.save()
+    else:
+        return
+
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
 
     try:
@@ -495,7 +521,7 @@ def create_bill(expense_group, task_log):
                     sage_intacct_connection.update_bill(created_bill['data']['apbill']['RECORDNO'], \
                                                         created_attachment_id)
                     bill_object.supdoc_id = created_attachment_id
-                    bill_object.save(update_fields=['supdoc_id'])
+                    bill_object.save()
                 except Exception:
                     error = traceback.format_exc()
                     logger.error(
@@ -507,7 +533,7 @@ def create_bill(expense_group, task_log):
             task_log.bill = bill_object
             task_log.status = 'COMPLETE'
 
-            task_log.save(update_fields=['detail', 'bill', 'status'])
+            task_log.save()
 
             expense_group.exported_at = datetime.now()
             expense_group.save()
@@ -525,7 +551,7 @@ def create_bill(expense_group, task_log):
         task_log.status = 'FAILED'
         task_log.detail = detail
 
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
 
     except BulkError as exception:
         logger.error(exception.response)
@@ -533,7 +559,7 @@ def create_bill(expense_group, task_log):
         task_log.status = 'FAILED'
         task_log.detail = detail
 
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
@@ -544,11 +570,18 @@ def create_bill(expense_group, task_log):
             'error': error
         }
         task_log.status = 'FATAL'
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def create_charge_card_transaction(expense_group, task_log):
+def create_charge_card_transaction(expense_group, task_log_id):
+    task_log = TaskLog.objects.get(id=task_log_id)
+    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+        task_log.status = 'IN_PROGRESS'
+        task_log.save()
+    else:
+        return
+
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
     try:
         with transaction.atomic():
@@ -573,7 +606,7 @@ def create_charge_card_transaction(expense_group, task_log):
                     sage_intacct_connection.update_charge_card_transaction( \
                         created_charge_card_transaction['key'], created_attachment_id)
                     charge_card_transaction_object.supdoc_id = created_attachment_id
-                    charge_card_transaction_object.save(update_fields=['supdoc_id'])
+                    charge_card_transaction_object.save()
                 except Exception:
                     error = traceback.format_exc()
                     logger.error(
@@ -585,7 +618,7 @@ def create_charge_card_transaction(expense_group, task_log):
             task_log.charge_card_transaction = charge_card_transaction_object
             task_log.status = 'COMPLETE'
 
-            task_log.save(update_fields=['detail', 'charge_card_transaction', 'status'])
+            task_log.save()
 
             expense_group.exported_at = datetime.now()
             expense_group.save()
@@ -603,7 +636,7 @@ def create_charge_card_transaction(expense_group, task_log):
         task_log.status = 'FAILED'
         task_log.detail = detail
 
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
 
     except BulkError as exception:
         logger.error(exception.response)
@@ -611,7 +644,7 @@ def create_charge_card_transaction(expense_group, task_log):
         task_log.status = 'FAILED'
         task_log.detail = detail
 
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
@@ -622,7 +655,7 @@ def create_charge_card_transaction(expense_group, task_log):
             'error': error
         }
         task_log.status = 'FATAL'
-        task_log.save(update_fields=['detail', 'status'])
+        task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
@@ -687,13 +720,13 @@ def create_ap_payment(workspace_id):
 
                         bill.payment_synced = True
                         bill.paid_on_sage_intacct = True
-                        bill.save(update_fields=['payment_synced', 'paid_on_sage_intacct'])
+                        bill.save()
 
                         task_log.detail = created_ap_payment
                         task_log.ap_payment = ap_payment_object
                         task_log.status = 'COMPLETE'
 
-                        task_log.save(update_fields=['detail', 'ap_payment', 'status'])
+                        task_log.save()
 
                 except SageIntacctCredential.DoesNotExist:
                     logger.error(
@@ -708,7 +741,7 @@ def create_ap_payment(workspace_id):
                     task_log.status = 'FAILED'
                     task_log.detail = detail
 
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
 
                 except BulkError as exception:
                     logger.error(exception.response)
@@ -716,7 +749,7 @@ def create_ap_payment(workspace_id):
                     task_log.status = 'FAILED'
                     task_log.detail = detail
 
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
 
                 except WrongParamsError as exception:
                     logger.error(exception.response)
@@ -724,7 +757,7 @@ def create_ap_payment(workspace_id):
                     task_log.status = 'FAILED'
                     task_log.detail = detail
 
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
 
                 except Exception:
                     error = traceback.format_exc()
@@ -732,7 +765,7 @@ def create_ap_payment(workspace_id):
                         'error': error
                     }
                     task_log.status = 'FATAL'
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
                     logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
                                  task_log.detail)
 
@@ -812,13 +845,13 @@ def create_sage_intacct_reimbursement(workspace_id):
 
                         expense_report.payment_synced = True
                         expense_report.paid_on_sage_intacct = True
-                        expense_report.save(update_fields=['payment_synced', 'paid_on_sage_intacct'])
+                        expense_report.save()
 
                         task_log.detail = created__sage_intacct_reimbursement
                         task_log.sage_intacct_reimbursement = sage_intacct_reimbursement_object
                         task_log.status = 'COMPLETE'
 
-                        task_log.save(update_fields=['detail', 'sage_intacct_reimbursement', 'status'])
+                        task_log.save()
 
                 except SageIntacctCredential.DoesNotExist:
                     logger.error(
@@ -833,7 +866,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                     task_log.status = 'FAILED'
                     task_log.detail = detail
 
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
 
                 except BulkError as exception:
                     logger.error(exception.response)
@@ -841,7 +874,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                     task_log.status = 'FAILED'
                     task_log.detail = detail
 
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
 
                 except WrongParamsError as exception:
                     logger.error(exception.response)
@@ -849,7 +882,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                     task_log.status = 'FAILED'
                     task_log.detail = detail
 
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
 
                 except Exception:
                     error = traceback.format_exc()
@@ -857,7 +890,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                         'error': error
                     }
                     task_log.status = 'FATAL'
-                    task_log.save(update_fields=['detail', 'status'])
+                    task_log.save()
                     logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
                                  task_log.detail)
 
@@ -942,11 +975,11 @@ def check_sage_intacct_object_status(workspace_id):
                 for line_item in line_items:
                     expense = line_item.expense
                     expense.paid_on_sage_intacct = True
-                    expense.save(update_fields=['paid_on_sage_intacct'])
+                    expense.save()
 
                 bill.paid_on_sage_intacct = True
                 bill.payment_synced = True
-                bill.save(update_fields=['paid_on_sage_intacct', 'payment_synced'])
+                bill.save()
 
     if expense_reports:
         expense_report_ids = get_all_sage_intacct_expense_report_ids(expense_reports)
@@ -960,11 +993,11 @@ def check_sage_intacct_object_status(workspace_id):
                 for line_item in line_items:
                     expense = line_item.expense
                     expense.paid_on_sage_intacct = True
-                    expense.save(update_fields=['paid_on_sage_intacct'])
+                    expense.save()
 
                 expense_report.paid_on_sage_intacct = True
                 expense_report.payment_synced = True
-                expense_report.save(update_fields=['paid_on_sage_intacct', 'payment_synced'])
+                expense_report.save()
 
 
 def schedule_sage_intacct_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):

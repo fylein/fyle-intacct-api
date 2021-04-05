@@ -39,7 +39,9 @@ class ExpenseGroupView(generics.ListCreateAPIView):
 
         elif state == 'READY':
             return ExpenseGroup.objects.filter(
-                Q(tasklog__isnull=True) | Q(tasklog__status='FAILED') | Q(tasklog__status='FATAL'),
+                bill__id__isnull=True,
+                expensereport__id__isnull=True,
+                chargecardtransaction__id__isnull=True,
                 workspace_id=self.kwargs['workspace_id']
             ).order_by('-updated_at')
 
