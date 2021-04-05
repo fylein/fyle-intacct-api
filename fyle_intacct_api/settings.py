@@ -167,10 +167,10 @@ CACHES = {
 
 Q_CLUSTER = {
     'name': 'fyle_intacct_api',
-    'compress': True,
     'save_limit': 0,
     'workers': 1,
     'queue_limit': 30,
+    'cached': False,
     'orm': 'default',
     'ack_failures': True,
     'poll': 1,
