@@ -168,6 +168,9 @@ CACHES = {
 Q_CLUSTER = {
     'name': 'fyle_intacct_api',
     'save_limit': 0,
+    'retry': 14400,
+    'timeout': 3600,
+    'catch_up': False,
     'workers': 1,
     'queue_limit': 30,
     'cached': False,
