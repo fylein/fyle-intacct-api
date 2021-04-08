@@ -98,7 +98,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                     )
                 else:
                     entity: DestinationAttribute = sage_intacct_connection.get_or_create_vendor(
-                        source_employee.detail['full_name'], source_employee.value
+                        source_employee.detail['full_name'], source_employee.value, create=True
                     )
 
             mapping = Mapping.create_or_update_mapping(
