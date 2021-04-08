@@ -257,14 +257,14 @@ class SageIntacctConnector:
             employee_attributes, self.workspace_id)
         return account_attributes
 
-    def create_vendor_destionation_attribute(self, vendor: dict):
+    def create_vendor_destionation_attribute(self, vendor_name: str, vendor_id: str, vendor_email: str = None):
         vendor_attribute = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'VENDOR',
             'display_name': 'vendor',
-            'value': vendor['NAME'],
-            'destination_id': vendor['VENDORID'],
+            'value': vendor_name,
+            'destination_id': vendor_id,
             'detail': {
-                'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
+                'email': vendor_email
             }
         }], self.workspace_id)[0]
 
@@ -287,12 +287,14 @@ class SageIntacctConnector:
         if not vendor:
             if create:
                 created_vendor = self.post_vendor(vendor_name, email)
-                return self.create_vendor_destionation_attribute(created_vendor)
+                return self.create_vendor_destionation_attribute(created_vendor['VENDORID'],
+                    created_vendor['VENDORID'], email)
             else:
                 return
         else:
-            return self.create_vendor_destionation_attribute(vendor)
-    
+            return self.create_vendor_destionation_attribute(vendor['NAME'], vendor['VENDORID'],
+                vendor['DISPLAYCONTACT.EMAIL1'])
+
     def post_employees(self, employee: ExpenseAttribute, auto_map_employee_preference: str):
         """
         Create a Vendor on Sage Intacct
