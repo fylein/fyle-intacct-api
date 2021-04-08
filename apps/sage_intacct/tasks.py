@@ -97,8 +97,8 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         source_employee, auto_map_employees_preference
                     )
                 else:
-                    entity: DestinationAttribute = sage_intacct_connection.post_vendor(
-                        source_employee, auto_map_employees_preference
+                    entity: DestinationAttribute = sage_intacct_connection.get_or_create_vendor(
+                        source_employee.detail['full_name'], source_employee.value
                     )
 
             mapping = Mapping.create_or_update_mapping(
@@ -147,7 +147,29 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         source_employee.detail['full_name'],
                         expense_group.workspace_id
                     )
-        
+
+def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
+    """
+    Get or create default vendor
+    :param merchant: Fyle Expense Merchant
+    :param workspace_id: Workspace Id
+    :return:
+    """
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+    vendor = None
+
+    if merchant:
+        try:
+            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=False)
+        except WrongParamsError as bad_request:
+            logger.error(bad_request.response)
+
+    if not vendor:
+        vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
+
+    return vendor
+
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule expense reports creation
@@ -301,21 +323,6 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
             'message': 'General mappings not found'
         })
 
-    general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.get(
-        workspace_id=expense_group.workspace_id)
-
-    if general_settings.corporate_credit_card_expenses_object:
-        try:
-            GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        except GeneralMapping.DoesNotExist:
-            bulk_errors.append({
-                'row': None,
-                'expense_group_id': expense_group.id,
-                'value': expense_group.description.get('employee_email'),
-                'type': 'General Mapping',
-                'message': 'General Mapping not found'
-            })
-
     try:
         if expense_group.fund_source == 'PERSONAL':
             error_message = 'Employee Mapping not found'
@@ -395,7 +402,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def create_expense_report(expense_group, task_log_id):
+def create_expense_report(expense_group: ExpenseGroup, task_log_id):
     task_log = TaskLog.objects.get(id=task_log_id)
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
@@ -409,7 +416,8 @@ def create_expense_report(expense_group, task_log_id):
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-        if general_settings.auto_map_employees and general_settings.auto_create_destination_entity:
+        if general_settings.auto_map_employees and general_settings.auto_create_destination_entity \
+            and general_settings.auto_map_employees != 'EMPLOYEE_CODE':
             create_or_update_employee_mapping(expense_group, sage_intacct_connection, general_settings.auto_map_employees)
 
         with transaction.atomic():
@@ -485,7 +493,7 @@ def create_expense_report(expense_group, task_log_id):
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def create_bill(expense_group, task_log_id):
+def create_bill(expense_group: ExpenseGroup, task_log_id):
     task_log = TaskLog.objects.get(id=task_log_id)
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
@@ -499,8 +507,8 @@ def create_bill(expense_group, task_log_id):
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-        if expense_group.fund_source == 'PERSONAL' and general_settings.auto_map_employees \
-                and general_settings.auto_create_destination_entity:
+        if general_settings.auto_map_employees and general_settings.auto_create_destination_entity \
+            and expense_group.fund_source == 'PERSONAL' and general_settings.auto_map_employees != 'EMPLOYEE_CODE':
             create_or_update_employee_mapping(expense_group, sage_intacct_connection, general_settings.auto_map_employees)
             
         with transaction.atomic():
@@ -574,7 +582,7 @@ def create_bill(expense_group, task_log_id):
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def create_charge_card_transaction(expense_group, task_log_id):
+def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
     task_log = TaskLog.objects.get(id=task_log_id)
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
@@ -584,6 +592,8 @@ def create_charge_card_transaction(expense_group, task_log_id):
 
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
     try:
+        merchant = expense_group.expenses.first().vendor
+        get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
         with transaction.atomic():
             __validate_expense_group(expense_group, general_settings)
 

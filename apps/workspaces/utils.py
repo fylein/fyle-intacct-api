@@ -6,6 +6,7 @@ from apps.mappings.tasks import schedule_projects_creation, schedule_auto_map_em
 from .models import WorkspaceGeneralSettings
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync,\
     schedule_sage_intacct_reimbursement_creation, schedule_fyle_reimbursements_sync
+from apps.fyle.models import ExpenseGroupSettings
 from fyle_intacct_api.utils import assert_valid
 
 
@@ -36,6 +37,15 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
             'auto_create_destination_entity': general_settings_payload['auto_create_destination_entity']
         }
     )
+
+    if general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+        expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+
+        ccc_expense_group_fields = expense_group_settings.corporate_credit_card_expense_group_fields
+        ccc_expense_group_fields.append('expense_id')
+        expense_group_settings.corporate_credit_card_expense_group_fields = list(set(ccc_expense_group_fields))
+
+        expense_group_settings.save()
 
     schedule_projects_creation(import_projects=general_settings.import_projects, workspace_id=workspace_id)
 
