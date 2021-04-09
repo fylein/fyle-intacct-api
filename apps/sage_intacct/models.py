@@ -524,7 +524,7 @@ class ChargeCardTransaction(models.Model):
                     'memo': 'Credit card expenses by {0}'.format(description.get('employee_email')),
                     'reference_no': expense.expense_number,
                     'currency': expense.currency,
-                    'transaction_date': expense_group.description['spent_at']
+                    'transaction_date': get_transaction_date(expense_group)
                 }
             )
 
