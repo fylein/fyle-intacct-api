@@ -257,7 +257,44 @@ class SageIntacctConnector:
             employee_attributes, self.workspace_id)
         return account_attributes
 
-    
+    def create_vendor_destionation_attribute(self, vendor_name: str, vendor_id: str, vendor_email: str = None):
+        vendor_attribute = DestinationAttribute.bulk_upsert_destination_attributes([{
+            'attribute_type': 'VENDOR',
+            'display_name': 'vendor',
+            'value': vendor_name,
+            'destination_id': vendor_id,
+            'detail': {
+                'email': vendor_email
+            }
+        }], self.workspace_id)[0]
+
+        return vendor_attribute
+
+    def get_or_create_vendor(self, vendor_name: str, email: str = None, create: bool = False):
+        """
+        Call Sage Intacct api to get or create vendor
+        :param vendor_name: Name of the vendor
+        :param email: Email of the vendor
+        :param create: False to just Get and True to Get or Create if not exists
+        :return: Vendor
+        """
+        vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
+        if 'vendor' in vendor:
+            vendor = vendor['vendor'][0] if int(vendor['@totalcount']) > 1 else vendor['vendor']
+        else:
+            vendor = None
+
+        if not vendor:
+            if create:
+                created_vendor = self.post_vendor(vendor_name, email)
+                return self.create_vendor_destionation_attribute(created_vendor['VENDORID'],
+                    created_vendor['VENDORID'], email)
+            else:
+                return
+        else:
+            return self.create_vendor_destionation_attribute(vendor['NAME'], vendor['VENDORID'],
+                vendor['DISPLAYCONTACT.EMAIL1'])
+
     def post_employees(self, employee: ExpenseAttribute, auto_map_employee_preference: str):
         """
         Create a Vendor on Sage Intacct
@@ -357,24 +394,23 @@ class SageIntacctConnector:
             vendor_attributes, self.workspace_id)
         return account_attributes
     
-    def post_vendor(self, vendor: ExpenseAttribute, auto_map_employee_preference: str):
+    def post_vendor(self, vendor_name: str, email: str = None):
         """
         Create a Vendor on Sage Intacct
-        :param auto_map_employee_preference: Preference while doing automap of employees
         :param vendor: vendor attribute to be created
         :return Vendor Destination Attribute
         """
 
-        sage_intacct_display_name = vendor.detail['full_name']
+        sage_intacct_display_name = vendor_name
 
-        name = vendor.detail['full_name'].split(' ')
+        name = vendor_name.split(' ')
 
         vendor_payload = {
             'NAME': sage_intacct_display_name,
             'VENDORID': sage_intacct_display_name,
             'DISPLAYCONTACT': {
                 'PRINTAS': sage_intacct_display_name,
-                'EMAIL1': vendor.value,
+                'EMAIL1': email,
                 'FIRSTNAME': name[0],
                 'LASTNAME': name[-1] if len(name) == 2 else None
             }
@@ -396,7 +432,7 @@ class SageIntacctConnector:
             'value': sage_intacct_display_name,
             'destination_id': created_vendor['VENDORID'],
             'detail': {
-                'email': vendor.value
+                'email': email
             }
         }], self.workspace_id)[0]
 
@@ -509,6 +545,7 @@ class SageIntacctConnector:
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
                 'customerid': lineitem.customer_id,
+                'vendorid': charge_card_transaction.vendor_id,
                 'projectid': lineitem.project_id,
                 'itemid': lineitem.item_id
             }
@@ -523,6 +560,7 @@ class SageIntacctConnector:
                 'month': transaction_date.month,
                 'day': transaction_date.day
             },
+            'referenceno': charge_card_transaction.reference_no,
             'description': charge_card_transaction.memo,
             'currency': charge_card_transaction.currency,
             'exchratetype': None,

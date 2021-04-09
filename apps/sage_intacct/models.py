@@ -458,8 +458,10 @@ class ChargeCardTransaction(models.Model):
     id = models.AutoField(primary_key=True)
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
     charge_card_id = models.CharField(max_length=255, help_text='Sage Intacct Charge Card ID')
+    vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
     description = models.TextField(help_text='Sage Intacct Charge Card Transaction Description')
     memo = models.TextField(help_text='Sage Intacct referenceno', null=True)
+    reference_no = models.CharField(max_length=255, help_text='Sage Intacct Reference number to transaction')
     currency = models.CharField(max_length=5, help_text='Expense Report Currency')
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Safe Intacct Charge Card transaction date', null=True)
@@ -479,35 +481,51 @@ class ChargeCardTransaction(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
 
-        if expense_group.fund_source == 'CCC':
-            charge_card_id = None
-            mapping: Mapping = Mapping.objects.filter(
-                source_type='EMPLOYEE',
-                destination_type='CHARGE_CARD_NUMBER',
-                source__value=description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
+        expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
+        expense_group.save()
+
+        vendor = None
+        merchant = expense.vendor if expense.vendor else None
+
+        if merchant:
+            vendor = DestinationAttribute.objects.filter(
+                value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
             ).first()
 
-            if mapping:
-                charge_card_id = mapping.destination.destination_id
+        if vendor:
+            vendor = vendor.destination_id
+        else:
+            vendor = DestinationAttribute.objects.filter(
+                value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
 
-            else:
-                general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-                if general_mappings.default_charge_card_id:
-                    charge_card_id = general_mappings.default_charge_card_id
+        charge_card_id = None
+        mapping: Mapping = Mapping.objects.filter(
+            source_type='EMPLOYEE',
+            destination_type='CHARGE_CARD_NUMBER',
+            source__value=description.get('employee_email'),
+            workspace_id=expense_group.workspace_id
+        ).first()
 
-            charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
-                expense_group=expense_group,
-                defaults={
-                    'charge_card_id': charge_card_id,
-                    'description': description,
-                    'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
-                    expense_group.fund_source == 'PERSONAL' else
-                    'Credit card expenses by {0}'.format(description.get('employee_email')),
-                    'currency': expense.currency,
-                    'transaction_date': get_transaction_date(expense_group)
-                }
-            )
+        if mapping:
+            charge_card_id = mapping.destination.destination_id
+
+        else:
+            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+            if general_mappings.default_charge_card_id:
+                charge_card_id = general_mappings.default_charge_card_id
+
+        charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
+            expense_group=expense_group,
+            defaults={
+                'charge_card_id': charge_card_id,
+                'vendor_id': vendor,
+                'description': description,
+                'memo': 'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'reference_no': expense.expense_number,
+                'currency': expense.currency,
+                'transaction_date': get_transaction_date(expense_group)
+            }
+        )
 
         return charge_card_transaction_object
 
