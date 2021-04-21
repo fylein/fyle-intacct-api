@@ -78,27 +78,10 @@ def auto_create_project_mappings(workspace_id):
     Create Project Mappings
     :return: mappings
     """
-    si_projects = upload_projects_to_fyle(workspace_id=workspace_id)
-    project_mappings = []
 
     try:
-        for project in si_projects:
-            mapping = Mapping.create_or_update_mapping(
-                source_type='PROJECT',
-                destination_type='PROJECT',
-                source_value=project.value,
-                destination_value=project.value,
-                destination_id=project.destination_id,
-                workspace_id=workspace_id
-            )
-
-            mapping.source.auto_mapped = True
-            mapping.source.auto_created = True
-            mapping.source.save()
-
-            project_mappings.append(mapping)
-
-        return project_mappings
+        si_projects = upload_projects_to_fyle(workspace_id=workspace_id)
+        Mapping.bulk_create_mappings(fyle_categories, 'PROJECT', 'PROJECT', workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
@@ -395,37 +378,9 @@ def auto_create_category_mappings(workspace_id):
     try:
         fyle_categories = upload_categories_to_fyle(
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
-        for category in fyle_categories:
-            try:
-                mapping = Mapping.create_or_update_mapping(
-                    source_type='CATEGORY',
-                    destination_type=reimbursable_destination_type,
-                    source_value=category.value,
-                    destination_value=category.value,
-                    destination_id=category.destination_id,
-                    workspace_id=workspace_id,
-                )
-                mapping.source.auto_mapped = True
-                mapping.source.auto_created = True
-                mapping.source.save()
+        
+        Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
 
-                create_credit_card_category_mappings(
-                    reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
-                category_mappings.append(mapping)
-
-            except ExpenseAttribute.DoesNotExist:
-                detail = {
-                    'source_value': category.value,
-                    'destination_value': category.value,
-                    'destiantion_type': reimbursable_destination_type
-                }
-                logger.error(
-                    'Error while creating categories auto mapping workspace_id - %s %s',
-                    workspace_id, {'payload': detail}
-                )
-                raise ExpenseAttribute.DoesNotExist
-
-        return category_mappings
     except WrongParamsError as exception:
         logger.error(
             'Error while creating categories workspace_id - %s in Fyle %s %s',

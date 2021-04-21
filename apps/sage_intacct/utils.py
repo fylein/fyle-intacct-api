@@ -53,10 +53,13 @@ class SageIntacctConnector:
         general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
             workspace_id=workspace_id).first()
 
-        account_attributes = []
+        account_attributes = {
+            "bank_account": [],
+            "credit_card_account": []
+        }
 
         for account in accounts:
-            account_attributes.append({
+            account_attributes['bank_account'].append({
                 'attribute_type': 'ACCOUNT',
                 'active': True if account['STATUS'] == 'active' else None,
                 'display_name': 'account',
@@ -65,7 +68,7 @@ class SageIntacctConnector:
             })
 
             if general_settings and general_settings.corporate_credit_card_expenses_object:
-                account_attributes.append({
+                account_attributes['credit_card_account'].append({
                     'attribute_type': 'CCC_ACCOUNT',
                     'active': True if account['STATUS'] == 'active' else None,
                     'display_name': 'Credit Card Account',
@@ -73,9 +76,11 @@ class SageIntacctConnector:
                     'destination_id': account['ACCOUNTNO']
                 })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            account_attributes, self.workspace_id)
-        return account_attributes
+        for attribute_type, account_attribute in account_attributes.items():
+            if account_attribute:
+                DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    account_attributes, attribute_type.upper(), self.workspace_id, True)
+        return []
 
     def sync_departments(self):
         """
@@ -93,9 +98,10 @@ class SageIntacctConnector:
                 'destination_id': department['DEPARTMENTID']
             })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            department_attributes, self.workspace_id)
-        return account_attributes
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            department_attributes, 'DEPARTMENT', self.workspace_id, True)
+
+        return []
 
     def sync_expense_types(self):
         """
@@ -118,9 +124,9 @@ class SageIntacctConnector:
                 }
             })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            expense_types_attributes, self.workspace_id)
-        return account_attributes
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            expense_types_attributes, 'EXPENSE_TYPE', self.workspace_id, True)
+        return []
 
     def sync_charge_card_accounts(self):
         """
@@ -138,9 +144,10 @@ class SageIntacctConnector:
                 'destination_id': charge_card_account['CARDID']
             })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            charge_card_accounts_attributes, self.workspace_id)
-        return account_attributes
+        DestinationAttribute.bulk_upsert_destination_attributes(
+            charge_card_accounts_attributes, 'CHARGE_CARD_NUMBER', self.workspace_id, True)
+
+        return []
 
     def sync_payment_accounts(self):
         """
@@ -158,9 +165,10 @@ class SageIntacctConnector:
                 'destination_id': payment_account['BANKACCOUNTID']
             })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            payment_accounts_attributes, self.workspace_id)
-        return account_attributes
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            payment_accounts_attributes, 'PAYMENT_ACCOUNT', self.workspace_id, True)
+
+        return []
 
     def sync_projects(self):
         """
@@ -185,9 +193,10 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            project_attributes, self.workspace_id)
-        return account_attributes
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            project_attributes, 'PROJECTS', self.workspace_id, True)
+
+        return []
 
     def sync_items(self):
         """
@@ -207,9 +216,10 @@ class SageIntacctConnector:
                     'destination_id': item['ITEMID']
                 })
 
-        attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            item_attributes, self.workspace_id)
-        return attributes
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            item_attributes, 'ITEM', self.workspace_id, True)
+
+        return []
 
     def sync_locations(self):
         """
@@ -227,9 +237,10 @@ class SageIntacctConnector:
                 'destination_id': location['LOCATIONID']
             })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            location_attributes, self.workspace_id)
-        return account_attributes
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            location_attributes, 'LOCATION', self.workspace_id, True)
+
+        return []
 
     def sync_employees(self):
         """
@@ -253,12 +264,13 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            employee_attributes, self.workspace_id)
-        return account_attributes
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            employee_attributes, 'EMPLOYEE', self.workspace_id, True)
+
+        return []
 
     def create_vendor_destionation_attribute(self, vendor_name: str, vendor_id: str, vendor_email: str = None):
-        vendor_attribute = DestinationAttribute.bulk_upsert_destination_attributes([{
+        vendor_attribute = DestinationAttribute.create_or_update_destination_attribute({
             'attribute_type': 'VENDOR',
             'display_name': 'vendor',
             'value': vendor_name,
@@ -266,7 +278,7 @@ class SageIntacctConnector:
             'detail': {
                 'email': vendor_email
             }
-        }], self.workspace_id)[0]
+        }, self.workspace_id)
 
         return vendor_attribute
 
@@ -287,8 +299,8 @@ class SageIntacctConnector:
         if not vendor:
             if create:
                 created_vendor = self.post_vendor(vendor_name, email)
-                return self.create_vendor_destionation_attribute(created_vendor['VENDORID'],
-                    created_vendor['VENDORID'], email)
+                return self.create_vendor_destionation_attribute(
+                    created_vendor['VENDORID'], created_vendor['VENDORID'], email)
             else:
                 return
         else:
@@ -299,8 +311,8 @@ class SageIntacctConnector:
         """
         Create a Vendor on Sage Intacct
         :param auto_map_employee_preference: Preference while doing automap of employees
-        :param vendor: vendor attribute to be created
-        :return Vendor Destination Attribute
+        :param employee: employee attribute to be created
+        :return Employee Destination Attribute
         """
         department = DestinationAttribute.objects.filter(
             workspace_id=self.workspace_id, attribute_type='DEPARTMENT',
@@ -326,7 +338,7 @@ class SageIntacctConnector:
             }
 
             created_contact = self.connection.contacts.post(contact)
-        
+
         except Exception as e:
             logger.error(e.response)
 
@@ -343,7 +355,7 @@ class SageIntacctConnector:
 
         created_employee = self.connection.employees.post(employee_payload)['data']['employee']
 
-        created_employee = DestinationAttribute.bulk_upsert_destination_attributes([{
+        created_employee = DestinationAttribute.create_or_update_destination_attribute({
             'attribute_type': 'EMPLOYEE',
             'display_name': 'employee',
             'value': sage_intacct_display_name,
@@ -353,7 +365,7 @@ class SageIntacctConnector:
                'full_name': name,
                'employee_code': employee.detail['employee_code']
             }
-        }], self.workspace_id)[0]
+        }, self.workspace_id)
 
         return created_employee
 
@@ -390,10 +402,11 @@ class SageIntacctConnector:
                     'detail': detail
                 })
 
-        account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
-            vendor_attributes, self.workspace_id)
-        return account_attributes
-    
+        account_attributes = DestinationAttribute.bulk_create_or_update_destination_attributes(
+            vendor_attributes, 'VENDOR', self.workspace_id, True)
+
+        return []
+
     def post_vendor(self, vendor_name: str, email: str = None):
         """
         Create a Vendor on Sage Intacct
@@ -425,8 +438,8 @@ class SageIntacctConnector:
                 created_vendor = get_vendor['vendor'][0]
             else:
                 created_vendor = get_vendor['vendor']
-                
-        created_vendor = DestinationAttribute.bulk_upsert_destination_attributes([{
+
+        created_vendor = DestinationAttribute.bulk_create_or_update_destination_attributes({
             'attribute_type': 'VENDOR',
             'display_name': 'vendor',
             'value': sage_intacct_display_name,
@@ -434,7 +447,7 @@ class SageIntacctConnector:
             'detail': {
                 'email': email
             }
-        }], self.workspace_id)[0]
+        }, self.workspace_id)
 
         return created_vendor
 
