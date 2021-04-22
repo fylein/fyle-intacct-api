@@ -97,7 +97,7 @@ class FyleConnector:
             raise UnauthorizedClientError('Wrong client secret or/and refresh token', response.text)
 
         elif response.status_code == 404:
-            raise NotFoundClientError('Client ID dosen\'t exist', response.text)
+            raise NotFoundClientError('Client ID doesn\'t exist', response.text)
 
         elif response.status_code == 400:
             raise WrongParamsError('Some of the parameters were wrong', response.text)
