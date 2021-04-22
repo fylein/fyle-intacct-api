@@ -226,7 +226,7 @@ class FyleConnector:
             })
 
         ExpenseAttribute.bulk_create_or_update_expense_attributes(
-            project_attributes, "PROJECT", self.workspace_id)
+            project_attributes, 'PROJECT', self.workspace_id)
 
         return []
 

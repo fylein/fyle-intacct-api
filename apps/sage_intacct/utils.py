@@ -54,12 +54,12 @@ class SageIntacctConnector:
             workspace_id=workspace_id).first()
 
         account_attributes = {
-            "bank_account": [],
-            "credit_card_account": []
+            "account": [],
+            "ccc_account": []
         }
 
         for account in accounts:
-            account_attributes['bank_account'].append({
+            account_attributes['account'].append({
                 'attribute_type': 'ACCOUNT',
                 'active': True if account['STATUS'] == 'active' else None,
                 'display_name': 'account',
@@ -68,7 +68,7 @@ class SageIntacctConnector:
             })
 
             if general_settings and general_settings.corporate_credit_card_expenses_object:
-                account_attributes['credit_card_account'].append({
+                account_attributes['ccc_account'].append({
                     'attribute_type': 'CCC_ACCOUNT',
                     'active': True if account['STATUS'] == 'active' else None,
                     'display_name': 'Credit Card Account',
@@ -194,7 +194,7 @@ class SageIntacctConnector:
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            project_attributes, 'PROJECTS', self.workspace_id, True)
+            project_attributes, 'PROJECT', self.workspace_id, True)
 
         return []
 
@@ -402,7 +402,7 @@ class SageIntacctConnector:
                     'detail': detail
                 })
 
-        account_attributes = DestinationAttribute.bulk_create_or_update_destination_attributes(
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
             vendor_attributes, 'VENDOR', self.workspace_id, True)
 
         return []
@@ -439,7 +439,7 @@ class SageIntacctConnector:
             else:
                 created_vendor = get_vendor['vendor']
 
-        created_vendor = DestinationAttribute.bulk_create_or_update_destination_attributes({
+        created_vendor = DestinationAttribute.create_or_update_destination_attribute({
             'attribute_type': 'VENDOR',
             'display_name': 'vendor',
             'value': sage_intacct_display_name,
