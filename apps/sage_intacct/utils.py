@@ -376,7 +376,11 @@ class SageIntacctConnector:
         """
         vendors = self.connection.vendors.get_all()
 
-        vendor_attributes = []
+        vendor_attributes = {
+            'vendor': [],
+            'charge_card_number': []
+        }
+
         general_settings = None
         general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
             workspace_id=workspace_id).first()
@@ -385,7 +389,7 @@ class SageIntacctConnector:
             detail = {
                 'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
             }
-            vendor_attributes.append({
+            vendor_attributes['vendor'].append({
                 'attribute_type': 'VENDOR',
                 'display_name': 'vendor',
                 'value': vendor['NAME'],
@@ -401,9 +405,11 @@ class SageIntacctConnector:
                     'destination_id': vendor['VENDORID'],
                     'detail': detail
                 })
-
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            vendor_attributes, 'VENDOR', self.workspace_id, True)
+        
+        for attribute_type, vendor_attribute in vendor_attributes.items():
+            if vendor_attribute:
+                DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    vendor_attribute, attribute_type.upper(), self.workspace_id, True)
 
         return []
 
