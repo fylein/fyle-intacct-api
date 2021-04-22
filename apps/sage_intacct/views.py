@@ -674,7 +674,7 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
                 time_interval = datetime.now(timezone.utc) - workspace.destination_synced_at
 
             if workspace.destination_synced_at is None or time_interval.days > 0:
-                sage_intacct_credentials = SageIntacctCredential(workspace_id=kwargs['workspace_id'])
+                sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
                 sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
                 sage_intacct_connecter.sync_dimensions(kwargs['workspace_id'])
@@ -682,9 +682,9 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
                 workspace.destination_synced_at = datetime.now()
                 workspace.save(update_fields=['destination_synced_at'])
 
-                return Response(
-                    status=status.HTTP_200_OK
-                )
+            return Response(
+                status=status.HTTP_200_OK
+            )
 
         except SageIntacctCredential.DoesNotExist:
             return Response(
@@ -708,7 +708,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
             sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-            xero_connector.sync_dimensions(kwargs['workspace_id'])
+            sage_intacct_connecter.sync_dimensions(kwargs['workspace_id'])
 
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
             workspace.destination_synced_at = datetime.now()
@@ -717,7 +717,8 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
             return Response(
                 status=status.HTTP_200_OK
             )
-        except XeroCredentials.DoesNotExist:
+
+        except SageIntacctCredential.DoesNotExist:
             return Response(
                 data={
                     'message': 'Sage Intacct credentials not found in workspace'

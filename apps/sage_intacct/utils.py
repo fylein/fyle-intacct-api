@@ -257,7 +257,7 @@ class SageIntacctConnector:
             employee_attributes, self.workspace_id)
         return account_attributes
 
-    def sync_dimensions(self):
+    def sync_dimensions(self, workspace_id: str):
 
         try:
             self.sync_locations()
@@ -285,7 +285,7 @@ class SageIntacctConnector:
             logger.exception(exception)
 
         try:
-            self.sync_vendors()
+            self.sync_vendors(workspace_id)
         except Exception as exception:
             logger.exception(exception)
 
@@ -295,7 +295,7 @@ class SageIntacctConnector:
             logger.exception(exception)
 
         try:
-            self.sync_accounts()
+            self.sync_accounts(workspace_id)
         except Exception as exception:
             logger.exception(exception)
         
