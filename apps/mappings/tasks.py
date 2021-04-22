@@ -81,7 +81,7 @@ def auto_create_project_mappings(workspace_id):
 
     try:
         si_projects = upload_projects_to_fyle(workspace_id=workspace_id)
-        Mapping.bulk_create_mappings(fyle_categories, 'PROJECT', 'PROJECT', workspace_id)
+        Mapping.bulk_create_mappings(si_projects, 'PROJECT', 'PROJECT', workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
