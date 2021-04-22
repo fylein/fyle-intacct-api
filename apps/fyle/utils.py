@@ -1,5 +1,6 @@
 from typing import List
 import json
+import logging
 
 from django.conf import settings
 
@@ -9,6 +10,7 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from apps.fyle.models import Reimbursement
 import requests
 
+logger = logging.getLogger(__name__)
 
 class FyleConnector:
     """
@@ -310,6 +312,33 @@ class FyleConnector:
         )
 
         return reimbursement_attributes
+
+    def sync_dimensions(self):
+
+        try:
+            self.sync_employees()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_categories(active_only=True)
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_projects()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_cost_centers(active_only=True)
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_expense_custom_fields(active_only=True)
+        except Exception as exception:
+            logger.exception(exception)
 
     def post_reimbursement(self, reimbursement_ids: list):
         """

@@ -1,4 +1,5 @@
 from django.db.models import Q
+from datetime import datetime, timezone
 
 from rest_framework.response import Response
 from rest_framework.views import status
@@ -13,7 +14,8 @@ from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import SageIntacctCredential
+from apps.workspaces.models import SageIntacctCredential, Workspace
+from apps.workspaces.serializers import WorkspaceSerializer
 
 from .utils import SageIntacctConnector
 from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
@@ -657,3 +659,70 @@ class FyleReimbursementsView(generics.ListCreateAPIView):
             data={},
             status=status.HTTP_200_OK
         )
+
+
+class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
+    """
+    Sync Sage Intacct Dimension View
+    """
+
+    def post(self, request, *args, **kwargs):
+
+        try:
+            workspace = Workspace.objects.get(id=kwargs['workspace_id'])
+            if workspace.destination_synced_at:
+                time_interval = datetime.now(timezone.utc) - workspace.destination_synced_at
+
+            if workspace.destination_synced_at is None or time_interval.days > 0:
+                sage_intacct_credentials = SageIntacctCredential(workspace_id=kwargs['workspace_id'])
+                sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+
+                sage_intacct_connecter.sync_dimensions(kwargs['workspace_id'])
+
+                workspace.destination_synced_at = datetime.now()
+                workspace.save(update_fields=['destination_synced_at'])
+
+                return Response(
+                    status=status.HTTP_200_OK
+                )
+
+        except SageIntacctCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Sage Intacct Credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
+    """
+    Refresh Sage Intacct Dimensions view
+    """
+
+    def post(self, request, *args, **kwargs):
+        """
+        Sync data from sage intacct
+        """
+        try:
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
+            sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+
+            xero_connector.sync_dimensions(kwargs['workspace_id'])
+
+            workspace = Workspace.objects.get(id=kwargs['workspace_id'])
+            workspace.destination_synced_at = datetime.now()
+            workspace.save(update_fields=['destination_synced_at'])
+
+            return Response(
+                status=status.HTTP_200_OK
+            )
+        except XeroCredentials.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Sage Intacct credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+

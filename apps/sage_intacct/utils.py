@@ -257,6 +257,58 @@ class SageIntacctConnector:
             employee_attributes, self.workspace_id)
         return account_attributes
 
+    def sync_dimensions(self):
+
+        try:
+            self.sync_locations()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_departments()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_projects()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_charge_card_accounts()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_payment_accounts()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_vendors()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_employees()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_accounts()
+        except Exception as exception:
+            logger.exception(exception)
+        
+        try:
+            self.sync_expense_types()
+        except Exception as exception:
+            logger.exception(exception)
+        
+        try:
+            self.sync_items()
+        except Exception as exception:
+            logger.exception(exception)
+
     def create_vendor_destionation_attribute(self, vendor_name: str, vendor_id: str, vendor_email: str = None):
         vendor_attribute = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'VENDOR',
