@@ -240,7 +240,9 @@ def async_auto_map_charge_card_account(workspace_id: int):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
-    source_attributes = fyle_connection.sync_employees()
+    fyle_connection.sync_employees()    
+    
+    source_attributes = ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', workspace_id=workspace_id).all()
         
     mapping_attributes = {
         'destination_type': 'CHARGE_CARD_NUMBER',
@@ -381,11 +383,18 @@ def auto_create_category_mappings(workspace_id):
         
         Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
 
+        for category in fyle_categories:
+            create_credit_card_category_mappings(
+                        reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
+
+        return []
+
     except WrongParamsError as exception:
         logger.error(
             'Error while creating categories workspace_id - %s in Fyle %s %s',
             workspace_id, exception.message, {'error': exception.response}
         )
+
     except Exception:
         error = traceback.format_exc()
         error = {

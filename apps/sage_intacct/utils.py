@@ -79,7 +79,7 @@ class SageIntacctConnector:
         for attribute_type, account_attribute in account_attributes.items():
             if account_attribute:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    account_attributes, attribute_type.upper(), self.workspace_id, True)
+                    account_attribute, attribute_type.upper(), self.workspace_id, True)
         return []
 
     def sync_departments(self):
@@ -144,7 +144,7 @@ class SageIntacctConnector:
                 'destination_id': charge_card_account['CARDID']
             })
 
-        DestinationAttribute.bulk_upsert_destination_attributes(
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
             charge_card_accounts_attributes, 'CHARGE_CARD_NUMBER', self.workspace_id, True)
 
         return []
