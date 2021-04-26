@@ -385,8 +385,6 @@ def auto_create_category_mappings(workspace_id):
     reimbursable_expenses_object = general_settings.reimbursable_expenses_object
     corporate_credit_card_expenses_object = general_settings.corporate_credit_card_expenses_object
 
-    category_mappings = []
-
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
         reimbursable_destination_type = 'EXPENSE_TYPE'
     else:

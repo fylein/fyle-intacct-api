@@ -49,9 +49,6 @@ class SageIntacctConnector:
         Get accounts
         """
         accounts = self.connection.accounts.get_all()
-        general_settings = None
-        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
-            workspace_id=workspace_id).first()
 
         account_attributes = []
 
@@ -64,14 +61,14 @@ class SageIntacctConnector:
                 'destination_id': account['ACCOUNTNO']
             })
 
-            if general_settings and general_settings.corporate_credit_card_expenses_object:
-                account_attributes.append({
-                    'attribute_type': 'CCC_ACCOUNT',
-                    'active': True if account['STATUS'] == 'active' else None,
-                    'display_name': 'Credit Card Account',
-                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
-                    'destination_id': account['ACCOUNTNO']
-                })
+            
+            account_attributes.append({
+                'attribute_type': 'CCC_ACCOUNT',
+                'active': True if account['STATUS'] == 'active' else None,
+                'display_name': 'Credit Card Account',
+                'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
+                'destination_id': account['ACCOUNTNO']
+            })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             account_attributes, self.workspace_id)
@@ -417,9 +414,6 @@ class SageIntacctConnector:
         vendors = self.connection.vendors.get_all()
 
         vendor_attributes = []
-        general_settings = None
-        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
-            workspace_id=workspace_id).first()
 
         for vendor in vendors:
             detail = {
@@ -433,14 +427,13 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-            if general_settings and general_settings.corporate_credit_card_expenses_object == 'BILL':
-                vendor_attributes.append({
-                    'attribute_type': 'CHARGE_CARD_NUMBER',
-                    'display_name': 'Charge Card Account',
-                    'value': vendor['NAME'],
-                    'destination_id': vendor['VENDORID'],
-                    'detail': detail
-                })
+            vendor_attributes.append({
+                'attribute_type': 'CHARGE_CARD_NUMBER',
+                'display_name': 'Charge Card Account',
+                'value': vendor['NAME'],
+                'destination_id': vendor['VENDORID'],
+                'detail': detail
+            })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             vendor_attributes, self.workspace_id)
