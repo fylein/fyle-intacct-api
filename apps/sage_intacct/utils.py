@@ -398,7 +398,7 @@ class SageIntacctConnector:
             })
 
             if general_settings and general_settings.corporate_credit_card_expenses_object == 'BILL':
-                vendor_attributes.append({
+                vendor_attributes['charge_card_number'].append({
                     'attribute_type': 'CHARGE_CARD_NUMBER',
                     'display_name': 'Charge Card Account',
                     'value': vendor['NAME'],
