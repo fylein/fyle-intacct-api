@@ -15,7 +15,6 @@ from fyle_intacct_api.utils import assert_valid
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import SageIntacctCredential, Workspace
-from apps.workspaces.serializers import WorkspaceSerializer
 
 from .utils import SageIntacctConnector
 from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
@@ -88,7 +87,7 @@ class VendorView(generics.ListCreateAPIView):
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
             sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-            vendors = sage_intacct_connector.sync_vendors(workspace_id=self.kwargs['workspace_id'])
+            vendors = sage_intacct_connector.sync_vendors()
 
             return Response(
                 data=self.serializer_class(vendors, many=True).data,
@@ -131,7 +130,7 @@ class AccountView(generics.ListCreateAPIView):
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
             sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-            accounts = sage_intacct_connector.sync_accounts(kwargs['workspace_id'])
+            accounts = sage_intacct_connector.sync_accounts()
 
             return Response(
                 data=self.serializer_class(accounts, many=True).data,
@@ -677,7 +676,7 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
                 sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
                 sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-                sage_intacct_connecter.sync_dimensions(kwargs['workspace_id'])
+                sage_intacct_connecter.sync_dimensions()
 
                 workspace.destination_synced_at = datetime.now()
                 workspace.save(update_fields=['destination_synced_at'])
@@ -708,7 +707,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
             sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-            sage_intacct_connecter.sync_dimensions(kwargs['workspace_id'])
+            sage_intacct_connecter.sync_dimensions()
 
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
             workspace.destination_synced_at = datetime.now()

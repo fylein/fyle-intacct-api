@@ -7,12 +7,10 @@ from cryptography.fernet import Fernet
 
 from django.conf import settings
 
+from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
-
-from sageintacctsdk import SageIntacctSDK
-
-from apps.workspaces.models import SageIntacctCredential, WorkspaceGeneralSettings
+from apps.workspaces.models import SageIntacctCredential
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -44,7 +42,7 @@ class SageIntacctConnector:
 
         credentials_object.save()
 
-    def sync_accounts(self, workspace_id):
+    def sync_accounts(self):
         """
         Get accounts
         """
@@ -254,7 +252,7 @@ class SageIntacctConnector:
             employee_attributes, self.workspace_id)
         return account_attributes
 
-    def sync_dimensions(self, workspace_id: str):
+    def sync_dimensions(self):
 
         try:
             self.sync_locations()
@@ -282,7 +280,7 @@ class SageIntacctConnector:
             logger.exception(exception)
 
         try:
-            self.sync_vendors(workspace_id)
+            self.sync_vendors()
         except Exception as exception:
             logger.exception(exception)
 
@@ -292,7 +290,7 @@ class SageIntacctConnector:
             logger.exception(exception)
 
         try:
-            self.sync_accounts(workspace_id)
+            self.sync_accounts()
         except Exception as exception:
             logger.exception(exception)
         
@@ -407,7 +405,7 @@ class SageIntacctConnector:
         return created_employee
 
 
-    def sync_vendors(self, workspace_id: str):
+    def sync_vendors(self):
         """
         Get vendors
         """
