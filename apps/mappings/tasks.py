@@ -153,7 +153,7 @@ def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], map
             source__value=source.value,
             workspace_id=mapping_attributes['workspace_id']
         ).first()
-
+        
         if not mapping:
             Mapping.create_or_update_mapping(
                 source_type='EMPLOYEE',
@@ -257,14 +257,14 @@ def async_auto_map_charge_card_account(workspace_id: int):
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
     default_charge_card_id = general_mappings.default_charge_card_id
     default_charge_card_name = general_mappings.default_charge_card_name
-    
+
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
     fyle_connection.sync_employees()    
-    
+
     source_attributes = ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', workspace_id=workspace_id).all()
-        
+
     mapping_attributes = {
         'destination_type': 'CHARGE_CARD_NUMBER',
         'destination_value': default_charge_card_name,

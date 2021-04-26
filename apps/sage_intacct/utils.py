@@ -49,9 +49,6 @@ class SageIntacctConnector:
         Get accounts
         """
         accounts = self.connection.accounts.get_all()
-        general_settings = None
-        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
-            workspace_id=workspace_id).first()
 
         account_attributes = {
             "account": [],
@@ -67,14 +64,14 @@ class SageIntacctConnector:
                 'destination_id': account['ACCOUNTNO']
             })
 
-            if general_settings and general_settings.corporate_credit_card_expenses_object:
-                account_attributes['ccc_account'].append({
-                    'attribute_type': 'CCC_ACCOUNT',
-                    'active': True if account['STATUS'] == 'active' else None,
-                    'display_name': 'Credit Card Account',
-                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
-                    'destination_id': account['ACCOUNTNO']
-                })
+            
+            account_attributes['ccc_account'].append({
+                'attribute_type': 'CCC_ACCOUNT',
+                'active': True if account['STATUS'] == 'active' else None,
+                'display_name': 'Credit Card Account',
+                'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
+                'destination_id': account['ACCOUNTNO']
+            })
 
         for attribute_type, account_attribute in account_attributes.items():
             if account_attribute:
@@ -381,10 +378,6 @@ class SageIntacctConnector:
             'charge_card_number': []
         }
 
-        general_settings = None
-        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
-            workspace_id=workspace_id).first()
-
         for vendor in vendors:
             detail = {
                 'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
@@ -397,14 +390,14 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-            if general_settings and general_settings.corporate_credit_card_expenses_object == 'BILL':
-                vendor_attributes['charge_card_number'].append({
-                    'attribute_type': 'CHARGE_CARD_NUMBER',
-                    'display_name': 'Charge Card Account',
-                    'value': vendor['NAME'],
-                    'destination_id': vendor['VENDORID'],
-                    'detail': detail
-                })
+            
+            vendor_attributes['charge_card_number'].append({
+                'attribute_type': 'CHARGE_CARD_NUMBER',
+                'display_name': 'Charge Card Account',
+                'value': vendor['NAME'],
+                'destination_id': vendor['VENDORID'],
+                'detail': detail
+            })
         
         for attribute_type, vendor_attribute in vendor_attributes.items():
             if vendor_attribute:
