@@ -18,6 +18,19 @@ from apps.workspaces.models import SageIntacctCredential, FyleCredential, Worksp
 logger = logging.getLogger(__name__)
 
 
+def remove_duplicates(si_attributes: List[DestinationAttribute]):
+    unique_attributes = []
+
+    attribute_values = []
+
+    for attribute in si_attributes:
+        if attribute.value not in attribute_values:
+            unique_attributes.append(attribute)
+            attribute_values.append(attribute.value)
+
+    return unique_attributes
+
+
 def create_fyle_projects_payload(projects: List[DestinationAttribute], workspace_id: int):
     """
     Create Fyle Projects Payload from Sage Intacct Projects and Customers
@@ -63,7 +76,11 @@ def upload_projects_to_fyle(workspace_id):
     )
 
     fyle_connection.sync_projects()
-    si_projects = si_connection.sync_projects()
+    si_connection.sync_projects()
+
+    si_projects: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+        workspace_id=workspace_id, attribute_type='PROJECT'
+    )
 
     fyle_payload: List[Dict] = create_fyle_projects_payload(si_projects, workspace_id)
     if fyle_payload:
@@ -82,6 +99,8 @@ def auto_create_project_mappings(workspace_id):
     try:
         si_projects = upload_projects_to_fyle(workspace_id=workspace_id)
         Mapping.bulk_create_mappings(si_projects, 'PROJECT', 'PROJECT', workspace_id)
+
+        return si_projects
 
     except WrongParamsError as exception:
         logger.error(
@@ -320,12 +339,18 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     fyle_connection.sync_categories(False)
 
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
-        si_attributes: List[DestinationAttribute] = si_connection.sync_expense_types()
+        si_connection.sync_expense_types()
+        si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id, attribute_type='EXPENSE_REPORT'
+        ).all()
+
     else:
         si_connection.sync_accounts(workspace_id)
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
         ).all()
+
+    si_attributes = remove_duplicates(si_attributes)
 
     fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)
 
@@ -382,7 +407,7 @@ def auto_create_category_mappings(workspace_id):
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
         
         Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
-
+       
         for category in fyle_categories:
             create_credit_card_category_mappings(
                         reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
