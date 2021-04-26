@@ -345,6 +345,7 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='EXPENSE_REPORT'
         ).all()
+
     else:
         si_connection.sync_accounts(workspace_id)
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
@@ -408,7 +409,7 @@ def auto_create_category_mappings(workspace_id):
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
         
         Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
-
+       
         for category in fyle_categories:
             create_credit_card_category_mappings(
                         reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
