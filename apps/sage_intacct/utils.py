@@ -372,8 +372,8 @@ class SageIntacctConnector:
                 'LASTNAME': name[-1] if len(name) == 2 else None
             }
 
-            self.connection.contacts.post(contact)
-     
+            created_contact = self.connection.contacts.post(contact)
+
         except Exception as e:
             logger.error(e.response)
 
