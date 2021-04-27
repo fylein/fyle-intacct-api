@@ -674,9 +674,9 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
 
             if workspace.destination_synced_at is None or time_interval.days > 0:
                 sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
-                sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+                sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-                sage_intacct_connecter.sync_dimensions()
+                sage_intacct_connector.sync_dimensions()
 
                 workspace.destination_synced_at = datetime.now()
                 workspace.save(update_fields=['destination_synced_at'])
@@ -705,9 +705,9 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
         """
         try:
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
-            sage_intacct_connecter = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+            sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
 
-            sage_intacct_connecter.sync_dimensions()
+            sage_intacct_connector.sync_dimensions()
 
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
             workspace.destination_synced_at = datetime.now()
