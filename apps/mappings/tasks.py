@@ -153,6 +153,8 @@ def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], map
             source__value=source.value,
             workspace_id=mapping_attributes['workspace_id']
         ).first()
+
+        print("source", source.value)
         
         if not mapping:
             Mapping.create_or_update_mapping(
@@ -272,6 +274,8 @@ def async_auto_map_charge_card_account(workspace_id: int):
         'workspace_id': workspace_id
     }
 
+    print("mapping_attributes", mapping_attributes)
+
     auto_create_employee_mappings(source_attributes, mapping_attributes)
 
 
@@ -343,15 +347,16 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
         si_connection.sync_expense_types()
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-            workspace_id=workspace_id, attribute_type='EXPENSE_REPORT'
-        ).all()
+            workspace_id=workspace_id, attribute_type='EXPENSE_TYPE'
+        )
 
     else:
         si_connection.sync_accounts(workspace_id)
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
         ).all()
-
+  
+    
     si_attributes = remove_duplicates(si_attributes)
 
     fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)
@@ -396,9 +401,9 @@ def auto_create_category_mappings(workspace_id):
 
     reimbursable_expenses_object = general_settings.reimbursable_expenses_object
     corporate_credit_card_expenses_object = general_settings.corporate_credit_card_expenses_object
-
-    category_mappings = []
-
+       
+    print("general_settings", general_settings)
+     
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
         reimbursable_destination_type = 'EXPENSE_TYPE'
     else:
@@ -408,8 +413,13 @@ def auto_create_category_mappings(workspace_id):
         fyle_categories = upload_categories_to_fyle(
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
         
-        Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
-       
+        print("fyle categories", fyle_categories)
+
+        a = Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
+
+      
+        print(a)
+        
         for category in fyle_categories:
             create_credit_card_category_mappings(
                         reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
