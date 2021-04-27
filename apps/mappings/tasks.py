@@ -211,7 +211,7 @@ def async_auto_map_employees(workspace_id: int):
     if destination_type == 'EMPLOYEE':
         sage_intacct_connection.sync_employees()
     else:
-        sage_intacct_connection.sync_vendors(workspace_id=workspace_id)
+        sage_intacct_connection.sync_vendors()
 
     source_attribute = []
     employee_attributes = DestinationAttribute.objects.filter(attribute_type=destination_type,
@@ -348,7 +348,7 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
         )
 
     else:
-        si_connection.sync_accounts(workspace_id)
+        si_connection.sync_accounts()
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
         ).all()
