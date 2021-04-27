@@ -7,12 +7,10 @@ from cryptography.fernet import Fernet
 
 from django.conf import settings
 
+from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
-
-from sageintacctsdk import SageIntacctSDK
-
-from apps.workspaces.models import SageIntacctCredential, WorkspaceGeneralSettings
+from apps.workspaces.models import SageIntacctCredential
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -44,14 +42,11 @@ class SageIntacctConnector:
 
         credentials_object.save()
 
-    def sync_accounts(self, workspace_id):
+    def sync_accounts(self):
         """
         Get accounts
         """
         accounts = self.connection.accounts.get_all()
-        general_settings = None
-        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
-            workspace_id=workspace_id).first()
 
         account_attributes = []
 
@@ -64,14 +59,14 @@ class SageIntacctConnector:
                 'destination_id': account['ACCOUNTNO']
             })
 
-            if general_settings and general_settings.corporate_credit_card_expenses_object:
-                account_attributes.append({
-                    'attribute_type': 'CCC_ACCOUNT',
-                    'active': True if account['STATUS'] == 'active' else None,
-                    'display_name': 'Credit Card Account',
-                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
-                    'destination_id': account['ACCOUNTNO']
-                })
+            
+            account_attributes.append({
+                'attribute_type': 'CCC_ACCOUNT',
+                'active': True if account['STATUS'] == 'active' else None,
+                'display_name': 'Credit Card Account',
+                'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
+                'destination_id': account['ACCOUNTNO']
+            })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             account_attributes, self.workspace_id)
@@ -257,6 +252,58 @@ class SageIntacctConnector:
             employee_attributes, self.workspace_id)
         return account_attributes
 
+    def sync_dimensions(self):
+
+        try:
+            self.sync_locations()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_departments()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_projects()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_charge_card_accounts()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_payment_accounts()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_vendors()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_employees()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_accounts()
+        except Exception as exception:
+            logger.exception(exception)
+        
+        try:
+            self.sync_expense_types()
+        except Exception as exception:
+            logger.exception(exception)
+        
+        try:
+            self.sync_items()
+        except Exception as exception:
+            logger.exception(exception)
+
     def create_vendor_destionation_attribute(self, vendor_name: str, vendor_id: str, vendor_email: str = None):
         vendor_attribute = DestinationAttribute.bulk_upsert_destination_attributes([{
             'attribute_type': 'VENDOR',
@@ -326,7 +373,7 @@ class SageIntacctConnector:
             }
 
             created_contact = self.connection.contacts.post(contact)
-        
+
         except Exception as e:
             logger.error(e.response)
 
@@ -358,16 +405,13 @@ class SageIntacctConnector:
         return created_employee
 
 
-    def sync_vendors(self, workspace_id: str):
+    def sync_vendors(self):
         """
         Get vendors
         """
         vendors = self.connection.vendors.get_all()
 
         vendor_attributes = []
-        general_settings = None
-        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.filter(
-            workspace_id=workspace_id).first()
 
         for vendor in vendors:
             detail = {
@@ -381,14 +425,13 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-            if general_settings and general_settings.corporate_credit_card_expenses_object == 'BILL':
-                vendor_attributes.append({
-                    'attribute_type': 'CHARGE_CARD_NUMBER',
-                    'display_name': 'Charge Card Account',
-                    'value': vendor['NAME'],
-                    'destination_id': vendor['VENDORID'],
-                    'detail': detail
-                })
+            vendor_attributes.append({
+                'attribute_type': 'CHARGE_CARD_NUMBER',
+                'display_name': 'Charge Card Account',
+                'value': vendor['NAME'],
+                'destination_id': vendor['VENDORID'],
+                'detail': detail
+            })
 
         account_attributes = DestinationAttribute.bulk_upsert_destination_attributes(
             vendor_attributes, self.workspace_id)
