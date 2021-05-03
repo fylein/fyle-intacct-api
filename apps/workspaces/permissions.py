@@ -27,7 +27,6 @@ class WorkspacePermissions(permissions.BasePermission):
 
         if workspace_users:
             return self.validate_and_cache(workspace_users, user, workspace_id)
-        
         else:
             workspace_users = Workspace.objects.filter(pk=workspace_id).values_list('user', flat=True)
             return self.validate_and_cache(workspace_users, user, workspace_id, True)
