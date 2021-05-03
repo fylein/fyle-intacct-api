@@ -99,7 +99,7 @@ def auto_create_project_mappings(workspace_id):
     """
 
     try:
-        si_projects = upload_projects_to_fyle(workspace_id=workspace_id)
+        si_projects = upload_projects_to_fyle(workspace_id)
         Mapping.bulk_create_mappings(si_projects, 'PROJECT', 'PROJECT', workspace_id)
 
         return si_projects
@@ -279,7 +279,7 @@ def async_auto_map_charge_card_account(workspace_id: int):
 def schedule_auto_map_charge_card_employees(workspace_id: int):
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
 
-    if general_settings.auto_map_employees and general_settings.corporate_credit_card_expenses_object=='CHARGE_CARD_TRANSACTION':
+    if general_settings.auto_map_employees and general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         start_datetime = datetime.now()
 
         schedule, _ = Schedule.objects.update_or_create(
@@ -352,8 +352,7 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
         ).all()
-  
-    
+
     si_attributes = remove_duplicates(si_attributes)
 
     fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)

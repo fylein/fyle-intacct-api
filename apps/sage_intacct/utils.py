@@ -49,8 +49,8 @@ class SageIntacctConnector:
         accounts = self.connection.accounts.get_all()
 
         account_attributes = {
-            "account": [],
-            "ccc_account": []
+            'account': [],
+            'ccc_account': []
         }
 
         for account in accounts:
