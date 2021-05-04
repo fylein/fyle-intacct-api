@@ -18,6 +18,19 @@ from apps.workspaces.models import SageIntacctCredential, FyleCredential, Worksp
 logger = logging.getLogger(__name__)
 
 
+def remove_duplicates(si_attributes: List[DestinationAttribute]):
+    unique_attributes = []
+
+    attribute_values = []
+
+    for attribute in si_attributes:
+        if attribute.value not in attribute_values:
+            unique_attributes.append(attribute)
+            attribute_values.append(attribute.value)
+
+    return unique_attributes
+
+
 def create_fyle_projects_payload(projects: List[DestinationAttribute], workspace_id: int):
     """
     Create Fyle Projects Payload from Sage Intacct Projects and Customers
@@ -63,7 +76,13 @@ def upload_projects_to_fyle(workspace_id):
     )
 
     fyle_connection.sync_projects()
-    si_projects = si_connection.sync_projects()
+    si_connection.sync_projects()
+
+    si_projects: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+        workspace_id=workspace_id, attribute_type='PROJECT'
+    )
+
+    si_projects = remove_duplicates(si_projects)
 
     fyle_payload: List[Dict] = create_fyle_projects_payload(si_projects, workspace_id)
     if fyle_payload:
@@ -78,27 +97,12 @@ def auto_create_project_mappings(workspace_id):
     Create Project Mappings
     :return: mappings
     """
-    si_projects = upload_projects_to_fyle(workspace_id=workspace_id)
-    project_mappings = []
 
     try:
-        for project in si_projects:
-            mapping = Mapping.create_or_update_mapping(
-                source_type='PROJECT',
-                destination_type='PROJECT',
-                source_value=project.value,
-                destination_value=project.value,
-                destination_id=project.destination_id,
-                workspace_id=workspace_id
-            )
+        si_projects = upload_projects_to_fyle(workspace_id)
+        Mapping.bulk_create_mappings(si_projects, 'PROJECT', 'PROJECT', workspace_id)
 
-            mapping.source.auto_mapped = True
-            mapping.source.auto_created = True
-            mapping.source.save()
-
-            project_mappings.append(mapping)
-
-        return project_mappings
+        return si_projects
 
     except WrongParamsError as exception:
         logger.error(
@@ -149,6 +153,7 @@ def auto_create_employee_mappings(source_attributes: List[ExpenseAttribute], map
             source__value=source.value,
             workspace_id=mapping_attributes['workspace_id']
         ).first()
+
 
         if not mapping:
             Mapping.create_or_update_mapping(
@@ -253,12 +258,14 @@ def async_auto_map_charge_card_account(workspace_id: int):
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
     default_charge_card_id = general_mappings.default_charge_card_id
     default_charge_card_name = general_mappings.default_charge_card_name
-    
+
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
-    source_attributes = fyle_connection.sync_employees()
-        
+    fyle_connection.sync_employees()    
+
+    source_attributes = ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', workspace_id=workspace_id).all()
+
     mapping_attributes = {
         'destination_type': 'CHARGE_CARD_NUMBER',
         'destination_value': default_charge_card_name,
@@ -272,7 +279,7 @@ def async_auto_map_charge_card_account(workspace_id: int):
 def schedule_auto_map_charge_card_employees(workspace_id: int):
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
 
-    if general_settings.auto_map_employees and general_settings.corporate_credit_card_expenses_object:
+    if general_settings.auto_map_employees and general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         start_datetime = datetime.now()
 
         schedule, _ = Schedule.objects.update_or_create(
@@ -335,12 +342,18 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     fyle_connection.sync_categories(False)
 
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
-        si_attributes: List[DestinationAttribute] = si_connection.sync_expense_types()
+        si_connection.sync_expense_types()
+        si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id, attribute_type='EXPENSE_TYPE'
+        )
+
     else:
         si_connection.sync_accounts()
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
         ).all()
+
+    si_attributes = remove_duplicates(si_attributes)
 
     fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)
 
@@ -384,9 +397,8 @@ def auto_create_category_mappings(workspace_id):
 
     reimbursable_expenses_object = general_settings.reimbursable_expenses_object
     corporate_credit_card_expenses_object = general_settings.corporate_credit_card_expenses_object
-
-    category_mappings = []
-
+       
+   
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
         reimbursable_destination_type = 'EXPENSE_TYPE'
     else:
@@ -395,42 +407,22 @@ def auto_create_category_mappings(workspace_id):
     try:
         fyle_categories = upload_categories_to_fyle(
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
+   
+
+        Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
+       
         for category in fyle_categories:
-            try:
-                mapping = Mapping.create_or_update_mapping(
-                    source_type='CATEGORY',
-                    destination_type=reimbursable_destination_type,
-                    source_value=category.value,
-                    destination_value=category.value,
-                    destination_id=category.destination_id,
-                    workspace_id=workspace_id,
-                )
-                mapping.source.auto_mapped = True
-                mapping.source.auto_created = True
-                mapping.source.save()
+            create_credit_card_category_mappings(
+                        reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
 
-                create_credit_card_category_mappings(
-                    reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
-                category_mappings.append(mapping)
+        return []
 
-            except ExpenseAttribute.DoesNotExist:
-                detail = {
-                    'source_value': category.value,
-                    'destination_value': category.value,
-                    'destiantion_type': reimbursable_destination_type
-                }
-                logger.error(
-                    'Error while creating categories auto mapping workspace_id - %s %s',
-                    workspace_id, {'payload': detail}
-                )
-                raise ExpenseAttribute.DoesNotExist
-
-        return category_mappings
     except WrongParamsError as exception:
         logger.error(
             'Error while creating categories workspace_id - %s in Fyle %s %s',
             workspace_id, exception.message, {'error': exception.response}
         )
+
     except Exception:
         error = traceback.format_exc()
         error = {
