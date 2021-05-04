@@ -165,11 +165,10 @@ def async_auto_map_employees(workspace_id: int):
     else:
         sage_intacct_connection.sync_vendors()
 
-    Mapping.auto_map_employees('EMPLOYEE', destination_type, employee_mapping_preference, workspace_id)
+    Mapping.auto_map_employees(destination_type, employee_mapping_preference, workspace_id)
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
-
     if employee_mapping_preference:
         start_datetime = datetime.now()
         
@@ -200,7 +199,7 @@ def async_auto_map_charge_card_account(workspace_id: int):
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
     fyle_connection.sync_employees()
 
-    Mapping.auto_map_ccc_employees('EMPLOYEE', 'CHARGE_CARD_NUMBER', default_charge_card_id, workspace_id)
+    Mapping.auto_map_ccc_employees('CHARGE_CARD_NUMBER', default_charge_card_id, workspace_id)
 
 
 def schedule_auto_map_charge_card_employees(workspace_id: int):
