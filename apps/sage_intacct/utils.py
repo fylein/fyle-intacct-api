@@ -182,19 +182,20 @@ class SageIntacctConnector:
             project_attributes = []
 
             for project in projects:
-                detail = {
-                    'customer_id': project['CUSTOMERID'],
-                    'customer_name': project['CUSTOMERNAME']
-                }
+                if project['STATUS'] == 'active':
+                    detail = {
+                        'customer_id': project['CUSTOMERID'],
+                        'customer_name': project['CUSTOMERNAME']
+                    }
 
-                project_attributes.append({
-                    'attribute_type': 'PROJECT',
-                    'display_name': 'project',
-                    'value': project['NAME'],
-                    'destination_id': project['PROJECTID'],
-                    'active': True if project['STATUS'] == 'active' else False,
-                    'detail': detail
-                })
+                    project_attributes.append({
+                        'attribute_type': 'PROJECT',
+                        'display_name': 'project',
+                        'value': project['NAME'],
+                        'destination_id': project['PROJECTID'],
+                        'active': True,
+                        'detail': detail
+                    })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes, 'PROJECT', self.workspace_id, True)
