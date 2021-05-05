@@ -18,6 +18,12 @@ from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, Ch
 
 logger = logging.getLogger(__name__)
 
+
+SYNC_UPPER_LIMIT = {
+    'projects': 5000
+}
+
+
 class SageIntacctConnector:
     """
     Sage Intacct utility functions
@@ -169,27 +175,30 @@ class SageIntacctConnector:
         """
         Get projects
         """
-        projects = self.connection.projects.get_all()
+        projects_count = self.connection.projects.count()
+        if projects_count < SYNC_UPPER_LIMIT['projects']:
+            projects = self.connection.projects.get_all()
 
-        project_attributes = []
+            project_attributes = []
 
-        for project in projects:
-            detail = {
-                'customer_id': project['CUSTOMERID'],
-                'customer_name': project['CUSTOMERNAME']
-            }
+            for project in projects:
+                if project['STATUS'] == 'active':
+                    detail = {
+                        'customer_id': project['CUSTOMERID'],
+                        'customer_name': project['CUSTOMERNAME']
+                    }
 
-            project_attributes.append({
-                'attribute_type': 'PROJECT',
-                'display_name': 'project',
-                'value': project['NAME'],
-                'destination_id': project['PROJECTID'],
-                'active': True if project['STATUS'] == 'active' else False,
-                'detail': detail
-            })
+                    project_attributes.append({
+                        'attribute_type': 'PROJECT',
+                        'display_name': 'project',
+                        'value': project['NAME'],
+                        'destination_id': project['PROJECTID'],
+                        'active': True,
+                        'detail': detail
+                    })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            project_attributes, 'PROJECT', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                project_attributes, 'PROJECT', self.workspace_id, True)
 
         return []
 
