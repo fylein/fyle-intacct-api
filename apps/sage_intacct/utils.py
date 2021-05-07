@@ -354,7 +354,7 @@ class SageIntacctConnector:
             if create:
                 created_vendor = self.post_vendor(vendor_name, email)
                 return self.create_vendor_destionation_attribute(
-                    created_vendor.value, created_vendor.destination_id, email)
+                    created_vendor['VENDORID'], created_vendor['VENDORID'], email)
             else:
                 return
         else:
@@ -485,16 +485,6 @@ class SageIntacctConnector:
         }
 
         created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
-
-        created_vendor = DestinationAttribute.create_or_update_destination_attribute({
-            'attribute_type': 'VENDOR',
-            'display_name': 'vendor',
-            'value': sage_intacct_display_name,
-            'destination_id': created_vendor['VENDORID'],
-            'detail': {
-                'email': email
-            }
-        }, self.workspace_id)
 
         return created_vendor
 
