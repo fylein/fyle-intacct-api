@@ -454,7 +454,7 @@ class SageIntacctConnector:
                 'destination_id': vendor['VENDORID'],
                 'detail': detail
             })
-        
+
         for attribute_type, vendor_attribute in vendor_attributes.items():
             if vendor_attribute:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
