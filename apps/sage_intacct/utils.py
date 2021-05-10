@@ -339,14 +339,15 @@ class SageIntacctConnector:
         return vendor_attribute
     
     def get_or_create_employee(self, source_employee: ExpenseAttribute):
-         """
+        """
         Call Sage Intacct api to get or create employee
         :param vendor_name: Name of the employee
         :param email: Email of the employee
         :param create: False to just Get and True to Get or Create if not exists
         :return: Employee
         """
-        employee = self.connection.vendors.get(field='CONTACT_NAME', value=employee_name.replace("'","\\'"))
+        employee_name = source_employee.detail['full_name']
+        employee = self.connection.employees.get(field='CONTACT_NAME', value=employee_name)
 
         if 'employee' in employee:
             employee = employee['employee'][0] if int(employee['@totalcount']) > 1 else employee['employee']
@@ -354,13 +355,13 @@ class SageIntacctConnector:
             employee = None
 
         if not employee:
-            created_employee = self.post_employees(employee, email)
+            created_employee = self.post_employees(employee)
             return self.create_destination_attribute(
                 'employee', created_employee['EMPLOYEEID'], created_employee['EMPLOYEEID'], source_employee.value
             )
         else:
             return self.create_destination_attribute(
-                'employee', employee['CONTACT_NAME'], employee['EMPLOYEEID'], email
+                'employee', employee['CONTACT_NAME'], employee['EMPLOYEEID'], source_employee.value
             )
 
         
