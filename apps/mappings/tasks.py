@@ -60,7 +60,7 @@ def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int):
         attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
     si_attributes_count = DestinationAttribute.objects.filter(
         attribute_type='PROJECT', workspace_id=workspace_id).count()
-    page_size = 5
+    page_size = 200
 
     for offset in range(0, si_attributes_count, page_size):
         limit = offset + page_size
