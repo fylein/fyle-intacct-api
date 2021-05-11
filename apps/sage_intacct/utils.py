@@ -325,25 +325,23 @@ class SageIntacctConnector:
         except Exception as exception:
             logger.exception(exception)
 
-    def create_destination_attribute(self, attribute: str, name: str, entity_id: str, email: str = None):
-        vendor_attribute = DestinationAttribute.create_or_update_destination_attribute({
+    def create_destination_attribute(self, attribute: str, name: str, destination_id: str, email: str = None):
+        created_attribute = DestinationAttribute.create_or_update_destination_attribute({
             'attribute_type': attribute.upper(),
             'display_name': attribute,
             'value': name,
-            'destination_id': entity_id,
+            'destination_id': destination_id,
             'detail': {
                 'email': email
             }
         }, self.workspace_id)
 
-        return vendor_attribute
+        return created_attribute
     
     def get_or_create_employee(self, source_employee: ExpenseAttribute):
         """
         Call Sage Intacct api to get or create employee
-        :param vendor_name: Name of the employee
-        :param email: Email of the employee
-        :param create: False to just Get and True to Get or Create if not exists
+        :param source_employee: employee attribute to be created
         :return: Employee
         """
         employee_name = source_employee.detail['full_name']
@@ -355,7 +353,7 @@ class SageIntacctConnector:
             employee = None
 
         if not employee:
-            created_employee = self.post_employees(employee)
+            created_employee = self.post_employees(source_employee)
             return self.create_destination_attribute(
                 'employee', created_employee['EMPLOYEEID'], created_employee['EMPLOYEEID'], source_employee.value
             )
@@ -363,8 +361,6 @@ class SageIntacctConnector:
             return self.create_destination_attribute(
                 'employee', employee['CONTACT_NAME'], employee['EMPLOYEEID'], source_employee.value
             )
-
-        
 
     def get_or_create_vendor(self, vendor_name: str, email: str = None, create: bool = False):
         """
