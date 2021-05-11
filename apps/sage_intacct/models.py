@@ -75,6 +75,34 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
             department_id = mapping.destination.destination_id
     return department_id
 
+def get_task_id_or_none(lineitem: Expense, workspace_id: int):
+    task_id = None
+
+    task_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=workspace_id,
+        destination_field='TASK'
+    ).first()
+
+    if task_setting:
+        if task_setting.source_field == 'PROJECT':
+            source_value = lineitem.project
+        elif task_setting.source_field == 'COST_CENTER':
+            source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=task_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=task_setting.source_field,
+            destination_type='TASK',
+            source__value=source_value,
+            workspace_id=workspace_id
+        ).first()
+
+        if mapping:
+            task_id = mapping.destination.detail['task_id']
+
+    return task_id
 
 def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     location_id = None
@@ -227,6 +255,7 @@ class BillLineitem(models.Model):
     expense_type_id = models.CharField(help_text='Sage Intacct expense type id', max_length=255, null=True)
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
+    task_id = models.CharField(help_text='Sage Intacct task id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
@@ -285,6 +314,7 @@ class BillLineitem(models.Model):
             ).first()
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
+            # TODO: get_task_id_or_none
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)
@@ -373,6 +403,7 @@ class ExpenseReportLineitem(models.Model):
     expense_type_id = models.CharField(help_text='Sage Intacct expense type id', max_length=255, null=True)
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
+    task_id = models.CharField(help_text='Sage Intacct task id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
@@ -423,6 +454,7 @@ class ExpenseReportLineitem(models.Model):
             ).first()
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
+            task_id = get_task_id_or_none(lineitem, expense_group.workspace_id)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)
@@ -435,6 +467,7 @@ class ExpenseReportLineitem(models.Model):
                     'gl_account_number': account.destination.destination_id if account else None,
                     'expense_type_id': expense_type.destination.destination_id if expense_type else None,
                     'project_id': project_id,
+                    'task_id': task_id,
                     'department_id': department_id,
                     'location_id': location_id,
                     'customer_id': customer_id,
@@ -540,6 +573,7 @@ class ChargeCardTransactionLineitem(models.Model):
     expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
+    task_id = models.CharField(help_text='Sage Intacct task id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
@@ -581,6 +615,7 @@ class ChargeCardTransactionLineitem(models.Model):
             ).first()
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
+            # TODO: get_task_id_or_none
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)

@@ -225,6 +225,31 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_tasks(self):
+        """
+        Get tasks
+        """
+        tasks = self.connection.tasks.get_all()
+
+        task_attributes = []
+
+        for task in tasks:
+            task_attributes.append({
+                'attribute_type': 'TASK',
+                'display_name': 'task',
+                'value': task['NAME'],
+                'destination_id': task['RECORDNO'],
+                'detail': {
+                    'task_id': task['TASKID'],
+                    'project_id': task['PROJECTID']
+                }
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            task_attributes, 'TASK', self.workspace_id, True)
+
+        return []
+
     def sync_locations(self):
         """
         Get locations
@@ -322,6 +347,11 @@ class SageIntacctConnector:
         
         try:
             self.sync_items()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_tasks()
         except Exception as exception:
             logger.exception(exception)
 
@@ -533,6 +563,7 @@ class SageIntacctConnector:
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
                 'projectid': lineitem.project_id,
+                'taskid': lineitem.task_id,
                 'customerid': lineitem.customer_id,
                 'itemid': lineitem.item_id,
                 'billable': lineitem.billable
@@ -550,6 +581,7 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
+            'basecurr': expense_report.currency,
             'currency': expense_report.currency,
             'expenses': {
                 'expense': expsense_payload
@@ -574,6 +606,7 @@ class SageIntacctConnector:
                 'LOCATIONID': lineitem.location_id,
                 'DEPARTMENTID': lineitem.department_id,
                 'PROJECTID': lineitem.project_id,
+                # TODO: add task id
                 'CUSTOMERID': lineitem.customer_id,
                 'ITEMID': lineitem.item_id,
                 'BILLABLE': lineitem.billable
@@ -590,6 +623,7 @@ class SageIntacctConnector:
             'VENDORID': bill.vendor_id,
             'RECORDID': bill.memo,
             'WHENDUE': current_date,
+            'BASECURR': bill.currency,
             'CURRENCY': bill.currency,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
@@ -618,6 +652,7 @@ class SageIntacctConnector:
                 'customerid': lineitem.customer_id,
                 'vendorid': charge_card_transaction.vendor_id,
                 'projectid': lineitem.project_id,
+                # TODO: add task id
                 'itemid': lineitem.item_id
             }
 
