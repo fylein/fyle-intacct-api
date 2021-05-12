@@ -384,7 +384,7 @@ class SageIntacctConnector:
             else:
                 return
         else:
-            return self.create_vendor_destination_attribute(
+            return self.create_destination_attribute(
                 'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
 
     def post_employees(self, employee: ExpenseAttribute):
