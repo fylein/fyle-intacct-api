@@ -68,7 +68,6 @@ class SageIntacctConnector:
                 'destination_id': account['ACCOUNTNO']
             })
 
-            
             account_attributes['ccc_account'].append({
                 'attribute_type': 'CCC_ACCOUNT',
                 'active': True if account['STATUS'] == 'active' else None,
@@ -274,7 +273,6 @@ class SageIntacctConnector:
         return []
 
     def sync_dimensions(self):
-
         try:
             self.sync_locations()
         except Exception as exception:
@@ -314,12 +312,12 @@ class SageIntacctConnector:
             self.sync_accounts()
         except Exception as exception:
             logger.exception(exception)
-        
+
         try:
             self.sync_expense_types()
         except Exception as exception:
             logger.exception(exception)
-        
+
         try:
             self.sync_items()
         except Exception as exception:
@@ -416,7 +414,7 @@ class SageIntacctConnector:
                 'LASTNAME': name[-1] if len(name) == 2 else None
             }
 
-            created_contact = self.connection.contacts.post(contact)
+            self.connection.contacts.post(contact)
 
         except Exception as e:
             logger.error(e.response)
@@ -460,7 +458,6 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-            
             vendor_attributes['charge_card_number'].append({
                 'attribute_type': 'CHARGE_CARD_NUMBER',
                 'display_name': 'Charge Card Account',
@@ -468,7 +465,7 @@ class SageIntacctConnector:
                 'destination_id': vendor['VENDORID'],
                 'detail': detail
             })
-        
+
         for attribute_type, vendor_attribute in vendor_attributes.items():
             if vendor_attribute:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -498,25 +495,7 @@ class SageIntacctConnector:
             }
         }
 
-        get_vendor = self.connection.vendors.get(field='NAME', value=vendor_payload['NAME'])
-
-        if get_vendor['@count'] == '0':
-            created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
-        else:
-            if int(get_vendor['@count']) > 1:
-                created_vendor = get_vendor['vendor'][0]
-            else:
-                created_vendor = get_vendor['vendor']
-
-        created_vendor = DestinationAttribute.create_or_update_destination_attribute({
-            'attribute_type': 'VENDOR',
-            'display_name': 'vendor',
-            'value': sage_intacct_display_name,
-            'destination_id': created_vendor['VENDORID'],
-            'detail': {
-                'email': email
-            }
-        }, self.workspace_id)
+        created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
 
         return created_vendor
 

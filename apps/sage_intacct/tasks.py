@@ -5,8 +5,8 @@ from typing import List
 from datetime import datetime, timedelta
 
 from django.db import transaction
-from django_q.models import Schedule
 from django.db.models import Q
+from django_q.models import Schedule
 from django_q.tasks import Chain
 
 from sageintacctsdk.exceptions import WrongParamsError
@@ -66,7 +66,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             source_field='EMPLOYEE',
             workspace_id=expense_group.workspace_id
         ).first().destination_field
-        
+
         source_employee = ExpenseAttribute.objects.get(
             workspace_id=expense_group.workspace_id,
             attribute_type='EMPLOYEE',
@@ -85,7 +85,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                     'value__iexact': source_employee.detail['full_name'],
                     'attribute_type': employee_mapping_setting
                 }
-            
+
             entity = DestinationAttribute.objects.filter(
                      workspace_id=expense_group.workspace_id,
                      **filters
@@ -119,9 +119,9 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             error_response = exception.response['error'][0]
 
             # This error code comes up when the employee already exists
-            if error_response['errorno'] == 'BL34000061' or error_response['errorno'] == 'PL05000104': 
+            if error_response['errorno'] == 'BL34000061' or error_response['errorno'] == 'PL05000104':
                 sage_intacct_display_name = source_employee.detail['full_name']
-                
+
                 sage_intacct_entity = DestinationAttribute.objects.filter(
                     value=sage_intacct_display_name,
                     workspace_id=expense_group.workspace_id,
@@ -178,7 +178,8 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
             Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
-            workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True, exported_at__isnull=True
+            workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True,
+            exported_at__isnull=True
         ).all()
 
         chain = Chain()
@@ -248,7 +249,8 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
             Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
-            workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True, exported_at__isnull=True
+            workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True,
+            exported_at__isnull=True
         ).all()
 
         chain = Chain()
@@ -416,7 +418,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
 
         if general_settings.auto_map_employees and general_settings.auto_create_destination_entity \
             and general_settings.auto_map_employees != 'EMPLOYEE_CODE':
-            create_or_update_employee_mapping(expense_group, sage_intacct_connection, general_settings.auto_map_employees)
+            create_or_update_employee_mapping(
+                expense_group, sage_intacct_connection, general_settings.auto_map_employees)
 
         with transaction.atomic():
             __validate_expense_group(expense_group, general_settings)
@@ -506,9 +509,11 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
         if general_settings.auto_map_employees and general_settings.auto_create_destination_entity \
-            and expense_group.fund_source == 'PERSONAL' and general_settings.auto_map_employees != 'EMPLOYEE_CODE':
-            create_or_update_employee_mapping(expense_group, sage_intacct_connection, general_settings.auto_map_employees)
-            
+            and expense_group.fund_source == 'PERSONAL' and \
+                general_settings.auto_map_employees != 'EMPLOYEE_CODE':
+            create_or_update_employee_mapping(
+                expense_group, sage_intacct_connection, general_settings.auto_map_employees)
+
         with transaction.atomic():
             __validate_expense_group(expense_group, general_settings)
 
