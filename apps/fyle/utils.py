@@ -1,6 +1,7 @@
 from typing import List
 import json
 import logging
+import requests
 
 from django.conf import settings
 
@@ -8,7 +9,6 @@ from fylesdk import FyleSDK, UnauthorizedClientError, NotFoundClientError, Inter
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 from apps.fyle.models import Reimbursement
-import requests
 
 logger = logging.getLogger(__name__)
 
@@ -204,22 +204,11 @@ class FyleConnector:
         """
         Get projects from fyle
         """
-        all_projects = []
-        limit = 1000
-        offset = 0
-
-        while True:
-            projects = self.connection.Projects.get(limit=str(limit), offset=str(offset))['data']
-
-            if len(projects) == 0:
-                break
-            else:
-                all_projects.extend(projects)
-                offset = offset + limit
+        projects = self.connection.Projects.get_all()
 
         project_attributes = []
 
-        for project in all_projects:
+        for project in projects:
             project_attributes.append({
                 'attribute_type': 'PROJECT',
                 'display_name': 'Project',
@@ -294,7 +283,7 @@ class FyleConnector:
                             attachment['expense_id'] = expense_id
                             attachments.append(attachment)
                             attachment_file_names.append(attachment['filename'])
-                        
+
             return attachments
 
         return []
