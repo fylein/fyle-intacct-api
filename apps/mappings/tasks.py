@@ -31,7 +31,7 @@ def remove_duplicates(si_attributes: List[DestinationAttribute]):
     return unique_attributes
 
 
-def create_fyle_projects_payload(projects: List[DestinationAttribute], workspace_id: int):
+def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_project_names: list, workspace_id: int):
     """
     Create Fyle Projects Payload from Sage Intacct Projects and Customers
     :param projects: Sage Intacct Projects
@@ -39,9 +39,6 @@ def create_fyle_projects_payload(projects: List[DestinationAttribute], workspace
     :return: Fyle Projects Payload
     """
     payload = []
-    existing_project_names = ExpenseAttribute.objects.filter(
-        attribute_type='PROJECT',
-        workspace_id=workspace_id).values_list('value', flat=True)
 
     for project in projects:
         if project.value not in existing_project_names:
@@ -58,51 +55,52 @@ def create_fyle_projects_payload(projects: List[DestinationAttribute], workspace
     return payload
 
 
-def upload_projects_to_fyle(workspace_id):
-    """
-    Upload projects to Fyle
-    """
-    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int):
+    existing_project_names = ExpenseAttribute.objects.filter(
+        attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
+    si_attributes_count = DestinationAttribute.objects.filter(
+        attribute_type='PROJECT', workspace_id=workspace_id).count()
+    page_size = 200
 
-    fyle_connection = FyleConnector(
-        refresh_token=fyle_credentials.refresh_token,
-        workspace_id=workspace_id
-    )
+    for offset in range(0, si_attributes_count, page_size):
+        limit = offset + page_size
+        paginated_si_attributes = DestinationAttribute.objects.filter(
+            attribute_type='PROJECT', workspace_id=workspace_id).order_by('value', 'id')[offset:limit]
 
-    si_connection = SageIntacctConnector(
-        credentials_object=sage_intacct_credentials,
-        workspace_id=workspace_id
-    )
+        paginated_si_attributes = remove_duplicates(paginated_si_attributes)
 
-    fyle_connection.sync_projects()
-    si_connection.sync_projects()
+        fyle_payload: List[Dict] = create_fyle_projects_payload(
+            paginated_si_attributes, existing_project_names, workspace_id)
+        if fyle_payload:
+            fyle_connection.connection.Projects.post(fyle_payload)
+            fyle_connection.sync_projects()
 
-    si_projects: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-        workspace_id=workspace_id, attribute_type='PROJECT'
-    )
-
-    si_projects = remove_duplicates(si_projects)
-
-    fyle_payload: List[Dict] = create_fyle_projects_payload(si_projects, workspace_id)
-    if fyle_payload:
-        fyle_connection.connection.Projects.post(fyle_payload)
-        fyle_connection.sync_projects()
-
-    return si_projects
+        Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', 'PROJECT', workspace_id)
 
 
-def auto_create_project_mappings(workspace_id):
+def auto_create_project_mappings(workspace_id: int):
     """
     Create Project Mappings
     :return: mappings
     """
-
     try:
-        si_projects = upload_projects_to_fyle(workspace_id)
-        Mapping.bulk_create_mappings(si_projects, 'PROJECT', 'PROJECT', workspace_id)
+        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+        sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
-        return si_projects
+        fyle_connection = FyleConnector(
+            refresh_token=fyle_credentials.refresh_token,
+            workspace_id=workspace_id
+        )
+
+        si_connection = SageIntacctConnector(
+            credentials_object=sage_intacct_credentials,
+            workspace_id=workspace_id
+        )
+
+        fyle_connection.sync_projects()
+        si_connection.sync_projects()
+
+        post_projects_in_batches(fyle_connection, workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
@@ -157,7 +155,8 @@ def async_auto_map_employees(workspace_id: int):
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
 
     fyle_connection.sync_employees()
     if destination_type == 'EMPLOYEE':
@@ -171,7 +170,7 @@ def async_auto_map_employees(workspace_id: int):
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
     if employee_mapping_preference:
         start_datetime = datetime.now()
-        
+
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.async_auto_map_employees',
             args='{}'.format(workspace_id),
@@ -188,13 +187,13 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
         ).first()
 
         if schedule:
-            schedule.delete()       
+            schedule.delete()
 
 
 def async_auto_map_charge_card_account(workspace_id: int):
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
     default_charge_card_id = general_mappings.default_charge_card_id
-    
+
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
     fyle_connection.sync_employees()
@@ -205,7 +204,8 @@ def async_auto_map_charge_card_account(workspace_id: int):
 def schedule_auto_map_charge_card_employees(workspace_id: int):
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
 
-    if general_settings.auto_map_employees and general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+    if general_settings.auto_map_employees and \
+        general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         start_datetime = datetime.now()
 
         schedule, _ = Schedule.objects.update_or_create(
@@ -295,7 +295,8 @@ def create_credit_card_category_mappings(reimbursable_expenses_object,
     Create credit card mappings
     """
 
-    if reimbursable_expenses_object == 'EXPENSE_REPORT' and corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' and \
+        corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
         Mapping.create_or_update_mapping(
             source_type='CATEGORY',
             destination_type='CCC_ACCOUNT',
@@ -304,7 +305,8 @@ def create_credit_card_category_mappings(reimbursable_expenses_object,
             destination_id=destination.detail['gl_account_no'],
             workspace_id=workspace_id
         )
-    elif reimbursable_expenses_object == 'BILL' and corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
+    elif reimbursable_expenses_object == 'BILL' and \
+        corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
         Mapping.create_or_update_mapping(
             source_type='CATEGORY',
             destination_type='CCC_ACCOUNT',
@@ -323,8 +325,7 @@ def auto_create_category_mappings(workspace_id):
 
     reimbursable_expenses_object = general_settings.reimbursable_expenses_object
     corporate_credit_card_expenses_object = general_settings.corporate_credit_card_expenses_object
-       
-   
+
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
         reimbursable_destination_type = 'EXPENSE_TYPE'
     else:
@@ -333,10 +334,9 @@ def auto_create_category_mappings(workspace_id):
     try:
         fyle_categories = upload_categories_to_fyle(
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
-   
 
         Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
-       
+
         for category in fyle_categories:
             create_credit_card_category_mappings(
                         reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)

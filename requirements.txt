@@ -10,9 +10,9 @@ djangorestframework==3.11.0
 future==0.18.2
 fyle_accounting_mappings==0.16.6
 fyle-rest-auth==0.7.0
-fylesdk===1.3.0
+fylesdk===1.4.0
 psycopg2-binary==2.8.4
-sageintacctsdk==0.10.0
+sageintacctsdk==0.11.0
 requests==2.22.0
 six==1.13.0
 Unidecode==1.1.2
