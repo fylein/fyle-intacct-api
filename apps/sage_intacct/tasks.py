@@ -93,9 +93,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
 
             if entity is None:
                 if employee_mapping_setting == 'EMPLOYEE':
-                    entity: DestinationAttribute = sage_intacct_connection.post_employees(
-                        source_employee, auto_map_employees_preference
-                    )
+                    entity: DestinationAttribute = sage_intacct_connection.get_or_create_employee(source_employee)
                 else:
                     entity: DestinationAttribute = sage_intacct_connection.get_or_create_vendor(
                         source_employee.detail['full_name'], source_employee.value, create=True
