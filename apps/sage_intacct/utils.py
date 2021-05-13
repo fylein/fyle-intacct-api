@@ -323,18 +323,42 @@ class SageIntacctConnector:
         except Exception as exception:
             logger.exception(exception)
 
-    def create_vendor_destionation_attribute(self, vendor_name: str, vendor_id: str, vendor_email: str = None):
-        vendor_attribute = DestinationAttribute.create_or_update_destination_attribute({
-            'attribute_type': 'VENDOR',
-            'display_name': 'vendor',
-            'value': vendor_name,
-            'destination_id': vendor_id,
+    def create_destination_attribute(self, attribute: str, name: str, destination_id: str, email: str = None):
+        created_attribute = DestinationAttribute.create_or_update_destination_attribute({
+            'attribute_type': attribute.upper(),
+            'display_name': attribute,
+            'value': name,
+            'destination_id': destination_id,
             'detail': {
-                'email': vendor_email
+                'email': email
             }
         }, self.workspace_id)
 
-        return vendor_attribute
+        return created_attribute
+    
+    def get_or_create_employee(self, source_employee: ExpenseAttribute):
+        """
+        Call Sage Intacct api to get or create employee
+        :param source_employee: employee attribute to be created
+        :return: Employee
+        """
+        employee_name = source_employee.detail['full_name']
+        employee = self.connection.employees.get(field='CONTACT_NAME', value=employee_name)
+
+        if 'employee' in employee:
+            employee = employee['employee'][0] if int(employee['@totalcount']) > 1 else employee['employee']
+        else:
+            employee = None
+
+        if not employee:
+            created_employee = self.post_employees(source_employee)
+            return self.create_destination_attribute(
+                'employee', created_employee['EMPLOYEEID'], created_employee['EMPLOYEEID'], source_employee.value
+            )
+        else:
+            return self.create_destination_attribute(
+                'employee', employee['CONTACT_NAME'], employee['EMPLOYEEID'], source_employee.value
+            )
 
     def get_or_create_vendor(self, vendor_name: str, email: str = None, create: bool = False):
         """
@@ -353,18 +377,17 @@ class SageIntacctConnector:
         if not vendor:
             if create:
                 created_vendor = self.post_vendor(vendor_name, email)
-                return self.create_vendor_destionation_attribute(
-                    created_vendor['VENDORID'], created_vendor['VENDORID'], email)
+                return self.create_destination_attribute(
+                    'vendor', created_vendor['VENDORID'], created_vendor['VENDORID'], email)
             else:
                 return
         else:
-            return self.create_vendor_destionation_attribute(vendor['NAME'], vendor['VENDORID'],
-                vendor['DISPLAYCONTACT.EMAIL1'])
+            return self.create_destination_attribute(
+                'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
 
-    def post_employees(self, employee: ExpenseAttribute, auto_map_employee_preference: str):
+    def post_employees(self, employee: ExpenseAttribute):
         """
         Create a Vendor on Sage Intacct
-        :param auto_map_employee_preference: Preference while doing automap of employees
         :param employee: employee attribute to be created
         :return Employee Destination Attribute
         """
@@ -408,18 +431,6 @@ class SageIntacctConnector:
         }
 
         created_employee = self.connection.employees.post(employee_payload)['data']['employee']
-
-        created_employee = DestinationAttribute.create_or_update_destination_attribute({
-            'attribute_type': 'EMPLOYEE',
-            'display_name': 'employee',
-            'value': sage_intacct_display_name,
-            'destination_id': created_employee['EMPLOYEEID'],
-            'detail': {
-               'email': employee.value,
-               'full_name': name,
-               'employee_code': employee.detail['employee_code']
-            }
-        }, self.workspace_id)
 
         return created_employee
 
