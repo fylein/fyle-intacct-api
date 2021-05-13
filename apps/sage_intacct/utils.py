@@ -10,7 +10,7 @@ from django.conf import settings
 from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import SageIntacctCredential
+from apps.workspaces.models import SageIntacctCredential, WorkspaceGeneralSettings
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -272,6 +272,56 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_expense_custom_fields(self):
+        """
+        Get Expense Custom Fields
+        """
+        custom_field_attribute = {
+            'apbill': [],
+            'cctransaction': [],
+            'eexpenses': []
+        }
+
+        general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=self.workspace_id)
+
+        if general_settings.reimbursable_expenses_object == 'EXPENSE_REPORT':
+            reimbursable_expenses_custom_field = self.connection.custom_fields.get('EEXPENSES')
+        else:
+            reimbursable_expenses_custom_field = self.connection.custom_fields.get('APBILL')
+
+        if general_settings.corporate_credit_card_expenses_object:
+            if general_settings.corporate_credit_card_expenses_object == 'BILL' and general_settings.reimbursable_expenses_object != 'BILL':
+                ccc_expenses_custom_field = self.connection.custom_fields.get('APBILL')
+            elif general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+                ccc_expenses_custom_field = self.connection.custom_fields.get('CCTRANSACTION')
+
+            for custom_field in ccc_expenses_custom_field['Fields']['Field']:
+                if custom_field['ISCUSTOM'] == 'true':
+                    custom_field_attribute[ccc_expenses_custom_field['@Name'].lower()].append({
+                        'attribute_type': ccc_expenses_custom_field['@Name'],
+                        'display_name': ccc_expenses_custom_field['@Name'],
+                        'value': custom_field['LABEL'],
+                        'destination_id': custom_field['ID']
+                    })
+        
+        for custom_field in reimbursable_expenses_custom_field['Fields']['Field']:
+            if custom_field['ISCUSTOM'] == 'true':
+                custom_field_attribute[reimbursable_expenses_custom_field['@Name'].lower()].append({
+                    'attribute_type': reimbursable_expenses_custom_field['@Name'],
+                    'display_name': reimbursable_expenses_custom_field['@Name'],
+                    'value': custom_field['LABEL'],
+                    'destination_id': custom_field['ID']
+                })
+        
+        for attribute_type, account_attribute in custom_field_attribute.items():
+            if account_attribute:
+                DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    account_attribute, attribute_type.upper(), self.workspace_id, True
+                )
+
+        return []
+
+
     def sync_dimensions(self):
         try:
             self.sync_locations()
@@ -320,6 +370,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_items()
+        except Exception as exception:
+            logger.exception(exception)
+        
+        try:
+            self.sync_expense_custom_fields()
         except Exception as exception:
             logger.exception(exception)
 
