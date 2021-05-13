@@ -276,18 +276,13 @@ class SageIntacctConnector:
         """
         Get Expense Custom Fields
         """
-        custom_field_attribute = {
-            'apbill': [],
-            'cctransaction': [],
-            'eexpenses': []
-        }
-
         general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=self.workspace_id)
 
         if general_settings.reimbursable_expenses_object == 'EXPENSE_REPORT':
             reimbursable_expenses_custom_field = self.connection.custom_fields.get('EEXPENSES')
         else:
             reimbursable_expenses_custom_field = self.connection.custom_fields.get('APBILL')
+
 
         if general_settings.corporate_credit_card_expenses_object:
             if general_settings.corporate_credit_card_expenses_object == 'BILL' and general_settings.reimbursable_expenses_object != 'BILL':
@@ -296,29 +291,39 @@ class SageIntacctConnector:
                 ccc_expenses_custom_field = self.connection.custom_fields.get('CCTRANSACTION')
 
             for custom_field in ccc_expenses_custom_field['Fields']['Field']:
-                if custom_field['ISCUSTOM'] == 'true':
-                    custom_field_attribute[ccc_expenses_custom_field['@Name'].lower()].append({
-                        'attribute_type': ccc_expenses_custom_field['@Name'],
-                        'display_name': ccc_expenses_custom_field['@Name'],
-                        'value': custom_field['LABEL'],
-                        'destination_id': custom_field['ID']
-                    })
+                custom_field_attributes = []
+                count = 1
+                if custom_field['ISCUSTOM'] == 'true' and custom_field['DATATYPE'] == 'ENUM':
+                    for value in custom_field['VALIDVALUES']['VALIDVALUE']:
+                        custom_field_attributes.append({
+                            'attribute_type': custom_field['ID'],
+                            'display_name': custom_field['LABEL'].lower().replace('_', ' '),
+                            'value': value,
+                            'destination_id': 'expense_custom_field.{}.{}'.format(custom_field['ID'].lower(), count)
+                        })
+                        count = count + 1
+                    
+                    DestinationAttribute.bulk_create_or_update_destination_attributes(
+                        custom_field_attributes, custom_field['ID'],self.workspace_id
+                    )
         
         for custom_field in reimbursable_expenses_custom_field['Fields']['Field']:
-            if custom_field['ISCUSTOM'] == 'true':
-                custom_field_attribute[reimbursable_expenses_custom_field['@Name'].lower()].append({
-                    'attribute_type': reimbursable_expenses_custom_field['@Name'],
-                    'display_name': reimbursable_expenses_custom_field['@Name'],
-                    'value': custom_field['LABEL'],
-                    'destination_id': custom_field['ID']
-                })
-        
-        for attribute_type, account_attribute in custom_field_attribute.items():
-            if account_attribute:
+            custom_field_attributes = []
+            count = 1
+            if custom_field['ISCUSTOM'] == 'true' and custom_field['DATATYPE'] == 'ENUM':
+                for value in custom_field['VALIDVALUES']['VALIDVALUE']:
+                    custom_field_attributes.append({
+                        'attribute_type': custom_field['ID'],
+                        'display_name': custom_field['LABEL'],
+                        'value': value,
+                        'destination_id': 'custom_field.{}.{}'.format(custom_field['ID'].lower(), count)
+                    })
+                    count = count + 1
+                    
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    account_attribute, attribute_type.upper(), self.workspace_id, True
-                )
-
+                        custom_field_attributes, custom_field['ID'], self.workspace_id
+                    )
+        
         return []
 
 
@@ -378,42 +383,18 @@ class SageIntacctConnector:
         except Exception as exception:
             logger.exception(exception)
 
-    def create_destination_attribute(self, attribute: str, name: str, destination_id: str, email: str = None):
-        created_attribute = DestinationAttribute.create_or_update_destination_attribute({
-            'attribute_type': attribute.upper(),
-            'display_name': attribute,
-            'value': name,
-            'destination_id': destination_id,
+    def create_vendor_destionation_attribute(self, vendor_name: str, vendor_id: str, vendor_email: str = None):
+        vendor_attribute = DestinationAttribute.create_or_update_destination_attribute({
+            'attribute_type': 'VENDOR',
+            'display_name': 'vendor',
+            'value': vendor_name,
+            'destination_id': vendor_id,
             'detail': {
-                'email': email
+                'email': vendor_email
             }
         }, self.workspace_id)
 
-        return created_attribute
-    
-    def get_or_create_employee(self, source_employee: ExpenseAttribute):
-        """
-        Call Sage Intacct api to get or create employee
-        :param source_employee: employee attribute to be created
-        :return: Employee
-        """
-        employee_name = source_employee.detail['full_name']
-        employee = self.connection.employees.get(field='CONTACT_NAME', value=employee_name)
-
-        if 'employee' in employee:
-            employee = employee['employee'][0] if int(employee['@totalcount']) > 1 else employee['employee']
-        else:
-            employee = None
-
-        if not employee:
-            created_employee = self.post_employees(source_employee)
-            return self.create_destination_attribute(
-                'employee', created_employee['EMPLOYEEID'], created_employee['EMPLOYEEID'], source_employee.value
-            )
-        else:
-            return self.create_destination_attribute(
-                'employee', employee['CONTACT_NAME'], employee['EMPLOYEEID'], source_employee.value
-            )
+        return vendor_attribute
 
     def get_or_create_vendor(self, vendor_name: str, email: str = None, create: bool = False):
         """
@@ -432,17 +413,18 @@ class SageIntacctConnector:
         if not vendor:
             if create:
                 created_vendor = self.post_vendor(vendor_name, email)
-                return self.create_destination_attribute(
-                    'vendor', created_vendor['VENDORID'], created_vendor['VENDORID'], email)
+                return self.create_vendor_destionation_attribute(
+                    created_vendor['VENDORID'], created_vendor['VENDORID'], email)
             else:
                 return
         else:
-            return self.create_destination_attribute(
-                'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
+            return self.create_vendor_destionation_attribute(vendor['NAME'], vendor['VENDORID'],
+                vendor['DISPLAYCONTACT.EMAIL1'])
 
-    def post_employees(self, employee: ExpenseAttribute):
+    def post_employees(self, employee: ExpenseAttribute, auto_map_employee_preference: str):
         """
         Create a Vendor on Sage Intacct
+        :param auto_map_employee_preference: Preference while doing automap of employees
         :param employee: employee attribute to be created
         :return Employee Destination Attribute
         """
@@ -486,6 +468,18 @@ class SageIntacctConnector:
         }
 
         created_employee = self.connection.employees.post(employee_payload)['data']['employee']
+
+        created_employee = DestinationAttribute.create_or_update_destination_attribute({
+            'attribute_type': 'EMPLOYEE',
+            'display_name': 'employee',
+            'value': sage_intacct_display_name,
+            'destination_id': created_employee['EMPLOYEEID'],
+            'detail': {
+               'email': employee.value,
+               'full_name': name,
+               'employee_code': employee.detail['employee_code']
+            }
+        }, self.workspace_id)
 
         return created_employee
 
