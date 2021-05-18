@@ -245,6 +245,30 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_expense_payment_types(self):
+        """
+        Get Expense Payment Types
+        """
+        expense_payment_types = self.connection.expense_payment_types.get_all()
+
+        expense_payment_type_attributes = []
+
+        for expense_payment_type in expense_payment_types:
+            expense_payment_type_attributes.append({
+                'attribute_type': 'EXPENSE_PAYMENT_TYPE',
+                'display_name': 'expense payment type',
+                'value': expense_payment_type['NAME'],
+                'destination_id': expense_payment_type['RECORDNO'],
+                'detail': {
+                    'is_reimbursable': True if expense_payment_type['NONREIMBURSABLE'] == 'false' else False
+                }
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            expense_payment_type_attributes, 'EXPENSE_PAYMENT_TYPE', self.workspace_id, True)
+
+        return []
+
     def sync_employees(self):
         """
         Get employees
@@ -285,6 +309,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_projects()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_expense_payment_types()
         except Exception as exception:
             logger.exception(exception)
 
@@ -525,7 +554,8 @@ class SageIntacctConnector:
                 'projectid': lineitem.project_id,
                 'customerid': lineitem.customer_id,
                 'itemid': lineitem.item_id,
-                'billable': lineitem.billable
+                'billable': lineitem.billable,
+                'exppmttype': lineitem.expense_payment_type
             }
 
             expsense_payload.append(expense)

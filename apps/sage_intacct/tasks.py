@@ -378,7 +378,8 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                 workspace_id=expense_group.workspace_id
             ).first()
 
-        elif expense_group.fund_source == 'CCC':
+        elif expense_group.fund_source == 'CCC' and \
+            general_settings.corporate_credit_card_expenses_object != 'EXPENSE_REPORT':
             error_message = 'Credit Card Expense Account Mapping Not Found'
             account = Mapping.objects.filter(
                 source_type='CATEGORY',
@@ -387,14 +388,14 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                 workspace_id=expense_group.workspace_id
             ).first()
 
-        if category and not account:
-            bulk_errors.append({
-                'row': row,
-                'expense_group_id': expense_group.id,
-                'value': category,
-                'type': 'Category Mapping',
-                'message': error_message
-            })
+            if account is None:
+                bulk_errors.append({
+                    'row': row,
+                    'expense_group_id': expense_group.id,
+                    'value': category,
+                    'type': 'Category Mapping',
+                    'message': error_message
+                })
 
         row = row + 1
 
