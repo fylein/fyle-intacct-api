@@ -90,7 +90,6 @@ class MappingUtils:
                 workspace_id=self.__workspace_id
             )
 
-        # TODO: check this
         if general_mapping_object.default_charge_card_name:
             schedule_auto_map_charge_card_employees(self.__workspace_id)
 
