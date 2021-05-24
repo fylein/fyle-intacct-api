@@ -132,7 +132,7 @@ class SageIntacctConnector:
         """
         Get charge card accounts
         """
-        charge_card_accounts = self.connection.charge_card_accounts.get_all()
+        charge_card_accounts = self.connection.charge_card_accounts.get_all(field='LIABILITYTYPE', value='Credit')
 
         charge_card_accounts_attributes = []
 
@@ -255,14 +255,14 @@ class SageIntacctConnector:
 
         for employee in employees:
             detail = {
-                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None,
-                'full_name': employee['PERSONALINFO.PRINTAS'] if employee['PERSONALINFO.PRINTAS'] else None,
+                'email': employee['CONTACT.EMAIL1'] if employee['CONTACT.EMAIL1'] else None,
+                'full_name': employee['CONTACT.PRINTAS'] if employee['CONTACT.PRINTAS'] else None,
             }
 
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
                 'display_name': 'employee',
-                'value': employee['CONTACT_NAME'],
+                'value': employee['CONTACT.CONTACTNAME'],
                 'destination_id': employee['EMPLOYEEID'],
                 'detail': detail
             })
@@ -335,7 +335,7 @@ class SageIntacctConnector:
         }, self.workspace_id)
 
         return created_attribute
-    
+
     def get_or_create_employee(self, source_employee: ExpenseAttribute):
         """
         Call Sage Intacct api to get or create employee
