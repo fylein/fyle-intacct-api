@@ -276,29 +276,26 @@ class SageIntacctConnector:
         """
         Get User Defined Dimensions
         """
-        user_defined_dimensions = []
 
         dimensions = self.connection.dimensions.get()['dimension']
 
         for dimension in dimensions:
             if dimension['userDefinedDimension'] == 'true':
-                user_defined_dimensions.append(dimension['objectName'])
+                dimension_attributes = []
+                dimension_name = dimension['objectName']
+                dimension_values = self.connection.dimension_values.get(dimension_name)
 
-        for dimension_name in user_defined_dimensions:
-            dimension_attributes = []
-            dimension_values = self.connection.dimension_values.get(dimension_name)
+                for value in dimension_values:
+                    dimension_attributes.append({
+                        'attribute_type': dimension_name,
+                        'display_name': dimension_name.lower().replace('_', ' '),
+                        'value': value['name'],
+                        'destination_id': value['id']
+                    })
 
-            for value in dimension_values:
-                dimension_attributes.append({
-                    'attribute_type': dimension_name,
-                    'display_name': dimension_name.lower().replace('_', ' '),
-                    'value': value['name'],
-                    'destination_id': value['id']
-                })
-
-            DestinationAttribute.bulk_create_or_update_destination_attributes(
-                dimension_attributes, dimension_name, self.workspace_id
-            )
+                DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    dimension_attributes, dimension_name, self.workspace_id
+                )
         
         return []
 
@@ -580,8 +577,8 @@ class SageIntacctConnector:
             'state': 'Submitted',
             'description': expense_report.memo,
             'currency': expense_report.currency,
-            'EEXPENSESITEMS': {
-                'EEXPENSESITEM': expsense_payload
+            'eexpensesitems': {
+                'eexpensesitem': expsense_payload
             }
         }
 

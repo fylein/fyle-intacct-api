@@ -18,7 +18,7 @@ from .views import EmployeeView, VendorView, AccountView, ExpenseTypeView, Charg
     ProjectView, LocationView, ExpenseReportView, ExpenseReportScheduleView, BillView, BillScheduleView, \
     ChargeCardTransactionsView, ChargeCardTransactionsScheduleView, SageIntacctFieldsView, ItemView, APPaymentView, \
     ReimbursementView, PaymentAccountView, FyleReimbursementsView, SyncSageIntacctDimensionView,  \
-    RefreshSageIntacctDimensionView, UserDefinedDimensionsView
+    RefreshSageIntacctDimensionView, ExpenseCustomFieldsView
 
 urlpatterns = [
     path('employees/', EmployeeView.as_view()),
@@ -43,5 +43,5 @@ urlpatterns = [
     path('fyle_reimbursements/', FyleReimbursementsView.as_view()),
     path('sync_dimensions/', SyncSageIntacctDimensionView.as_view()),
     path('refresh_dimensions/', RefreshSageIntacctDimensionView.as_view()),
-    path('user_defined_dimensions/', UserDefinedDimensionsView.as_view())
+    path('expense_custom_fields/', ExpenseCustomFieldsView.as_view())
 ]

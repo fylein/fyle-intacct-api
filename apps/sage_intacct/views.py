@@ -725,7 +725,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-class UserDefinedDimensionsView(generics.ListCreateAPIView):
+class ExpenseCustomFieldsView(generics.ListCreateAPIView):
     """
     Expense Custom view
     """
@@ -736,4 +736,4 @@ class UserDefinedDimensionsView(generics.ListCreateAPIView):
         attribute_type = self.request.query_params.get('attribute_type')
 
         return DestinationAttribute.objects.filter(
-            attribute_type=attribute_type, workspace_id=self.kwargs['workspace_id']).order_by('value') 
+            attribute_type=attribute_type, workspace_id=self.kwargs['workspace_id']).order_by('value')
