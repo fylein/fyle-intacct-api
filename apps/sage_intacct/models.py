@@ -167,7 +167,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
     default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE','CHARGE_CARD_NUMBER',
-                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'ITEM']
+                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT']
 
     for setting in mapping_settings:
         if setting.source_field not in default_expense_attributes and \
