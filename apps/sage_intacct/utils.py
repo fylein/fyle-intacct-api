@@ -655,7 +655,7 @@ class SageIntacctConnector:
         bill = self.connection.bills.get(field='RECORDNO', value=bill_id)
         return bill
 
-    def get_expense_report(self, expense_report_id):
+    def get_expense_report(self, expense_report_id: str):
         """
         GET expense reports from SAGE
         """
@@ -672,6 +672,14 @@ class SageIntacctConnector:
         created_charge_card_transaction = self.connection.charge_card_transactions.post \
             (created_charge_card_transaction_payload)
         return created_charge_card_transaction
+
+    def get_charge_card_transaction(self, charge_card_transaction_id: str):
+        """
+        GET charge card transaction from SAGE Intacct
+        """
+        charge_card_transaction = self.connection.charge_card_transactions.get(
+            field='RECORDNO', value=charge_card_transaction_id)
+        return charge_card_transaction
 
     def update_expense_report(self, object_key, supdocid: str):
         """

@@ -437,6 +437,11 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
                                                      created_expense_report['key'], expense_group)
+
+            expense_report = sage_intacct_connection.get_expense_report(created_expense_report['key'])
+            redirected_url_id = expense_report['EEXPENSES']['RECORD_URL'].split('?.r=', 1)[1]
+            created_expense_report['redirected_url_id'] = redirected_url_id
+           
             if created_attachment_id:
                 try:
                     sage_intacct_connection.update_expense_report(created_expense_report['key'], created_attachment_id)
@@ -527,6 +532,10 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             created_attachment_id = load_attachments(sage_intacct_connection, \
                                                      created_bill['data']['apbill']['RECORDNO'], expense_group)
 
+            bill = sage_intacct_connection.get_bill(created_bill['data']['apbill']['RECORDNO'])
+            redirected_url_id = bill['APBILL']['RECORD_URL'].split('?.r=', 1)[1]
+            created_bill['redirect_url_id'] = redirected_url_id
+
             if created_attachment_id:
                 try:
                     sage_intacct_connection.update_bill(created_bill['data']['apbill']['RECORDNO'], \
@@ -539,7 +548,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
                         'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
                         expense_group.id, expense_group.workspace_id, {'error': error}
                     )
-
+                        
             task_log.detail = created_bill
             task_log.bill = bill_object
             task_log.status = 'COMPLETE'
@@ -612,8 +621,13 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction( \
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
 
+            charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(created_charge_card_transaction['key'])
+            redirected_url_id = charge_card_transaction['CCTRANSACTION']['RECORD_URL'].split('?.r=', 1)[1]
+            created_charge_card_transaction['redirect_url_id'] = redirected_url_id
+
             created_attachment_id = load_attachments(sage_intacct_connection, \
                                                      created_charge_card_transaction['key'], expense_group)
+                                                     
             if created_attachment_id:
                 try:
                     sage_intacct_connection.update_charge_card_transaction( \
