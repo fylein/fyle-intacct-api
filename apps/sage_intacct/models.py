@@ -165,7 +165,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     mapping_settings = MappingSetting.objects.filter(workspace_id=expense_group.workspace_id).all()
 
     user_dimensions = []
-    default_expense_attributes = ['CATEGORY', 'EMPLOYEE', 'PROJECT', 'COST_CENTER']
+    default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
     default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE','CHARGE_CARD_NUMBER',
                                       'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'ITEM']
 
