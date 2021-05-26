@@ -534,7 +534,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
 
             bill = sage_intacct_connection.get_bill(created_bill['data']['apbill']['RECORDNO'])
             redirected_url_id = bill['APBILL']['RECORD_URL'].split('?.r=', 1)[1]
-            created_bill['redirect_url_id'] = redirected_url_id
+            created_bill['redirected_url_id'] = redirected_url_id
 
             if created_attachment_id:
                 try:
@@ -623,7 +623,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
 
             charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(created_charge_card_transaction['key'])
             redirected_url_id = charge_card_transaction['CCTRANSACTION']['RECORD_URL'].split('?.r=', 1)[1]
-            created_charge_card_transaction['redirect_url_id'] = redirected_url_id
+            created_charge_card_transaction['redirected_url_id'] = redirected_url_id
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
                                                      created_charge_card_transaction['key'], expense_group)
