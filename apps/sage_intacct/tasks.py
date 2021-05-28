@@ -369,7 +369,8 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        if expense_group.fund_source == 'PERSONAL':
+        if (expense_group.fund_source == 'PERSONAL') or (expense_group.fund_source == 'CCC' and \
+            general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'):
             error_message = 'Category Mapping Not Found'
             account = Mapping.objects.filter(
                 Q(destination_type='ACCOUNT') | Q(destination_type='EXPENSE_TYPE'),
