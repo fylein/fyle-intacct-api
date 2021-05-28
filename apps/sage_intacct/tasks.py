@@ -354,6 +354,15 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                         'message': 'Default Charge Card not found'
                     })
 
+            elif general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+                error_message = 'Employee Mapping not found'
+                Mapping.objects.get(
+                    Q(destination_type='EMPLOYEE'),
+                    source_type='EMPLOYEE',
+                    source__value=expense_group.description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                )
+
     except Mapping.DoesNotExist:
         bulk_errors.append({
             'row': None,
