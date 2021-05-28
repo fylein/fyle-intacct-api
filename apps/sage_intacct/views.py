@@ -725,4 +725,15 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+class ExpenseCustomFieldsView(generics.ListCreateAPIView):
+    """
+    Expense Custom view
+    """
+    serializer_class = DestinationAttributeSerializer
+    pagination_class = None
 
+    def get_queryset(self):
+        attribute_type = self.request.query_params.get('attribute_type')
+
+        return DestinationAttribute.objects.filter(
+            attribute_type=attribute_type, workspace_id=self.kwargs['workspace_id']).order_by('value')

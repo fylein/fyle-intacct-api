@@ -436,10 +436,10 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                                                                                  expense_report_lineitems_objects)
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
-                                                     created_expense_report['key'], expense_group)
+                                                     created_expense_report['data']['eexpenses']['RECORDNO'], expense_group)
             if created_attachment_id:
                 try:
-                    sage_intacct_connection.update_expense_report(created_expense_report['key'], created_attachment_id)
+                    sage_intacct_connection.update_expense_report(created_expense_report['data']['eexpenses']['RECORDNO'], created_attachment_id)
                     expense_report_object.supdoc_id = created_attachment_id
                     expense_report_object.save()
                 except Exception:
