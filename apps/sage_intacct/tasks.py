@@ -388,14 +388,14 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if account is None:
-                bulk_errors.append({
-                    'row': row,
-                    'expense_group_id': expense_group.id,
-                    'value': category,
-                    'type': 'Category Mapping',
-                    'message': error_message
-                })
+        if account is None:
+            bulk_errors.append({
+                'row': row,
+                'expense_group_id': expense_group.id,
+                'value': category,
+                'type': 'Category Mapping',
+                'message': error_message
+            })
 
         row = row + 1
 
