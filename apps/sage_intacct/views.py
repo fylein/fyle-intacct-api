@@ -725,7 +725,6 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-
 class ExpenseCustomFieldsView(generics.ListCreateAPIView):
     """
     Expense Custom view
