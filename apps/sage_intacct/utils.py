@@ -470,16 +470,13 @@ class SageIntacctConnector:
         """
         vendors = self.connection.vendors.get_all()
 
-        vendor_attributes = {
-            'vendor': [],
-            'charge_card_number': []
-        }
+        vendor_attributes = []
 
         for vendor in vendors:
             detail = {
                 'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
             }
-            vendor_attributes['vendor'].append({
+            vendor_attributes.append({
                 'attribute_type': 'VENDOR',
                 'display_name': 'vendor',
                 'value': vendor['NAME'],
@@ -487,18 +484,8 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-            vendor_attributes['charge_card_number'].append({
-                'attribute_type': 'CHARGE_CARD_NUMBER',
-                'display_name': 'Charge Card Account',
-                'value': vendor['NAME'],
-                'destination_id': vendor['VENDORID'],
-                'detail': detail
-            })
-
-        for attribute_type, vendor_attribute in vendor_attributes.items():
-            if vendor_attribute:
-                DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    vendor_attribute, attribute_type.upper(), self.workspace_id, True)
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            vendor_attributes, 'VENDOR', self.workspace_id, True)
 
         return []
 
