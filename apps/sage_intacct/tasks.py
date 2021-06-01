@@ -548,7 +548,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
                         'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
                         expense_group.id, expense_group.workspace_id, {'error': error}
                     )
-                        
+                  
             task_log.detail = created_bill
             task_log.bill = bill_object
             task_log.status = 'COMPLETE'
