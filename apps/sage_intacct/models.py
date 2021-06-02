@@ -486,6 +486,7 @@ class ExpenseReportLineitem(models.Model):
                     'transaction_date': get_transaction_date(expense_group),
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
+                    'expense_payment_type': expense_payment_type,
                     'memo': get_expense_purpose(lineitem, category)
                 }
             )
