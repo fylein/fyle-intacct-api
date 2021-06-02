@@ -10,7 +10,9 @@ from django.conf import settings
 from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import SageIntacctCredential
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace
+from apps.fyle.utils import FyleConnector
+from apps.fyle.models import Expense
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -416,6 +418,25 @@ class SageIntacctConnector:
         else:
             return self.create_destination_attribute(
                 'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
+    
+    def get_expense_link(self, lineitem: ExpenseReportLineitem) -> str:
+        """
+        Create Link For Fyle Expenses
+        :param expense: Expense Report Lineitem
+        :return: Expense link
+        """
+        fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
+        fyle_connector = FyleConnector(fyle_credentials.refresh_token, self.workspace_id)
+        org_id = Workspace.objects.get(id=self.workspace_id).fyle_org_id
+
+        expense = Expense.objects.get(pk=lineitem.expense_id)
+
+        cluster_domain = fyle_connector.get_cluster_domain()
+        expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
+            cluster_domain['cluster_domain'], expense.expense_id, org_id
+        )
+                
+        return expense_link
 
     def post_employees(self, employee: ExpenseAttribute):
         """
@@ -529,6 +550,8 @@ class SageIntacctConnector:
         expsense_payload = []
         for lineitem in expense_report_lineitems:
             transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
+            expense_link = self.get_expense_link(lineitem)
+
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
                     if lineitem.expense_type_id else lineitem.gl_account_number,
@@ -540,6 +563,14 @@ class SageIntacctConnector:
                 },
                 'memo': lineitem.memo,
                 'locationid': lineitem.location_id,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                },
                 'departmentid': lineitem.department_id,
                 'projectid': lineitem.project_id,
                 'customerid': lineitem.customer_id,
@@ -580,11 +611,20 @@ class SageIntacctConnector:
         """
         bill_lineitems_payload = []
         for lineitem in bill_lineitems:
+            expense_link = self.get_expense_link(lineitem)
             expense = {
                 'ACCOUNTNO': lineitem.gl_account_number,
                 'TRX_AMOUNT': lineitem.amount,
                 'ENTRYDESCRIPTION': lineitem.memo,
                 'LOCATIONID': lineitem.location_id,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                },
                 'DEPARTMENTID': lineitem.department_id,
                 'PROJECTID': lineitem.project_id,
                 'CUSTOMERID': lineitem.customer_id,
@@ -626,12 +666,21 @@ class SageIntacctConnector:
         """
         charge_card_transaction_payload = []
         for lineitem in charge_card_transaction_lineitems:
+            expense_link = self.get_expense_link(lineitem)
             expense = {
                 'glaccountno': lineitem.gl_account_number,
                 'description': lineitem.memo,
                 'paymentamount': lineitem.amount,
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                },
                 'customerid': lineitem.customer_id,
                 'vendorid': charge_card_transaction.vendor_id,
                 'projectid': lineitem.project_id,
