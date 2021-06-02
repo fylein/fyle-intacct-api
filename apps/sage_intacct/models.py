@@ -385,24 +385,24 @@ class ExpenseReport(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
 
-        if expense_group.fund_source == 'PERSONAL':
-            expense_report_object, _ = ExpenseReport.objects.update_or_create(
-                expense_group=expense_group,
-                defaults={
-                    'employee_id': Mapping.objects.get(
-                        source_type='EMPLOYEE',
-                        destination_type='EMPLOYEE',
-                        source__value=description.get('employee_email'),
-                        workspace_id=expense_group.workspace_id
-                    ).destination.destination_id,
-                    'description': description,
-                    'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
-                    expense_group.fund_source == 'PERSONAL' else
-                    'Credit card expenses by {0}'.format(description.get('employee_email')),
-                    'currency': expense.currency,
-                    'transaction_date': get_transaction_date(expense_group),
-                }
-            )
+        expense_report_object, _ = ExpenseReport.objects.update_or_create(
+            expense_group=expense_group,
+            defaults={
+                'employee_id': Mapping.objects.get(
+                    source_type='EMPLOYEE',
+                    destination_type='EMPLOYEE',
+                    source__value=description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                ).destination.destination_id,
+                'description': description,
+                'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
+                expense_group.fund_source == 'PERSONAL' else
+                'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'currency': expense.currency,
+                'transaction_date': get_transaction_date(expense_group),
+            }
+        )
+
         return expense_report_object
 
 
@@ -424,6 +424,7 @@ class ExpenseReportLineitem(models.Model):
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Expense amount')
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
+    expense_payment_type = models.CharField(max_length=255, help_text='Expense Payment Type', null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -473,6 +474,11 @@ class ExpenseReportLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            if expense_group.fund_source == 'PERSONAL':
+                expense_payment_type = general_mappings.default_reimbursable_expense_payment_type_name
+            else:
+                expense_payment_type = general_mappings.default_ccc_expense_payment_type_name
+
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
                 expense_id=lineitem.id,
@@ -488,6 +494,7 @@ class ExpenseReportLineitem(models.Model):
                     'transaction_date': get_transaction_date(expense_group),
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
+                    'expense_payment_type': expense_payment_type,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
                 }
             )
