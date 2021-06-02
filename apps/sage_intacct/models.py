@@ -3,6 +3,7 @@ Sage Intacct models
 """
 from datetime import datetime
 from typing import List
+from django.contrib.postgres.fields import JSONField
 from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
@@ -160,6 +161,45 @@ def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str) -> 
         lineitem.employee_email, category, spent_at, lineitem.claim_number, expense_purpose, expense_link)
 
 
+def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Expense):
+    mapping_settings = MappingSetting.objects.filter(workspace_id=expense_group.workspace_id).all()
+
+    user_dimensions = []
+    default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
+    default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE','CHARGE_CARD_NUMBER',
+                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT']
+
+    for setting in mapping_settings:
+        if setting.source_field not in default_expense_attributes and \
+                setting.destination_field not in default_destination_attributes:
+            if setting.source_field == 'PROJECT':
+                source_value = lineitem.project
+            elif setting.source_field == 'COST_CENTER':
+                source_value = lineitem.cost_center
+            else:
+                attribute = ExpenseAttribute.objects.filter(
+                    attribute_type=setting.source_field,
+                    workspace_id=expense_group.workspace_id
+                ).first()
+                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+            mapping: Mapping = Mapping.objects.filter(
+                source_type=setting.source_field,
+                destination_type=setting.destination_field,
+                source__value=source_value,
+                workspace_id=expense_group.workspace_id
+            ).first()
+            if mapping:
+                dimension_name = 'GLDIM{}'.format(mapping.destination.attribute_type)
+                value = mapping.destination.destination_id
+                
+                user_dimensions.append({
+                    dimension_name: value
+                })
+
+    return user_dimensions
+
+
 class Bill(models.Model):
     """
     Sage Intacct Bill
@@ -232,6 +272,7 @@ class BillLineitem(models.Model):
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
+    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions') 
     amount = models.FloatField(help_text='Bill amount')
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
@@ -289,6 +330,7 @@ class BillLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
@@ -301,6 +343,7 @@ class BillLineitem(models.Model):
                     'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
@@ -342,24 +385,24 @@ class ExpenseReport(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
 
-        if expense_group.fund_source == 'PERSONAL':
-            expense_report_object, _ = ExpenseReport.objects.update_or_create(
-                expense_group=expense_group,
-                defaults={
-                    'employee_id': Mapping.objects.get(
-                        source_type='EMPLOYEE',
-                        destination_type='EMPLOYEE',
-                        source__value=description.get('employee_email'),
-                        workspace_id=expense_group.workspace_id
-                    ).destination.destination_id,
-                    'description': description,
-                    'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
-                    expense_group.fund_source == 'PERSONAL' else
-                    'Credit card expenses by {0}'.format(description.get('employee_email')),
-                    'currency': expense.currency,
-                    'transaction_date': get_transaction_date(expense_group),
-                }
-            )
+        expense_report_object, _ = ExpenseReport.objects.update_or_create(
+            expense_group=expense_group,
+            defaults={
+                'employee_id': Mapping.objects.get(
+                    source_type='EMPLOYEE',
+                    destination_type='EMPLOYEE',
+                    source__value=description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                ).destination.destination_id,
+                'description': description,
+                'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
+                expense_group.fund_source == 'PERSONAL' else
+                'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'currency': expense.currency,
+                'transaction_date': get_transaction_date(expense_group),
+            }
+        )
+
         return expense_report_object
 
 
@@ -377,9 +420,11 @@ class ExpenseReportLineitem(models.Model):
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions') 
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Expense amount')
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
+    expense_payment_type = models.CharField(max_length=255, help_text='Expense Payment Type', null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -427,6 +472,12 @@ class ExpenseReportLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
+
+            if expense_group.fund_source == 'PERSONAL':
+                expense_payment_type = general_mappings.default_reimbursable_expense_payment_type_name
+            else:
+                expense_payment_type = general_mappings.default_ccc_expense_payment_type_name
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
@@ -439,9 +490,11 @@ class ExpenseReportLineitem(models.Model):
                     'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'user_defined_dimensions': user_defined_dimensions,
                     'transaction_date': get_transaction_date(expense_group),
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
+                    'expense_payment_type': expense_payment_type,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
                 }
             )

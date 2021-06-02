@@ -245,6 +245,30 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_expense_payment_types(self):
+        """
+        Get Expense Payment Types
+        """
+        expense_payment_types = self.connection.expense_payment_types.get_all()
+
+        expense_payment_type_attributes = []
+
+        for expense_payment_type in expense_payment_types:
+            expense_payment_type_attributes.append({
+                'attribute_type': 'EXPENSE_PAYMENT_TYPE',
+                'display_name': 'expense payment type',
+                'value': expense_payment_type['NAME'],
+                'destination_id': expense_payment_type['RECORDNO'],
+                'detail': {
+                    'is_reimbursable': True if expense_payment_type['NONREIMBURSABLE'] == 'false' else False
+                }
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            expense_payment_type_attributes, 'EXPENSE_PAYMENT_TYPE', self.workspace_id, True)
+
+        return []
+
     def sync_employees(self):
         """
         Get employees
@@ -271,6 +295,33 @@ class SageIntacctConnector:
             employee_attributes, 'EMPLOYEE', self.workspace_id, True)
 
         return []
+    
+    def sync_user_defined_dimensions(self):
+        """
+        Get User Defined Dimensions
+        """
+
+        dimensions = self.connection.dimensions.get_all()
+
+        for dimension in dimensions:
+            if dimension['userDefinedDimension'] == 'true':
+                dimension_attributes = []
+                dimension_name = dimension['objectName']
+                dimension_values = self.connection.dimension_values.get_all(dimension_name)
+
+                for value in dimension_values:
+                    dimension_attributes.append({
+                        'attribute_type': dimension_name,
+                        'display_name': dimension_name.lower().replace('_', ' '),
+                        'value': value['name'],
+                        'destination_id': value['id']
+                    })
+
+                DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    dimension_attributes, dimension_name, self.workspace_id
+                )
+
+        return []
 
     def sync_dimensions(self):
         try:
@@ -285,6 +336,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_projects()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_expense_payment_types()
         except Exception as exception:
             logger.exception(exception)
 
@@ -320,6 +376,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_items()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_user_defined_dimensions()
         except Exception as exception:
             logger.exception(exception)
 
@@ -441,16 +502,13 @@ class SageIntacctConnector:
         """
         vendors = self.connection.vendors.get_all()
 
-        vendor_attributes = {
-            'vendor': [],
-            'charge_card_number': []
-        }
+        vendor_attributes = []
 
         for vendor in vendors:
             detail = {
                 'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
             }
-            vendor_attributes['vendor'].append({
+            vendor_attributes.append({
                 'attribute_type': 'VENDOR',
                 'display_name': 'vendor',
                 'value': vendor['NAME'],
@@ -458,18 +516,8 @@ class SageIntacctConnector:
                 'detail': detail
             })
 
-            vendor_attributes['charge_card_number'].append({
-                'attribute_type': 'CHARGE_CARD_NUMBER',
-                'display_name': 'Charge Card Account',
-                'value': vendor['NAME'],
-                'destination_id': vendor['VENDORID'],
-                'detail': detail
-            })
-
-        for attribute_type, vendor_attribute in vendor_attributes.items():
-            if vendor_attribute:
-                DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    vendor_attribute, attribute_type.upper(), self.workspace_id, True)
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            vendor_attributes, 'VENDOR', self.workspace_id, True)
 
         return []
 
@@ -525,8 +573,13 @@ class SageIntacctConnector:
                 'projectid': lineitem.project_id,
                 'customerid': lineitem.customer_id,
                 'itemid': lineitem.item_id,
-                'billable': lineitem.billable
+                'billable': lineitem.billable,
+                'exppmttype': lineitem.expense_payment_type
             }
+
+            for dimension in lineitem.user_defined_dimensions:
+                for name, value in dimension.items():
+                    expense[name] = value
 
             expsense_payload.append(expense)
 
@@ -541,8 +594,8 @@ class SageIntacctConnector:
             'state': 'Submitted',
             'description': expense_report.memo,
             'currency': expense_report.currency,
-            'expenses': {
-                'expense': expsense_payload
+            'eexpensesitems': {
+                'eexpensesitem': expsense_payload
             }
         }
 
@@ -568,6 +621,10 @@ class SageIntacctConnector:
                 'ITEMID': lineitem.item_id,
                 'BILLABLE': lineitem.billable
             }
+
+            for dimension in lineitem.user_defined_dimensions:
+                for name, value in dimension.items():
+                    expense[name] = value
 
             bill_lineitems_payload.append(expense)
 
