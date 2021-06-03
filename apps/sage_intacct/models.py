@@ -446,19 +446,7 @@ class ExpenseReportLineitem(models.Model):
         description = expense_group.description
 
         default_employee_location_id = None
-        employee = DestinationAttribute.objects.filter(
-            attribute_type='EMPLOYEE',
-            destination_id=Mapping.objects.get(
-                source_type='EMPLOYEE',
-                destination_type='EMPLOYEE',
-                source__value=description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            ).destination.destination_id,
-            workspace_id=expense_group.workspace_id
-        ).order_by('-updated_at').first()
-
-        if employee.detail['location_id']:
-            default_employee_location_id = employee.detail['location_id']
+        default_employee_department_id = None
 
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
@@ -485,6 +473,42 @@ class ExpenseReportLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
+            if general_mappings.use_intacct_employee_locations:
+                employee = DestinationAttribute.objects.filter(
+                    attribute_type='EMPLOYEE',
+                    destination_id=Mapping.objects.get(
+                        source_type='EMPLOYEE',
+                        destination_type='EMPLOYEE',
+                        source__value=description.get('employee_email'),
+                        workspace_id=expense_group.workspace_id
+                    ).destination.destination_id,
+                    workspace_id=expense_group.workspace_id
+                ).order_by('-updated_at').first()
+
+                if employee.detail['location_id']:
+                    default_employee_location_id = employee.detail['location_id']
+                else:
+                    default_employee_location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+
+            if general_mappings.use_intacct_employee_departments:
+                employee = DestinationAttribute.objects.filter(
+                    attribute_type='EMPLOYEE',
+                    destination_id=Mapping.objects.get(
+                        source_type='EMPLOYEE',
+                        destination_type='EMPLOYEE',
+                        source__value=description.get('employee_email'),
+                        workspace_id=expense_group.workspace_id
+                    ).destination.destination_id,
+                    workspace_id=expense_group.workspace_id
+                ).order_by('-updated_at').first()
+
+                if employee.detail['department_id']:
+                    default_employee_department_id = employee.detail['department_id']
+                else:
+                    default_employee_department_id = get_department_id_or_none(
+                        expense_group, lineitem, general_mappings
+                    )
+
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
@@ -504,8 +528,9 @@ class ExpenseReportLineitem(models.Model):
                     'gl_account_number': account.destination.destination_id if account else None,
                     'expense_type_id': expense_type.destination.destination_id if expense_type else None,
                     'project_id': project_id,
-                    'department_id': department_id,
-                    'location_id': location_id if location_id else default_employee_location_id,
+                    'department_id': default_employee_department_id if default_employee_department_id
+                    else department_id,
+                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'user_defined_dimensions': user_defined_dimensions,
@@ -635,19 +660,7 @@ class ChargeCardTransactionLineitem(models.Model):
         description = expense_group.description
 
         default_employee_location_id = None
-        employee = DestinationAttribute.objects.filter(
-            attribute_type='EMPLOYEE',
-            destination_id=Mapping.objects.get(
-                source_type='EMPLOYEE',
-                destination_type='EMPLOYEE',
-                source__value=description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            ).destination.destination_id,
-            workspace_id=expense_group.workspace_id
-        ).order_by('-updated_at').first()
-
-        if employee.detail['location_id']:
-            default_employee_location_id = employee.detail['location_id']
+        default_employee_department_id = None
 
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
@@ -667,6 +680,42 @@ class ChargeCardTransactionLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
+            if general_mappings.use_intacct_employee_locations:
+                employee = DestinationAttribute.objects.filter(
+                    attribute_type='EMPLOYEE',
+                    destination_id=Mapping.objects.get(
+                        source_type='EMPLOYEE',
+                        destination_type='EMPLOYEE',
+                        source__value=description.get('employee_email'),
+                        workspace_id=expense_group.workspace_id
+                    ).destination.destination_id,
+                    workspace_id=expense_group.workspace_id
+                ).order_by('-updated_at').first()
+
+                if employee.detail['location_id']:
+                    default_employee_location_id = employee.detail['location_id']
+                else:
+                    default_employee_location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+
+            if general_mappings.use_intacct_employee_departments:
+                employee = DestinationAttribute.objects.filter(
+                    attribute_type='EMPLOYEE',
+                    destination_id=Mapping.objects.get(
+                        source_type='EMPLOYEE',
+                        destination_type='EMPLOYEE',
+                        source__value=description.get('employee_email'),
+                        workspace_id=expense_group.workspace_id
+                    ).destination.destination_id,
+                    workspace_id=expense_group.workspace_id
+                ).order_by('-updated_at').first()
+
+                if employee.detail['department_id']:
+                    default_employee_department_id = employee.detail['department_id']
+                else:
+                    default_employee_department_id = get_department_id_or_none(
+                        expense_group, lineitem, general_mappings
+                    )
+
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
@@ -679,8 +728,9 @@ class ChargeCardTransactionLineitem(models.Model):
                 defaults={
                     'gl_account_number': account.destination.destination_id if account else None,
                     'project_id': project_id,
-                    'department_id': department_id,
-                    'location_id': location_id if location_id else default_employee_location_id,
+                    'department_id': default_employee_department_id if default_employee_department_id
+                    else department_id,
+                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'amount': lineitem.amount,

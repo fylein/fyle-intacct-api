@@ -34,11 +34,11 @@ class MappingUtils:
 
         elif general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
             assert_valid('default_ccc_expense_payment_type_name' in general_mapping and
-                general_mapping['default_ccc_expense_payment_type_name'],
-                'default ccc expense payment type name is blank')
+                         general_mapping['default_ccc_expense_payment_type_name'],
+                         'default ccc expense payment type name is blank')
             assert_valid('default_ccc_expense_payment_type_id' in general_mapping and
-                general_mapping['default_ccc_expense_payment_type_id'],
-                'default ccc expense payment type id is blank')
+                         general_mapping['default_ccc_expense_payment_type_id'],
+                         'default ccc expense payment type id is blank')
 
         if general_settings.import_projects:
             assert_valid('default_item_name' in general_mapping and general_mapping['default_item_name'],
@@ -74,7 +74,9 @@ class MappingUtils:
                 'default_reimbursable_expense_payment_type_id': \
                     general_mapping['default_reimbursable_expense_payment_type_id'],
                 'default_ccc_expense_payment_type_name': general_mapping['default_ccc_expense_payment_type_name'],
-                'default_ccc_expense_payment_type_id': general_mapping['default_ccc_expense_payment_type_id']
+                'default_ccc_expense_payment_type_id': general_mapping['default_ccc_expense_payment_type_id'],
+                'use_intacct_employee_departments': general_mapping['use_intacct_employee_departments'],
+                'use_intacct_employee_locations': general_mapping['use_intacct_employee_locations']
             }
         )
 
