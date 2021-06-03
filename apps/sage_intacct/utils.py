@@ -281,6 +281,8 @@ class SageIntacctConnector:
             detail = {
                 'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None,
                 'full_name': employee['PERSONALINFO.PRINTAS'] if employee['PERSONALINFO.PRINTAS'] else None,
+                'location_id': employee['LOCATIONID'] if employee['LOCATIONID'] else None,
+                'department_id': employee['DEPARTMENTID'] if employee['DEPARTMENTID'] else None
             }
 
             employee_attributes.append({

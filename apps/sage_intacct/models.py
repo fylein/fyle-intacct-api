@@ -2,7 +2,6 @@
 Sage Intacct models
 """
 from datetime import datetime
-from typing import List
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 
@@ -107,6 +106,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             location_id = mapping.destination.destination_id
     return location_id
 
+
 def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
     customer_id = None
 
@@ -121,6 +121,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
 
     return customer_id
 
+
 def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     item_id = None
 
@@ -131,6 +132,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
             item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
 
     return item_id
+
 
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
     if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
@@ -166,7 +168,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
 
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
-    default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE','CHARGE_CARD_NUMBER',
+    default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
                                       'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT']
 
     for setting in mapping_settings:
@@ -192,7 +194,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
             if mapping:
                 dimension_name = 'GLDIM{}'.format(mapping.destination.attribute_type)
                 value = mapping.destination.destination_id
-                
+
                 user_dimensions.append({
                     dimension_name: value
                 })
@@ -272,7 +274,7 @@ class BillLineitem(models.Model):
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
-    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions') 
+    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Bill amount')
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
@@ -420,7 +422,7 @@ class ExpenseReportLineitem(models.Model):
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
-    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions') 
+    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Expense amount')
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
@@ -441,6 +443,22 @@ class ExpenseReportLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         expense_report = ExpenseReport.objects.get(expense_group=expense_group)
+        description = expense_group.description
+
+        default_employee_location_id = None
+        employee = DestinationAttribute.objects.filter(
+            attribute_type='EMPLOYEE',
+            destination_id=Mapping.objects.get(
+                source_type='EMPLOYEE',
+                destination_type='EMPLOYEE',
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).destination.destination_id,
+            workspace_id=expense_group.workspace_id
+        ).order_by('-updated_at').first()
+
+        if employee.detail['location_id']:
+            default_employee_location_id = employee.detail['location_id']
 
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
@@ -487,7 +505,7 @@ class ExpenseReportLineitem(models.Model):
                     'expense_type_id': expense_type.destination.destination_id if expense_type else None,
                     'project_id': project_id,
                     'department_id': department_id,
-                    'location_id': location_id,
+                    'location_id': location_id if location_id else default_employee_location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'user_defined_dimensions': user_defined_dimensions,
@@ -614,6 +632,22 @@ class ChargeCardTransactionLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         charge_card_transaction = ChargeCardTransaction.objects.get(expense_group=expense_group)
+        description = expense_group.description
+
+        default_employee_location_id = None
+        employee = DestinationAttribute.objects.filter(
+            attribute_type='EMPLOYEE',
+            destination_id=Mapping.objects.get(
+                source_type='EMPLOYEE',
+                destination_type='EMPLOYEE',
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).destination.destination_id,
+            workspace_id=expense_group.workspace_id
+        ).order_by('-updated_at').first()
+
+        if employee.detail['location_id']:
+            default_employee_location_id = employee.detail['location_id']
 
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
@@ -646,7 +680,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'gl_account_number': account.destination.destination_id if account else None,
                     'project_id': project_id,
                     'department_id': department_id,
-                    'location_id': location_id,
+                    'location_id': location_id if location_id else default_employee_location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'amount': lineitem.amount,
@@ -686,7 +720,7 @@ class APPayment(models.Model):
         description = expense_group.description
 
         expense = expense_group.expenses.first()
-        
+
         vendor_id = Mapping.objects.get(
             source_type='EMPLOYEE',
             destination_type='VENDOR',
