@@ -202,6 +202,27 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     return user_dimensions
 
 
+def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
+    description = expense_group.description
+
+    employee = DestinationAttribute.objects.filter(
+        attribute_type='EMPLOYEE',
+        destination_id=Mapping.objects.get(
+            source_type='EMPLOYEE',
+            destination_type='EMPLOYEE',
+            source__value=description.get('employee_email'),
+            workspace_id=expense_group.workspace_id
+        ).destination.destination_id,
+        workspace_id=expense_group.workspace_id
+    ).order_by('-updated_at').first()
+
+    if employee.detail[object_type]:
+        default_employee_object = employee.detail[object_type]
+        return default_employee_object
+    else:
+        return None
+
+
 class Bill(models.Model):
     """
     Sage Intacct Bill
@@ -443,7 +464,6 @@ class ExpenseReportLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         expense_report = ExpenseReport.objects.get(expense_group=expense_group)
-        description = expense_group.description
 
         default_employee_location_id = None
         default_employee_department_id = None
@@ -474,40 +494,10 @@ class ExpenseReportLineitem(models.Model):
             ).first()
 
             if general_mappings.use_intacct_employee_locations:
-                employee = DestinationAttribute.objects.filter(
-                    attribute_type='EMPLOYEE',
-                    destination_id=Mapping.objects.get(
-                        source_type='EMPLOYEE',
-                        destination_type='EMPLOYEE',
-                        source__value=description.get('employee_email'),
-                        workspace_id=expense_group.workspace_id
-                    ).destination.destination_id,
-                    workspace_id=expense_group.workspace_id
-                ).order_by('-updated_at').first()
-
-                if employee.detail['location_id']:
-                    default_employee_location_id = employee.detail['location_id']
-                else:
-                    default_employee_location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
 
             if general_mappings.use_intacct_employee_departments:
-                employee = DestinationAttribute.objects.filter(
-                    attribute_type='EMPLOYEE',
-                    destination_id=Mapping.objects.get(
-                        source_type='EMPLOYEE',
-                        destination_type='EMPLOYEE',
-                        source__value=description.get('employee_email'),
-                        workspace_id=expense_group.workspace_id
-                    ).destination.destination_id,
-                    workspace_id=expense_group.workspace_id
-                ).order_by('-updated_at').first()
-
-                if employee.detail['department_id']:
-                    default_employee_department_id = employee.detail['department_id']
-                else:
-                    default_employee_department_id = get_department_id_or_none(
-                        expense_group, lineitem, general_mappings
-                    )
+                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
@@ -657,7 +647,6 @@ class ChargeCardTransactionLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         charge_card_transaction = ChargeCardTransaction.objects.get(expense_group=expense_group)
-        description = expense_group.description
 
         default_employee_location_id = None
         default_employee_department_id = None
@@ -681,40 +670,10 @@ class ChargeCardTransactionLineitem(models.Model):
             ).first()
 
             if general_mappings.use_intacct_employee_locations:
-                employee = DestinationAttribute.objects.filter(
-                    attribute_type='EMPLOYEE',
-                    destination_id=Mapping.objects.get(
-                        source_type='EMPLOYEE',
-                        destination_type='EMPLOYEE',
-                        source__value=description.get('employee_email'),
-                        workspace_id=expense_group.workspace_id
-                    ).destination.destination_id,
-                    workspace_id=expense_group.workspace_id
-                ).order_by('-updated_at').first()
-
-                if employee.detail['location_id']:
-                    default_employee_location_id = employee.detail['location_id']
-                else:
-                    default_employee_location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
 
             if general_mappings.use_intacct_employee_departments:
-                employee = DestinationAttribute.objects.filter(
-                    attribute_type='EMPLOYEE',
-                    destination_id=Mapping.objects.get(
-                        source_type='EMPLOYEE',
-                        destination_type='EMPLOYEE',
-                        source__value=description.get('employee_email'),
-                        workspace_id=expense_group.workspace_id
-                    ).destination.destination_id,
-                    workspace_id=expense_group.workspace_id
-                ).order_by('-updated_at').first()
-
-                if employee.detail['department_id']:
-                    default_employee_department_id = employee.detail['department_id']
-                else:
-                    default_employee_department_id = get_department_id_or_none(
-                        expense_group, lineitem, general_mappings
-                    )
+                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
