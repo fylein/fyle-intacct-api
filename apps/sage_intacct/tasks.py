@@ -450,8 +450,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                                                      created_expense_report['data']['eexpenses']['RECORDNO'], expense_group)
 
             expense_report = sage_intacct_connection.get_expense_report(created_expense_report['data']['eexpenses']['RECORDNO'], ['RECORD_URL'])
-            redirected_url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
-            created_expense_report['redirected_url_id'] = redirected_url_id
+            url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
+            created_expense_report['redirected_url_id'] = url_id
            
             if created_attachment_id:
                 try:
@@ -544,8 +544,8 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
                                                      created_bill['data']['apbill']['RECORDNO'], expense_group)
 
             bill = sage_intacct_connection.get_bill(created_bill['data']['apbill']['RECORDNO'], ['RECORD_URL'])
-            redirected_url_id = bill['apbill']['RECORD_URL'].split('?.r=', 1)[1]
-            created_bill['redirected_url_id'] = redirected_url_id
+            url_id = bill['apbill']['RECORD_URL'].split('?.r=', 1)[1]
+            created_bill['redirected_url_id'] = url_id
 
             if created_attachment_id:
                 try:
@@ -634,8 +634,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
 
             charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(
                 created_charge_card_transaction['key'], ['RECORD_URL'])
-            redirected_url_id = charge_card_transaction['cctransaction']['RECORD_URL'].split('?.r=', 1)[1]
-            created_charge_card_transaction['redirected_url_id'] = redirected_url_id
+            url_id = charge_card_transaction['cctransaction']['RECORD_URL'].split('?.r=', 1)[1]
+            created_charge_card_transaction['redirected_url_id'] = url_id
 
             created_attachment_id = load_attachments(sage_intacct_connection,
                                                      created_charge_card_transaction['key'], expense_group)
