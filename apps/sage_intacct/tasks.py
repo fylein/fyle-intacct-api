@@ -354,6 +354,15 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                         'message': 'Default Charge Card not found'
                     })
 
+            elif general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+                error_message = 'Employee Mapping not found'
+                Mapping.objects.get(
+                    Q(destination_type='EMPLOYEE'),
+                    source_type='EMPLOYEE',
+                    source__value=expense_group.description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                )
+
     except Mapping.DoesNotExist:
         bulk_errors.append({
             'row': None,
@@ -369,7 +378,8 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        if expense_group.fund_source == 'PERSONAL':
+        if (expense_group.fund_source == 'PERSONAL') or (expense_group.fund_source == 'CCC' and \
+            general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'):
             error_message = 'Category Mapping Not Found'
             account = Mapping.objects.filter(
                 Q(destination_type='ACCOUNT') | Q(destination_type='EXPENSE_TYPE'),
@@ -378,7 +388,8 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                 workspace_id=expense_group.workspace_id
             ).first()
 
-        elif expense_group.fund_source == 'CCC':
+        elif expense_group.fund_source == 'CCC' and \
+            general_settings.corporate_credit_card_expenses_object != 'EXPENSE_REPORT':
             error_message = 'Credit Card Expense Account Mapping Not Found'
             account = Mapping.objects.filter(
                 source_type='CATEGORY',
@@ -387,7 +398,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                 workspace_id=expense_group.workspace_id
             ).first()
 
-        if category and not account:
+        if account is None:
             bulk_errors.append({
                 'row': row,
                 'expense_group_id': expense_group.id,

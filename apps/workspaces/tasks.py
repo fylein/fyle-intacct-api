@@ -69,10 +69,9 @@ def run_sync_schedule(workspace_id):
         )
 
     if task_log.status == 'COMPLETE':
-
         if general_settings.reimbursable_expenses_object:
-
-            expense_group_ids = ExpenseGroup.objects.filter(fund_source='PERSONAL').values_list('id', flat=True)
+            expense_group_ids = ExpenseGroup.objects.filter(
+                fund_source='PERSONAL', exported_at__isnull=True).values_list('id', flat=True)
 
             if general_settings.reimbursable_expenses_object == 'EXPENSE_REPORT':
                 schedule_expense_reports_creation(
@@ -85,7 +84,8 @@ def run_sync_schedule(workspace_id):
                 )
 
         if general_settings.corporate_credit_card_expenses_object:
-            expense_group_ids = ExpenseGroup.objects.filter(fund_source='CCC').values_list('id', flat=True)
+            expense_group_ids = ExpenseGroup.objects.filter(
+                fund_source='CCC', exported_at__isnull=True).values_list('id', flat=True)
 
             if general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
                 schedule_charge_card_transaction_creation(
@@ -94,5 +94,10 @@ def run_sync_schedule(workspace_id):
 
             elif general_settings.corporate_credit_card_expenses_object == 'BILL':
                 schedule_bills_creation(
+                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                )
+
+            elif general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+                schedule_expense_reports_creation(
                     workspace_id=workspace_id, expense_group_ids=expense_group_ids
                 )
