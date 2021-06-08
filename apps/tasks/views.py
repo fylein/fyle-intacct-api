@@ -60,9 +60,9 @@ class TasksByExpenseGroupIdView(generics.RetrieveAPIView):
         """
         Get task logs by ids
         """
-        task_logs = TaskLog.objects.get(expense_group_id=kwargs['expense_group_id'])
+        task_log = TaskLog.objects.get(expense_group_id=kwargs['expense_group_id'])
 
         return Response(
-            data=self.serializer_class(task_logs).data,
+            data=self.serializer_class(task_log).data,
             status=status.HTTP_200_OK
         )
