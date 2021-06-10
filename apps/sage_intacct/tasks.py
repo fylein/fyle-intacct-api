@@ -443,14 +443,16 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
 
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-            created_expense_report = sage_intacct_connection.post_expense_report(expense_report_object, \
-                                                                                 expense_report_lineitems_objects)
+            created_expense_report = sage_intacct_connection.post_expense_report(
+                expense_report_object, expense_report_lineitems_objects)
 
-            created_attachment_id = load_attachments(sage_intacct_connection, \
-                                                     created_expense_report['data']['eexpenses']['RECORDNO'], expense_group)
+            record_no = created_expense_report['data']['eexpenses']['RECORDNO']
+            created_attachment_id = load_attachments(
+                sage_intacct_connection, record_no, expense_group)
             if created_attachment_id:
                 try:
-                    sage_intacct_connection.update_expense_report(created_expense_report['data']['eexpenses']['RECORDNO'], created_attachment_id)
+                    sage_intacct_connection.update_expense_report(
+                        record_no, created_attachment_id)
                     expense_report_object.supdoc_id = created_attachment_id
                     expense_report_object.save()
                 except Exception:
@@ -460,7 +462,10 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                         expense_group.id, expense_group.workspace_id, {'error': error}
                     )
 
-            task_log.detail = created_expense_report
+            details = {
+                'key': record_no
+            }
+            task_log.detail = details
             task_log.expense_report = expense_report_object
             task_log.status = 'COMPLETE'
 
@@ -777,9 +782,8 @@ def create_ap_payment(workspace_id):
 
                 except WrongParamsError as exception:
                     logger.error(exception.response)
-                    detail = json.loads(exception.response)
                     task_log.status = 'FAILED'
-                    task_log.detail = detail
+                    task_log.detail = exception.response
 
                     task_log.save()
 
@@ -902,9 +906,8 @@ def create_sage_intacct_reimbursement(workspace_id):
 
                 except WrongParamsError as exception:
                     logger.error(exception.response)
-                    detail = json.loads(exception.response)
                     task_log.status = 'FAILED'
-                    task_log.detail = detail
+                    task_log.detail = exception.response
 
                     task_log.save()
 
@@ -994,7 +997,7 @@ def check_sage_intacct_object_status(workspace_id):
         for bill in bills:
             bill_object = sage_intacct_connection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
 
-            if bill_object['apbill']['STATE'] == 'Paid':
+            if 'apbill' in bill_object and bill_object['apbill']['STATE'] == 'Paid':
                 line_items = BillLineitem.objects.filter(bill_id=bill.id)
                 for line_item in line_items:
                     expense = line_item.expense
@@ -1012,7 +1015,7 @@ def check_sage_intacct_object_status(workspace_id):
             expense_report_object = sage_intacct_connection.get_expense_report(
                 expense_report_ids[expense_report.expense_group_id]['sage_object_id'])
 
-            if expense_report_object['EEXPENSES']['STATE'] == 'Paid':
+            if 'EEXPENSES' in expense_report_object and expense_report_object['EEXPENSES']['STATE'] == 'Paid':
                 line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
                 for line_item in line_items:
                     expense = line_item.expense
