@@ -782,9 +782,8 @@ def create_ap_payment(workspace_id):
 
                 except WrongParamsError as exception:
                     logger.error(exception.response)
-                    detail = json.loads(exception.response)
                     task_log.status = 'FAILED'
-                    task_log.detail = detail
+                    task_log.detail = exception.response
 
                     task_log.save()
 
@@ -907,9 +906,8 @@ def create_sage_intacct_reimbursement(workspace_id):
 
                 except WrongParamsError as exception:
                     logger.error(exception.response)
-                    detail = json.loads(exception.response)
                     task_log.status = 'FAILED'
-                    task_log.detail = detail
+                    task_log.detail = exception.response
 
                     task_log.save()
 
@@ -999,7 +997,7 @@ def check_sage_intacct_object_status(workspace_id):
         for bill in bills:
             bill_object = sage_intacct_connection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
 
-            if bill_object['apbill']['STATE'] == 'Paid':
+            if 'apbill' in bill_object and bill_object['apbill']['STATE'] == 'Paid':
                 line_items = BillLineitem.objects.filter(bill_id=bill.id)
                 for line_item in line_items:
                     expense = line_item.expense
