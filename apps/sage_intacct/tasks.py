@@ -1010,17 +1010,13 @@ def check_sage_intacct_object_status(workspace_id):
 
     if expense_reports:
         expense_report_ids = get_all_sage_intacct_expense_report_ids(expense_reports)
-        print('expense_report_ids',expense_report_ids)
 
         for expense_report in expense_reports:
             expense_report_object = sage_intacct_connection.get_expense_report(
                 expense_report_ids[expense_report.expense_group_id]['sage_object_id'])
-            print('expense_report_object',expense_report_object)
 
-            if ('eexpenses' in expense_report_object and expense_report_object['eexpenses']['STATE'] == 'Paid') \
-                or ('EEXPENSES' in expense_report_object and expense_report_object['EEXPENSES']['STATE'] == 'Paid'):
+            if 'EEXPENSES' in expense_report_object and expense_report_object['EEXPENSES']['STATE'] == 'Paid':
                 line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
-                print('line_items',line_items)
                 for line_item in line_items:
                     expense = line_item.expense
                     expense.paid_on_sage_intacct = True
