@@ -443,14 +443,16 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
 
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-            created_expense_report = sage_intacct_connection.post_expense_report(expense_report_object, \
-                                                                                 expense_report_lineitems_objects)
+            created_expense_report = sage_intacct_connection.post_expense_report(
+                expense_report_object, expense_report_lineitems_objects)
 
-            created_attachment_id = load_attachments(sage_intacct_connection, \
-                                                     created_expense_report['data']['eexpenses']['RECORDNO'], expense_group)
+            record_no = created_expense_report['data']['eexpenses']['RECORDNO']
+            created_attachment_id = load_attachments(
+                sage_intacct_connection, record_no, expense_group)
             if created_attachment_id:
                 try:
-                    sage_intacct_connection.update_expense_report(created_expense_report['data']['eexpenses']['RECORDNO'], created_attachment_id)
+                    sage_intacct_connection.update_expense_report(
+                        record_no, created_attachment_id)
                     expense_report_object.supdoc_id = created_attachment_id
                     expense_report_object.save()
                 except Exception:
@@ -460,7 +462,10 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                         expense_group.id, expense_group.workspace_id, {'error': error}
                     )
 
-            task_log.detail = created_expense_report
+            details = {
+                'key': record_no
+            }
+            task_log.detail = details
             task_log.expense_report = expense_report_object
             task_log.status = 'COMPLETE'
 
