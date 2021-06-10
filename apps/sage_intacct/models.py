@@ -682,11 +682,9 @@ class APPayment(models.Model):
         :param expense_group: expense group
         :return: AP Payment object
         """
-
         description = expense_group.description
-
         expense = expense_group.expenses.first()
-        
+
         vendor_id = Mapping.objects.get(
             source_type='EMPLOYEE',
             destination_type='VENDOR',
