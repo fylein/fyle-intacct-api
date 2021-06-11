@@ -396,7 +396,7 @@ class SageIntacctConnector:
         }, self.workspace_id)
 
         return created_attribute
-    
+
     def get_or_create_employee(self, source_employee: ExpenseAttribute):
         """
         Call Sage Intacct api to get or create employee
