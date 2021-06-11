@@ -447,6 +447,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                 expense_report_object, expense_report_lineitems_objects)
 
             record_no = created_expense_report['data']['eexpenses']['RECORDNO']
+            expense_report = sage_intacct_connection.get_expense_report(record_no, ['RECORD_URL'])
+            url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
+
             created_attachment_id = load_attachments(
                 sage_intacct_connection, record_no, expense_group)
             if created_attachment_id:
@@ -463,7 +466,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                     )
 
             details = {
-                'key': record_no
+                'key': record_no,
+                'url_id': url_id
             }
             task_log.detail = details
             task_log.expense_report = expense_report_object
