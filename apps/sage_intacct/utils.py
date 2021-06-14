@@ -132,7 +132,7 @@ class SageIntacctConnector:
         """
         Get charge card accounts
         """
-        charge_card_accounts = self.connection.charge_card_accounts.get_all()
+        charge_card_accounts = self.connection.charge_card_accounts.get_all(field='LIABILITYTYPE', value='Credit')
 
         charge_card_accounts_attributes = []
 
@@ -279,8 +279,8 @@ class SageIntacctConnector:
 
         for employee in employees:
             detail = {
-                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None,
-                'full_name': employee['PERSONALINFO.PRINTAS'] if employee['PERSONALINFO.PRINTAS'] else None,
+                'email': employee['CONTACT.EMAIL1'] if employee['CONTACT.EMAIL1'] else None,
+                'full_name': employee['CONTACT.PRINTAS'] if employee['CONTACT.PRINTAS'] else None,
                 'location_id': employee['LOCATIONID'] if employee['LOCATIONID'] else None,
                 'department_id': employee['DEPARTMENTID'] if employee['DEPARTMENTID'] else None
             }
@@ -288,7 +288,7 @@ class SageIntacctConnector:
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
                 'display_name': 'employee',
-                'value': employee['CONTACT_NAME'],
+                'value': employee['CONTACT.CONTACTNAME'],
                 'destination_id': employee['EMPLOYEEID'],
                 'detail': detail
             })
@@ -303,13 +303,13 @@ class SageIntacctConnector:
         Get User Defined Dimensions
         """
 
-        dimensions = self.connection.dimensions.get()['dimension']
+        dimensions = self.connection.dimensions.get_all()
 
         for dimension in dimensions:
             if dimension['userDefinedDimension'] == 'true':
                 dimension_attributes = []
                 dimension_name = dimension['objectName']
-                dimension_values = self.connection.dimension_values.get(dimension_name)
+                dimension_values = self.connection.dimension_values.get_all(dimension_name)
 
                 for value in dimension_values:
                     dimension_attributes.append({
@@ -322,7 +322,7 @@ class SageIntacctConnector:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
                     dimension_attributes, dimension_name, self.workspace_id
                 )
-        
+
         return []
 
     def sync_dimensions(self):
@@ -398,7 +398,7 @@ class SageIntacctConnector:
         }, self.workspace_id)
 
         return created_attribute
-    
+
     def get_or_create_employee(self, source_employee: ExpenseAttribute):
         """
         Call Sage Intacct api to get or create employee
