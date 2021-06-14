@@ -500,8 +500,10 @@ class ExpenseReportLineitem(models.Model):
                 default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if\
+                default_employee_department_id is None else None
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
+                default_employee_location_id is None else None
             customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
