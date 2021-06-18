@@ -18,6 +18,7 @@ class MappingUtils:
         :param general_mapping: general mapping payload
         :return:
         """
+        print(general_mapping)
         general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=self.__workspace_id)
 
         if general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
@@ -76,7 +77,7 @@ class MappingUtils:
                 'default_ccc_expense_payment_type_name': general_mapping['default_ccc_expense_payment_type_name'],
                 'default_ccc_expense_payment_type_id': general_mapping['default_ccc_expense_payment_type_id'],
                 'use_intacct_employee_departments': general_mapping['use_intacct_employee_departments'],
-                'use_intacct_employee_locations': general_mapping['use_intacct_employee_locations']
+                'use_intacct_employee_locations': general_mapping['use_intacct_employee_locations'],
             }
         )
 
