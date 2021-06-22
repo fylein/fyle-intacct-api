@@ -121,12 +121,12 @@ def auto_create_project_mappings(workspace_id: int, source_field):
         )
 
 
-def schedule_projects_creation(import_projects, workspace_id, source_field='PROJECT'):
+def schedule_projects_creation(import_projects, workspace_id):
     if import_projects:
         start_datetime = datetime.now()
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.auto_create_project_mappings',
-            args=(workspace_id, source_field),
+            args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
                 'minutes': 24 * 60,
@@ -136,7 +136,7 @@ def schedule_projects_creation(import_projects, workspace_id, source_field='PROJ
     else:
         schedule: Schedule = Schedule.objects.filter(
             func='apps.mappings.tasks.auto_create_project_mappings',
-            args=(workspace_id, source_field)
+            args='{}'.format(workspace_id)
         ).first()
 
         if schedule:
@@ -144,8 +144,9 @@ def schedule_projects_creation(import_projects, workspace_id, source_field='PROJ
             mapping_setting = MappingSetting.objects.filter(
                 workspace_id=workspace_id, source_field='PROJECT', destination_field='PROJECT'
             ).first()
-            mapping_setting.import_to_fyle = False
-            mapping_setting.save()
+            if mapping_setting:
+                mapping_setting.import_to_fyle = False
+                mapping_setting.save()
 
 
 def async_auto_map_employees(workspace_id: int):
@@ -258,8 +259,8 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
     return payload
 
 
-def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute], workspace_id: int,
-                                     fyle_attribute: str):
+def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute],
+                                     existing_fyle_cost_centers: list):
     """
     Create Fyle Cost Centers Payload from SageIntacct Objects
     :param workspace_id: Workspace integer id
@@ -269,18 +270,127 @@ def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAtt
     """
     fyle_cost_centers_payload = []
 
-    existing_fyle_cost_centers = ExpenseAttribute.objects.filter(
-        attribute_type=fyle_attribute, workspace_id=workspace_id).values_list('value', flat=True)
-
     for si_attribute in sageintacct_attributes:
         if si_attribute.value not in existing_fyle_cost_centers:
             fyle_cost_centers_payload.append({
                 'name': si_attribute.value,
-                'code': si_attribute.destination_id,
-                'enabled': si_attribute.active
+                'enabled': True if si_attribute.active is None else si_attribute.active,
+                'description': 'Cost Center - {0}, Id - {1}'.format(
+                    si_attribute.value,
+                    si_attribute.destination_id
+                )
             })
 
     return fyle_cost_centers_payload
+
+
+def post_cost_centers_in_batches(fyle_connection: FyleConnector, workspace_id: int, sageintacct_attribute_type: str):
+    existing_cost_center_names = ExpenseAttribute.objects.filter(
+        attribute_type='COST_CENTER', workspace_id=workspace_id).values_list('value', flat=True)
+
+    si_attributes_count = DestinationAttribute.objects.filter(
+        attribute_type=sageintacct_attribute_type, workspace_id=workspace_id).count()
+
+    page_size = 200
+
+    for offset in range(0, si_attributes_count, page_size):
+        limit = offset + page_size
+        paginated_si_attributes = DestinationAttribute.objects.filter(
+            attribute_type=sageintacct_attribute_type, workspace_id=workspace_id).order_by('value', 'id')[offset:limit]
+
+        paginated_si_attributes = remove_duplicates(paginated_si_attributes)
+
+        fyle_payload: List[Dict] = create_fyle_cost_centers_payload(
+            paginated_si_attributes, existing_cost_center_names)
+
+        if fyle_payload:
+            fyle_connection.connection.CostCenters.post(fyle_payload)
+            fyle_connection.sync_cost_centers(active_only=True)
+
+        Mapping.bulk_create_mappings(paginated_si_attributes, 'COST_CENTER', sageintacct_attribute_type, workspace_id)
+
+
+def auto_create_cost_center_mappings(workspace_id, sageintacct_attribute_type):
+    """
+    Create Cost Center Mappings
+    """
+    try:
+        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+        si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+        fyle_connection = FyleConnector(
+            refresh_token=fyle_credentials.refresh_token,
+            workspace_id=workspace_id
+        )
+
+        si_connection = SageIntacctConnector(
+            credentials_object=sage_intacct_credentials,
+            workspace_id=workspace_id
+        )
+
+        fyle_connection.sync_cost_centers(active_only=True)
+
+        if sageintacct_attribute_type == 'LOCATION':
+            si_connection.sync_locations()
+
+        if sageintacct_attribute_type == 'PROJECT':
+            si_connection.sync_projects()
+
+        if sageintacct_attribute_type == 'DEPARTMENT':
+            si_connection.sync_departments()
+
+        if sageintacct_attribute_type == 'CLASS':
+            si_connection.sync_classifications()
+
+        post_cost_centers_in_batches(fyle_connection, workspace_id, sageintacct_attribute_type)
+
+    except WrongParamsError as exception:
+        logger.error(
+            'Error while creating cost centers workspace_id - %s in Fyle %s %s',
+            workspace_id, exception.message, {'error': exception.response}
+        )
+
+    except Exception:
+        error = traceback.format_exc()
+        error = {
+            'error': error
+        }
+        logger.error(
+            'Error while creating cost centers workspace_id - %s error: %s',
+            workspace_id, error
+        )
+
+
+def async_auto_map_cost_centers(workspace_id: int):
+    mapping_setting = MappingSetting.objects.get(
+        source_field='COST_CENTER', import_to_fyle=True, workspace_id=workspace_id
+    )
+
+    if mapping_setting:
+        auto_create_cost_center_mappings(workspace_id, mapping_setting.destination_field)
+
+
+def schedule_cost_centers_creation(import_to_fyle, workspace_id):
+    if import_to_fyle:
+        start_datetime = datetime.now()
+        schedule, _ = Schedule.objects.update_or_create(
+            func='apps.mappings.tasks.async_auto_map_cost_centers',
+            args='{}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': start_datetime
+            }
+        )
+    else:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.mappings.tasks.async_auto_map_cost_centers',
+            args='{}'.format(workspace_id)
+        ).first()
+
+        if schedule:
+            schedule.delete()
+
 
 
 def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[DestinationAttribute], workspace_id: int,
@@ -335,25 +445,29 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
     """
     Upload attributes to Fyle
     """
-    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_attribute_count = ExpenseAttribute.objects.filter(
+        attribute_type=fyle_attribute_type, workspace_id=workspace_id).count()
 
-    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
+    sageintacct_attribute_count = DestinationAttribute.objects.filter(
+        attribute_type=sageintacct_attribute_type, workspace_id=workspace_id).count()
 
-    sageintacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
-    )
-    sageintacct_attributes = remove_duplicates(sageintacct_attributes)
+    mappings_count = Mapping.objects.filter(
+        source_type=fyle_attribute_type, destination_type=sageintacct_attribute_type, workspace_id=workspace_id).count()
 
-    if fyle_attribute_type == 'COST_CENTER':
-        fyle_attributes_payload: List[Dict] = create_fyle_cost_centers_payload(
-            sageintacct_attributes, workspace_id, fyle_attribute_type
+    updated = False if fyle_attribute_count == sageintacct_attribute_count and mappings_count != 0 else True
+
+
+    if updated:
+        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+
+        fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
+
+        sageintacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
         )
+        sageintacct_attributes = remove_duplicates(sageintacct_attributes)
 
-        if fyle_attributes_payload:
-            fyle_connection.connection.CostCenters.post(fyle_attributes_payload)
-            fyle_connection.sync_cost_centers(active_only=True)
 
-    else:
         fyle_custom_field_payload = create_fyle_expense_custom_field_payload(
             fyle_attribute=fyle_attribute_type,
             sageintacct_attributes=sageintacct_attributes,
@@ -364,15 +478,14 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
             fyle_connection.connection.ExpensesCustomFields.post(fyle_custom_field_payload)
             fyle_connection.sync_expense_custom_fields(active_only=True)
 
-    async_task(
-        'apps.mappings.tasks.async_auto_create_expense_fields_mappings',
-        sageintacct_attributes,
-        fyle_attribute_type,
-        sageintacct_attribute_type,
-        workspace_id
-    )
+        async_task(
+            'apps.mappings.tasks.auto_create_expense_fields_mappings',
+            workspace_id,
+            sageintacct_attribute_type,
+            fyle_attribute_type
+        )
 
-    return sageintacct_attributes
+        return sageintacct_attributes
 
 
 def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str):
@@ -381,10 +494,12 @@ def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute
     :return: mappings
     """
     try:
-        fyle_attributes = upload_attributes_to_fyle(workspace_id, sageintacct_attribute_type, fyle_attribute_type)
+        fyle_attributes = upload_attributes_to_fyle(workspace_id=workspace_id,
+                                                    sageintacct_attribute_type=sageintacct_attribute_type,
+                                                    fyle_attribute_type=fyle_attribute_type)
+        if fyle_attributes:
+            Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
 
-        Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
-        return []
     except WrongParamsError as exception:
         logger.error(
             'Error while creating %s workspace_id - %s in Fyle %s %s',
@@ -400,22 +515,22 @@ def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute
         )
 
 
-def async_auto_create_expense_fields_mappings(mapping_attributes: str,
-                                              fyle_attribute_type: str,
-                                              sageintacct_attribute_type: str,
-                                              workspace_id: str):
-    print(fyle_attribute_type)
-    Mapping.bulk_create_mappings(mapping_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
-    return []
+def async_auto_create_custom_field_mappings(workspace_id: str):
+    mapping_settings = MappingSetting.objects.filter(is_custom=True, import_to_fyle=True, workspace_id=workspace_id)
+    if mapping_settings:
+        for mapping_setting in mapping_settings:
+            auto_create_expense_fields_mappings(
+                workspace_id, mapping_setting.destination_field, mapping_settings.source_field
+            )
+
 
 def schedule_fyle_attributes_creation(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str,
                                       import_to_fyle: bool):
     if import_to_fyle:
         if sageintacct_attribute_type != 'PROJECT':
             schedule, _ = Schedule.objects.update_or_create(
-                func='apps.mappings.tasks.'
-                     'auto_create_expense_fields_mappings',
-                args=(workspace_id, sageintacct_attribute_type, fyle_attribute_type),
+                func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
+                args=workspace_id,
                 defaults={
                     'schedule_type': Schedule.MINUTES,
                     'minutes': 24 * 60,
@@ -424,15 +539,15 @@ def schedule_fyle_attributes_creation(workspace_id: int, sageintacct_attribute_t
             )
         if sageintacct_attribute_type == 'PROJECT':
             general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
-            general_settings.import_projects = True
-            general_settings.save()
-            schedule_projects_creation(import_projects=general_settings.import_projects,
-                                       workspace_id=workspace_id,
-                                       source_field='PROJECT')
+            if not general_settings.import_projects:
+                general_settings.import_projects = True
+                general_settings.save()
+
+            schedule_projects_creation(import_projects=general_settings.import_projects, workspace_id=workspace_id)
     else:
         schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.auto_create_expense_fields_mappings',
-            args=(workspace_id, sageintacct_attribute_type, fyle_attribute_type)
+            func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
+            args=workspace_id
         ).first()
 
         if schedule:

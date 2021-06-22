@@ -7,7 +7,6 @@ from fyle_intacct_api.utils import assert_valid
 from .models import GeneralMapping
 from .tasks import schedule_auto_map_charge_card_employees
 
-
 class MappingUtils:
     def __init__(self, workspace_id):
         self.__workspace_id = workspace_id

@@ -16,10 +16,10 @@ from fyle_accounting_mappings.serializers import MappingSettingSerializer
 from fyle_intacct_api.utils import assert_valid
 from apps.workspaces.models import WorkspaceGeneralSettings
 
+from .tasks import schedule_fyle_attributes_creation, upload_attributes_to_fyle, schedule_cost_centers_creation
 from .serializers import GeneralMappingSerializer
 from .models import GeneralMapping
 from .utils import MappingUtils
-from .tasks import schedule_fyle_attributes_creation, upload_attributes_to_fyle
 
 
 class GeneralMappingView(generics.ListCreateAPIView):
@@ -169,9 +169,9 @@ class MappingSettingsView(ListCreateAPIView):
                             general_settings.import_projects = False
                             general_settings.save()
 
-                mapping_settings = MappingSetting.bulk_upsert_mapping_setting(
-                    all_mapping_settings, self.kwargs['workspace_id']
-                )
+            mapping_settings = MappingSetting.bulk_upsert_mapping_setting(
+                all_mapping_settings, self.kwargs['workspace_id']
+            )
 
             return Response(data=self.serializer_class(mapping_settings, many=True).data, status=status.HTTP_200_OK)
 
