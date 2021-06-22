@@ -57,7 +57,7 @@ def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_
     return payload
 
 
-def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int, source_field: str):
+def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int):
     existing_project_names = ExpenseAttribute.objects.filter(
         attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
     si_attributes_count = DestinationAttribute.objects.filter(
@@ -77,10 +77,10 @@ def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int, 
             fyle_connection.connection.Projects.post(fyle_payload)
             fyle_connection.sync_projects()
 
-        Mapping.bulk_create_mappings(paginated_si_attributes, source_field, 'PROJECT', workspace_id)
+        Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', 'PROJECT', workspace_id)
 
 
-def auto_create_project_mappings(workspace_id: int, source_field):
+def auto_create_project_mappings(workspace_id: int):
     """
     Create Project Mappings
     :return: mappings
@@ -102,7 +102,7 @@ def auto_create_project_mappings(workspace_id: int, source_field):
         fyle_connection.sync_projects()
         si_connection.sync_projects()
 
-        post_projects_in_batches(fyle_connection, workspace_id, source_field)
+        post_projects_in_batches(fyle_connection, workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
