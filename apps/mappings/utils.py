@@ -18,7 +18,6 @@ class MappingUtils:
         :param general_mapping: general mapping payload
         :return:
         """
-        print(general_mapping)
         general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=self.__workspace_id)
 
         if general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':

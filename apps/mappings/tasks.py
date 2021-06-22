@@ -6,6 +6,8 @@ from typing import List, Dict
 
 from django_q.models import Schedule
 from django.db.models import Q
+from django_q.tasks import async_task
+
 
 from fylesdk import WrongParamsError
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute
@@ -55,7 +57,7 @@ def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_
     return payload
 
 
-def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int):
+def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int, source_field: str):
     existing_project_names = ExpenseAttribute.objects.filter(
         attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
     si_attributes_count = DestinationAttribute.objects.filter(
@@ -75,10 +77,10 @@ def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int):
             fyle_connection.connection.Projects.post(fyle_payload)
             fyle_connection.sync_projects()
 
-        Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', 'PROJECT', workspace_id)
+        Mapping.bulk_create_mappings(paginated_si_attributes, source_field, 'PROJECT', workspace_id)
 
 
-def auto_create_project_mappings(workspace_id: int):
+def auto_create_project_mappings(workspace_id: int, source_field):
     """
     Create Project Mappings
     :return: mappings
@@ -100,7 +102,7 @@ def auto_create_project_mappings(workspace_id: int):
         fyle_connection.sync_projects()
         si_connection.sync_projects()
 
-        post_projects_in_batches(fyle_connection, workspace_id)
+        post_projects_in_batches(fyle_connection, workspace_id, source_field)
 
     except WrongParamsError as exception:
         logger.error(
@@ -119,12 +121,12 @@ def auto_create_project_mappings(workspace_id: int):
         )
 
 
-def schedule_projects_creation(import_projects, workspace_id):
+def schedule_projects_creation(import_projects, workspace_id, source_field='PROJECT'):
     if import_projects:
         start_datetime = datetime.now()
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.auto_create_project_mappings',
-            args='{}'.format(workspace_id),
+            args=(workspace_id, source_field),
             defaults={
                 'schedule_type': Schedule.MINUTES,
                 'minutes': 24 * 60,
@@ -134,7 +136,7 @@ def schedule_projects_creation(import_projects, workspace_id):
     else:
         schedule: Schedule = Schedule.objects.filter(
             func='apps.mappings.tasks.auto_create_project_mappings',
-            args='{}'.format(workspace_id)
+            args=(workspace_id, source_field)
         ).first()
 
         if schedule:
@@ -362,6 +364,14 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
             fyle_connection.connection.ExpensesCustomFields.post(fyle_custom_field_payload)
             fyle_connection.sync_expense_custom_fields(active_only=True)
 
+    async_task(
+        'apps.mappings.tasks.async_auto_create_expense_fields_mappings',
+        sageintacct_attributes,
+        fyle_attribute_type,
+        sageintacct_attribute_type,
+        workspace_id
+    )
+
     return sageintacct_attributes
 
 
@@ -390,12 +400,21 @@ def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute
         )
 
 
+def async_auto_create_expense_fields_mappings(mapping_attributes: str,
+                                              fyle_attribute_type: str,
+                                              sageintacct_attribute_type: str,
+                                              workspace_id: str):
+    print(fyle_attribute_type)
+    Mapping.bulk_create_mappings(mapping_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
+    return []
+
 def schedule_fyle_attributes_creation(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str,
                                       import_to_fyle: bool):
     if import_to_fyle:
         if sageintacct_attribute_type != 'PROJECT':
             schedule, _ = Schedule.objects.update_or_create(
-                func='apps.mappings.tasks.auto_create_expense_fields_mappings',
+                func='apps.mappings.tasks.'
+                     'auto_create_expense_fields_mappings',
                 args=(workspace_id, sageintacct_attribute_type, fyle_attribute_type),
                 defaults={
                     'schedule_type': Schedule.MINUTES,
@@ -407,7 +426,9 @@ def schedule_fyle_attributes_creation(workspace_id: int, sageintacct_attribute_t
             general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
             general_settings.import_projects = True
             general_settings.save()
-            schedule_projects_creation(import_projects=general_settings.import_projects, workspace_id=workspace_id)
+            schedule_projects_creation(import_projects=general_settings.import_projects,
+                                       workspace_id=workspace_id,
+                                       source_field='PROJECT')
     else:
         schedule: Schedule = Schedule.objects.filter(
             func='apps.mappings.tasks.auto_create_expense_fields_mappings',
