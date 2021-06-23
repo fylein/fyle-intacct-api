@@ -524,7 +524,7 @@ def async_auto_create_custom_field_mappings(workspace_id: str):
             )
 
 
-def schedule_fyle_attributes_creation(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str,
+def schedule_fyle_attributes_creation(workspace_id: int, sageintacct_attribute_type: str,
                                       import_to_fyle: bool):
     if import_to_fyle:
         if sageintacct_attribute_type != 'PROJECT':

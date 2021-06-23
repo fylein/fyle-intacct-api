@@ -131,43 +131,8 @@ class MappingSettingsView(ListCreateAPIView):
             all_mapping_settings = []
 
             for mapping_setting in mapping_settings:
-                if 'is_custom' not in mapping_setting:
-                    mapping_setting['source_field'] = mapping_setting['source_field'].upper().replace(' ', '_')
-                    all_mapping_settings.append(mapping_setting)
-
-                if 'is_custom' in mapping_setting and 'import_to_fyle' in mapping_setting:
-                    if mapping_setting['is_custom']:
-                        upload_attributes_to_fyle(
-                            workspace_id=self.kwargs['workspace_id'],
-                            sageintacct_attribute_type=mapping_setting['destination_field'],
-                            fyle_attribute_type=mapping_setting['source_field'],
-                        )
-
-                    mapping_setting['source_field'] = mapping_setting['source_field'].upper().replace(' ', '_')
-
-                    schedule_fyle_attributes_creation(
-                        workspace_id=self.kwargs['workspace_id'],
-                        sageintacct_attribute_type=mapping_setting['destination_field'],
-                        fyle_attribute_type=mapping_setting['source_field'],
-                        import_to_fyle=mapping_setting['import_to_fyle'],
-                    )
-
-                    all_mapping_settings.append(mapping_setting)
-
-                    if mapping_setting['destination_field'] in ['PROJECT'] and \
-                            mapping_setting['import_to_fyle'] is False:
-                        schedule: Schedule = Schedule.objects.filter(
-                            func='apps.mappings.tasks.auto_create_project_mappings',
-                            args=(self.kwargs['workspace_id']),
-                        ).first()
-
-                        if schedule:
-                            schedule.delete()
-                            general_settings = Configuration.objects.get(
-                                workspace_id=self.kwargs['workspace_id']
-                            )
-                            general_settings.import_projects = False
-                            general_settings.save()
+                mapping_setting['source_field'] = mapping_setting['source_field'].upper().replace(' ', '_')
+                all_mapping_settings.append(mapping_setting)
 
             mapping_settings = MappingSetting.bulk_upsert_mapping_setting(
                 all_mapping_settings, self.kwargs['workspace_id']
