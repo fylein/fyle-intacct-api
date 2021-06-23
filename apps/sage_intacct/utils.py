@@ -450,7 +450,7 @@ class SageIntacctConnector:
             return self.create_destination_attribute(
                 'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
     
-    def get_expense_link(self, lineitem: Expense) -> str:
+    def get_expense_link(self, lineitem) -> str:
         """
         Create Link For Fyle Expenses
         :param expense: Expense Lineitem
@@ -460,11 +460,9 @@ class SageIntacctConnector:
         fyle_connector = FyleConnector(fyle_credentials.refresh_token, self.workspace_id)
         org_id = Workspace.objects.get(id=self.workspace_id).fyle_org_id
 
-        expense = Expense.objects.get(pk=lineitem.expense_id)
-
         cluster_domain = fyle_connector.get_cluster_domain()
         expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
-            cluster_domain['cluster_domain'], expense.expense_id, org_id
+            cluster_domain['cluster_domain'], lineitem.expense.expense_id, org_id
         )
                 
         return expense_link
