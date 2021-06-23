@@ -134,7 +134,7 @@ class SageIntacctConnector:
         """
         Get charge card accounts
         """
-        charge_card_accounts = self.connection.charge_card_accounts.get_all()
+        charge_card_accounts = self.connection.charge_card_accounts.get_all(field='LIABILITYTYPE', value='Credit')
 
         charge_card_accounts_attributes = []
 
@@ -281,14 +281,16 @@ class SageIntacctConnector:
 
         for employee in employees:
             detail = {
-                'email': employee['PERSONALINFO.EMAIL1'] if employee['PERSONALINFO.EMAIL1'] else None,
-                'full_name': employee['PERSONALINFO.PRINTAS'] if employee['PERSONALINFO.PRINTAS'] else None,
+                'email': employee['CONTACT.EMAIL1'] if employee['CONTACT.EMAIL1'] else None,
+                'full_name': employee['CONTACT.PRINTAS'] if employee['CONTACT.PRINTAS'] else None,
+                'location_id': employee['LOCATIONID'] if employee['LOCATIONID'] else None,
+                'department_id': employee['DEPARTMENTID'] if employee['DEPARTMENTID'] else None
             }
 
             employee_attributes.append({
                 'attribute_type': 'EMPLOYEE',
                 'display_name': 'employee',
-                'value': employee['CONTACT_NAME'],
+                'value': employee['CONTACT.CONTACTNAME'],
                 'destination_id': employee['EMPLOYEEID'],
                 'detail': detail
             })
@@ -303,13 +305,13 @@ class SageIntacctConnector:
         Get User Defined Dimensions
         """
 
-        dimensions = self.connection.dimensions.get()['dimension']
+        dimensions = self.connection.dimensions.get_all()
 
         for dimension in dimensions:
             if dimension['userDefinedDimension'] == 'true':
                 dimension_attributes = []
                 dimension_name = dimension['objectName']
-                dimension_values = self.connection.dimension_values.get(dimension_name)
+                dimension_values = self.connection.dimension_values.get_all(dimension_name)
 
                 for value in dimension_values:
                     dimension_attributes.append({
@@ -322,7 +324,7 @@ class SageIntacctConnector:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
                     dimension_attributes, dimension_name, self.workspace_id
                 )
-        
+
         return []
 
     def sync_dimensions(self):
@@ -398,7 +400,7 @@ class SageIntacctConnector:
         }, self.workspace_id)
 
         return created_attribute
-    
+
     def get_or_create_employee(self, source_employee: ExpenseAttribute):
         """
         Call Sage Intacct api to get or create employee
@@ -754,18 +756,18 @@ class SageIntacctConnector:
         created_bill = self.connection.bills.post(bill_payload)
         return created_bill
 
-    def get_bill(self, bill_id: str):
+    def get_bill(self, bill_id: str, fields: list = None):
         """
         GET bill from SAGE Intacct
         """
-        bill = self.connection.bills.get(field='RECORDNO', value=bill_id)
+        bill = self.connection.bills.get(field='RECORDNO', value=bill_id, fields=fields)
         return bill
 
-    def get_expense_report(self, expense_report_id):
+    def get_expense_report(self, expense_report_id: str, fields: list = None):
         """
         GET expense reports from SAGE
         """
-        expense_report = self.connection.expense_reports.get(field='RECORDNO', value=expense_report_id)
+        expense_report = self.connection.expense_reports.get(field='RECORDNO', value=expense_report_id, fields=fields)
         return expense_report
 
     def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
@@ -778,6 +780,14 @@ class SageIntacctConnector:
         created_charge_card_transaction = self.connection.charge_card_transactions.post \
             (created_charge_card_transaction_payload)
         return created_charge_card_transaction
+
+    def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None):
+        """
+        GET charge card transaction from SAGE Intacct
+        """
+        charge_card_transaction = self.connection.charge_card_transactions.get(
+            field='RECORDNO', value=charge_card_transaction_id, fields=fields)
+        return charge_card_transaction
 
     def update_expense_report(self, object_key, supdocid: str):
         """
