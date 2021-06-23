@@ -450,10 +450,10 @@ class SageIntacctConnector:
             return self.create_destination_attribute(
                 'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
     
-    def get_expense_link(self, lineitem: ExpenseReportLineitem) -> str:
+    def get_expense_link(self, lineitem: Expense) -> str:
         """
         Create Link For Fyle Expenses
-        :param expense: Expense Report Lineitem
+        :param expense: Expense Lineitem
         :return: Expense link
         """
         fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
