@@ -306,6 +306,9 @@ class BillLineitem(models.Model):
         expenses = expense_group.expenses.all()
         bill = Bill.objects.get(expense_group=expense_group)
 
+        default_employee_location_id = None
+        default_employee_department_id = None
+
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -340,9 +343,17 @@ class BillLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
+            if general_mappings.use_intacct_employee_locations:
+                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
+
+            if general_mappings.use_intacct_employee_departments:
+                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
+
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
+                default_employee_department_id is None else None
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
+                default_employee_location_id is None else None
             customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
@@ -354,8 +365,9 @@ class BillLineitem(models.Model):
                     'gl_account_number': account.destination.destination_id if account else None,
                     'expense_type_id': expense_type.destination.destination_id if expense_type else None,
                     'project_id': project_id,
-                    'department_id': department_id,
-                    'location_id': location_id,
+                    'department_id': default_employee_department_id if default_employee_department_id
+                    else department_id,
+                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'user_defined_dimensions': user_defined_dimensions,
