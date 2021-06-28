@@ -456,13 +456,12 @@ class SageIntacctConnector:
         :param expense: Expense Lineitem
         :return: Expense link
         """
-        fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
-        fyle_connector = FyleConnector(fyle_credentials.refresh_token, self.workspace_id)
-        org_id = Workspace.objects.get(id=self.workspace_id).fyle_org_id
+        workspace = Workspace.objects.get(id=self.workspace_id)
+        org_id = workspace.fyle_org_id
+        cluster_domain = workspace.cluster_domain
 
-        cluster_domain = fyle_connector.get_cluster_domain()
         expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
-            cluster_domain['cluster_domain'], lineitem.expense.expense_id, org_id
+            cluster_domain, lineitem.expense.expense_id, org_id
         )
                 
         return expense_link
