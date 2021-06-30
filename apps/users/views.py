@@ -27,33 +27,6 @@ class UserProfileView(generics.RetrieveAPIView):
             status=status.HTTP_200_OK
         )
 
-class CluserDomainView(generics.RetrieveAPIView):
-    """
-    CluserDomain view
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        """
-        Get cluster domain from Fyle
-        """
-        try:
-            fyle_credentials = AuthToken.objects.get(user__user_id=request.user)
-            fyle_connector = FyleConnector(fyle_credentials.refresh_token)
-            cluser_domain = fyle_connector.get_cluster_domain()['cluster_domain']
-
-            return Response(
-                data=cluser_domain,
-                status=status.HTTP_200_OK
-            )
-        except FyleCredential.DoesNotExist:
-            return Response(
-                data={
-                    'message': 'Invalid / Expired Token'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
 class FyleOrgsView(generics.ListCreateAPIView):
     """
