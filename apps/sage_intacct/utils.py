@@ -592,6 +592,12 @@ class SageIntacctConnector:
                 },
                 'memo': lineitem.memo,
                 'locationid': lineitem.location_id,
+                'departmentid': lineitem.department_id,
+                'projectid': lineitem.project_id,
+                'customerid': lineitem.customer_id,
+                'itemid': lineitem.item_id,
+                'billable': lineitem.billable,
+                'exppmttype': lineitem.expense_payment_type,
                 'customfields': {
                    'customfield': [
                     {
@@ -599,13 +605,7 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
-                },
-                'departmentid': lineitem.department_id,
-                'projectid': lineitem.project_id,
-                'customerid': lineitem.customer_id,
-                'itemid': lineitem.item_id,
-                'billable': lineitem.billable,
-                'exppmttype': lineitem.expense_payment_type
+                }
             }
 
             for dimension in lineitem.user_defined_dimensions:
@@ -648,6 +648,11 @@ class SageIntacctConnector:
                 'TRX_AMOUNT': lineitem.amount,
                 'ENTRYDESCRIPTION': lineitem.memo,
                 'LOCATIONID': lineitem.location_id,
+                'DEPARTMENTID': lineitem.department_id,
+                'PROJECTID': lineitem.project_id,
+                'CUSTOMERID': lineitem.customer_id,
+                'ITEMID': lineitem.item_id,
+                'BILLABLE': lineitem.billable,
                 'customfields': {
                    'customfield': [
                     {
@@ -655,12 +660,7 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
-                },
-                'DEPARTMENTID': lineitem.department_id,
-                'PROJECTID': lineitem.project_id,
-                'CUSTOMERID': lineitem.customer_id,
-                'ITEMID': lineitem.item_id,
-                'BILLABLE': lineitem.billable
+                }
             }
 
             for dimension in lineitem.user_defined_dimensions:
@@ -705,6 +705,10 @@ class SageIntacctConnector:
                 'paymentamount': lineitem.amount,
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
+                'customerid': lineitem.customer_id,
+                'vendorid': charge_card_transaction.vendor_id,
+                'projectid': lineitem.project_id,
+                'itemid': lineitem.item_id,
                 'customfields': {
                    'customfield': [
                     {
@@ -712,11 +716,7 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
-                },
-                'customerid': lineitem.customer_id,
-                'vendorid': charge_card_transaction.vendor_id,
-                'projectid': lineitem.project_id,
-                'itemid': lineitem.item_id
+                }
             }
 
             charge_card_transaction_payload.append(expense)
