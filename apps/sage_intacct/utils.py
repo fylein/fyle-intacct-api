@@ -624,6 +624,7 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
+            'basecurr': expense_report.currency,
             'currency': expense_report.currency,
             'eexpensesitems': {
                 'eexpensesitem': expsense_payload
@@ -677,6 +678,7 @@ class SageIntacctConnector:
             'VENDORID': bill.vendor_id,
             'RECORDID': bill.memo,
             'WHENDUE': current_date,
+            'BASECURR': bill.currency,
             'CURRENCY': bill.currency,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
@@ -878,6 +880,8 @@ class SageIntacctConnector:
             'VENDORID': ap_payment.vendor_id,
             'DESCRIPTION': ap_payment.description,
             'PAYMENTDATE': current_date,
+            'CURRENCY': ap_payment.currency,
+            'BASECURR': ap_payment.currency,
             'APPYMTDETAILS': {
                 'APPYMTDETAIL': ap_payment_lineitems_payload
             }
