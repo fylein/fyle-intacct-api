@@ -222,6 +222,7 @@ class Bill(models.Model):
     id = models.AutoField(primary_key=True)
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
     vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
+    location_entity_id = models.CharField(max_length=255, help_text='Sage Intacct Location Entity ID', null=True)
     description = models.TextField(help_text='Sage Intacct Bill Description')
     memo = models.TextField(help_text='Sage Intacct docnumber', null=True)
     currency = models.CharField(max_length=5, help_text='Expense Report Currency')
@@ -261,6 +262,7 @@ class Bill(models.Model):
             expense_group=expense_group,
             defaults={
                 'vendor_id': vendor_id,
+                'location_entity_id': general_mappings.location_entity_id,
                 'description': description,
                 'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
                 expense_group.fund_source == 'PERSONAL' else
@@ -389,6 +391,7 @@ class ExpenseReport(models.Model):
     id = models.AutoField(primary_key=True)
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
     employee_id = models.CharField(max_length=255, help_text='Sage Intacct Employee ID')
+    location_entity_id = models.CharField(max_length=255, help_text='Sage Intacct Location Entity ID', null=True)
     description = models.TextField(help_text='Sage Intacct ExpenseReport Description')
     memo = models.TextField(help_text='Sage Intacct memo', null=True)
     currency = models.CharField(max_length=5, help_text='Expense Report Currency')
@@ -411,6 +414,7 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -421,6 +425,7 @@ class ExpenseReport(models.Model):
                     source__value=description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
                 ).destination.destination_id,
+                'location_entity_id': general_mappings.location_entity_id,
                 'description': description,
                 'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
                 expense_group.fund_source == 'PERSONAL' else
@@ -551,6 +556,7 @@ class ChargeCardTransaction(models.Model):
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
     charge_card_id = models.CharField(max_length=255, help_text='Sage Intacct Charge Card ID')
     vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
+    # location_entity_id = models.CharField(max_length=255, help_text='Sage Intacct Location Entity ID', null=True)
     description = models.TextField(help_text='Sage Intacct Charge Card Transaction Description')
     memo = models.TextField(help_text='Sage Intacct referenceno', null=True)
     reference_no = models.CharField(max_length=255, help_text='Sage Intacct Reference number to transaction')

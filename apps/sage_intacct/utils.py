@@ -247,6 +247,28 @@ class SageIntacctConnector:
 
         return []
 
+
+    def sync_location_entities(self):
+        """
+        Get location entities
+        """
+        location_entities = self.connection.location_entities.get_all()
+
+        location_entities_attributes = []
+
+        for location_entity in location_entities:
+            location_entities_attributes.append({
+                'attribute_type': 'LOCATION_ENTITY',
+                'display_name': 'location entity',
+                'value': location_entity['NAME'],
+                'destination_id': location_entity['LOCATIONID']
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            location_entities_attributes, 'LOCATION_ENTITY', self.workspace_id, True)
+
+        return []
+
     def sync_expense_payment_types(self):
         """
         Get Expense Payment Types
@@ -328,6 +350,12 @@ class SageIntacctConnector:
         return []
 
     def sync_dimensions(self):
+        try:
+            # TODO: Sync location_entities only once (After Sage Intacct account connection)
+            self.sync_location_entities()
+        except Exception as exception:
+            logger.exception(exception)
+
         try:
             self.sync_locations()
         except Exception as exception:
@@ -449,7 +477,7 @@ class SageIntacctConnector:
         else:
             return self.create_destination_attribute(
                 'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
-    
+
     def get_expense_link(self, lineitem) -> str:
         """
         Create Link For Fyle Expenses
@@ -464,7 +492,7 @@ class SageIntacctConnector:
         expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
             cluster_domain['cluster_domain'], lineitem.expense.expense_id, org_id
         )
-                
+
         return expense_link
 
     def post_employees(self, employee: ExpenseAttribute):
@@ -624,6 +652,7 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
+            'locationid': expense_report.location_entity_id,
             'basecurr': expense_report.currency,
             'currency': expense_report.currency,
             'eexpensesitems': {
@@ -680,6 +709,7 @@ class SageIntacctConnector:
             'WHENDUE': current_date,
             'BASECURR': bill.currency,
             'CURRENCY': bill.currency,
+            'LOCATIONID': bill.location_entity_id,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
             }
