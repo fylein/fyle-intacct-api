@@ -12,7 +12,6 @@ from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribu
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace
 from apps.fyle.utils import FyleConnector
-from apps.fyle.models import Expense
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -38,17 +37,19 @@ class SageIntacctConnector:
         cipher_suite = Fernet(encryption_key)
         decrypted_password = cipher_suite.decrypt(credentials_object.si_user_password.encode('utf-8')).decode('utf-8')
 
+        # TODO: Cache general_mappings
+        general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+
         self.connection = SageIntacctSDK(
             sender_id=sender_id,
             sender_password=sender_password,
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
-            user_password=decrypted_password
+            user_password=decrypted_password,
+            entity_id=general_mappings.location_entity_id
         )
 
         self.workspace_id = workspace_id
-
-        credentials_object.save()
 
     def sync_accounts(self):
         """
@@ -652,7 +653,6 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
-            'locationid': expense_report.location_entity_id,
             'basecurr': expense_report.currency,
             'currency': expense_report.currency,
             'eexpensesitems': {
@@ -709,7 +709,6 @@ class SageIntacctConnector:
             'WHENDUE': current_date,
             'BASECURR': bill.currency,
             'CURRENCY': bill.currency,
-            'LOCATIONID': bill.location_entity_id,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
             }
