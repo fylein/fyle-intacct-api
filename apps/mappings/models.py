@@ -11,6 +11,8 @@ class GeneralMapping(models.Model):
     General Mappings
     """
     id = models.AutoField(primary_key=True)
+    location_entity_name = models.CharField(max_length=255, help_text='Location Entity name', null=True)
+    location_entity_id = models.CharField(max_length=255, help_text='Location Entity ID', null=True)
     default_location_name = models.CharField(max_length=255, help_text='Default location name', null=True)
     default_location_id = models.CharField(max_length=255, help_text='Default location ID', null=True)
     default_department_name = models.CharField(max_length=255, help_text='Default department name', null=True)
