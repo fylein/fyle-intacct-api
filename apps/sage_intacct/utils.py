@@ -46,7 +46,7 @@ class SageIntacctConnector:
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
             user_password=decrypted_password,
-            entity_id=general_mappings.location_entity_id
+            entity_id=general_mappings.location_entity_id if general_mappings else None
         )
 
         self.workspace_id = workspace_id
