@@ -16,6 +16,7 @@ from apps.fyle.utils import FyleConnector
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, WorkspaceGeneralSettings
+from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +34,10 @@ def remove_duplicates(si_attributes: List[DestinationAttribute]):
     return unique_attributes
 
 
-def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_project_names: list, workspace_id: int):
+def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_project_names: list):
     """
     Create Fyle Projects Payload from Sage Intacct Projects and Customers
     :param projects: Sage Intacct Projects
-    :param workspace_id: integer id of workspace
     :return: Fyle Projects Payload
     """
     payload = []
@@ -57,27 +57,27 @@ def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_
     return payload
 
 
-def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int):
+def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int, destination_field: str):
     existing_project_names = ExpenseAttribute.objects.filter(
         attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
     si_attributes_count = DestinationAttribute.objects.filter(
-        attribute_type='PROJECT', workspace_id=workspace_id).count()
+        attribute_type=destination_field, workspace_id=workspace_id).count()
     page_size = 200
 
     for offset in range(0, si_attributes_count, page_size):
         limit = offset + page_size
         paginated_si_attributes = DestinationAttribute.objects.filter(
-            attribute_type='PROJECT', workspace_id=workspace_id).order_by('value', 'id')[offset:limit]
+            attribute_type=destination_field, workspace_id=workspace_id).order_by('value', 'id')[offset:limit]
 
         paginated_si_attributes = remove_duplicates(paginated_si_attributes)
 
         fyle_payload: List[Dict] = create_fyle_projects_payload(
-            paginated_si_attributes, existing_project_names, workspace_id)
+            paginated_si_attributes, existing_project_names)
         if fyle_payload:
             fyle_connection.connection.Projects.post(fyle_payload)
             fyle_connection.sync_projects()
 
-        Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', 'PROJECT', workspace_id)
+        Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', destination_field, workspace_id)
 
 
 def auto_create_project_mappings(workspace_id: int):
@@ -102,7 +102,11 @@ def auto_create_project_mappings(workspace_id: int):
         fyle_connection.sync_projects()
         si_connection.sync_projects()
 
-        post_projects_in_batches(fyle_connection, workspace_id)
+        mapping_setting = MappingSetting.objects.get(
+            source_field='PROJECT', workspace_id=workspace_id
+        )
+
+        post_projects_in_batches(fyle_connection, workspace_id, mapping_setting.destination_field)
 
     except WrongParamsError as exception:
         logger.error(
@@ -121,16 +125,15 @@ def auto_create_project_mappings(workspace_id: int):
         )
 
 
-def schedule_projects_creation(import_projects, workspace_id):
-    if import_projects:
-        start_datetime = datetime.now()
+def schedule_projects_creation(import_to_fyle, workspace_id):
+    if import_to_fyle:
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.auto_create_project_mappings',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
                 'minutes': 24 * 60,
-                'next_run': start_datetime
+                'next_run': datetime.now()
             }
         )
     else:
@@ -259,8 +262,7 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
     return payload
 
 
-def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute],
-                                     existing_fyle_cost_centers: list):
+def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute], existing_fyle_cost_centers: list):
     """
     Create Fyle Cost Centers Payload from SageIntacct Objects
     :param workspace_id: Workspace integer id
@@ -333,14 +335,17 @@ def auto_create_cost_center_mappings(workspace_id, sageintacct_attribute_type):
         if sageintacct_attribute_type == 'LOCATION':
             si_connection.sync_locations()
 
-        if sageintacct_attribute_type == 'PROJECT':
+        elif sageintacct_attribute_type == 'PROJECT':
             si_connection.sync_projects()
 
-        if sageintacct_attribute_type == 'DEPARTMENT':
+        elif sageintacct_attribute_type == 'DEPARTMENT':
             si_connection.sync_departments()
 
-        if sageintacct_attribute_type == 'CLASS':
+        elif sageintacct_attribute_type == 'CLASS':
             si_connection.sync_classifications()
+        
+        else:
+            si_connection.sync_dimensions()
 
         post_cost_centers_in_batches(fyle_connection, workspace_id, sageintacct_attribute_type)
 
@@ -372,14 +377,13 @@ def async_auto_map_cost_centers(workspace_id: int):
 
 def schedule_cost_centers_creation(import_to_fyle, workspace_id):
     if import_to_fyle:
-        start_datetime = datetime.now()
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.async_auto_map_cost_centers',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
                 'minutes': 24 * 60,
-                'next_run': start_datetime
+                'next_run': datetime.now()
             }
         )
     else:
@@ -393,8 +397,7 @@ def schedule_cost_centers_creation(import_to_fyle, workspace_id):
 
 
 
-def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[DestinationAttribute], workspace_id: int,
-                                             fyle_attribute: str):
+def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[DestinationAttribute], workspace_id: int, fyle_attribute: str):
     """
     Create Fyle Expense Custom Field Payload from SageIntacct Objects
     :param workspace_id: Workspace ID
@@ -402,18 +405,12 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
     :param fyle_attribute: Fyle Attribute
     :return: Fyle Expense Custom Field Payload
     """
-    system_fields = ['employee id', 'organisation name', 'employee name', 'employee email', 'expense date',
-                     'expense id', 'report id', 'employee id', 'department', 'state', 'reporter', 'report',
-                     'purpose', 'vendor', 'category', 'category code', 'mileage distance', 'mileage unit',
-                     'flight from city', 'flight to city', 'flight from date', 'flight to date', 'flight from class',
-                     'flight to class', 'hotel checkin', 'hotel checkout', 'hotel location', 'hotel breakfast',
-                     'currency', 'amount', 'foreign currency', 'foreign amount', 'tax', 'approver', 'project',
-                     'billable', 'cost center', 'cost center code', 'approved on', 'reimbursable', 'receipts',
-                     'paid date', 'expense created date']
 
     fyle_expense_custom_field_options = []
 
-    if fyle_attribute.lower() not in system_fields:
+    [fyle_expense_custom_field_options.append(sageintacct_attribute.value) for sageintacct_attribute in sageintacct_attributes]
+
+    if fyle_attribute.lower() not in FYLE_EXPENSE_SYSTEM_FIELDS:
         existing_attribute = ExpenseAttribute.objects.filter(
             attribute_type=fyle_attribute, workspace_id=workspace_id).values_list('detail', flat=True).first()
 
@@ -475,15 +472,9 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
         )
 
         if fyle_custom_field_payload:
+            print(fyle_custom_field_payload)
             fyle_connection.connection.ExpensesCustomFields.post(fyle_custom_field_payload)
             fyle_connection.sync_expense_custom_fields(active_only=True)
-
-        async_task(
-            'apps.mappings.tasks.auto_create_expense_fields_mappings',
-            workspace_id,
-            sageintacct_attribute_type,
-            fyle_attribute_type
-        )
 
         return sageintacct_attributes
 
@@ -494,9 +485,7 @@ def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute
     :return: mappings
     """
     try:
-        fyle_attributes = upload_attributes_to_fyle(workspace_id=workspace_id,
-                                                    sageintacct_attribute_type=sageintacct_attribute_type,
-                                                    fyle_attribute_type=fyle_attribute_type)
+        fyle_attributes = upload_attributes_to_fyle(workspace_id=workspace_id, sageintacct_attribute_type=sageintacct_attribute_type, fyle_attribute_type=fyle_attribute_type)
         if fyle_attributes:
             Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
 
@@ -524,26 +513,20 @@ def async_auto_create_custom_field_mappings(workspace_id: str):
             )
 
 
-def schedule_fyle_attributes_creation(workspace_id: int, sageintacct_attribute_type: str,
-                                      import_to_fyle: bool):
-    if import_to_fyle:
-        if sageintacct_attribute_type != 'PROJECT':
-            schedule, _ = Schedule.objects.update_or_create(
-                func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
-                args=workspace_id,
-                defaults={
-                    'schedule_type': Schedule.MINUTES,
-                    'minutes': 24 * 60,
-                    'next_run': datetime.now() + timedelta(hours=24)
-                }
-            )
-        if sageintacct_attribute_type == 'PROJECT':
-            general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
-            if not general_settings.import_projects:
-                general_settings.import_projects = True
-                general_settings.save()
-
-            schedule_projects_creation(import_projects=general_settings.import_projects, workspace_id=workspace_id)
+def schedule_fyle_attributes_creation(workspace_id: int):
+    mapping_setting = MappingSetting.objects.filter(
+        is_custom=True, import_to_fyle=True, workspace_id=workspace_id
+    )
+    if mapping_setting:
+        schedule, _=Schedule.objects.get_or_create(
+            func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
+            args='{0}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': datetime.now() + timedelta(hours=24)
+            }
+        )
     else:
         schedule: Schedule = Schedule.objects.filter(
             func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
