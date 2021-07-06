@@ -249,7 +249,8 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
 
     return payload
 
-def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str):
+def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
+    corporate_credit_card_expenses_object: str):
     """
     Upload categories to Fyle
     """
@@ -267,13 +268,14 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     )
     fyle_connection.sync_categories(False)
 
-    if reimbursable_expenses_object == 'EXPENSE_REPORT':
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
         si_connection.sync_expense_types()
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='EXPENSE_TYPE'
         )
 
-    else:
+    if reimbursable_expenses_object == 'BILL' or \
+        corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION'):
         si_connection.sync_accounts()
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
@@ -380,7 +382,8 @@ def auto_create_category_mappings(workspace_id):
 
     try:
         fyle_categories = upload_categories_to_fyle(
-            workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
+            workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object,
+            corporate_credit_card_expenses_object=corporate_credit_card_expenses_object)
 
         Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
 
