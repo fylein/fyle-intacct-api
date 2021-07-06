@@ -249,6 +249,15 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
 
     return payload
 
+def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate_credit_card_expenses_object: str,
+    si_connection: SageIntacctConnector):
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+        si_connection.sync_expense_types()
+
+    if reimbursable_expenses_object == 'BILL' or \
+        corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION'):
+        si_connection.sync_accounts()
+
 def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
     corporate_credit_card_expenses_object: str):
     """
@@ -268,15 +277,13 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     )
     fyle_connection.sync_categories(False)
 
-    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-        si_connection.sync_expense_types()
+    sync_expense_types_and_accounts(reimbursable_expenses_object, corporate_credit_card_expenses_object, si_connection)
+
+    if reimbursable_expenses_object == 'EXPENSE_REPORT':
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='EXPENSE_TYPE'
         )
-
-    if reimbursable_expenses_object == 'BILL' or \
-        corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION'):
-        si_connection.sync_accounts()
+    else:
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
         ).all()
