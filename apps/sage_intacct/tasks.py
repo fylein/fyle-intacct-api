@@ -471,6 +471,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             }
             task_log.detail = details
             task_log.expense_report = expense_report_object
+            task_log.sage_intacct_errors = None
             task_log.status = 'COMPLETE'
 
             task_log.save()
@@ -566,6 +567,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
 
             task_log.detail = created_bill
             task_log.bill = bill_object
+            task_log.sage_intacct_errors = None
             task_log.status = 'COMPLETE'
 
             task_log.save()
@@ -658,6 +660,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
 
             task_log.detail = created_charge_card_transaction
             task_log.charge_card_transaction = charge_card_transaction_object
+            task_log.sage_intacct_errors = None
             task_log.status = 'COMPLETE'
 
             task_log.save()
