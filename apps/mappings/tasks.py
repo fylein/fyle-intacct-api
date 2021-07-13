@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict
 
 from django_q.models import Schedule
-from django.db.models import Q
+from django.db.models import Q, Count
 
 from fylesdk import WrongParamsError
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute
@@ -537,7 +537,17 @@ def schedule_fyle_attributes_creation(workspace_id: int):
             schedule.delete()
 
 
-def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str):
+def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate_credit_card_expenses_object: str,
+    si_connection: SageIntacctConnector):
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+        si_connection.sync_expense_types()
+
+    if reimbursable_expenses_object == 'BILL' or \
+        corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION'):
+        si_connection.sync_accounts()
+
+def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
+    corporate_credit_card_expenses_object: str):
     """
     Upload categories to Fyle
     """
@@ -555,14 +565,13 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     )
     fyle_connection.sync_categories(False)
 
+    sync_expense_types_and_accounts(reimbursable_expenses_object, corporate_credit_card_expenses_object, si_connection)
+
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
-        si_connection.sync_expense_types()
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='EXPENSE_TYPE'
         )
-
     else:
-        si_connection.sync_accounts()
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='ACCOUNT'
         ).all()
@@ -577,33 +586,79 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
 
     return si_attributes
 
-
-def create_credit_card_category_mappings(reimbursable_expenses_object,
-                                         corporate_credit_card_expenses_object, workspace_id, destination):
+def create_credit_card_category_mappings(reimbursable_expenses_object: str,
+    corporate_credit_card_expenses_object: str, workspace_id: int):
     """
     Create credit card mappings
     """
+    destination_type = 'CCC_ACCOUNT'
+    mapping_batch = []
+    category_mappings = Mapping.objects.filter(
+        source_id__in=Mapping.objects.filter(
+            workspace_id=workspace_id, source_type='CATEGORY'
+        ).values('source_id').annotate(
+            count=Count('source_id')
+        ).filter(count=1).values_list('source_id')
+    )
 
-    if reimbursable_expenses_object == 'EXPENSE_REPORT' and \
-            corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
-        Mapping.create_or_update_mapping(
-            source_type='CATEGORY',
-            destination_type='CCC_ACCOUNT',
-            source_value=destination.value,
-            destination_value=destination.detail['gl_account_title'],
-            destination_id=destination.detail['gl_account_no'],
-            workspace_id=workspace_id
-        )
-    elif reimbursable_expenses_object == 'BILL' and \
-            corporate_credit_card_expenses_object in ['BILL', 'CHARGE_CARD_TRANSACTION']:
-        Mapping.create_or_update_mapping(
-            source_type='CATEGORY',
-            destination_type='CCC_ACCOUNT',
-            source_value=destination.value,
-            destination_value=destination.value,
-            destination_id=destination.destination_id,
-            workspace_id=workspace_id
-        )
+    destination_values = []
+    gl_account_ids = []
+    for mapping in category_mappings:
+        destination_values.append(mapping.destination.value)
+        if mapping.destination.detail and 'gl_account_no' in mapping.destination.detail:
+            gl_account_ids.append(mapping.destination.detail['gl_account_no'])
+
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' and corporate_credit_card_expenses_object in (
+        'BILL', 'CHARGE_CARD_TRANSACTION'):
+        destination_attributes = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id,
+            attribute_type=destination_type,
+            destination_id__in=gl_account_ids
+        ).all()
+    else:
+        destination_attributes = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id,
+            attribute_type=destination_type,
+            value__in=destination_values
+        ).all()
+
+    destination_id_map = {}
+    for attribute in destination_attributes:
+        destination_id_map[attribute.value] = {
+            'id': attribute.id,
+            'destination_id': attribute.destination_id
+        }
+
+    for mapping in category_mappings:
+        if reimbursable_expenses_object == 'EXPENSE_REPORT' and corporate_credit_card_expenses_object in (
+            'BILL', 'CHARGE_CARD_TRANSACTION'):
+            for value in destination_id_map:
+                if destination_id_map[value]['destination_id'] == mapping.destination.detail['gl_account_no']:
+                    mapping_batch.append(
+                        Mapping(
+                            source_type='CATEGORY',
+                            destination_type=destination_type,
+                            source_id=mapping.source.id,
+                            destination_id=destination_id_map[value]['id'],
+                            workspace_id=workspace_id
+                        )
+                    )
+                    break
+        elif reimbursable_expenses_object == 'BILL' and corporate_credit_card_expenses_object in (
+            'BILL', 'CHARGE_CARD_TRANSACTION'):
+            mapping_batch.append(
+                Mapping(
+                    source_type='CATEGORY',
+                    destination_type=destination_type,
+                    source_id=mapping.source.id,
+                    destination_id=destination_id_map[mapping.destination.value]['id'],
+                    workspace_id=workspace_id
+                )
+            )
+
+    if mapping_batch:
+        Mapping.objects.bulk_create(mapping_batch, batch_size=50)
+
 
 
 def auto_create_category_mappings(workspace_id):
@@ -623,13 +678,14 @@ def auto_create_category_mappings(workspace_id):
 
     try:
         fyle_categories = upload_categories_to_fyle(
-            workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object)
+            workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object,
+            corporate_credit_card_expenses_object=corporate_credit_card_expenses_object)
 
         Mapping.bulk_create_mappings(fyle_categories, 'CATEGORY', reimbursable_destination_type, workspace_id)
 
-        for category in fyle_categories:
+        if corporate_credit_card_expenses_object:
             create_credit_card_category_mappings(
-                reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id, category)
+                reimbursable_expenses_object, corporate_credit_card_expenses_object, workspace_id)
 
         return []
 

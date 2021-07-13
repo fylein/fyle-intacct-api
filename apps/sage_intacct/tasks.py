@@ -447,6 +447,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                 expense_report_object, expense_report_lineitems_objects)
 
             record_no = created_expense_report['data']['eexpenses']['RECORDNO']
+            expense_report = sage_intacct_connection.get_expense_report(record_no, ['RECORD_URL'])
+            url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
+
             created_attachment_id = load_attachments(
                 sage_intacct_connection, record_no, expense_group)
             if created_attachment_id:
@@ -463,10 +466,12 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                     )
 
             details = {
-                'key': record_no
+                'key': record_no,
+                'url_id': url_id
             }
             task_log.detail = details
             task_log.expense_report = expense_report_object
+            task_log.sage_intacct_errors = None
             task_log.status = 'COMPLETE'
 
             task_log.save()
@@ -543,6 +548,10 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             created_attachment_id = load_attachments(sage_intacct_connection, \
                                                      created_bill['data']['apbill']['RECORDNO'], expense_group)
 
+            bill = sage_intacct_connection.get_bill(created_bill['data']['apbill']['RECORDNO'], ['RECORD_URL'])
+            url_id = bill['apbill']['RECORD_URL'].split('?.r=', 1)[1]
+            created_bill['url_id'] = url_id
+
             if created_attachment_id:
                 try:
                     sage_intacct_connection.update_bill(created_bill['data']['apbill']['RECORDNO'], \
@@ -558,6 +567,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
 
             task_log.detail = created_bill
             task_log.bill = bill_object
+            task_log.sage_intacct_errors = None
             task_log.status = 'COMPLETE'
 
             task_log.save()
@@ -625,14 +635,19 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
 
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-            created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction( \
+            created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
 
-            created_attachment_id = load_attachments(sage_intacct_connection, \
+            charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(
+                created_charge_card_transaction['key'], ['RECORD_URL'])
+            url_id = charge_card_transaction['cctransaction']['RECORD_URL'].split('?.r=', 1)[1]
+            created_charge_card_transaction['url_id'] = url_id
+
+            created_attachment_id = load_attachments(sage_intacct_connection,
                                                      created_charge_card_transaction['key'], expense_group)
             if created_attachment_id:
                 try:
-                    sage_intacct_connection.update_charge_card_transaction( \
+                    sage_intacct_connection.update_charge_card_transaction(
                         created_charge_card_transaction['key'], created_attachment_id)
                     charge_card_transaction_object.supdoc_id = created_attachment_id
                     charge_card_transaction_object.save()
@@ -645,6 +660,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
 
             task_log.detail = created_charge_card_transaction
             task_log.charge_card_transaction = charge_card_transaction_object
+            task_log.sage_intacct_errors = None
             task_log.status = 'COMPLETE'
 
             task_log.save()

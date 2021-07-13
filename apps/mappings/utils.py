@@ -54,6 +54,8 @@ class MappingUtils:
         general_mapping_object, _ = GeneralMapping.objects.update_or_create(
             workspace_id=self.__workspace_id,
             defaults={
+                'location_entity_name': general_mapping['location_entity_name'],
+                'location_entity_id': general_mapping['location_entity_id'],
                 'default_location_name': general_mapping['default_location_name'],
                 'default_location_id': general_mapping['default_location_id'],
                 'payment_account_name': general_mapping['payment_account_name'],
