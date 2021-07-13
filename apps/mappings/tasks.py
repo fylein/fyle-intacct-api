@@ -6,8 +6,6 @@ from typing import List, Dict
 
 from django_q.models import Schedule
 from django.db.models import Q
-from django_q.tasks import async_task
-
 
 from fylesdk import WrongParamsError
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute
@@ -87,24 +85,20 @@ def auto_create_project_mappings(workspace_id: int):
     """
     try:
         fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-        sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
         fyle_connection = FyleConnector(
             refresh_token=fyle_credentials.refresh_token,
             workspace_id=workspace_id
         )
 
-        si_connection = SageIntacctConnector(
-            credentials_object=sage_intacct_credentials,
-            workspace_id=workspace_id
-        )
 
         fyle_connection.sync_projects()
-        si_connection.sync_projects()
 
         mapping_setting = MappingSetting.objects.get(
             source_field='PROJECT', workspace_id=workspace_id
         )
+
+        sync_sageintacct_attribute(mapping_setting.destination_field, workspace_id)
 
         post_projects_in_batches(fyle_connection, workspace_id, mapping_setting.destination_field)
 
@@ -262,6 +256,30 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
     return payload
 
 
+def sync_sageintacct_attribute(sageintacct_attribute_type: str, workspace_id: int):
+    sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    if sageintacct_attribute_type == 'LOCATION':
+        sage_intacct_connection.sync_locations()
+
+    elif sageintacct_attribute_type == 'PROJECT':
+        sage_intacct_connection.sync_projects()
+
+    elif sageintacct_attribute_type == 'DEPARTMENT':
+        sage_intacct_connection.sync_departments()
+
+    elif sageintacct_attribute_type == 'CLASS':
+        sage_intacct_connection.sync_classifications()
+
+    else:
+        sage_intacct_connection.sync_dimensions()
+
+
 def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute], existing_fyle_cost_centers: list):
     """
     Create Fyle Cost Centers Payload from SageIntacct Objects
@@ -318,34 +336,15 @@ def auto_create_cost_center_mappings(workspace_id, sageintacct_attribute_type):
     """
     try:
         fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-        si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
         fyle_connection = FyleConnector(
             refresh_token=fyle_credentials.refresh_token,
             workspace_id=workspace_id
         )
 
-        si_connection = SageIntacctConnector(
-            credentials_object=sage_intacct_credentials,
-            workspace_id=workspace_id
-        )
-
         fyle_connection.sync_cost_centers(active_only=True)
 
-        if sageintacct_attribute_type == 'LOCATION':
-            si_connection.sync_locations()
-
-        elif sageintacct_attribute_type == 'PROJECT':
-            si_connection.sync_projects()
-
-        elif sageintacct_attribute_type == 'DEPARTMENT':
-            si_connection.sync_departments()
-
-        elif sageintacct_attribute_type == 'CLASS':
-            si_connection.sync_classifications()
-        
-        else:
-            si_connection.sync_dimensions()
+        sync_sageintacct_attribute(mapping_setting.destination_field, workspace_id)
 
         post_cost_centers_in_batches(fyle_connection, workspace_id, sageintacct_attribute_type)
 
@@ -472,7 +471,6 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
         )
 
         if fyle_custom_field_payload:
-            print(fyle_custom_field_payload)
             fyle_connection.connection.ExpensesCustomFields.post(fyle_custom_field_payload)
             fyle_connection.sync_expense_custom_fields(active_only=True)
 
@@ -508,16 +506,18 @@ def async_auto_create_custom_field_mappings(workspace_id: str):
     mapping_settings = MappingSetting.objects.filter(is_custom=True, import_to_fyle=True, workspace_id=workspace_id)
     if mapping_settings:
         for mapping_setting in mapping_settings:
+            sync_sageintacct_attribute(mapping_setting.destination_field, workspace_id)
             auto_create_expense_fields_mappings(
-                workspace_id, mapping_setting.destination_field, mapping_settings.source_field
+                workspace_id, mapping_setting.destination_field, mapping_setting.source_field
             )
 
 
 def schedule_fyle_attributes_creation(workspace_id: int):
-    mapping_setting = MappingSetting.objects.filter(
+    mapping_settings = MappingSetting.objects.filter(
         is_custom=True, import_to_fyle=True, workspace_id=workspace_id
-    )
-    if mapping_setting:
+    ).all()
+
+    if mapping_settings:
         schedule, _=Schedule.objects.get_or_create(
             func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
             args='{0}'.format(workspace_id),
