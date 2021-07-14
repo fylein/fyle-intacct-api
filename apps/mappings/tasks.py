@@ -138,12 +138,6 @@ def schedule_projects_creation(import_to_fyle, workspace_id):
 
         if schedule:
             schedule.delete()
-            mapping_setting = MappingSetting.objects.filter(
-                workspace_id=workspace_id, source_field='PROJECT', destination_field='PROJECT'
-            ).first()
-            if mapping_setting:
-                mapping_setting.import_to_fyle = False
-                mapping_setting.save()
 
 
 def async_auto_map_employees(workspace_id: int):
@@ -330,7 +324,7 @@ def post_cost_centers_in_batches(fyle_connection: FyleConnector, workspace_id: i
         Mapping.bulk_create_mappings(paginated_si_attributes, 'COST_CENTER', sageintacct_attribute_type, workspace_id)
 
 
-def auto_create_cost_center_mappings(workspace_id, sageintacct_attribute_type):
+def auto_create_cost_center_mappings(workspace_id):
     """
     Create Cost Center Mappings
     """
@@ -342,11 +336,15 @@ def auto_create_cost_center_mappings(workspace_id, sageintacct_attribute_type):
             workspace_id=workspace_id
         )
 
+        mapping_setting = MappingSetting.objects.get(
+            source_field='COST_CENTER', import_to_fyle=True, workspace_id=workspace_id
+        )
+
         fyle_connection.sync_cost_centers(active_only=True)
 
         sync_sageintacct_attribute(mapping_setting.destination_field, workspace_id)
 
-        post_cost_centers_in_batches(fyle_connection, workspace_id, sageintacct_attribute_type)
+        post_cost_centers_in_batches(fyle_connection, workspace_id, mapping_setting.destination_field)
 
     except WrongParamsError as exception:
         logger.error(
@@ -365,19 +363,10 @@ def auto_create_cost_center_mappings(workspace_id, sageintacct_attribute_type):
         )
 
 
-def async_auto_map_cost_centers(workspace_id: int):
-    mapping_setting = MappingSetting.objects.get(
-        source_field='COST_CENTER', import_to_fyle=True, workspace_id=workspace_id
-    )
-
-    if mapping_setting:
-        auto_create_cost_center_mappings(workspace_id, mapping_setting.destination_field)
-
-
 def schedule_cost_centers_creation(import_to_fyle, workspace_id):
     if import_to_fyle:
         schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.async_auto_map_cost_centers',
+            func='apps.mappings.tasks.auto_create_cost_center_mappings',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -387,7 +376,7 @@ def schedule_cost_centers_creation(import_to_fyle, workspace_id):
         )
     else:
         schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.async_auto_map_cost_centers',
+            func='apps.mappings.tasks.auto_create_cost_center_mappings',
             args='{}'.format(workspace_id)
         ).first()
 

@@ -3,11 +3,9 @@ Mappings Signal
 """
 from django.db.models import Q
 from django.db.models.signals import post_save, pre_save
-from typing import List, Dict
 
 from django.dispatch import receiver
-from datetime import datetime, timedelta
-from apps.workspaces.models import WorkspaceGeneralSettings
+from datetime import datetime
 
 from django_q.models import Schedule
 from django_q.tasks import async_task
@@ -34,7 +32,7 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
 
 
 @receiver(pre_save, sender=MappingSetting)
-def run_porun_pre_mapping_settings_triggersst_save(sender, instance: MappingSetting, **kwargs):
+def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
     """
         :param sender: Sender Class
         :param instance: Row instance of Sender Class
@@ -42,7 +40,7 @@ def run_porun_pre_mapping_settings_triggersst_save(sender, instance: MappingSett
     """
     default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER']
 
-    instance.source_field = instance.source_field .upper().replace(' ', '_')
+    instance.source_field = instance.source_field.upper().replace(' ', '_')
 
     attributes = ExpenseAttribute.objects.filter(
         ~Q(attribute_type__in=default_attributes),
