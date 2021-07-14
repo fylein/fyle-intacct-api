@@ -12,7 +12,6 @@ from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribu
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace
 from apps.fyle.utils import FyleConnector
-from apps.fyle.models import Expense
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -38,17 +37,19 @@ class SageIntacctConnector:
         cipher_suite = Fernet(encryption_key)
         decrypted_password = cipher_suite.decrypt(credentials_object.si_user_password.encode('utf-8')).decode('utf-8')
 
+        # TODO: Cache general_mappings
+        general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+
         self.connection = SageIntacctSDK(
             sender_id=sender_id,
             sender_password=sender_password,
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
-            user_password=decrypted_password
+            user_password=decrypted_password,
+            entity_id=general_mappings.location_entity_id if general_mappings else None
         )
 
         self.workspace_id = workspace_id
-
-        credentials_object.save()
 
     def sync_accounts(self):
         """
@@ -247,6 +248,28 @@ class SageIntacctConnector:
 
         return []
 
+
+    def sync_location_entities(self):
+        """
+        Get location entities
+        """
+        location_entities = self.connection.location_entities.get_all()
+
+        location_entities_attributes = []
+
+        for location_entity in location_entities:
+            location_entities_attributes.append({
+                'attribute_type': 'LOCATION_ENTITY',
+                'display_name': 'location entity',
+                'value': location_entity['NAME'],
+                'destination_id': location_entity['LOCATIONID']
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            location_entities_attributes, 'LOCATION_ENTITY', self.workspace_id, True)
+
+        return []
+
     def sync_expense_payment_types(self):
         """
         Get Expense Payment Types
@@ -328,6 +351,12 @@ class SageIntacctConnector:
         return []
 
     def sync_dimensions(self):
+        try:
+            # TODO: Sync location_entities only once (After Sage Intacct account connection)
+            self.sync_location_entities()
+        except Exception as exception:
+            logger.exception(exception)
+
         try:
             self.sync_locations()
         except Exception as exception:
@@ -449,7 +478,7 @@ class SageIntacctConnector:
         else:
             return self.create_destination_attribute(
                 'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
-    
+
     def get_expense_link(self, lineitem) -> str:
         """
         Create Link For Fyle Expenses
@@ -463,7 +492,7 @@ class SageIntacctConnector:
         expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
             cluster_domain, lineitem.expense.expense_id, org_id
         )
-                
+
         return expense_link
 
     def post_employees(self, employee: ExpenseAttribute):
@@ -591,6 +620,12 @@ class SageIntacctConnector:
                 },
                 'memo': lineitem.memo,
                 'locationid': lineitem.location_id,
+                'departmentid': lineitem.department_id,
+                'projectid': lineitem.project_id,
+                'customerid': lineitem.customer_id,
+                'itemid': lineitem.item_id,
+                'billable': lineitem.billable,
+                'exppmttype': lineitem.expense_payment_type,
                 'customfields': {
                    'customfield': [
                     {
@@ -598,13 +633,7 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
-                },
-                'departmentid': lineitem.department_id,
-                'projectid': lineitem.project_id,
-                'customerid': lineitem.customer_id,
-                'itemid': lineitem.item_id,
-                'billable': lineitem.billable,
-                'exppmttype': lineitem.expense_payment_type
+                }
             }
 
             for dimension in lineitem.user_defined_dimensions:
@@ -623,6 +652,7 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
+            'basecurr': expense_report.currency,
             'currency': expense_report.currency,
             'eexpensesitems': {
                 'eexpensesitem': expsense_payload
@@ -646,6 +676,11 @@ class SageIntacctConnector:
                 'TRX_AMOUNT': lineitem.amount,
                 'ENTRYDESCRIPTION': lineitem.memo,
                 'LOCATIONID': lineitem.location_id,
+                'DEPARTMENTID': lineitem.department_id,
+                'PROJECTID': lineitem.project_id,
+                'CUSTOMERID': lineitem.customer_id,
+                'ITEMID': lineitem.item_id,
+                'BILLABLE': lineitem.billable,
                 'customfields': {
                    'customfield': [
                     {
@@ -653,12 +688,7 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
-                },
-                'DEPARTMENTID': lineitem.department_id,
-                'PROJECTID': lineitem.project_id,
-                'CUSTOMERID': lineitem.customer_id,
-                'ITEMID': lineitem.item_id,
-                'BILLABLE': lineitem.billable
+                }
             }
 
             for dimension in lineitem.user_defined_dimensions:
@@ -676,6 +706,7 @@ class SageIntacctConnector:
             'VENDORID': bill.vendor_id,
             'RECORDID': bill.memo,
             'WHENDUE': current_date,
+            'BASECURR': bill.currency,
             'CURRENCY': bill.currency,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
@@ -702,6 +733,10 @@ class SageIntacctConnector:
                 'paymentamount': lineitem.amount,
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
+                'customerid': lineitem.customer_id,
+                'vendorid': charge_card_transaction.vendor_id,
+                'projectid': lineitem.project_id,
+                'itemid': lineitem.item_id,
                 'customfields': {
                    'customfield': [
                     {
@@ -709,11 +744,7 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
-                },
-                'customerid': lineitem.customer_id,
-                'vendorid': charge_card_transaction.vendor_id,
-                'projectid': lineitem.project_id,
-                'itemid': lineitem.item_id
+                }
             }
 
             charge_card_transaction_payload.append(expense)
@@ -877,6 +908,8 @@ class SageIntacctConnector:
             'VENDORID': ap_payment.vendor_id,
             'DESCRIPTION': ap_payment.description,
             'PAYMENTDATE': current_date,
+            'CURRENCY': ap_payment.currency,
+            'BASECURR': ap_payment.currency,
             'APPYMTDETAILS': {
                 'APPYMTDETAIL': ap_payment_lineitems_payload
             }
