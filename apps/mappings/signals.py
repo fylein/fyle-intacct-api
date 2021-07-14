@@ -7,7 +7,6 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from datetime import datetime
 
-from django_q.models import Schedule
 from django_q.tasks import async_task
 
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
