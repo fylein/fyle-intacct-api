@@ -77,7 +77,7 @@ class MappingUtils:
                 'default_ccc_expense_payment_type_name': general_mapping['default_ccc_expense_payment_type_name'],
                 'default_ccc_expense_payment_type_id': general_mapping['default_ccc_expense_payment_type_id'],
                 'use_intacct_employee_departments': general_mapping['use_intacct_employee_departments'],
-                'use_intacct_employee_locations': general_mapping['use_intacct_employee_locations'],
+                'use_intacct_employee_locations': general_mapping['use_intacct_employee_locations']
             }
         )
 

@@ -402,9 +402,6 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
         existing_attribute = ExpenseAttribute.objects.filter(
             attribute_type=fyle_attribute, workspace_id=workspace_id).values_list('detail', flat=True).first()
 
-        for si_attribute in sageintacct_attributes:
-            fyle_expense_custom_field_options.append(si_attribute.value)
-
         custom_field_id = None
         if existing_attribute is not None:
             custom_field_id = existing_attribute['custom_field_id']
@@ -430,40 +427,28 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
     """
     Upload attributes to Fyle
     """
-    fyle_attribute_count = ExpenseAttribute.objects.filter(
-        attribute_type=fyle_attribute_type, workspace_id=workspace_id).count()
 
-    sageintacct_attribute_count = DestinationAttribute.objects.filter(
-        attribute_type=sageintacct_attribute_type, workspace_id=workspace_id).count()
+    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    mappings_count = Mapping.objects.filter(
-        source_type=fyle_attribute_type, destination_type=sageintacct_attribute_type, workspace_id=workspace_id).count()
+    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
-    updated = False if fyle_attribute_count == sageintacct_attribute_count and mappings_count != 0 else True
+    sageintacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
+    )
 
+    sageintacct_attributes = remove_duplicates(sageintacct_attributes)
 
-    if updated:
-        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_custom_field_payload = create_fyle_expense_custom_field_payload(
+        fyle_attribute=fyle_attribute_type,
+        sageintacct_attributes=sageintacct_attributes,
+        workspace_id=workspace_id
+    )
 
-        fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
+    if fyle_custom_field_payload:
+        fyle_connection.connection.ExpensesCustomFields.post(fyle_custom_field_payload)
+        fyle_connection.sync_expense_custom_fields(active_only=True)
 
-        sageintacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-            workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
-        )
-        sageintacct_attributes = remove_duplicates(sageintacct_attributes)
-
-
-        fyle_custom_field_payload = create_fyle_expense_custom_field_payload(
-            fyle_attribute=fyle_attribute_type,
-            sageintacct_attributes=sageintacct_attributes,
-            workspace_id=workspace_id
-        )
-
-        if fyle_custom_field_payload:
-            fyle_connection.connection.ExpensesCustomFields.post(fyle_custom_field_payload)
-            fyle_connection.sync_expense_custom_fields(active_only=True)
-
-        return sageintacct_attributes
+    return sageintacct_attributes
 
 
 def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str):

@@ -1,12 +1,8 @@
-from typing import List, Dict
-
-from rest_framework.generics import ListCreateAPIView
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import status
 
 from django_q.tasks import Chain
-from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import MappingSetting
 from fyle_accounting_mappings.views import logger
