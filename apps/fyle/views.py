@@ -387,7 +387,7 @@ class ExpenseFieldsView(generics.ListAPIView):
         ).values('attribute_type', 'display_name').distinct()
 
         expense_fields= [
-            {'attribute_type': 'COST_CENTER', 'display_name': 'COST Center'},
+            {'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center'},
             {'attribute_type': 'PROJECT', 'display_name': 'Project'}
         ]
 

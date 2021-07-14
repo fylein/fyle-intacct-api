@@ -4,15 +4,9 @@ from rest_framework.views import status
 
 from django_q.tasks import Chain
 
-from fyle_accounting_mappings.models import MappingSetting
-from fyle_accounting_mappings.views import logger
-from fyle_accounting_mappings.exceptions import BulkError
-from fyle_accounting_mappings.serializers import MappingSettingSerializer
-
 from fyle_intacct_api.utils import assert_valid
 from apps.workspaces.models import WorkspaceGeneralSettings
 
-from .tasks import schedule_fyle_attributes_creation, upload_attributes_to_fyle, schedule_cost_centers_creation
 from .serializers import GeneralMappingSerializer
 from .models import GeneralMapping
 from .utils import MappingUtils

@@ -61,6 +61,3 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
             instance.destination_field,
             instance.source_field
         )
-
-
-

@@ -204,7 +204,8 @@ def schedule_auto_map_charge_card_employees(workspace_id: int):
     general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
 
     if general_settings.auto_map_employees and \
-            general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+        general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+
         start_datetime = datetime.now()
 
         schedule, _ = Schedule.objects.update_or_create(
@@ -382,7 +383,6 @@ def schedule_cost_centers_creation(import_to_fyle, workspace_id):
 
         if schedule:
             schedule.delete()
-
 
 
 def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[DestinationAttribute], workspace_id: int, fyle_attribute: str):
@@ -632,7 +632,6 @@ def create_credit_card_category_mappings(reimbursable_expenses_object: str,
 
     if mapping_batch:
         Mapping.objects.bulk_create(mapping_batch, batch_size=50)
-
 
 
 def auto_create_category_mappings(workspace_id):
