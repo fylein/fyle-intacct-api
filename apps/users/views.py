@@ -2,11 +2,15 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+
 from fyle_rest_auth.models import AuthToken
+from fyle_rest_auth.utils import AuthUtils
 
 from apps.fyle.utils import FyleConnector
 
 from apps.workspaces.models import FyleCredential, Workspace
+
+auth_utils = AuthUtils()
 
 class UserProfileView(generics.RetrieveAPIView):
 
@@ -43,7 +47,10 @@ class CluserDomainView(generics.RetrieveAPIView):
             fyle_connector = FyleConnector(fyle_credentials.refresh_token)
             cluser_domain = fyle_connector.get_cluster_domain()['cluster_domain']
 
-            workspace = Workspace.objects.filter(user__user_id=request.user).first()
+            fyle_user = auth_utils.get_fyle_user(fyle_credentials.refresh_token)
+            org_id = fyle_user['org_id']
+
+            workspace = Workspace.objects.filter(user__user_id=request.user, fyle_org_id=org_id).first()
 
             workspace.cluster_domain = cluser_domain
             workspace.save()
