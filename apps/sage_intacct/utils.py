@@ -489,6 +489,13 @@ class SageIntacctConnector:
         org_id = workspace.fyle_org_id
         cluster_domain = workspace.cluster_domain
 
+        if not cluster_domain:
+            fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
+            fyle_connector = FyleConnector(fyle_credentials.refresh_token, self.workspace_id)
+            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+            workspace.cluster_domain = cluster_domain
+            workspace.save()
+
         expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
             cluster_domain, lineitem.expense.expense_id, org_id
         )
