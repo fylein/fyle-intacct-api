@@ -20,6 +20,7 @@ from fyle_rest_auth.models import AuthToken
 from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroupSettings
+from apps.fyle.utils import FyleConnector
 
 from .models import Workspace, FyleCredential, SageIntacctCredential, WorkspaceGeneralSettings, WorkspaceSchedule
 from .utils import create_or_update_general_settings
@@ -54,8 +55,10 @@ class WorkspaceView(viewsets.ViewSet):
             workspace.user.add(User.objects.get(user_id=request.user))
             cache.delete(str(workspace.id))
         else:
-            workspace = Workspace.objects.create(name=org_name, fyle_org_id=org_id)
+            fyle_connector = FyleConnector(auth_tokens.refresh_token)
+            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
 
+            workspace = Workspace.objects.create(name=org_name, fyle_org_id=org_id, cluster_domain=cluster_domain)
             ExpenseGroupSettings.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))

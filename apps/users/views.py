@@ -6,7 +6,7 @@ from fyle_rest_auth.models import AuthToken
 
 from apps.fyle.utils import FyleConnector
 
-from apps.workspaces.models import FyleCredential
+from apps.workspaces.models import FyleCredential, Workspace
 
 class UserProfileView(generics.RetrieveAPIView):
 
@@ -42,6 +42,11 @@ class CluserDomainView(generics.RetrieveAPIView):
             fyle_credentials = AuthToken.objects.get(user__user_id=request.user)
             fyle_connector = FyleConnector(fyle_credentials.refresh_token)
             cluser_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+
+            workspace = Workspace.objects.filter(user__user_id=request.user).first()
+
+            workspace.cluster_domain = cluser_domain
+            workspace.save()
 
             return Response(
                 data=cluser_domain,
