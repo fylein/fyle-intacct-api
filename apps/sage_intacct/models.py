@@ -148,7 +148,6 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
 
 
 def get_expense_purpose(workspace_id, lineitem: Expense, category: str) -> str:
-
     workspace = Workspace.objects.get(id=workspace_id)
     org_id = workspace.fyle_org_id
 
