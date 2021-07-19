@@ -106,6 +106,39 @@ class WorkspaceView(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+class ClusterDomainView(viewsets.ViewSet):
+    """
+    CluserDomain view
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        """
+        Get cluster domain from Fyle
+        """
+        try:
+            fyle_credentials = AuthToken.objects.get(user__user_id=request.user)
+            fyle_connector = FyleConnector(fyle_credentials.refresh_token)
+            cluser_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+
+            workspace_id = kwargs['workspace_id']
+            workspace = Workspace.objects.filter(user__user_id=request.user, id=workspace_id).first()
+
+            workspace.cluster_domain = cluser_domain
+            workspace.save()
+
+            return Response(
+                data=cluser_domain,
+                status=status.HTTP_200_OK
+            )
+        except FyleCredential.DoesNotExist:
+            return Response(
+                data={
+                    'message': 'Invalid / Expired Token'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class ConnectFyleView(viewsets.ViewSet):
     """
