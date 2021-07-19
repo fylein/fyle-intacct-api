@@ -273,7 +273,7 @@ class CostCenterView(generics.ListCreateAPIView):
 
             fyle_connector = FyleConnector(fyle_credentials.refresh_token, kwargs['workspace_id'])
 
-            cost_center_attributes = fyle_connector.sync_cost_centers(active_only=active_only)
+            cost_center_attributes = fyle_connector.sync_cost_centers()
 
             return Response(
                 data=self.serializer_class(cost_center_attributes, many=True).data,

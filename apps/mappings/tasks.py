@@ -98,7 +98,7 @@ def auto_create_project_mappings(workspace_id: int):
             source_field='PROJECT', workspace_id=workspace_id
         )
 
-        sync_sageintacct_attribute(mapping_setting.destination_field, workspace_id)
+        sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
         post_projects_in_batches(fyle_connection, workspace_id, mapping_setting.destination_field)
 
@@ -251,7 +251,7 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
     return payload
 
 
-def sync_sageintacct_attribute(sageintacct_attribute_type: str, workspace_id: int):
+def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int):
     sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
     sage_intacct_connection = SageIntacctConnector(
@@ -270,9 +270,6 @@ def sync_sageintacct_attribute(sageintacct_attribute_type: str, workspace_id: in
 
     elif sageintacct_attribute_type == 'CLASS':
         sage_intacct_connection.sync_classifications()
-
-    else:
-        sage_intacct_connection.sync_dimensions()
 
 
 def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute], existing_fyle_cost_centers: list):
@@ -320,12 +317,12 @@ def post_cost_centers_in_batches(fyle_connection: FyleConnector, workspace_id: i
 
         if fyle_payload:
             fyle_connection.connection.CostCenters.post(fyle_payload)
-            fyle_connection.sync_cost_centers(active_only=True)
+            fyle_connection.sync_cost_centers()
 
         Mapping.bulk_create_mappings(paginated_si_attributes, 'COST_CENTER', sageintacct_attribute_type, workspace_id)
 
 
-def auto_create_cost_center_mappings(workspace_id):
+def auto_create_cost_center_mappings(workspace_id: int):
     """
     Create Cost Center Mappings
     """
@@ -341,9 +338,9 @@ def auto_create_cost_center_mappings(workspace_id):
             source_field='COST_CENTER', import_to_fyle=True, workspace_id=workspace_id
         )
 
-        fyle_connection.sync_cost_centers(active_only=True)
+        fyle_connection.sync_cost_centers()
 
-        sync_sageintacct_attribute(mapping_setting.destination_field, workspace_id)
+        sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
         post_cost_centers_in_batches(fyle_connection, workspace_id, mapping_setting.destination_field)
 
@@ -477,13 +474,17 @@ def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute
 
 
 def async_auto_create_custom_field_mappings(workspace_id: str):
-    mapping_settings = MappingSetting.objects.filter(is_custom=True, import_to_fyle=True, workspace_id=workspace_id)
+    mapping_settings = MappingSetting.objects.filter(
+        is_custom=True, import_to_fyle=True, workspace_id=workspace_id
+    ).all()
+
     if mapping_settings:
         for mapping_setting in mapping_settings:
-            sync_sageintacct_attribute(mapping_setting.destination_field, workspace_id)
-            auto_create_expense_fields_mappings(
-                workspace_id, mapping_setting.destination_field, mapping_setting.source_field
-            )
+            if mapping_setting.import_to_fyle:
+                sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
+                auto_create_expense_fields_mappings(
+                    workspace_id, mapping_setting.destination_field, mapping_setting.source_field
+                )
 
 
 def schedule_fyle_attributes_creation(workspace_id: int):
@@ -492,7 +493,7 @@ def schedule_fyle_attributes_creation(workspace_id: int):
     ).all()
 
     if mapping_settings:
-        schedule, _=Schedule.objects.get_or_create(
+        schedule, _= Schedule.objects.get_or_create(
             func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
             args='{0}'.format(workspace_id),
             defaults={

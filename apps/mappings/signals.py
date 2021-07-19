@@ -33,20 +33,13 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
 @receiver(pre_save, sender=MappingSetting)
 def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
     """
-        :param sender: Sender Class
-        :param instance: Row instance of Sender Class
-        :return: None
+    :param sender: Sender Class
+    :param instance: Row instance of Sender Class
+    :return: None
     """
     default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER']
 
     instance.source_field = instance.source_field.upper().replace(' ', '_')
-
-    attributes = ExpenseAttribute.objects.filter(
-        ~Q(attribute_type__in=default_attributes),
-        workspace_id=int(instance.workspace_id)
-    ).values('attribute_type').distinct()
-
-    [default_attributes.append(attribute['attribute_type']) for attribute in attributes]
 
     if instance.source_field not in default_attributes:
         upload_attributes_to_fyle(

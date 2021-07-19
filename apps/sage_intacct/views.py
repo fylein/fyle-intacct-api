@@ -479,7 +479,7 @@ class ExpenseReportView(generics.ListCreateAPIView):
     serializer_class = ExpenseReportSerializer
 
     def get_queryset(self):
-        return ExpenseReport.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id']) \
+        return ExpenseReport.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
             .order_by('-updated_at')
 
     def post(self, request, *args, **kwargs):
@@ -526,7 +526,7 @@ class BillView(generics.ListCreateAPIView):
     serializer_class = BillSerializer
 
     def get_queryset(self):
-        return Bill.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id']) \
+        return Bill.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
             .order_by('-updated_at')
 
     def post(self, request, *args, **kwargs):
@@ -573,7 +573,7 @@ class ChargeCardTransactionsView(generics.ListCreateAPIView):
     serializer_class = ChargeCardTransactionSerializer
 
     def get_queryset(self):
-        return ChargeCardTransaction.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id']) \
+        return ChargeCardTransaction.objects.filter(expense_group__workspace_id=self.kwargs['workspace_id'])\
             .order_by('-updated_at')
 
     def post(self, request, *args, **kwargs):
