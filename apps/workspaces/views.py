@@ -108,7 +108,7 @@ class WorkspaceView(viewsets.ViewSet):
 
 class ClusterDomainView(viewsets.ViewSet):
     """
-    CluserDomain view
+    Cluster Domain view
     """
 
     permission_classes = [IsAuthenticated]
@@ -118,18 +118,19 @@ class ClusterDomainView(viewsets.ViewSet):
         Get cluster domain from Fyle
         """
         try:
-            fyle_credentials = AuthToken.objects.get(user__user_id=request.user)
-            fyle_connector = FyleConnector(fyle_credentials.refresh_token)
-            cluser_domain = fyle_connector.get_cluster_domain()['cluster_domain']
-
             workspace_id = kwargs['workspace_id']
-            workspace = Workspace.objects.filter(user__user_id=request.user, id=workspace_id).first()
 
-            workspace.cluster_domain = cluser_domain
+            fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+            fyle_connector = FyleConnector(fyle_credentials.refresh_token)
+            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+
+            workspace = Workspace.objects.filter(id=workspace_id).first()
+
+            workspace.cluster_domain = cluster_domain
             workspace.save()
 
             return Response(
-                data=cluser_domain,
+                data=cluster_domain,
                 status=status.HTTP_200_OK
             )
         except FyleCredential.DoesNotExist:

@@ -19,7 +19,7 @@ from .views import WorkspaceView, ClusterDomainView, ConnectFyleView, ConnectSag
 
 urlpatterns = [
     path('', WorkspaceView.as_view({'get': 'get', 'post': 'post'})),
-    path('domain/<int:workspace_id>/', ClusterDomainView.as_view({'get': 'get'})),
+    path('cluster_domain/<int:workspace_id>/', ClusterDomainView.as_view({'get': 'get'})),
     path('<int:workspace_id>/', WorkspaceView.as_view({'get': 'get_by_id'})),
     path('<int:workspace_id>/settings/general/', GeneralSettingsView.as_view({'post': 'post', 'get': 'get'})),
     path('<int:workspace_id>/connect_fyle/authorization_code/', ConnectFyleView.as_view({'post': 'post'})),
