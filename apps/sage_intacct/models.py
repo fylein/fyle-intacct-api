@@ -157,6 +157,8 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str) -> str:
         fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
         fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
         cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+        workspace.cluster_domain = cluster_domain
+        workspace.save()
 
     expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
         cluster_domain, lineitem.expense_id, org_id
