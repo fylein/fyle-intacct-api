@@ -268,8 +268,8 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     elif sageintacct_attribute_type == 'DEPARTMENT':
         sage_intacct_connection.sync_departments()
 
-    elif sageintacct_attribute_type == 'CLASS':
-        sage_intacct_connection.sync_classifications()
+    else:
+        sage_intacct_connection.sync_user_defined_dimensions()
 
 
 def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute], existing_fyle_cost_centers: list):
@@ -478,13 +478,12 @@ def async_auto_create_custom_field_mappings(workspace_id: str):
         is_custom=True, import_to_fyle=True, workspace_id=workspace_id
     ).all()
 
-    if mapping_settings:
-        for mapping_setting in mapping_settings:
-            if mapping_setting.import_to_fyle:
-                sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
-                auto_create_expense_fields_mappings(
-                    workspace_id, mapping_setting.destination_field, mapping_setting.source_field
-                )
+    for mapping_setting in mapping_settings:
+        if mapping_setting.import_to_fyle:
+            sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
+            auto_create_expense_fields_mappings(
+                workspace_id, mapping_setting.destination_field, mapping_setting.source_field
+            )
 
 
 def schedule_fyle_attributes_creation(workspace_id: int):
