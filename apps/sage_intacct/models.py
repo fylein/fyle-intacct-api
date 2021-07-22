@@ -147,12 +147,27 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
-def get_expense_purpose(lineitem: Expense, category: str) -> str:
+def get_expense_purpose(workspace_id, lineitem: Expense, category: str) -> str:
+    workspace = Workspace.objects.get(id=workspace_id)
+    org_id = workspace.fyle_org_id
+
+    if workspace.cluster_domain:
+        cluster_domain = workspace.cluster_domain
+    else:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
+        cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+        workspace.cluster_domain = cluster_domain
+        workspace.save()
+
+    expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
+        cluster_domain, lineitem.expense_id, org_id
+    )
 
     expense_purpose = ', purpose - {0}'.format(lineitem.purpose) if lineitem.purpose else ''
     spent_at = ' spent on {0} '.format(lineitem.spent_at.date()) if lineitem.spent_at else ''
-    return 'Expense by {0} against category {1}{2}with claim number - {3}{4}'.format(
-        lineitem.employee_email, category, spent_at, lineitem.claim_number, expense_purpose)
+    return 'Expense by {0} against category {1}{2}with claim number - {3}{4} - {5}'.format(
+        lineitem.employee_email, category, spent_at, lineitem.claim_number, expense_purpose, expense_link)
 
 
 def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Expense):
@@ -373,7 +388,7 @@ class BillLineitem(models.Model):
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(lineitem, category)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
                 }
             )
 
@@ -534,7 +549,7 @@ class ExpenseReportLineitem(models.Model):
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
-                    'memo': get_expense_purpose(lineitem, category)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
                 }
             )
 
@@ -701,7 +716,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'amount': lineitem.amount,
-                    'memo': get_expense_purpose(lineitem, category)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
                 }
             )
 
