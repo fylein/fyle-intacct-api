@@ -11,6 +11,7 @@ from .serializers import GeneralMappingSerializer
 from .models import GeneralMapping
 from .utils import MappingUtils
 
+
 class GeneralMappingView(generics.ListCreateAPIView):
     """
     General mappings
@@ -76,10 +77,9 @@ class AutoMapEmployeeView(generics.CreateAPIView):
                     },
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            
+
             chain.append('apps.mappings.tasks.async_auto_map_employees', workspace_id)
-            
+
             general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
             if general_mappings.default_charge_card_name:
                 chain.append('apps.mappings.tasks.async_auto_map_charge_card_account', workspace_id)
@@ -90,7 +90,7 @@ class AutoMapEmployeeView(generics.CreateAPIView):
                 data={},
                 status=status.HTTP_200_OK
             )
-            
+
         except GeneralMapping.DoesNotExist:
             return Response(
                 {

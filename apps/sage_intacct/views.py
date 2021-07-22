@@ -240,6 +240,23 @@ class ExpenseTypeView(generics.ListCreateAPIView):
             )
 
 
+class SageIntacctAttributesCountView(generics.RetrieveAPIView):
+
+    def get(self, request, *args, **kwargs):
+        attribute_type = self.request.query_params.get('attribute_type')
+
+        attribute_count = DestinationAttribute.objects.filter(
+            attribute_type=attribute_type, workspace_id=self.kwargs['workspace_id']
+        ).count()
+
+        return Response(
+            data={
+                'count': attribute_count
+            },
+            status=status.HTTP_200_OK
+        )
+
+
 class ChargeCardAccountView(generics.ListCreateAPIView):
     """
     Charge Card Account view
@@ -615,6 +632,7 @@ class APPaymentView(generics.CreateAPIView):
     """
     Create AP Payment View
     """
+
     def post(self, request, *args, **kwargs):
         """
         Create AP Payment
@@ -631,6 +649,7 @@ class ReimbursementView(generics.ListCreateAPIView):
     """
     Create Sage Intacct Reimbursements View
     """
+
     def post(self, request, *args, **kwargs):
         """
         Create Sage Intacct Reimbursements View
@@ -647,6 +666,7 @@ class FyleReimbursementsView(generics.ListCreateAPIView):
     """
     Create Fyle Reimbursements View
     """
+
     def post(self, request, *args, **kwargs):
         """
         Process Reimbursements in Fyle
@@ -674,7 +694,8 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
 
             if workspace.destination_synced_at is None or time_interval.days > 0:
                 sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=kwargs['workspace_id'])
-                sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials, workspace_id=kwargs['workspace_id'])
+                sage_intacct_connector = SageIntacctConnector(sage_intacct_credentials,
+                                                              workspace_id=kwargs['workspace_id'])
 
                 sage_intacct_connector.sync_dimensions()
 
@@ -724,6 +745,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
 
 class ExpenseCustomFieldsView(generics.ListCreateAPIView):
     """
