@@ -10,10 +10,10 @@ from django.db.models import Q, Count
 from fylesdk import WrongParamsError
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute
 
-from apps.fyle.utils import FyleConnector
+from apps.fyle.connector import FyleConnector
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, WorkspaceGeneralSettings
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
 from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
 
 logger = logging.getLogger(__name__)
@@ -141,8 +141,8 @@ def schedule_projects_creation(import_to_fyle, workspace_id):
 
 
 def async_auto_map_employees(workspace_id: int):
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
-    employee_mapping_preference = general_settings.auto_map_employees
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    employee_mapping_preference = configuration.auto_map_employees
 
     mapping_setting = MappingSetting.objects.filter(
         ~Q(destination_field='CHARGE_CARD_NUMBER'),
@@ -201,10 +201,10 @@ def async_auto_map_charge_card_account(workspace_id: int):
 
 
 def schedule_auto_map_charge_card_employees(workspace_id: int):
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-    if general_settings.auto_map_employees and \
-        general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+    if configuration.auto_map_employees and \
+        configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
 
         start_datetime = datetime.now()
 
@@ -639,10 +639,10 @@ def auto_create_category_mappings(workspace_id):
     Create Category Mappings
     :return: mappings
     """
-    general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
+    configuration: Configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-    reimbursable_expenses_object = general_settings.reimbursable_expenses_object
-    corporate_credit_card_expenses_object = general_settings.corporate_credit_card_expenses_object
+    reimbursable_expenses_object = configuration.reimbursable_expenses_object
+    corporate_credit_card_expenses_object = configuration.corporate_credit_card_expenses_object
 
     if reimbursable_expenses_object == 'EXPENSE_REPORT':
         reimbursable_destination_type = 'EXPENSE_TYPE'

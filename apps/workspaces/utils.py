@@ -3,7 +3,7 @@ from typing import Dict
 from apps.mappings.tasks import schedule_auto_map_employees, schedule_categories_creation, \
     schedule_auto_map_charge_card_employees
 
-from .models import WorkspaceGeneralSettings
+from .models import Configuration
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync,\
     schedule_sage_intacct_reimbursement_creation, schedule_fyle_reimbursements_sync
 from apps.fyle.models import ExpenseGroupSettings
@@ -24,7 +24,7 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
         assert_valid(general_settings_payload['auto_map_employees'] in ['EMAIL', 'NAME', 'EMPLOYEE_CODE'],
                     'auto_map_employees can have only EMAIL / NAME / EMPLOYEE_CODE')
 
-    general_settings, _ = WorkspaceGeneralSettings.objects.update_or_create(
+    general_settings, _ = Configuration.objects.update_or_create(
         workspace_id=workspace_id,
         defaults={
             'reimbursable_expenses_object': general_settings_payload['reimbursable_expenses_object'],
@@ -54,7 +54,7 @@ def create_or_update_general_settings(general_settings_payload: Dict, workspace_
     schedule_sage_intacct_reimbursement_creation(general_settings.sync_fyle_to_sage_intacct_payments, workspace_id)
 
     schedule_sage_intacct_objects_status_sync(
-        sync_sage_to_fyle_payments=general_settings.sync_sage_intacct_to_fyle_payments,
+        sync_sage_intacct_to_fyle_payments=general_settings.sync_sage_intacct_to_fyle_payments,
         workspace_id=workspace_id
     )
 

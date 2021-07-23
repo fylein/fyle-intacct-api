@@ -5,7 +5,7 @@ from rest_framework.views import status
 from django_q.tasks import Chain
 
 from fyle_intacct_api.utils import assert_valid
-from apps.workspaces.models import WorkspaceGeneralSettings
+from apps.workspaces.models import Configuration
 
 from .serializers import GeneralMappingSerializer
 from .models import GeneralMapping
@@ -66,11 +66,11 @@ class AutoMapEmployeeView(generics.CreateAPIView):
         """
         try:
             workspace_id = kwargs['workspace_id']
-            general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=workspace_id)
+            configuration = Configuration.objects.get(workspace_id=workspace_id)
 
             chain = Chain()
 
-            if not general_settings.auto_map_employees:
+            if not configuration.auto_map_employees:
                 return Response(
                     data={
                         'message': 'Employee mapping preference not found for this workspace'
