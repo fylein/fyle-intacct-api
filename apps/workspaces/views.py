@@ -9,6 +9,7 @@ from sageintacctsdk import SageIntacctSDK, exceptions as sage_intacct_exc
 
 from rest_framework.response import Response
 from rest_framework.views import status
+from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
@@ -20,12 +21,12 @@ from fyle_rest_auth.models import AuthToken
 from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroupSettings
-from apps.fyle.utils import FyleConnector
+from apps.fyle.connector import FyleConnector
 
-from .models import Workspace, FyleCredential, SageIntacctCredential, WorkspaceGeneralSettings, WorkspaceSchedule
+from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule
 from .utils import create_or_update_general_settings
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
-    WorkSpaceGeneralSettingsSerializer, WorkspaceScheduleSerializer
+    ConfigurationSerializer, WorkspaceScheduleSerializer
 from .tasks import schedule_sync
 
 User = get_user_model()
@@ -394,40 +395,24 @@ class ReadyView(viewsets.ViewSet):
         )
 
 
-class GeneralSettingsView(viewsets.ViewSet):
+class ConfigurationView(generics.ListCreateAPIView):
     """
     General Settings
     """
-    serializer_class = WorkSpaceGeneralSettingsSerializer
-    queryset = WorkspaceGeneralSettings.objects.all()
-
-    def post(self, request, *args, **kwargs):
-        """
-        Post workspace general settings
-        """
-        general_settings_payload = request.data
-
-        assert_valid(general_settings_payload is not None, 'Request body is empty')
-
-        workspace_id = kwargs['workspace_id']
-
-        general_settings = create_or_update_general_settings(general_settings_payload, workspace_id)
-        return Response(
-            data=self.serializer_class(general_settings).data,
-            status=status.HTTP_200_OK
-        )
+    serializer_class = ConfigurationSerializer
+    queryset = Configuration.objects.all()
 
     def get(self, request, *args, **kwargs):
         """
         Get workspace general settings
         """
         try:
-            general_settings = self.queryset.get(workspace_id=kwargs['workspace_id'])
+            configuration = self.queryset.get(workspace_id=kwargs['workspace_id'])
             return Response(
-                data=self.serializer_class(general_settings).data,
+                data=self.serializer_class(configuration).data,
                 status=status.HTTP_200_OK
             )
-        except WorkspaceGeneralSettings.DoesNotExist:
+        except Configuration.DoesNotExist:
             return Response(
                 {
                     'message': 'General Settings does not exist in workspace'

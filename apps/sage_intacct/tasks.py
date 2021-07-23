@@ -18,8 +18,8 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, WorkspaceGeneralSettings
-from apps.fyle.utils import FyleConnector
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
+from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -307,7 +307,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     task_log.save()
 
 
-def __validate_expense_group(expense_group: ExpenseGroup, general_settings: WorkspaceGeneralSettings):
+def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Configuration):
     bulk_errors = []
     row = 0
 
@@ -421,7 +421,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
     else:
         return
 
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
+    general_settings = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
@@ -523,7 +523,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
     else:
         return
 
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
+    general_settings = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
@@ -619,7 +619,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
     else:
         return
 
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
+    general_settings = Configuration.objects.get(workspace_id=expense_group.workspace_id)
     try:
         merchant = expense_group.expenses.first().vendor
         get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
@@ -1043,8 +1043,8 @@ def check_sage_intacct_object_status(workspace_id):
                 expense_report.save()
 
 
-def schedule_sage_intacct_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
-    if sync_sage_to_fyle_payments:
+def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
+    if sync_sage_intacct_to_fyle_payments:
         start_datetime = datetime.now()
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.sage_intacct.tasks.check_sage_intacct_object_status',

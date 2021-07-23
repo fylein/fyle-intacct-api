@@ -9,9 +9,9 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, Destination
 
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
-from apps.fyle.utils import FyleConnector
+from apps.fyle.connector import FyleConnector
 
-from apps.workspaces.models import WorkspaceGeneralSettings, Workspace, FyleCredential
+from apps.workspaces.models import Configuration, Workspace, FyleCredential
 
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
@@ -126,7 +126,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     item_id = None
 
     if lineitem.billable:
-        general_settings: WorkspaceGeneralSettings = WorkspaceGeneralSettings.objects.get(
+        general_settings: Configuration = Configuration.objects.get(
             workspace_id=expense_group.workspace_id)
         if general_settings.import_projects:
             item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
