@@ -24,7 +24,6 @@ from apps.fyle.models import ExpenseGroupSettings
 from apps.fyle.connector import FyleConnector
 
 from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule
-from .utils import create_or_update_general_settings
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
     ConfigurationSerializer, WorkspaceScheduleSerializer
 from .tasks import schedule_sync
@@ -395,7 +394,7 @@ class ReadyView(viewsets.ViewSet):
         )
 
 
-class ConfigurationView(generics.ListCreateAPIView):
+class ConfigurationsView(generics.ListCreateAPIView):
     """
     General Settings
     """

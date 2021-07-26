@@ -51,10 +51,10 @@ class ExpenseGroupView(generics.ListCreateAPIView):
         Create expense groups
         """
         task_log = TaskLog.objects.get(pk=request.data.get('task_log_id'))
-        general_settings = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
+        configuration = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
 
         fund_source = ['PERSONAL']
-        if general_settings.corporate_credit_card_expenses_object:
+        if configuration.corporate_credit_card_expenses_object:
             fund_source.append('CCC')
 
         create_expense_groups(
