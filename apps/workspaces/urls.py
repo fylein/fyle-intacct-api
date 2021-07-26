@@ -15,23 +15,38 @@ Including another URLconf
 """
 from django.urls import path, include
 
-from .views import WorkspaceView, ClusterDomainView, ConnectFyleView, ConnectSageIntacctView, ConfigurationView, ReadyView, ScheduleView
+from .views import WorkspaceView, ClusterDomainView, ConnectFyleView, ConnectSageIntacctView, ConfigurationsView, ReadyView, ScheduleView
 
-urlpatterns = [
+workspace_app_paths = [
     path('', WorkspaceView.as_view({'get': 'get', 'post': 'post'})),
     path('cluster_domain/<int:workspace_id>/', ClusterDomainView.as_view({'get': 'get'})),
     path('<int:workspace_id>/', WorkspaceView.as_view({'get': 'get_by_id'})),
-    path('<int:workspace_id>/settings/general/', ConfigurationView.as_view()),
+    path('<int:workspace_id>/configuration/', ConfigurationsView.as_view()),
+    path('ready/', ReadyView.as_view({'get': 'get'})),
+    path('<int:workspace_id>/schedule/', ScheduleView.as_view({'post': 'post', 'get': 'get'}))
+]
+
+fyle_connection_api_paths = [
     path('<int:workspace_id>/connect_fyle/authorization_code/', ConnectFyleView.as_view({'post': 'post'})),
     path('<int:workspace_id>/credentials/fyle/', ConnectFyleView.as_view({'get': 'get'})),
-    path('<int:workspace_id>/credentials/fyle/delete/', ConnectFyleView.as_view({'post': 'delete'})),
+    path('<int:workspace_id>/credentials/fyle/delete/', ConnectFyleView.as_view({'post': 'delete'}))
+]
+
+sage_intacct_connection_api_paths = [
     path('<int:workspace_id>/credentials/sage_intacct/delete/', ConnectSageIntacctView.as_view({'post': 'delete'})),
     path('<int:workspace_id>/credentials/sage_intacct/', ConnectSageIntacctView.as_view(
         {'post': 'post', 'get': 'get'})),
+]
+
+other_app_paths = [
     path('<int:workspace_id>/fyle/', include('apps.fyle.urls')),
     path('<int:workspace_id>/sage_intacct/', include('apps.sage_intacct.urls')),
     path('<int:workspace_id>/mappings/', include('apps.mappings.urls')),
     path('<int:workspace_id>/tasks/', include('apps.tasks.urls')),
-    path('ready/', ReadyView.as_view({'get': 'get'})),
-    path('<int:workspace_id>/schedule/', ScheduleView.as_view({'post': 'post', 'get': 'get'}))
 ]
+
+urlpatterns = []
+urlpatterns.extend(workspace_app_paths)
+urlpatterns.extend(fyle_connection_api_paths)
+urlpatterns.extend(sage_intacct_connection_api_paths)
+urlpatterns.extend(other_app_paths)
