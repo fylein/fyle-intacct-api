@@ -35,3 +35,12 @@ urlpatterns = [
     path('sync_dimensions/', SyncFyleDimensionView.as_view()),
     path('refresh_dimensions/', RefreshFyleDimensionView.as_view())
 ]
+
+fyle_dimension_path = [
+    path('sync_dimensions/', SyncFyleDimensionView.as_view()),
+    path('refresh_dimensions/', RefreshFyleDimensionView)
+]
+
+other_paths = [
+    
+]
