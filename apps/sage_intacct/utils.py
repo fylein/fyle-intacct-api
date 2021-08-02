@@ -164,7 +164,7 @@ class SageIntacctConnector:
             payment_accounts_attributes.append({
                 'attribute_type': 'PAYMENT_ACCOUNT',
                 'display_name': 'Payment Account',
-                'value': payment_account['BANKNAME'],
+                'value': '{} - {}'.format(payment_account['BANKNAME'], payment_account['BANKACCOUNTID']),
                 'destination_id': payment_account['BANKACCOUNTID']
             })
 
