@@ -4,7 +4,7 @@ from apps.workspaces.models import Configuration
 
 def schedule_payment_sync(configuration: Configuration):
     """
-    :param configuration: Workspace Configuration Intance
+    :param configuration: Workspace Configuration Instance
     :return: None
     """
     schedule_ap_payment_creation(

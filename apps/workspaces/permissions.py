@@ -17,6 +17,8 @@ class WorkspacePermissions(permissions.BasePermission):
             if cache_users:
                 cache.set(workspace_id, workspace_users, 172800)
             return True
+
+        return False
         
     def has_permission(self, request, view):
         workspace_id = str(view.kwargs.get('workspace_id'))
