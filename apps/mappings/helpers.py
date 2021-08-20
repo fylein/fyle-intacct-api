@@ -1,4 +1,4 @@
-from apps.mappings.tasks import schedule_projects_creation, schedule_categories_creation, schedule_auto_map_employees, \
+from apps.mappings.tasks import schedule_categories_creation, schedule_auto_map_employees, \
     schedule_auto_map_charge_card_employees
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
