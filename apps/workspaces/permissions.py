@@ -13,10 +13,13 @@ class WorkspacePermissions(permissions.BasePermission):
     """
     @staticmethod
     def validate_and_cache(workspace_users, user: User, workspace_id: str, cache_users: bool = False):
-        
-        
-        return True
+        if user.id in workspace_users:
+            if cache_users:
+                cache.set(workspace_id, workspace_users, 172800)
+            return True
 
+        return False
+        
     def has_permission(self, request, view):
         workspace_id = str(view.kwargs.get('workspace_id'))
         user = request.user

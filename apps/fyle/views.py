@@ -377,7 +377,7 @@ class FyleFieldsView(generics.ListAPIView):
     serializer_class = ExpenseFieldSerializer
 
     def get(self, request, *args, **kwargs):
-        default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER']
+        default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'LOCATION_ENTITY']
 
         attributes = ExpenseAttribute.objects.filter(
             ~Q(attribute_type__in=default_attributes),

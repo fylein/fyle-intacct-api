@@ -27,20 +27,11 @@ class ConfigurationSerializer(serializers.ModelSerializer):
         :param validated_data: Validated data
         :return: upserted general settings object
         """
-        workspace = validated_data['workspace']
+        workspace = validated_data.pop('workspace')
 
         configuration, _ = Configuration.objects.update_or_create(
             workspace_id=workspace,
-            defaults={
-                'reimbursable_expenses_object': validated_data['reimbursable_expenses_object'],
-                'corporate_credit_card_expenses_object': validated_data['corporate_credit_card_expenses_object'],
-                'sync_fyle_to_sage_intacct_payments': validated_data['sync_fyle_to_sage_intacct_payments'],
-                'sync_sage_intacct_to_fyle_payments': validated_data['sync_sage_intacct_to_fyle_payments'],
-                'import_projects': validated_data['import_projects'],
-                'import_categories': validated_data['import_categories'],
-                'auto_map_employees': validated_data['auto_map_employees'],
-                'auto_create_destination_entity': validated_data['auto_create_destination_entity']
-            }
+            defaults=validated_data
         )
 
         return configuration

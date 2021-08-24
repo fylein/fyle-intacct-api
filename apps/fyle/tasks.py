@@ -11,6 +11,7 @@ from apps.tasks.models import TaskLog
 
 from .models import Expense, ExpenseGroup, ExpenseGroupSettings
 from .connector import FyleConnector
+from .serializers import ExpenseGroupSerializer
 
 logger = logging.getLogger(__name__)
 

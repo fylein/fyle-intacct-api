@@ -8,7 +8,6 @@ from apps.workspaces.models import Workspace
 
 logger = logging.getLogger(__name__)
 
-
 def add_expense_id_to_expense_group_settings(workspace_id: int):
     """
     Add Expense id to card expense grouping
