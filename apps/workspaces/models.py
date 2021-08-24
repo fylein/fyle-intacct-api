@@ -27,30 +27,53 @@ class Workspace(models.Model):
         db_table = 'workspaces'
 
 
-class WorkspaceGeneralSettings(models.Model):
+REIMBURSABLE_EXPENSES_OBJECT_CHOICES = (
+    ('EXPENSE_REPORT', 'EXPENSE_REPORT'),
+    ('BILL', 'BILL')
+)
+
+COPORATE_CARD_EXPENSES_OBJECT_CHOICES = (
+    ('EXPENSE_REPORT', 'EXPENSE_REPORT'),
+    ('BILL', 'BILL'),
+    ('CHARGE_CARD_TRANSACTION', 'CHARGE_CARD_TRANSACTION')
+)
+
+AUTO_MAP_EMPLOYEE_CHOICES = (
+    ('EMAIL', 'EMAIL'),
+    ('NAME', 'NAME'),
+    ('EMPLOYEE_CODE', 'EMPLOYEE_CODE'),
+)
+
+
+class Configuration(models.Model):
     """
     Workspace General Settings
     """
     id = models.AutoField(primary_key=True, help_text='Unique Id to identify a workspace')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
-    reimbursable_expenses_object = models.CharField(max_length=50, \
-        help_text='Mapping Settings ( BILL / EXPENSE_REPORT )')
-    corporate_credit_card_expenses_object = models.CharField(max_length=50, \
-        help_text='Mapping Settings ( BILL / CHARGE_CARD_TRANSACTION )', null=True)
+    reimbursable_expenses_object = models.CharField(
+        max_length=50, choices=REIMBURSABLE_EXPENSES_OBJECT_CHOICES, help_text='Mapping Settings ( BILL / EXPENSE_REPORT )'
+    )
+    corporate_credit_card_expenses_object = models.CharField(
+        max_length=50, choices=COPORATE_CARD_EXPENSES_OBJECT_CHOICES, 
+        help_text='Mapping Settings ( BILL / CHARGE_CARD_TRANSACTION )', null=True
+    )
     import_projects = models.BooleanField(default=False, help_text='Auto import projects to Fyle')
     import_categories = models.BooleanField(default=False, help_text='Auto import caimport_categories to Fyle')
     sync_fyle_to_sage_intacct_payments = models.BooleanField(default=False, help_text='Auto Sync Payments from Fyle '
                                                                                       'to Sage Intacct')
     sync_sage_intacct_to_fyle_payments = models.BooleanField(default=False, help_text='Auto Sync Payments from Sage '
                                                                                       'Intacct to Fyle')
-    auto_map_employees = models.CharField(max_length=50,
-                                         help_text='Auto Map Employees type from Sage Intacct to Fyle', null=True)
+    auto_map_employees = models.CharField(
+        max_length=50, choices=AUTO_MAP_EMPLOYEE_CHOICES,
+        help_text='Auto Map Employees type from Sage Intacct to Fyle', null=True
+    )
     auto_create_destination_entity = models.BooleanField(default=False, help_text='Auto create vendor / employee')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
     class Meta:
-        db_table = 'workspace_general_settings'
+        db_table = 'configurations'
 
 
 class SageIntacctCredential(models.Model):

@@ -8,11 +8,11 @@ from rest_framework.response import Response
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
 
-from apps.workspaces.models import FyleCredential, WorkspaceGeneralSettings, Workspace
+from apps.workspaces.models import FyleCredential, Configuration, Workspace
 from apps.tasks.models import TaskLog
 
 from .tasks import create_expense_groups, schedule_expense_group_creation
-from .utils import FyleConnector
+from .connector import FyleConnector
 from .models import Expense, ExpenseGroup, ExpenseGroupSettings
 from .serializers import ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer, \
     ExpenseGroupSettingsSerializer
@@ -51,10 +51,10 @@ class ExpenseGroupView(generics.ListCreateAPIView):
         Create expense groups
         """
         task_log = TaskLog.objects.get(pk=request.data.get('task_log_id'))
-        general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=kwargs['workspace_id'])
+        configuration = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
 
         fund_source = ['PERSONAL']
-        if general_settings.corporate_credit_card_expenses_object:
+        if configuration.corporate_credit_card_expenses_object:
             fund_source.append('CCC')
 
         create_expense_groups(

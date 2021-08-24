@@ -11,7 +11,7 @@ from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace
-from apps.fyle.utils import FyleConnector
+from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \

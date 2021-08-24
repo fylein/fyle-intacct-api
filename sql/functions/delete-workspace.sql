@@ -151,10 +151,10 @@ BEGIN
     RAISE NOTICE 'Deleted % general_mappings', rcount;
 
     DELETE
-    FROM workspace_general_settings wgs
-    WHERE wgs.workspace_id = _workspace_id;
+    FROM configurations c
+    WHERE c.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
-    RAISE NOTICE 'Deleted % workspace_general_settings', rcount;
+    RAISE NOTICE 'Deleted % configurations', rcount;
 
     DELETE
     FROM expense_group_settings egs

@@ -18,8 +18,8 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, WorkspaceGeneralSettings
-from apps.fyle.utils import FyleConnector
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
+from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
@@ -307,7 +307,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     task_log.save()
 
 
-def __validate_expense_group(expense_group: ExpenseGroup, general_settings: WorkspaceGeneralSettings):
+def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration):
     bulk_errors = []
     row = 0
 
@@ -334,7 +334,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
             )
 
         elif expense_group.fund_source == 'CCC':
-            if general_settings.corporate_credit_card_expenses_object == 'BILL':
+            if configuration.corporate_credit_card_expenses_object == 'BILL':
                 if general_mapping and not general_mapping.default_ccc_vendor_id:
                     bulk_errors.append({
                         'row': None,
@@ -344,7 +344,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                         'message': 'Default Credit Card Vendor not found'
                     })
 
-            elif general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+            elif configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
                 if general_mapping and not general_mapping.default_charge_card_id:
                     bulk_errors.append({
                         'row': None,
@@ -354,7 +354,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
                         'message': 'Default Charge Card not found'
                     })
 
-            elif general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+            elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
                 error_message = 'Employee Mapping not found'
                 Mapping.objects.get(
                     Q(destination_type='EMPLOYEE'),
@@ -379,7 +379,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
             lineitem.category, lineitem.sub_category)
 
         if (expense_group.fund_source == 'PERSONAL') or (expense_group.fund_source == 'CCC' and \
-            general_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'):
+            configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'):
             error_message = 'Category Mapping Not Found'
             account = Mapping.objects.filter(
                 Q(destination_type='ACCOUNT') | Q(destination_type='EXPENSE_TYPE'),
@@ -389,7 +389,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, general_settings: Work
             ).first()
 
         elif expense_group.fund_source == 'CCC' and \
-            general_settings.corporate_credit_card_expenses_object != 'EXPENSE_REPORT':
+            configuration.corporate_credit_card_expenses_object != 'EXPENSE_REPORT':
             error_message = 'Credit Card Expense Account Mapping Not Found'
             account = Mapping.objects.filter(
                 source_type='CATEGORY',
@@ -421,19 +421,19 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
     else:
         return
 
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
+    configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-        if general_settings.auto_map_employees and general_settings.auto_create_destination_entity \
-            and general_settings.auto_map_employees != 'EMPLOYEE_CODE':
+        if configuration.auto_map_employees and configuration.auto_create_destination_entity \
+            and configuration.auto_map_employees != 'EMPLOYEE_CODE':
             create_or_update_employee_mapping(
-                expense_group, sage_intacct_connection, general_settings.auto_map_employees)
+                expense_group, sage_intacct_connection, configuration.auto_map_employees)
 
         with transaction.atomic():
-            __validate_expense_group(expense_group, general_settings)
+            __validate_expense_group(expense_group, configuration)
 
             expense_report_object = ExpenseReport.create_expense_report(expense_group)
 
@@ -523,20 +523,20 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
     else:
         return
 
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
+    configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-        if general_settings.auto_map_employees and general_settings.auto_create_destination_entity \
+        if configuration.auto_map_employees and configuration.auto_create_destination_entity \
             and expense_group.fund_source == 'PERSONAL' and \
-                general_settings.auto_map_employees != 'EMPLOYEE_CODE':
+                configuration.auto_map_employees != 'EMPLOYEE_CODE':
             create_or_update_employee_mapping(
-                expense_group, sage_intacct_connection, general_settings.auto_map_employees)
+                expense_group, sage_intacct_connection, configuration.auto_map_employees)
 
         with transaction.atomic():
-            __validate_expense_group(expense_group, general_settings)
+            __validate_expense_group(expense_group, configuration)
 
             bill_object = Bill.create_bill(expense_group)
 
@@ -619,12 +619,12 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
     else:
         return
 
-    general_settings = WorkspaceGeneralSettings.objects.get(workspace_id=expense_group.workspace_id)
+    configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
     try:
         merchant = expense_group.expenses.first().vendor
         get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
         with transaction.atomic():
-            __validate_expense_group(expense_group, general_settings)
+            __validate_expense_group(expense_group, configuration)
 
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
@@ -1043,8 +1043,8 @@ def check_sage_intacct_object_status(workspace_id):
                 expense_report.save()
 
 
-def schedule_sage_intacct_objects_status_sync(sync_sage_to_fyle_payments, workspace_id):
-    if sync_sage_to_fyle_payments:
+def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
+    if sync_sage_intacct_to_fyle_payments:
         start_datetime = datetime.now()
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.sage_intacct.tasks.check_sage_intacct_object_status',
