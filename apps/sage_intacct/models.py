@@ -134,6 +134,38 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     return item_id
 
 
+def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
+    class_id = None
+    if general_mappings and general_mappings.default_class_id:
+        class_id = general_mappings.default_class_id
+
+    class_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='CLASS'
+    ).first()
+
+    if class_setting:
+        if class_setting.source_field == 'PROJECT':
+            source_value = lineitem.project
+        elif class_setting.source_field == 'COST_CENTER':
+            source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=class_setting.source_field,
+            destination_type='CLASS',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+
+        if mapping:
+            class_id = mapping.destination.destination_id
+
+    return class_id
+
+
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
     if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
         return expense_group.description['spent_at']
@@ -298,6 +330,7 @@ class BillLineitem(models.Model):
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
+    class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
@@ -369,6 +402,7 @@ class BillLineitem(models.Model):
                 default_employee_department_id is None else None
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_location_id is None else None
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
@@ -382,6 +416,7 @@ class BillLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': default_employee_department_id if default_employee_department_id
                     else department_id,
+                    'class_id': class_id,
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,

@@ -63,6 +63,8 @@ class MappingUtils:
                 'payment_account_id': general_mapping['payment_account_id'],
                 'default_department_name': general_mapping['default_department_name'],
                 'default_department_id': general_mapping['default_department_id'],
+                'default_class_name': general_mapping['default_class_name'],
+                'default_class_id': general_mapping['default_class_id'],
                 'default_project_name': general_mapping['default_project_name'],
                 'default_project_id': general_mapping['default_project_id'],
                 'default_charge_card_name': general_mapping['default_charge_card_name'],

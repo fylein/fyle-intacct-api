@@ -322,7 +322,7 @@ class SageIntacctConnector:
             employee_attributes, 'EMPLOYEE', self.workspace_id, True)
 
         return []
-    
+
     def sync_user_defined_dimensions(self):
         """
         Get User Defined Dimensions
@@ -350,6 +350,27 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_classes(self):
+        """
+        Get classes
+        """
+        classes = self.connection.classes.get_all(fields=['NAME', 'CLASSID'])
+
+        class_attributes = []
+
+        for _class in classes:
+            class_attributes.append({
+                'attribute_type': 'CLASS',
+                'display_name': 'class',
+                'value': _class['NAME'],
+                'destination_id': _class['CLASSID']
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            class_attributes, 'CLASS', self.workspace_id, True)
+
+        return []
+
     def sync_dimensions(self):
         try:
             # TODO: Sync location_entities only once (After Sage Intacct account connection)
@@ -374,6 +395,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_expense_payment_types()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_classes()
         except Exception as exception:
             logger.exception(exception)
 
@@ -687,6 +713,7 @@ class SageIntacctConnector:
                 'PROJECTID': lineitem.project_id,
                 'CUSTOMERID': lineitem.customer_id,
                 'ITEMID': lineitem.item_id,
+                'CLASSID': lineitem.class_id,
                 'BILLABLE': lineitem.billable,
                 'customfields': {
                    'customfield': [
