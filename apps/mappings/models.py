@@ -17,6 +17,8 @@ class GeneralMapping(models.Model):
     default_location_id = models.CharField(max_length=255, help_text='Default location ID', null=True)
     default_department_name = models.CharField(max_length=255, help_text='Default department name', null=True)
     default_department_id = models.CharField(max_length=255, help_text='Default department ID', null=True)
+    default_class_name = models.CharField(max_length=255, help_text='Default class name', null=True)
+    default_class_id = models.CharField(max_length=255, help_text='Default class ID', null=True)
     default_project_name = models.CharField(max_length=255, help_text='Default project name', null=True)
     default_project_id = models.CharField(max_length=255, help_text='Default project ID', null=True)
     default_charge_card_name = models.CharField(max_length=255, help_text='Default charge card name', null=True)
