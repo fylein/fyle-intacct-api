@@ -552,7 +552,6 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     si_attributes = remove_duplicates(si_attributes)
 
     fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)
-
     if fyle_payload:
         fyle_connection.connection.Categories.post(fyle_payload)
         fyle_connection.sync_categories(False)

@@ -48,7 +48,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
     """
     try:
         with transaction.atomic():
-            updated = []
+            updated_at = []
 
             workspace = Workspace.objects.get(pk=workspace_id)
 
@@ -78,7 +78,6 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
                 expense_objects, workspace_id
             )
 
-            task_log.detail = ExpenseGroupSerializer(expense_group_objects, many=True).data
             task_log.status = 'COMPLETE'
             task_log.save()
 

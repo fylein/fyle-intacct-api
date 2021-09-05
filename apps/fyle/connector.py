@@ -195,7 +195,7 @@ class FyleConnector:
 
         return []
 
-    def sync_categories(self, active_only: bool):
+    def sync_categories(self, active_only: bool = True):
         """
         Get categories from fyle
         """
