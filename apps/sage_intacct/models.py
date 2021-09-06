@@ -494,6 +494,7 @@ class ExpenseReportLineitem(models.Model):
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
+    class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
@@ -558,6 +559,7 @@ class ExpenseReportLineitem(models.Model):
                 default_employee_department_id is None else None
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
                 default_employee_location_id is None else None
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
@@ -576,6 +578,7 @@ class ExpenseReportLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': default_employee_department_id if default_employee_department_id
                     else department_id,
+                    'class_id': class_id,
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
@@ -684,6 +687,7 @@ class ChargeCardTransactionLineitem(models.Model):
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
+    class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
@@ -736,6 +740,7 @@ class ChargeCardTransactionLineitem(models.Model):
                 default_employee_department_id is None else None
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
                 default_employee_location_id is None else None
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
@@ -747,6 +752,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'project_id': project_id,
                     'department_id': default_employee_department_id if default_employee_department_id
                     else department_id,
+                    'class_id': class_id,
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
