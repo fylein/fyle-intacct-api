@@ -770,9 +770,9 @@ class SageIntacctConnector:
                 'locationid': lineitem.location_id,
                 'customerid': lineitem.customer_id,
                 'vendorid': charge_card_transaction.vendor_id,
-                'classid': lineitem.class_id,
                 'projectid': lineitem.project_id,
                 'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
                 'customfields': {
                    'customfield': [
                     {
