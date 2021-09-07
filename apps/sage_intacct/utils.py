@@ -657,6 +657,7 @@ class SageIntacctConnector:
                 'projectid': lineitem.project_id,
                 'customerid': lineitem.customer_id,
                 'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
                 'billable': lineitem.billable,
                 'exppmttype': lineitem.expense_payment_type,
                 'customfields': {
@@ -771,6 +772,7 @@ class SageIntacctConnector:
                 'vendorid': charge_card_transaction.vendor_id,
                 'projectid': lineitem.project_id,
                 'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
                 'customfields': {
                    'customfield': [
                     {
