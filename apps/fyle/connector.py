@@ -63,7 +63,7 @@ class FyleConnector:
         elif response.status_code == 500:
             raise InternalServerError('Internal server error', response.text)
     
-    def __format_updated_at(self, updated_at):
+    def __format_updated_at(self, updated_at: datetime):
         return 'gte:{0}'.format(datetime.strftime(updated_at, '%Y-%m-%dT%H:%M:%S.000Z'))
 
     def __get_last_synced_at(self, attribute_type: str):

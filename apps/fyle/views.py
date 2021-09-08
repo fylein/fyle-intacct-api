@@ -333,7 +333,7 @@ class ExpenseGroupSettingsView(generics.ListCreateAPIView):
         )
 
 
-class ExpenseAttributesView(generics.ListAPIView):
+class ExpenseAttributesView(generics.ListCreateAPIView):
     """
     Expense Attributes view
     """
