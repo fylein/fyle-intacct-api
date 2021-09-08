@@ -333,7 +333,7 @@ class ExpenseGroupSettingsView(generics.ListCreateAPIView):
         )
 
 
-class ExpenseAttributesView(generics.ListCreateAPIView):
+class ExpenseAttributesView(generics.ListAPIView):
     """
     Expense Attributes view
     """
@@ -345,31 +345,6 @@ class ExpenseAttributesView(generics.ListCreateAPIView):
 
         return ExpenseAttribute.objects.filter(
             attribute_type=attribute_type, workspace_id=self.kwargs['workspace_id']).order_by('value')
-
-    def post(self, request, *args, **kwargs):
-        """
-        Get Expense Custom Fields from Fyle
-        """
-        try:
-            active_only = request.GET.get('active_only', True)
-            fyle_credentials = FyleCredential.objects.get(
-                workspace_id=kwargs['workspace_id'])
-
-            fyle_connector = FyleConnector(fyle_credentials.refresh_token, kwargs['workspace_id'])
-
-            expense_custom_field_attributes = fyle_connector.sync_expense_custom_fields(active_only=active_only)
-
-            return Response(
-                data=self.serializer_class(expense_custom_field_attributes, many=True).data,
-                status=status.HTTP_200_OK
-            )
-        except FyleCredential.DoesNotExist:
-            return Response(
-                data={
-                    'message': 'Fyle credentials not found in workspace'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
 
 class FyleFieldsView(generics.ListAPIView):
