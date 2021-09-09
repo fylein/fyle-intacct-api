@@ -2,6 +2,7 @@ from typing import List
 import json
 import logging
 import requests
+from datetime import datetime
 
 from django.conf import settings
 
@@ -61,6 +62,24 @@ class FyleConnector:
 
         elif response.status_code == 500:
             raise InternalServerError('Internal server error', response.text)
+    
+    def __format_updated_at(self, updated_at: datetime):
+        return 'gte:{0}'.format(datetime.strftime(updated_at, '%Y-%m-%dT%H:%M:%S.000Z'))
+
+    def __get_last_synced_at(self, attribute_type: str):
+        latest_synced_record = ExpenseAttribute.objects.filter(
+            workspace_id=self.workspace_id,
+            attribute_type=attribute_type
+        ).order_by('-updated_at').first()
+        updated_at = self.__format_updated_at(latest_synced_record.updated_at) if latest_synced_record else None
+
+        return updated_at
+
+    def existing_db_count(self, attribute_type: str):
+        return ExpenseAttribute.objects.filter(
+            workspace_id=self.workspace_id,
+            attribute_type=attribute_type
+        ).count()
 
     def _get_request(self, url, params):
         """
@@ -150,7 +169,8 @@ class FyleConnector:
         """
         Get employees from fyle
         """
-        employees = self.connection.Employees.get_all()
+        updated_at = self.__get_last_synced_at('EMPLOYEE')
+        employees = self.connection.Employees.get_all(updated_at=updated_at)
 
         employee_attributes = []
 
@@ -175,11 +195,17 @@ class FyleConnector:
 
         return []
 
-    def sync_categories(self, active_only: bool):
+    def sync_categories(self, active_only: bool = True):
         """
         Get categories from fyle
         """
-        categories = self.connection.Categories.get(active_only=active_only)['data']
+        existing_db_count = self.existing_db_count('CATEGORY')
+        existing_category_count = self.connection.Categories.count()['count']
+
+        if existing_db_count == existing_category_count:
+            return
+
+        categories = self.connection.Categories.get_all()
 
         category_attributes = []
 
@@ -203,6 +229,12 @@ class FyleConnector:
         """
         Get projects from fyle
         """
+        existing_db_count = self.existing_db_count('PROJECT')
+        existing_project_count = self.connection.Projects.count()['count']
+
+        if existing_db_count == existing_project_count:
+            return
+
         projects = self.connection.Projects.get_all()
 
         project_attributes = []
@@ -224,6 +256,12 @@ class FyleConnector:
         """
         Get cost centers from fyle
         """
+        existing_db_count = self.existing_db_count('COST_CENTER')
+        existing_cost_centers_count = self.connection.CostCenters.count()['count']
+
+        if existing_db_count == existing_cost_centers_count:
+            return
+
         cost_centers = self.connection.CostCenters.get_all()
 
         cost_center_attributes = []
@@ -241,7 +279,7 @@ class FyleConnector:
 
         return []
 
-    def sync_expense_custom_fields(self, active_only: bool):
+    def sync_expense_custom_fields(self, active_only: bool = True):
         """
         Get Expense Custom Fields from Fyle (Type = Select)
         """
@@ -300,38 +338,16 @@ class FyleConnector:
         """
         Get reimbursements from fyle
         """
-        reimbursements = self.connection.Reimbursements.get_all()
+        latest_synced_record = Reimbursement.objects.filter(
+            workspace_id=self.workspace_id
+        ).order_by('-updated_at').first()
+        updated_at = self.__format_updated_at(latest_synced_record.updated_at) if latest_synced_record else None
+
+        reimbursements = self.connection.Reimbursements.get_all(updated_at=updated_at)
 
         Reimbursement.create_or_update_reimbursement_objects(
             reimbursements, self.workspace_id
         )
-
-    def sync_dimensions(self):
-
-        try:
-            self.sync_employees()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_categories(active_only=True)
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_projects()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_cost_centers()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_expense_custom_fields(active_only=True)
-        except Exception as exception:
-            logger.exception(exception)
 
     def post_reimbursement(self, reimbursement_ids: list):
         """

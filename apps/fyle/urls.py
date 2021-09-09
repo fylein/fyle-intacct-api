@@ -14,24 +14,35 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
+import itertools
 
 from .views import UserProfileView, ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView, \
-    ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView, ExpenseFieldsView, \
-        ExpenseCustomFieldsView, ExpenseGroupSettingsView, RefreshFyleDimensionView, SyncFyleDimensionView
+    ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView, FyleFieldsView, \
+        ExpenseAttributesView, ExpenseGroupSettingsView, RefreshFyleDimensionView, SyncFyleDimensionView, \
+        ExpenseGroupCountView
 
-urlpatterns = [
+expense_groups_paths = [
     path('user/', UserProfileView.as_view()),
     path('expense_groups/', ExpenseGroupView.as_view()),
+    path('expense_groups/count/', ExpenseGroupCountView.as_view()),
     path('expense_groups/trigger/', ExpenseGroupScheduleView.as_view()),
-    path('expense_groups/<int:expense_group_id>/', ExpenseGroupByIdView.as_view()),
+    path('expense_groups/<int:pk>/', ExpenseGroupByIdView.as_view()),
     path('expense_groups/<int:expense_group_id>/expenses/', ExpenseView.as_view()),
     path('employees/', EmployeeView.as_view()),
     path('categories/', CategoryView.as_view()),
     path('projects/', ProjectView.as_view()),
     path('cost_centers/', CostCenterView.as_view()),
-    path('expense_custom_fields/', ExpenseCustomFieldsView.as_view()),
-    path('expense_fields/', ExpenseFieldsView.as_view()),
     path('expense_group_settings/', ExpenseGroupSettingsView.as_view()),
+]
+
+fyle_dimension_paths = [
     path('sync_dimensions/', SyncFyleDimensionView.as_view()),
     path('refresh_dimensions/', RefreshFyleDimensionView.as_view())
 ]
+
+other_paths = [
+    path('expense_attributes/', ExpenseAttributesView.as_view()),
+    path('fyle_fields/', FyleFieldsView.as_view())
+]
+
+urlpatterns = list(itertools.chain(expense_groups_paths, fyle_dimension_paths, other_paths))
