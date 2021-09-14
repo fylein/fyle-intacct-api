@@ -13,36 +13,24 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.urls import path
+import itertools
 
-from .views import EmployeeView, VendorView, AccountView, ExpenseTypeView, ChargeCardAccountView, DepartmentView, \
-    ProjectView, LocationView, ExpenseReportView, ExpenseReportScheduleView, BillView, BillScheduleView, \
-    ChargeCardTransactionsView, ChargeCardTransactionsScheduleView, SageIntacctFieldsView, ItemView, APPaymentView, \
-    ReimbursementView, PaymentAccountView, FyleReimbursementsView, SyncSageIntacctDimensionView, \
-    RefreshSageIntacctDimensionView, ExpenseCustomFieldsView, SageIntacctAttributesCountView
+from .views import  SageIntacctFieldsView, DestinationAttributesView, SyncSageIntacctDimensionView, \
+    RefreshSageIntacctDimensionView, DestinationAttributesCountView, \
+    TriggerExportsView, TriggerPaymentsView
 
-urlpatterns = [
-    path('employees/', EmployeeView.as_view()),
-    path('vendors/', VendorView.as_view()),
-    path('accounts/', AccountView.as_view()),
-    path('payment_accounts/', PaymentAccountView.as_view()),
-    path('expense_types/', ExpenseTypeView.as_view()),
-    path('charge_card_accounts/', ChargeCardAccountView.as_view()),
-    path('departments/', DepartmentView.as_view()),
-    path('projects/', ProjectView.as_view()),
-    path('locations/', LocationView.as_view()),
-    path('expense_reports/', ExpenseReportView.as_view()),
-    path('expense_reports/trigger/', ExpenseReportScheduleView.as_view()),
-    path('bills/', BillView.as_view()),
-    path('bills/trigger/', BillScheduleView.as_view()),
-    path('charge_card_transactions/', ChargeCardTransactionsView.as_view()),
-    path('charge_card_transactions/trigger/', ChargeCardTransactionsScheduleView.as_view()),
+
+sage_intacct_app_path = [
     path('sage_intacct_fields/', SageIntacctFieldsView.as_view()),
-    path('items/', ItemView.as_view()),
-    path('ap_payments/', APPaymentView.as_view()),
-    path('reimbursements/', ReimbursementView.as_view()),
-    path('fyle_reimbursements/', FyleReimbursementsView.as_view()),
+    path('destination_attributes/', DestinationAttributesView.as_view()),
+    path('destination_attributes/count/', DestinationAttributesCountView.as_view()),
+    path('exports/trigger/', TriggerExportsView.as_view()),
+    path('payments/trigger/', TriggerPaymentsView.as_view()),
+]
+
+sage_intacct_dimension_paths = [
     path('sync_dimensions/', SyncSageIntacctDimensionView.as_view()),
     path('refresh_dimensions/', RefreshSageIntacctDimensionView.as_view()),
-    path('attributes/count/', SageIntacctAttributesCountView.as_view()),
-    path('expense_custom_fields/', ExpenseCustomFieldsView.as_view())
 ]
+
+urlpatterns = list(itertools.chain(sage_intacct_app_path, sage_intacct_dimension_paths))
