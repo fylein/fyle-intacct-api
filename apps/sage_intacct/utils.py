@@ -817,7 +817,6 @@ class SageIntacctConnector:
         Post expense report to Sage Intacct
         """
         bill_payload = self.__construct_bill(bill, bill_lineitems)
-        print(bill_payload)
         created_bill = self.connection.bills.post(bill_payload)
         return created_bill
 
