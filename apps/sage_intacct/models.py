@@ -107,9 +107,36 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     return location_id
 
 
-def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
+def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str):
     customer_id = None
+    if not project_id:
+        if general_mappings and general_mappings.default_customer_id:
+            customer_id = general_mappings.default_customer_id
 
+        customer_setting: MappingSetting = MappingSetting.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            destination_field='CUSTOMER'
+        ).first()    
+
+        if customer_setting:
+            if customer_setting.source_field == 'PROJECT':
+                source_value = lineitem.project
+            elif customer_setting.source_field == 'COST CENTER':
+                source_value = lineitem.cost_center
+            else:
+                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field).first()
+                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+            mapping: Mapping = Mapping.objects.filter(
+                source_type=customer_setting.source_field,
+                destination_type='CUSTOMER',
+                source__value=source_value,
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+            if mapping:
+                customer_id = mapping.destination.destination_id    
+            
     if project_id:
         project = DestinationAttribute.objects.filter(
             attribute_type='PROJECT',

@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict
 from datetime import datetime
+from django.db.models import fields
 import unidecode
 
 from cryptography.fernet import Fernet
@@ -371,6 +372,27 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_customers(self):
+        """
+        Get Customers
+        """
+        customers = self.connection.customers.get_all()
+
+        customer_attributes = []
+
+        for _customer in customers:
+            customer_attributes.append({
+                'attribute_type': 'CUSTOMER',
+                'display_name': 'customer',
+                'value': _customer['NAME'],
+                'destination_id': _customer['CUSTOMERID']
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            customer_attributes, 'CUSTOMER', self.workspace_id, True)
+        
+        return []
+
     def sync_dimensions(self):
         try:
             # TODO: Sync location_entities only once (After Sage Intacct account connection)
@@ -380,6 +402,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_locations()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_customers()
         except Exception as exception:
             logger.exception(exception)
 
