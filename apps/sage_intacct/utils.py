@@ -1,7 +1,6 @@
 import logging
 from typing import List, Dict
 from datetime import datetime
-from django.db.models import fields
 import unidecode
 
 from cryptography.fernet import Fernet
@@ -380,12 +379,12 @@ class SageIntacctConnector:
 
         customer_attributes = []
 
-        for _customer in customers:
+        for customer in customers:
             customer_attributes.append({
                 'attribute_type': 'CUSTOMER',
                 'display_name': 'customer',
-                'value': _customer['NAME'],
-                'destination_id': _customer['CUSTOMERID']
+                'value': customer['NAME'],
+                'destination_id': customer['CUSTOMERID']
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
