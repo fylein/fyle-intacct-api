@@ -16,6 +16,13 @@ from .serializers import ExpenseGroupSerializer
 logger = logging.getLogger(__name__)
 
 
+def sync_reimbursements(workspace_id: int):
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
+
+    fyle_connector.sync_reimbursements()
+
+
 def schedule_expense_group_creation(workspace_id: int):
     """
     Schedule Expense group creation

@@ -201,6 +201,8 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
             task_log.save()
 
         if chain.length():
+            # TODO: check this
+            chain.insert(0, 'apps.fyle.tasks.sync_reimbursements', workspace_id)
             chain.run()
 
 
@@ -236,6 +238,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
             task_log.save()
 
         if chain.length():
+            chain.insert(0, 'apps.fyle.tasks.sync_reimbursements', workspace_id)
             chain.run()
 
 
@@ -272,6 +275,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             task_log.save()
 
         if chain.length():
+            chain.insert(0, 'apps.fyle.tasks.sync_reimbursements', workspace_id)
             chain.run()
 
 

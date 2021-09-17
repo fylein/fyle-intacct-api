@@ -329,11 +329,13 @@ class Reimbursement(models.Model):
     )
     settlement_id = models.CharField(max_length=255, help_text='Fyle Settlement ID')
     reimbursement_id = models.CharField(max_length=255, help_text='Fyle Reimbursement ID')
+    payment_number = models.CharField(max_length=255, help_text='Fyle Payment Number', null=True)
     state = models.CharField(max_length=255, help_text='Fyle Reimbursement State')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
     class Meta:
+        unique_together = ('workspace', 'payment_number')
         db_table = 'reimbursements'
 
     @staticmethod
@@ -365,6 +367,7 @@ class Reimbursement(models.Model):
                         settlement_id=reimbursement['settlement_id'],
                         reimbursement_id=reimbursement['id'],
                         state=reimbursement['state'],
+                        payment_number=reimbursement['unique_id'],
                         workspace_id=workspace_id
                     )
                 )
