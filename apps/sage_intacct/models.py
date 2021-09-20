@@ -109,12 +109,21 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
 
 def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str):
     customer_id = None
-    if not project_id:
 
+    if project_id:
+        project = DestinationAttribute.objects.filter(
+            attribute_type='PROJECT',
+            destination_id=project_id,
+            workspace_id=expense_group.workspace_id
+        ).order_by('-updated_at').first()
+        if project and project.detail:
+            customer_id = project.detail['customer_id']
+
+    if not customer_id:
         customer_setting: MappingSetting = MappingSetting.objects.filter(
             workspace_id=expense_group.workspace_id,
             destination_field='CUSTOMER'
-        ).first()    
+        ).first()
 
         if customer_setting:
             if customer_setting.source_field == 'PROJECT':
@@ -134,15 +143,6 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
 
             if mapping:
                 customer_id = mapping.destination.destination_id
-            
-    else:
-        project = DestinationAttribute.objects.filter(
-            attribute_type='PROJECT',
-            destination_id=project_id,
-            workspace_id=expense_group.workspace_id
-        ).order_by('-updated_at').first()
-        if project and project.detail:
-            customer_id = project.detail['customer_id']
 
     return customer_id
 
