@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 SYNC_UPPER_LIMIT = {
-    'projects': 5000
+    'projects': 5000,
+    'customers': 5000
 }
 
 
@@ -371,6 +372,29 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_customers(self):
+        """
+        Get Customers
+        """
+        customers_count = self.connection.customers.count()
+        if customers_count < SYNC_UPPER_LIMIT['customers']:
+            customers = self.connection.customers.get_all()
+
+            customer_attributes = []
+
+            for customer in customers:
+                customer_attributes.append({
+                    'attribute_type': 'CUSTOMER',
+                    'display_name': 'customer',
+                    'value': customer['NAME'],
+                    'destination_id': customer['CUSTOMERID']
+                })
+
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                customer_attributes, 'CUSTOMER', self.workspace_id, True)
+        
+        return []
+
     def sync_dimensions(self):
         try:
             # TODO: Sync location_entities only once (After Sage Intacct account connection)
@@ -380,6 +404,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_locations()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_customers()
         except Exception as exception:
             logger.exception(exception)
 

@@ -107,10 +107,35 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     return location_id
 
 
-def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
+def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str):
     customer_id = None
+    if not project_id:
 
-    if project_id:
+        customer_setting: MappingSetting = MappingSetting.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            destination_field='CUSTOMER'
+        ).first()    
+
+        if customer_setting:
+            if customer_setting.source_field == 'PROJECT':
+                source_value = lineitem.project
+            elif customer_setting.source_field == 'COST_CENTER':
+                source_value = lineitem.cost_center
+            else:
+                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field).first()
+                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+            mapping: Mapping = Mapping.objects.filter(
+                source_type=customer_setting.source_field,
+                destination_type='CUSTOMER',
+                source__value=source_value,
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+            if mapping:
+                customer_id = mapping.destination.destination_id
+            
+    else:
         project = DestinationAttribute.objects.filter(
             attribute_type='PROJECT',
             destination_id=project_id,
@@ -403,7 +428,7 @@ class BillLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_location_id is None else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, project_id)
+            customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
@@ -560,7 +585,7 @@ class ExpenseReportLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
                 default_employee_location_id is None else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, project_id)
+            customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
@@ -741,7 +766,7 @@ class ChargeCardTransactionLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
                 default_employee_location_id is None else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, project_id)
+            customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
