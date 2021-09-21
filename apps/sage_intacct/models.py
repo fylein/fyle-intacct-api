@@ -7,7 +7,7 @@ from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
 
-from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute
+from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings
 from apps.mappings.models import GeneralMapping
 from apps.fyle.connector import FyleConnector
 
@@ -204,6 +204,53 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
+def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
+    """
+    Get the memo from the description of the expense group.
+    :param expense_group: The expense group to get the memo from.
+    :param payment_type: The payment type to use in the memo.
+    :return: The memo.
+    """
+    expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' \
+        else 'Corporate Credit Card expense'
+    unique_number = None
+
+    if 'settlement_id' in expense_group.description and expense_group.description['settlement_id']:
+        # Grouped by payment
+        reimbursement = Reimbursement.objects.filter(
+            settlement_id=expense_group.description['settlement_id']
+        ).values('payment_number').first()
+
+        if reimbursement and reimbursement['payment_number']:
+            unique_number = reimbursement['payment_number']
+        else:
+            unique_number = expense_group.description['settlement_id']
+
+    elif 'claim_number' in expense_group.description and expense_group.description['claim_number']:
+        # Grouped by expense report
+        unique_number = expense_group.description['claim_number']
+
+    if payment_type:
+        # Payments sync
+        return 'Payment for {0} - {1}'.format(payment_type, unique_number)
+    elif unique_number:
+        memo = '{} - {}'.format(expense_fund_source, unique_number)
+        expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get(
+            workspace_id=expense_group.workspace_id
+        )
+        if expense_group_settings.export_date_type != 'current_date':
+            date = get_transaction_date(expense_group)
+            date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
+            memo = '{} - {}'.format(memo, date)
+
+        return memo
+    else:
+        # Safety addition
+        return 'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email')) \
+        if expense_group.fund_source == 'PERSONAL' \
+            else 'Credit card expenses by {0}'.format(expense_group.description.get('employee_email'))
+
+
 def get_expense_purpose(workspace_id, lineitem: Expense, category: str) -> str:
     workspace = Workspace.objects.get(id=workspace_id)
     org_id = workspace.fyle_org_id
@@ -317,6 +364,7 @@ class Bill(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        memo = get_memo(expense_group)
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = Mapping.objects.get(
@@ -334,9 +382,7 @@ class Bill(models.Model):
             defaults={
                 'vendor_id': vendor_id,
                 'description': description,
-                'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
-                expense_group.fund_source == 'PERSONAL' else
-                'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
             }
@@ -486,6 +532,7 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
+        memo = get_memo(expense_group)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -497,9 +544,7 @@ class ExpenseReport(models.Model):
                     workspace_id=expense_group.workspace_id
                 ).destination.destination_id,
                 'description': description,
-                'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
-                expense_group.fund_source == 'PERSONAL' else
-                'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group),
             }
@@ -650,6 +695,7 @@ class ChargeCardTransaction(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
+        memo = get_memo(expense_group)
 
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
@@ -690,7 +736,7 @@ class ChargeCardTransaction(models.Model):
                 'charge_card_id': charge_card_id,
                 'vendor_id': vendor,
                 'description': description,
-                'memo': 'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'reference_no': expense.expense_number,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
@@ -816,6 +862,7 @@ class APPayment(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
+        memo = get_memo(expense_group, 'Bill')
 
         vendor_id = Mapping.objects.get(
             source_type='EMPLOYEE',
@@ -831,7 +878,7 @@ class APPayment(models.Model):
             defaults={
                 'payment_account_id': general_mappings.payment_account_id,
                 'vendor_id': vendor_id,
-                'description': 'Payment for Bill by {0}'.format(description.get('employee_email')),
+                'description': memo,
                 'currency': expense.currency
             }
         )
@@ -907,6 +954,7 @@ class SageIntacctReimbursement(models.Model):
         """
 
         description = expense_group.description
+        memo = get_memo(expense_group, 'Expense Report')
 
         employee_id = Mapping.objects.get(
             source_type='EMPLOYEE',
@@ -922,7 +970,7 @@ class SageIntacctReimbursement(models.Model):
             defaults={
                 'account_id': general_mappings.payment_account_id,
                 'employee_id': employee_id,
-                'memo': 'Payment for Expense Report by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'payment_description': 'Payment for Expense Report by {0}'.format(description.get('employee_email'))
             }
         )
