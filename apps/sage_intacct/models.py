@@ -7,7 +7,7 @@ from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
 
-from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement
+from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings
 from apps.mappings.models import GeneralMapping
 from apps.fyle.connector import FyleConnector
 
@@ -234,10 +234,16 @@ def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
         # Payments sync
         return 'Payment for {0} - {1}'.format(payment_type, unique_number)
     elif unique_number:
-        return '{} - {}'.format(
-            expense_fund_source,
-            unique_number
+        memo = '{} - {}'.format(expense_fund_source, unique_number)
+        expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get(
+            workspace_id=expense_group.workspace_id
         )
+        if expense_group_settings.export_date_type != 'current_date':
+            date = get_transaction_date(expense_group)
+            date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
+            memo = '{} - {}'.format(memo, date)
+
+        return memo
     else:
         # Safety addition
         return 'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email')) \
