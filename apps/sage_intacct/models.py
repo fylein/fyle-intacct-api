@@ -653,7 +653,7 @@ class ExpenseReportLineitem(models.Model):
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'user_defined_dimensions': user_defined_dimensions,
-                    'transaction_date': get_transaction_date(expense_group),
+                    'transaction_date': lineitem.spent_at,
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
