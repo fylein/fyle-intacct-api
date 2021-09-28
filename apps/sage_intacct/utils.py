@@ -668,7 +668,7 @@ class SageIntacctConnector:
         """
         expsense_payload = []
         for lineitem in expense_report_lineitems:
-            transaction_date = datetime.strptime(lineitem.transaction_date, '%Y-%m-%dT%H:%M:%S')
+            transaction_date = lineitem.transaction_date
             expense_link = self.get_expense_link(lineitem)
 
             expense = {
