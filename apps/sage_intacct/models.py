@@ -327,6 +327,8 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
         workspace_id=expense_group.workspace_id
     ).order_by('-updated_at').first()
 
+    print(employee.detail, employee.value)
+    
     if employee.detail[object_type]:
         default_employee_object = employee.detail[object_type]
         return default_employee_object
