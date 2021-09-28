@@ -392,7 +392,7 @@ class SageIntacctConnector:
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 customer_attributes, 'CUSTOMER', self.workspace_id, True)
-        
+
         return []
 
     def sync_dimensions(self):
@@ -658,7 +658,7 @@ class SageIntacctConnector:
 
         return created_vendor
 
-    def __construct_expense_report(self, expense_report: ExpenseReport, \
+    def __construct_expense_report(self, expense_report: ExpenseReport,
                                    expense_report_lineitems: List[ExpenseReportLineitem]) -> Dict:
         """
         Create a expense report
@@ -668,12 +668,12 @@ class SageIntacctConnector:
         """
         expsense_payload = []
         for lineitem in expense_report_lineitems:
-            transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
+            transaction_date = lineitem.transaction_date
             expense_link = self.get_expense_link(lineitem)
 
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
-                    if lineitem.expense_type_id else lineitem.gl_account_number,
+                if lineitem.expense_type_id else lineitem.gl_account_number,
                 'amount': lineitem.amount,
                 'expensedate': {
                     'year': transaction_date.year,
