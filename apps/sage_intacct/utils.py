@@ -589,7 +589,7 @@ class SageIntacctConnector:
             self.connection.contacts.post(contact)
 
         except Exception as e:
-            logger.error(e.response)
+            logger.exception(e.response)
 
         employee_payload = {
             'PERSONALINFO': {

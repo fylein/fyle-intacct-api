@@ -27,6 +27,7 @@ from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, Ch
 from .utils import SageIntacctConnector
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, expense_group: ExpenseGroup):
@@ -114,7 +115,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             mapping.destination.save()
 
         except WrongParamsError as exception:
-            logger.error(exception.response)
+            logger.info(exception.response)
 
             error_response = exception.response['error'][0]
 
@@ -279,7 +280,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
 
 
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
-    logger.error(exception.response)
+    logger.info(exception.response)
     sage_intacct_errors = exception.response['error']
     error_msg = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
     errors = []
@@ -483,7 +484,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             expense_group.save()
 
     except SageIntacctCredential.DoesNotExist:
-        logger.exception(
+        logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
             expense_group.id,
             expense_group.workspace_id
@@ -498,7 +499,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
 
     except BulkError as exception:
-        logger.error(exception.response)
+        logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
         task_log.detail = detail
@@ -579,7 +580,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             expense_group.save()
 
     except SageIntacctCredential.DoesNotExist:
-        logger.exception(
+        logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
             expense_group.id,
             expense_group.workspace_id
@@ -594,7 +595,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
 
     except BulkError as exception:
-        logger.error(exception.response)
+        logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
         task_log.detail = detail
@@ -672,7 +673,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             expense_group.save()
 
     except SageIntacctCredential.DoesNotExist:
-        logger.exception(
+        logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
             expense_group.id,
             expense_group.workspace_id
@@ -687,7 +688,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
 
     except BulkError as exception:
-        logger.error(exception.response)
+        logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
         task_log.detail = detail
@@ -777,7 +778,7 @@ def create_ap_payment(workspace_id):
                         task_log.save()
 
                 except SageIntacctCredential.DoesNotExist:
-                    logger.error(
+                    logger.info(
                         'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
                         workspace_id,
                         bill.expense_group
@@ -792,7 +793,7 @@ def create_ap_payment(workspace_id):
                     task_log.save()
 
                 except BulkError as exception:
-                    logger.error(exception.response)
+                    logger.info(exception.response)
                     detail = exception.response
                     task_log.status = 'FAILED'
                     task_log.detail = detail
@@ -800,7 +801,7 @@ def create_ap_payment(workspace_id):
                     task_log.save()
 
                 except WrongParamsError as exception:
-                    logger.error(exception.response)
+                    logger.info(exception.response)
                     task_log.status = 'FAILED'
                     task_log.detail = exception.response
 
@@ -900,7 +901,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                     task_log.save()
 
             except SageIntacctCredential.DoesNotExist:
-                logger.error(
+                logger.info(
                     'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
                     workspace_id,
                     expense_report.expense_group
@@ -915,7 +916,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                 task_log.save()
 
             except BulkError as exception:
-                logger.error(exception.response)
+                logger.info(exception.response)
                 detail = exception.response
                 task_log.status = 'FAILED'
                 task_log.detail = detail
@@ -923,7 +924,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                 task_log.save()
 
             except WrongParamsError as exception:
-                logger.error(exception.response)
+                logger.info(exception.response)
                 task_log.status = 'FAILED'
                 task_log.detail = exception.response
 
