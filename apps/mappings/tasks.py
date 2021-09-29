@@ -17,6 +17,7 @@ from apps.workspaces.models import SageIntacctCredential, FyleCredential, Config
 from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 def remove_duplicates(si_attributes: List[DestinationAttribute]):
@@ -112,7 +113,7 @@ def auto_create_project_mappings(workspace_id: int):
         error = {
             'error': error
         }
-        logger.error(
+        logger.exception(
             'Error while creating projects workspace_id - %s error: %s',
             workspace_id, error
         )
@@ -354,7 +355,7 @@ def auto_create_cost_center_mappings(workspace_id: int):
         error = {
             'error': error
         }
-        logger.error(
+        logger.exception(
             'Error while creating cost centers workspace_id - %s error: %s',
             workspace_id, error
         )
@@ -467,7 +468,7 @@ def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute
         error = {
             'error': error
         }
-        logger.error(
+        logger.exception(
             'Error while creating %s workspace_id - %s error: %s', fyle_attribute_type, workspace_id, error
         )
 
@@ -671,7 +672,7 @@ def auto_create_category_mappings(workspace_id):
         error = {
             'error': error
         }
-        logger.error(
+        logger.exception(
             'Error while creating categories workspace_id - %s error: %s',
             workspace_id, error
         )
