@@ -238,10 +238,16 @@ def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
         expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get(
             workspace_id=expense_group.workspace_id
         )
-        if expense_group_settings.export_date_type != 'current_date':
-            date = get_transaction_date(expense_group)
-            date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
-            memo = '{} - {}'.format(memo, date)
+        if expense_fund_source == 'CCC':
+            if expense_group_settings.ccc_export_date_type != 'current_date':
+                date = get_transaction_date(expense_group)
+                date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
+                memo = '{} - {}'.format(memo, date)
+        else:
+            if expense_group_settings.reimbursable_export_date_type != 'current_date':
+                date = get_transaction_date(expense_group)
+                date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
+                memo = '{} - {}'.format(memo, date)
 
         return memo
     else:
