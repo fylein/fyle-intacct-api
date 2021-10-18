@@ -52,14 +52,14 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
     sage_intacct_connection = import_string('apps.sage_intacct.utils.SageIntacctConnector')(si_credentials, workspace_id)
     if not dimensions:
         dimensions = [
-            'accounts', 'departments', 'expense_types', 'charge_card_accounts', 'classes',
-            'payment_accounts', 'projects', 'items', 'locations', 'location_entities',
-            'expense_payment_types', 'employees', 'user_defined_dimensions', 'vendors'
+            'locations',  'departments', 'projects', 'expense_payment_types',
+            'classes', 'charge_card_accounts','payment_accounts', 'vendors', 'employees', 'accounts', 
+            'expense_types', 'items', 'user_defined_dimensions', 
         ]
 
-        for dimension in dimensions:
-            try:
-                sync = getattr(sage_intacct_connection, 'sync_{}'.format(dimension))
-                sync()
-            except Exception as exception:
-                logger.exception(exception)
+    for dimension in dimensions:
+        try:
+            sync = getattr(sage_intacct_connection, 'sync_{}'.format(dimension))
+            sync()
+        except Exception as exception:
+            logger.exception(exception)
