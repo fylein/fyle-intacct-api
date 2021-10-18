@@ -151,9 +151,11 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     item_id = None
 
     if lineitem.billable:
-        configuration: Configuration = Configuration.objects.get(
-            workspace_id=expense_group.workspace_id)
-        if configuration.import_projects:
+        project_setting: MappingSetting = MappingSetting.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            destination_field='PROJECT'
+        ).first()
+        if project_setting:
             item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
 
     return item_id
