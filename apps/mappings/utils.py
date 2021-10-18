@@ -21,7 +21,7 @@ class MappingUtils:
         configuration = Configuration.objects.get(workspace_id=self.__workspace_id)
 
         project_setting: MappingSetting = MappingSetting.objects.filter(
-            workspace_id=expense_group.workspace_id,
+            workspace_id=self.workspace_id,
             destination_field='PROJECT'
         ).first()
 
