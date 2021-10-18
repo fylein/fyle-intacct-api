@@ -14,6 +14,14 @@ from .connector import FyleConnector
 from .serializers import ExpenseGroupSerializer
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
+
+
+def sync_reimbursements(workspace_id: int):
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
+
+    fyle_connector.sync_reimbursements()
 
 
 def schedule_expense_group_creation(workspace_id: int):
@@ -82,7 +90,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
             task_log.save()
 
     except FyleCredential.DoesNotExist:
-        logger.exception('Fyle credentials not found %s', workspace_id)
+        logger.info('Fyle credentials not found %s', workspace_id)
         task_log.detail = {
             'message': 'Fyle credentials do not exist in workspace'
         }

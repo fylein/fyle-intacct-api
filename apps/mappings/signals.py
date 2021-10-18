@@ -1,17 +1,23 @@
 """
 Mappings Signal
 """
-from django.db.models import Q
-from django.db.models.signals import post_save, pre_save
-
-from django.dispatch import receiver
+import logging
+import json
 from datetime import datetime
 
+from rest_framework.exceptions import ValidationError
+
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
 from django_q.tasks import async_task
 
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
+from fylesdk.exceptions import WrongParamsError
 from apps.mappings.tasks import schedule_projects_creation, schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
-                        upload_attributes_to_fyle
+    upload_attributes_to_fyle
+
+logger = logging.getLogger(__name__)
+
 
 @receiver(post_save, sender=MappingSetting)
 def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
@@ -42,11 +48,26 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
     instance.source_field = instance.source_field.upper().replace(' ', '_')
 
     if instance.source_field not in default_attributes:
-        upload_attributes_to_fyle(
-            workspace_id=int(instance.workspace_id),
-            sageintacct_attribute_type=instance.destination_field,
-            fyle_attribute_type=instance.source_field
-        )
+        try:
+            upload_attributes_to_fyle(
+                workspace_id=int(instance.workspace_id),
+                sageintacct_attribute_type=instance.destination_field,
+                fyle_attribute_type=instance.source_field
+            )
+        except WrongParamsError as error:
+            logger.error(
+                'Error while creating %s workspace_id - %s in Fyle %s %s',
+                instance.source_field, instance.workspace_id, error.message, {'error': error.response}
+            )
+            if error.response:
+                response = json.loads(error.response)
+                if response and 'message' in response and \
+                    response['message'] == ('duplicate key value violates unique constraint '
+                    '"idx_expense_fields_org_id_field_name_is_enabled_is_custom"'):
+                    raise ValidationError({
+                        'message': 'Duplicate custom field name',
+                        'field_name': instance.source_field
+                    })
 
         async_task(
             'apps.mappings.tasks.auto_create_expense_fields_mappings',

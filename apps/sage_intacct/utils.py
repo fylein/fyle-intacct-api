@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 SYNC_UPPER_LIMIT = {
-    'projects': 5000
+    'projects': 5000,
+    'customers': 5000
 }
 
 
@@ -371,6 +372,29 @@ class SageIntacctConnector:
 
         return []
 
+    def sync_customers(self):
+        """
+        Get Customers
+        """
+        customers_count = self.connection.customers.count()
+        if customers_count < SYNC_UPPER_LIMIT['customers']:
+            customers = self.connection.customers.get_all()
+
+            customer_attributes = []
+
+            for customer in customers:
+                customer_attributes.append({
+                    'attribute_type': 'CUSTOMER',
+                    'display_name': 'customer',
+                    'value': customer['NAME'],
+                    'destination_id': customer['CUSTOMERID']
+                })
+
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                customer_attributes, 'CUSTOMER', self.workspace_id, True)
+
+        return []
+
     def sync_dimensions(self):
         try:
             # TODO: Sync location_entities only once (After Sage Intacct account connection)
@@ -380,6 +404,11 @@ class SageIntacctConnector:
 
         try:
             self.sync_locations()
+        except Exception as exception:
+            logger.exception(exception)
+
+        try:
+            self.sync_customers()
         except Exception as exception:
             logger.exception(exception)
 
@@ -560,7 +589,7 @@ class SageIntacctConnector:
             self.connection.contacts.post(contact)
 
         except Exception as e:
-            logger.error(e.response)
+            logger.exception(e.response)
 
         employee_payload = {
             'PERSONALINFO': {
@@ -629,7 +658,7 @@ class SageIntacctConnector:
 
         return created_vendor
 
-    def __construct_expense_report(self, expense_report: ExpenseReport, \
+    def __construct_expense_report(self, expense_report: ExpenseReport,
                                    expense_report_lineitems: List[ExpenseReportLineitem]) -> Dict:
         """
         Create a expense report
@@ -639,12 +668,12 @@ class SageIntacctConnector:
         """
         expsense_payload = []
         for lineitem in expense_report_lineitems:
-            transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
+            transaction_date = lineitem.transaction_date
             expense_link = self.get_expense_link(lineitem)
 
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
-                    if lineitem.expense_type_id else lineitem.gl_account_number,
+                if lineitem.expense_type_id else lineitem.gl_account_number,
                 'amount': lineitem.amount,
                 'expensedate': {
                     'year': transaction_date.year,

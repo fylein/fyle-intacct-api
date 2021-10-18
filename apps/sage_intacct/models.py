@@ -7,7 +7,7 @@ from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
 
-from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute
+from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings
 from apps.mappings.models import GeneralMapping
 from apps.fyle.connector import FyleConnector
 
@@ -107,7 +107,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     return location_id
 
 
-def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
+def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str):
     customer_id = None
 
     if project_id:
@@ -118,6 +118,31 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, project_id: str):
         ).order_by('-updated_at').first()
         if project and project.detail:
             customer_id = project.detail['customer_id']
+
+    if not customer_id:
+        customer_setting: MappingSetting = MappingSetting.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            destination_field='CUSTOMER'
+        ).first()
+
+        if customer_setting:
+            if customer_setting.source_field == 'PROJECT':
+                source_value = lineitem.project
+            elif customer_setting.source_field == 'COST_CENTER':
+                source_value = lineitem.cost_center
+            else:
+                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field).first()
+                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+            mapping: Mapping = Mapping.objects.filter(
+                source_type=customer_setting.source_field,
+                destination_type='CUSTOMER',
+                source__value=source_value,
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+            if mapping:
+                customer_id = mapping.destination.destination_id
 
     return customer_id
 
@@ -177,6 +202,59 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
         return expense_group.description['last_spent_at']
 
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+
+
+def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
+    """
+    Get the memo from the description of the expense group.
+    :param expense_group: The expense group to get the memo from.
+    :param payment_type: The payment type to use in the memo.
+    :return: The memo.
+    """
+    expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' \
+        else 'Corporate Credit Card expense'
+    unique_number = None
+
+    if 'settlement_id' in expense_group.description and expense_group.description['settlement_id']:
+        # Grouped by payment
+        reimbursement = Reimbursement.objects.filter(
+            settlement_id=expense_group.description['settlement_id']
+        ).values('payment_number').first()
+
+        if reimbursement and reimbursement['payment_number']:
+            unique_number = reimbursement['payment_number']
+        else:
+            unique_number = expense_group.description['settlement_id']
+
+    elif 'claim_number' in expense_group.description and expense_group.description['claim_number']:
+        # Grouped by expense report
+        unique_number = expense_group.description['claim_number']
+
+    if payment_type:
+        # Payments sync
+        return 'Payment for {0} - {1}'.format(payment_type, unique_number)
+    elif unique_number:
+        memo = '{} - {}'.format(expense_fund_source, unique_number)
+        expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get(
+            workspace_id=expense_group.workspace_id
+        )
+        if expense_group.fund_source == 'CCC':
+            if expense_group_settings.ccc_export_date_type != 'current_date':
+                date = get_transaction_date(expense_group)
+                date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
+                memo = '{} - {}'.format(memo, date)
+        else:
+            if expense_group_settings.reimbursable_export_date_type != 'current_date':
+                date = get_transaction_date(expense_group)
+                date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
+                memo = '{} - {}'.format(memo, date)
+
+        return memo
+    else:
+        # Safety addition
+        return 'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email')) \
+        if expense_group.fund_source == 'PERSONAL' \
+            else 'Credit card expenses by {0}'.format(expense_group.description.get('employee_email'))
 
 
 def get_expense_purpose(workspace_id, lineitem: Expense, category: str) -> str:
@@ -292,6 +370,7 @@ class Bill(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        memo = get_memo(expense_group)
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = Mapping.objects.get(
@@ -309,9 +388,7 @@ class Bill(models.Model):
             defaults={
                 'vendor_id': vendor_id,
                 'description': description,
-                'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
-                expense_group.fund_source == 'PERSONAL' else
-                'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
             }
@@ -403,7 +480,7 @@ class BillLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_location_id is None else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, project_id)
+            customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
@@ -461,6 +538,7 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
+        memo = get_memo(expense_group)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -472,9 +550,7 @@ class ExpenseReport(models.Model):
                     workspace_id=expense_group.workspace_id
                 ).destination.destination_id,
                 'description': description,
-                'memo': 'Reimbursable expenses by {0}'.format(description.get('employee_email')) if
-                expense_group.fund_source == 'PERSONAL' else
-                'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group),
             }
@@ -560,7 +636,7 @@ class ExpenseReportLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
                 default_employee_location_id is None else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, project_id)
+            customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
@@ -583,7 +659,7 @@ class ExpenseReportLineitem(models.Model):
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'user_defined_dimensions': user_defined_dimensions,
-                    'transaction_date': get_transaction_date(expense_group),
+                    'transaction_date': lineitem.spent_at,
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
@@ -625,6 +701,7 @@ class ChargeCardTransaction(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
+        memo = get_memo(expense_group)
 
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
@@ -665,7 +742,7 @@ class ChargeCardTransaction(models.Model):
                 'charge_card_id': charge_card_id,
                 'vendor_id': vendor,
                 'description': description,
-                'memo': 'Credit card expenses by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'reference_no': expense.expense_number,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
@@ -741,7 +818,7 @@ class ChargeCardTransactionLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
                 default_employee_location_id is None else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
-            customer_id = get_customer_id_or_none(expense_group, project_id)
+            customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
@@ -791,6 +868,7 @@ class APPayment(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
+        memo = get_memo(expense_group, 'Bill')
 
         vendor_id = Mapping.objects.get(
             source_type='EMPLOYEE',
@@ -806,7 +884,7 @@ class APPayment(models.Model):
             defaults={
                 'payment_account_id': general_mappings.payment_account_id,
                 'vendor_id': vendor_id,
-                'description': 'Payment for Bill by {0}'.format(description.get('employee_email')),
+                'description': memo,
                 'currency': expense.currency
             }
         )
@@ -882,6 +960,7 @@ class SageIntacctReimbursement(models.Model):
         """
 
         description = expense_group.description
+        memo = get_memo(expense_group, 'Expense Report')
 
         employee_id = Mapping.objects.get(
             source_type='EMPLOYEE',
@@ -897,7 +976,7 @@ class SageIntacctReimbursement(models.Model):
             defaults={
                 'account_id': general_mappings.payment_account_id,
                 'employee_id': employee_id,
-                'memo': 'Payment for Expense Report by {0}'.format(description.get('employee_email')),
+                'memo': memo,
                 'payment_description': 'Payment for Expense Report by {0}'.format(description.get('employee_email'))
             }
         )
