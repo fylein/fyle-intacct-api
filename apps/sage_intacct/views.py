@@ -63,14 +63,17 @@ class TriggerExportsView(generics.GenericAPIView):
     Trigger exports creation
     """
     def post(self, request, *args, **kwargs):
+        print('nilesh i am here')
         expense_group_ids = request.data.get('expense_group_ids', [])
         export_type = request.data.get('export_type')
 
+        print("export type", export_type)
+        print("expense group ids", expense_group_ids)
         if export_type == 'BILL':
             schedule_bills_creation(kwargs['workspace_id'], expense_group_ids)
-        elif export_type == 'CHARGE CARD TRANSACTION':
+        elif export_type == 'CHARGE_CARD_TRANSACTION':
             schedule_charge_card_transaction_creation(kwargs['workspace_id'], expense_group_ids)
-        elif export_type == 'EXPENSE REPORT':
+        elif export_type == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(kwargs['workspace_id'], expense_group_ids)
 
         return Response(
