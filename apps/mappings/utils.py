@@ -20,6 +20,11 @@ class MappingUtils:
         """
         configuration = Configuration.objects.get(workspace_id=self.__workspace_id)
 
+        project_setting: MappingSetting = MappingSetting.objects.filter(
+            workspace_id=self.workspace_id,
+            destination_field='PROJECT'
+        ).first()
+
         if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
             assert_valid('default_charge_card_name' in general_mapping and general_mapping['default_charge_card_name'],
                          'default charge card name field is blank')
@@ -40,7 +45,7 @@ class MappingUtils:
                          general_mapping['default_ccc_expense_payment_type_id'],
                          'default ccc expense payment type id is blank')
 
-        if configuration.import_projects:
+        if project_setting:
             assert_valid('default_item_name' in general_mapping and general_mapping['default_item_name'],
                          'default item name field is blank')
             assert_valid('default_item_id' in general_mapping and general_mapping['default_item_id'],
