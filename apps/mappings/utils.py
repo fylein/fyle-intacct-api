@@ -3,6 +3,7 @@ from typing import Dict
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_reimbursement_creation
 from apps.workspaces.models import Configuration
 from fyle_intacct_api.utils import assert_valid
+from fyle_accounting_mappings.models import MappingSetting
 
 from .models import GeneralMapping
 from .tasks import schedule_auto_map_charge_card_employees
@@ -21,7 +22,7 @@ class MappingUtils:
         configuration = Configuration.objects.get(workspace_id=self.__workspace_id)
 
         project_setting: MappingSetting = MappingSetting.objects.filter(
-            workspace_id=self.workspace_id,
+            workspace_id=self.__workspace_id,
             destination_field='PROJECT'
         ).first()
 
