@@ -15,6 +15,11 @@ from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
 from fylesdk.exceptions import WrongParamsError
 from apps.mappings.tasks import schedule_projects_creation, schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
     upload_attributes_to_fyle
+from apps.workspaces.models import Configuration
+from apps.sage_intacct.helpers import schedule_payment_sync
+from .tasks import schedule_auto_map_charge_card_employees
+
+from .models import GeneralMapping
 
 logger = logging.getLogger(__name__)
 
@@ -75,3 +80,17 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
             instance.destination_field,
             instance.source_field
         )
+
+@receiver(post_save, sender=GeneralMapping)
+def run_post_general_mapping_triggers(sender, instance: GeneralMapping, **kwargs):
+    """
+    :param sender: Sender Class
+    :param instance: Row Instance of Sender Class
+    :return: None
+    """
+
+    configuration = Configuration.objects.get(workspace_id=instance.workspace_id)
+    schedule_payment_sync(configuration)
+
+    if instance.default_charge_card_name:
+        schedule_auto_map_charge_card_employees(instance.workspace_id)
