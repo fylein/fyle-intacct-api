@@ -2,7 +2,7 @@
 Sage Intacct models
 """
 from datetime import datetime
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from django.db import models
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
