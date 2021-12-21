@@ -42,6 +42,7 @@ class ExpenseGroupView(generics.ListCreateAPIView):
         elif state == 'READY':
             return ExpenseGroup.objects.filter(
                 bill__id__isnull=True,
+                # journalentry__id__isnull=True,
                 expensereport__id__isnull=True,
                 chargecardtransaction__id__isnull=True,
                 workspace_id=self.kwargs['workspace_id']

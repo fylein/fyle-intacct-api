@@ -72,6 +72,8 @@ class TriggerExportsView(generics.GenericAPIView):
             schedule_charge_card_transaction_creation(kwargs['workspace_id'], expense_group_ids)
         elif export_type == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(kwargs['workspace_id'], expense_group_ids)
+        elif export_type == 'JOURNAL_ENTRY':
+            schedule_journal_entries_creation(kwargs['workspace_id'], expense_group_ids)
 
         return Response(
             status=status.HTTP_200_OK

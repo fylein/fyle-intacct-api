@@ -22,7 +22,7 @@ from apps.workspaces.models import SageIntacctCredential, FyleCredential, Config
 from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
-    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
     SageIntacctReimbursementLineitem
 from .utils import SageIntacctConnector
 
@@ -168,6 +168,42 @@ def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
         vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
 
     return vendor
+
+def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List[str]):
+    """
+    Schedule journal entries creation
+    :param expense_group_ids: List of expense group ids
+    :param workspace_id: workspace id
+    :return: None
+    """
+    if expense_group_ids:
+        expense_groups = ExpenseGroup.objects.filter(
+            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
+            workspace_id=workspace_id, id__in=expense_group_ids, journalreport__id__isnull=True,
+            exported_at__isnull=True
+        ).all()
+
+        chain = Chain()
+        chain.append('apps.fyle.tasks.sync_reimbursements', workspace_id)
+
+        for expense_group in expense_groups:
+            task_log, _ = TaskLog.objects.get_or_create(
+                workspace_id=expense_group.workspace_id,
+                expense_group=expense_group,
+                defaults={
+                    'status': 'ENQUEUED',
+                    'type': 'CREATING_JOURNAL_ENTRIES'
+                }
+            )
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
+                task_log.status = 'ENQUEUED'
+                task_log.save()
+
+            chain.append('apps.sage_intacct.tasks.create_journal_entry', expense_group, task_log.id)
+            task_log.save()
+
+        if chain.length() > 1:
+            chain.run()
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
@@ -416,6 +452,100 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
     if bulk_errors:
         raise BulkError('Mappings are missing', bulk_errors)
 
+def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
+    task_log = TaskLog.objects.get(id=task_log_id)
+    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+        task_log.status = 'IN_PROGRESS'
+        task_log.save()
+    else:
+        return
+
+    configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+
+    try:
+        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
+
+        if configuration.auto_map_employees and configuration.auto_create_destination_entity \
+            and configuration.auto_map_employees != 'EMPLOYEE_CODE':
+            create_or_update_employee_mapping(
+                expense_group, sage_intacct_connection, configuration.auto_map_employees)
+
+        with transaction.atomic():
+            __validate_expense_group(expense_group, configuration)
+
+            journal_entry_object = JournalEntry.create_journal_entry(expense_group)
+
+            journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group)
+
+            created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object,journal_entry_lineitem_object)
+
+            created_attachment_id = load_attachments(sage_intacct_connection, \
+                                                     created_journal_entry['data']['apbill']['RECORDNO'], expense_group)
+
+            journal_entry = sage_intacct_connection.get_journal_entry(created_journal_entry['data']['apbill']['RECORDNO'], ['RECORD_URL'])
+            url_id = journal_entry['apbill']['RECORD_URL'].split('?.r=', 1)[1]
+            created_journal_entry['url_id'] = url_id
+
+            if created_attachment_id:
+                try:
+                    sage_intacct_connection.update_journal_entry(created_journal_entry['data']['apbill']['RECORDNO'], created_attachment_id)
+                    journal_entry_object.supdoc_id = created_attachment_id
+                    journal_entry_object.save()
+                except Exception:
+                    error = traceback.format_exc()
+                    logger.error(
+                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                        expense_group.id, expense_group.workspace_id, {'error': error}
+                    )
+
+            task_log.detail = created_journal_entry
+            task_log.journal_entry = journal_entry_object
+            task_log.sage_intacct_errors = None
+            task_log.status = 'COMPLETE'
+
+            task_log.save()
+
+            expense_group.exported_at = datetime.now()
+            expense_group.save()
+    
+    except SageIntacctCredential.DoesNotExist:
+        logger.info(
+            'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
+            expense_group.id,
+            expense_group.workspace_id
+        )
+        detail = {
+            'expense_group_id': expense_group.id,
+            'message': 'Sage Intacct Account not connected'
+        }
+        task_log.status = 'FAILED'
+        task_log.detail = detail
+
+        task_log.save()
+
+    except BulkError as exception:
+        logger.info(exception.response)
+        detail = exception.response
+        task_log.status = 'FAILED'
+        task_log.detail = detail
+
+        task_log.save()
+
+    except WrongParamsError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
+
+    except Exception:
+        error = traceback.format_exc()
+        task_log.detail = {
+            'error': error
+        }
+        task_log.status = 'FATAL'
+        task_log.save()
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+
+
+    
 
 def create_expense_report(expense_group: ExpenseGroup, task_log_id):
     task_log = TaskLog.objects.get(id=task_log_id)
