@@ -2,8 +2,9 @@
 Sage Intacct models
 """
 from datetime import datetime
-from django.db.models import JSONField
+from django.db.models import Q,JSONField
 from django.db import models
+
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
 
@@ -679,14 +680,12 @@ class JournalEntry(models.Model):
     """
     id = models.AutoField(primary_key=True)
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
-    vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
+    entity_id = models.CharField(max_length=255, help_text='Sage Intacct Entity ID')
     description = models.TextField(help_text='Sage Intacct ExpenseReport Description')
     memo = models.TextField(help_text='Sage Intacct memo', null=True)
     currency = models.CharField(max_length=5, help_text='Expense Report Currency')
     supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
-    payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
-    paid_on_sage_intacct = models.BooleanField(help_text='Payment status in Sage Intacct', default=False)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -702,31 +701,32 @@ class JournalEntry(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         memo = get_memo(expense_group)
 
+        employee_mapping_setting = MappingSetting.objects.filter(
+            Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
+            source_field='EMPLOYEE',
+            workspace_id=expense_group.workspace_id
+        ).first().destination_field
 
-        if expense_group.fund_source == 'PERSONAL':
-            vendor_id = Mapping.objects.get(
+        if expense_group.fund_source == 'CCC':
+            entity_id = Mapping.objects.get(
                 source_type='EMPLOYEE',
-                destination_type='VENDOR',
+                destination_type=employee_mapping_setting,
                 source__value=description.get('employee_email'),
                 workspace_id=expense_group.workspace_id
             ).destination.destination_id
-        
-        elif expense_group.fund_source == 'CCC':
-            vendor_id = general_mappings.default_ccc_vendor_id
-
-        journal_entry_object, = JournalEntry.objects.update_or_create(
-            expense_group=expense_group,
-            defaults={
-                'vendor_id': vendor_id,
-                'description': description,
-                'memo': memo,
-                'currency': expense.currency,
-                'transaction_date': get_transaction_date(expense_group)
-            }
-        )
+            
+            journal_entry_object, _ = JournalEntry.objects.update_or_create(
+                expense_group=expense_group,
+                defaults={
+                    'entity_id': entity_id,
+                    'description': description,
+                    'memo': memo,
+                    'currency': expense.currency,
+                    'transaction_date': get_transaction_date(expense_group),
+                }
+            )
 
         return journal_entry_object
 
@@ -737,7 +737,6 @@ class JournalEntryLineitem(models.Model):
     id = models.AutoField(primary_key=True)
     journal_entry = models.ForeignKey(Bill, on_delete=models.PROTECT, help_text='Reference to Bill')
     expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
-    # expense_type_id = models.CharField(help_text='Sage Intacct expense type id', max_length=255, null=True)
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
@@ -781,28 +780,13 @@ class JournalEntryLineitem(models.Model):
             category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
-            if expense_group.fund_source == 'PERSONAL':
-                account: Mapping = Mapping.objects.filter(
-                    destination_type='ACCOUNT',
-                    source_type='CATEGORY',
-                    source__value=category,
-                    workspace_id=expense_group.workspace_id
-                ).first()
-
-            elif expense_group.fund_source == 'CCC':
+            if expense_group.fund_source == 'CCC':
                 account: Mapping = Mapping.objects.filter(
                     destination_type='CCC_ACCOUNT',
                     source_type='CATEGORY',
                     source__value=category,
                     workspace_id=expense_group.workspace_id
                 ).first()
-
-            expense_type: Mapping = Mapping.objects.filter(
-                destination_type='EXPENSE_TYPE',
-                source_type='CATEGORY',
-                source__value=category,
-                workspace_id=expense_group.workspace_id
-            ).first()
 
             if general_mappings.use_intacct_employee_locations:
                 default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
@@ -820,12 +804,11 @@ class JournalEntryLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
-            journal_entry_lineitem_object, _ = JournalEntry.objects.update_or_create(
+            journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
                 expense_id=lineitem.id,
                 defaults={
                     'gl_account_number': account.destination.destination_id if account else None,
-                    'expense_type_id': expense_type.destination.destination_id if expense_type else None,
                     'project_id': project_id,
                     'department_id': default_employee_department_id if default_employee_department_id
                     else department_id,

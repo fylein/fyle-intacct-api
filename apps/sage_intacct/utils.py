@@ -840,10 +840,10 @@ class SageIntacctConnector:
         :param jorunal_entry_lineitems: JorunalEntryLineItem objects extracted from database
         :return: constructed jorunal_entry
         """
-        glentry_payload = []
+        journal_entry_payload = []
 
         for lineitem in journal_entry_lineitems:
-            journal_entry_credit = {
+            credit_line = {
                 'accountno': lineitem.gl_account_number,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
@@ -853,7 +853,7 @@ class SageIntacctConnector:
                 'description': journal_entry.description
             }
 
-            journal_entry_debit = {
+            debit_line = {
                 'accountno': lineitem.gl_account_number,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
@@ -863,8 +863,8 @@ class SageIntacctConnector:
                 'description': journal_entry.description
             }
 
-            glentry_payload.append(journal_entry_credit)
-            glentry_payload.append(journal_entry_debit)
+            journal_entry_payload.append(credit_line)
+            journal_entry_payload.append(debit_line)
 
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
@@ -875,7 +875,7 @@ class SageIntacctConnector:
             'batch_title': journal_entry.description,
             'entries':[
                 {
-                    'glentry': glentry_payload
+                    'glentry': journal_entry_payload
                 }
             ]
         }

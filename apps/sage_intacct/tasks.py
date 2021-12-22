@@ -179,7 +179,7 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
             Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
-            workspace_id=workspace_id, id__in=expense_group_ids, journalreport__id__isnull=True,
+            workspace_id=workspace_id, id__in=expense_group_ids, journalentry__id__isnull=True,
             exported_at__isnull=True
         ).all()
 
@@ -479,6 +479,15 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group)
 
             created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object,journal_entry_lineitem_object)
+
+            task_log.journal_entry = journal_entry_object
+            task_log.sage_intacct_errors = None
+            task_log.status = 'COMPLETE'
+
+            task_log.save()
+
+            expense_group.exported_at = datetime.now()
+            expense_group.save()
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
                                                      created_journal_entry['data']['apbill']['RECORDNO'], expense_group)
