@@ -517,7 +517,7 @@ def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate
         si_connection.sync_expense_types()
 
     if reimbursable_expenses_object == 'BILL' or \
-        corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION'):
+        corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
         si_connection.sync_accounts()
 
 def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
@@ -582,7 +582,7 @@ def create_credit_card_category_mappings(reimbursable_expenses_object: str,
             gl_account_ids.append(mapping.destination.detail['gl_account_no'])
 
     if reimbursable_expenses_object == 'EXPENSE_REPORT' and corporate_credit_card_expenses_object in (
-        'BILL', 'CHARGE_CARD_TRANSACTION'):
+        'BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
         destination_attributes = DestinationAttribute.objects.filter(
             workspace_id=workspace_id,
             attribute_type=destination_type,
@@ -604,7 +604,7 @@ def create_credit_card_category_mappings(reimbursable_expenses_object: str,
 
     for mapping in category_mappings:
         if reimbursable_expenses_object == 'EXPENSE_REPORT' and corporate_credit_card_expenses_object in (
-            'BILL', 'CHARGE_CARD_TRANSACTION'):
+            'BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
             for value in destination_id_map:
                 if destination_id_map[value]['destination_id'] == mapping.destination.detail['gl_account_no']:
                     mapping_batch.append(
@@ -618,7 +618,7 @@ def create_credit_card_category_mappings(reimbursable_expenses_object: str,
                     )
                     break
         elif reimbursable_expenses_object == 'BILL' and corporate_credit_card_expenses_object in (
-            'BILL', 'CHARGE_CARD_TRANSACTION'):
+            'BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
             mapping_batch.append(
                 Mapping(
                     source_type='CATEGORY',
