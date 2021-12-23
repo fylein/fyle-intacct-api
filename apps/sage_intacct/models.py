@@ -716,7 +716,7 @@ class JournalEntry(models.Model):
                 source__value=description.get('employee_email'),
                 workspace_id=expense_group.workspace_id
             ).destination.destination_id
-            
+
             journal_entry_object, _ = JournalEntry.objects.update_or_create(
                 expense_group=expense_group,
                 defaults={
@@ -724,7 +724,7 @@ class JournalEntry(models.Model):
                     'description': description,
                     'memo': memo,
                     'currency': expense.currency,
-                    'transaction_date': get_transaction_date(expense_group),
+                    'transaction_date': get_transaction_date(expense_group)
                 }
             )
 
@@ -748,7 +748,6 @@ class JournalEntryLineitem(models.Model):
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Bill amount')
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
-    expense_payment_type = models.CharField(max_length=255, help_text='Expense Payment Type', null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')

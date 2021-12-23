@@ -518,9 +518,6 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
                     )
 
             task_log.detail = created_journal_entry
-            task_log.journal_entry = journal_entry_object
-            task_log.sage_intacct_errors = None
-            task_log.status = 'COMPLETE'
 
             task_log.save()
 

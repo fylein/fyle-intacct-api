@@ -843,24 +843,51 @@ class SageIntacctConnector:
         journal_entry_payload = []
 
         for lineitem in journal_entry_lineitems:
+            expense_link = self.get_expense_link(lineitem)
             credit_line = {
                 'accountno': lineitem.gl_account_number,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
+                'project': lineitem.project_id,
                 'currency': journal_entry.currency,
+                'class': lineitem.class_id,
+                'customer': lineitem.customer_id,
+                'item': lineitem.item_id,
+                'billable': lineitem.billable,
                 'tr_type': -1,
                 'amount': lineitem.amount,
-                'description': journal_entry.description
+                'description': journal_entry.description,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                }
             }
 
             debit_line = {
                 'accountno': lineitem.gl_account_number,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
+                'project': lineitem.project_id,
                 'currency': journal_entry.currency,
+                'class': lineitem.class_id,
+                'customer': lineitem.customer_id,
+                'item': lineitem.item_id,
+                'billable': lineitem.billable,
                 'tr_type': 1,
                 'amount': lineitem.amount,
-                'description': journal_entry.description
+                'description': journal_entry.description,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                }
             }
 
             journal_entry_payload.append(credit_line)
