@@ -735,7 +735,7 @@ class JournalEntryLineitem(models.Model):
     Sage Intacct Journal Entry Lineitem
     """
     id = models.AutoField(primary_key=True)
-    journal_entry = models.ForeignKey(Bill, on_delete=models.PROTECT, help_text='Reference to Bill')
+    journal_entry = models.ForeignKey(JournalEntry, on_delete=models.PROTECT, help_text='Reference to Journal Entry')
     expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)

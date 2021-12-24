@@ -397,7 +397,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
                 error_message = 'Employee Mapping not found'
                 Mapping.objects.get(
-                    Q(destination_type='EMPLOYEE') | Q(destination_field='VENDOR'),
+                    Q(destination_type='EMPLOYEE') | Q(destination_type='VENDOR'),
                     source_type='EMPLOYEE',
                     source__value=expense_group.description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
@@ -499,15 +499,15 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             expense_group.save()
 
             created_attachment_id = load_attachments(sage_intacct_connection, \
-                                                     created_journal_entry['data']['apbill']['RECORDNO'], expense_group)
+                                                     created_journal_entry['data']['glbatch']['RECORDNO'], expense_group)
 
-            journal_entry = sage_intacct_connection.get_journal_entry(created_journal_entry['data']['apbill']['RECORDNO'], ['RECORD_URL'])
-            url_id = journal_entry['apbill']['RECORD_URL'].split('?.r=', 1)[1]
+            journal_entry = sage_intacct_connection.get_journal_entry(created_journal_entry['data']['glbatch']['RECORDNO'], ['RECORD_URL'])
+            url_id = journal_entry['glbatch']['RECORD_URL'].split('?.r=', 1)[1]
             created_journal_entry['url_id'] = url_id
 
             if created_attachment_id:
                 try:
-                    sage_intacct_connection.update_journal_entry(created_journal_entry['data']['apbill']['RECORDNO'], created_attachment_id)
+                    sage_intacct_connection.update_journal_entry(created_journal_entry['data']['glbatch']['RECORDNO'], created_attachment_id)
                     journal_entry_object.supdoc_id = created_attachment_id
                     journal_entry_object.save()
                 except Exception:
