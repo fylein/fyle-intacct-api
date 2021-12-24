@@ -441,7 +441,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
 
             expense_report_object = ExpenseReport.create_expense_report(expense_group)
 
-            expense_report_lineitems_objects = ExpenseReportLineitem.create_expense_report_lineitems(expense_group)
+            expense_report_lineitems_objects = ExpenseReportLineitem.create_expense_report_lineitems(
+                expense_group, configuration
+            )
 
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
 
@@ -544,7 +546,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
 
             bill_object = Bill.create_bill(expense_group)
 
-            bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group)
+            bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group, configuration)
 
             created_bill = sage_intacct_connection.post_bill(bill_object, \
                                                              bill_lineitems_objects)
@@ -633,7 +635,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
             charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
-                create_charge_card_transaction_lineitems(expense_group)
+                create_charge_card_transaction_lineitems(expense_group, configuration)
 
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
 
