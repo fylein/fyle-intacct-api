@@ -846,17 +846,17 @@ class SageIntacctConnector:
             expense_link = self.get_expense_link(lineitem)
             credit_line = {
                 'accountno': lineitem.gl_account_number,
+                'currency': journal_entry.currency,
+                'amount': lineitem.amount,
+                'tr_type': -1,
+                'description': journal_entry.memo,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
-                'project': lineitem.project_id,
-                'currency': journal_entry.currency,
-                'class': lineitem.class_id,
-                'customer': lineitem.customer_id,
-                'item': lineitem.item_id,
+                'projectid': lineitem.project_id,
+                'customerid': lineitem.customer_id,
+                'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
                 'billable': lineitem.billable,
-                'tr_type': -1,
-                'amount': lineitem.amount,
-                'description': journal_entry.description,
                 'customfields': {
                    'customfield': [
                     {
@@ -869,17 +869,17 @@ class SageIntacctConnector:
 
             debit_line = {
                 'accountno': lineitem.gl_account_number,
+                'currency': journal_entry.currency,
+                'amount': lineitem.amount,
+                'tr_type': 1,
+                'description': journal_entry.memo,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
-                'project': lineitem.project_id,
-                'currency': journal_entry.currency,
-                'class': lineitem.class_id,
-                'customer': lineitem.customer_id,
-                'item': lineitem.item_id,
+                'projectid': lineitem.project_id,
+                'customerid': lineitem.customer_id,
+                'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
                 'billable': lineitem.billable,
-                'tr_type': 1,
-                'amount': lineitem.amount,
-                'description': journal_entry.description,
                 'customfields': {
                    'customfield': [
                     {
@@ -890,6 +890,11 @@ class SageIntacctConnector:
                 }
             }
 
+            for dimension in lineitem.user_defined_dimensions:
+                for name, value in dimension.items():
+                    credit_line[name] = value
+                    debit_line[name] = value
+
             journal_entry_payload.append(credit_line)
             journal_entry_payload.append(debit_line)
 
@@ -897,9 +902,9 @@ class SageIntacctConnector:
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
         
         journal_entry_payload = {
-            'journal': 'TEST_FYLE_JE',
+            'journal': 'FYLE_JE',
             'batch_date': transaction_date,
-            'batch_title': journal_entry.description,
+            'batch_title': journal_entry.memo,
             'entries':[
                 {
                     'glentry': journal_entry_payload
