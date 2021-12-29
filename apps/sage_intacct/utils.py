@@ -833,7 +833,7 @@ class SageIntacctConnector:
 
         return charge_card_transaction_payload
     
-    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]) -> Dict:
+    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str, recordno : str) -> Dict:
         """
         Create a jorunal_entry
         :param jorunal_entry: JorunalEntry object extracted from database
@@ -901,16 +901,33 @@ class SageIntacctConnector:
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
         
-        journal_entry_payload = {
-            'journal': 'FYLE_JE',
-            'batch_date': transaction_date,
-            'batch_title': journal_entry.memo,
-            'entries':[
-                {
-                    'glentry': journal_entry_payload
-                }
-            ]
-        }
+        if(supdocid and recordno):
+            journal_entry_payload = {
+                'redocrdno': recordno,
+                'journal': 'FYLE_JE',
+                'batch_date': transaction_date,
+                'batch_title': journal_entry.memo,
+                'supdocid': supdocid,
+                'entries':[
+                    {
+                        'glentry': journal_entry_payload
+                    }
+                ]
+            }
+        
+        else:
+            journal_entry_payload = {
+                'journal': 'FYLE_JE',
+                'batch_date': transaction_date,
+                'batch_title': journal_entry.memo,
+                'entries':[
+                    {
+                        'glentry': journal_entry_payload
+                    }
+                ]
+            }
+            
+
 
         return journal_entry_payload
 
@@ -1006,14 +1023,15 @@ class SageIntacctConnector:
         """
         return self.connection.charge_card_transactions.update_attachment(key=object_key, supdocid=supdocid)
 
-    def update_journal_entry(self, object_key, supdocid: str):
+    def update_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str, recordno : str):
         """
         Map posted attachment with Sage Intacct Object
-        :param object_key: journal entry key
         :param supdocid: attachments id
+        :param recordno: record no
         :return: response from sage intacct
         """
-        return self.connection.journal_entries.update_attachment(recordno=object_key, supdocid=supdocid)
+        journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems, supdocid, recordno)
+        return self.connection.journal_entries.post(journal_entry_payload)
 
     def post_attachments(self, attachments: List[Dict], supdoc_id: str):
         """

@@ -507,7 +507,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
 
             if created_attachment_id:
                 try:
-                    sage_intacct_connection.update_journal_entry(created_journal_entry['data']['glbatch']['RECORDNO'], created_attachment_id)
+                    sage_intacct_connection.update_journal_entry(journal_entry_object, journal_entry_lineitem_object, created_attachment_id, created_journal_entry['data']['glbatch']['RECORDNO'])
                     journal_entry_object.supdoc_id = created_attachment_id
                     journal_entry_object.save()
                 except Exception:
