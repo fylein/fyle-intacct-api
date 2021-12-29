@@ -260,7 +260,7 @@ def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
             else 'Credit card expenses by {0}'.format(expense_group.description.get('employee_email'))
 
 
-def get_expense_purpose(workspace_id, lineitem: Expense, category: str) -> str:
+def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configuration: Configuration) -> str:
     workspace = Workspace.objects.get(id=workspace_id)
     org_id = workspace.fyle_org_id
 
@@ -277,10 +277,27 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str) -> str:
         cluster_domain, lineitem.expense_id, org_id
     )
 
-    expense_purpose = ', purpose - {0}'.format(lineitem.purpose) if lineitem.purpose else ''
-    spent_at = ' spent on {0} '.format(lineitem.spent_at.date()) if lineitem.spent_at else ''
-    return 'Expense by {0} against category {1}{2}with report number - {3}{4} - {5}'.format(
-        lineitem.employee_email, category, spent_at, lineitem.claim_number, expense_purpose, expense_link)
+    memo_structure = configuration.memo_structure
+
+    details = {
+        'employee_email': lineitem.employee_email,
+        'merchant': '{0}'.format(lineitem.vendor) if lineitem.vendor else '',
+        'category': '{0}'.format(category) if lineitem.category else '',
+        'purpose': '{0}'.format(lineitem.purpose) if lineitem.purpose else '',
+        'report_number': '{0}'.format(lineitem.claim_number),
+        'spent_on': '{0}'.format(lineitem.spent_at.date()) if lineitem.spent_at else '',
+        'expense_link': expense_link
+    }
+
+    purpose = ''
+
+    for id, field in enumerate(memo_structure):
+        if field in details:
+            purpose += details[field]
+            if id + 1 != len(memo_structure):
+                purpose = '{0} - '.format(purpose)
+
+    return purpose
 
 
 def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Expense):
@@ -425,10 +442,11 @@ class BillLineitem(models.Model):
         db_table = 'bill_lineitems'
 
     @staticmethod
-    def create_bill_lineitems(expense_group: ExpenseGroup):
+    def create_bill_lineitems(expense_group: ExpenseGroup,  configuration: Configuration):
         """
         Create bill lineitems
         :param expense_group: expense group
+        :param configuration: Workspace Configuration Settings
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -503,7 +521,7 @@ class BillLineitem(models.Model):
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
                 }
             )
 
@@ -590,10 +608,11 @@ class ExpenseReportLineitem(models.Model):
         db_table = 'expense_report_lineitems'
 
     @staticmethod
-    def create_expense_report_lineitems(expense_group: ExpenseGroup):
+    def create_expense_report_lineitems(expense_group: ExpenseGroup, configuration: Configuration):
         """
         Create expense report lineitems
         :param expense_group: expense group
+        :param configuration: Workspace Configuration Settings
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -666,7 +685,7 @@ class ExpenseReportLineitem(models.Model):
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
                 }
             )
 
@@ -932,10 +951,11 @@ class ChargeCardTransactionLineitem(models.Model):
         db_table = 'charge_card_transaction_lineitems'
 
     @staticmethod
-    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup):
+    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup,  configuration: Configuration):
         """
         Create expense report lineitems
         :param expense_group: expense group
+        :param configuration: Workspace Configuration Settings
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -990,7 +1010,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'amount': lineitem.amount,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
                 }
             )
 
