@@ -3,7 +3,7 @@ from django.db.models import JSONField
 
 from apps.workspaces.models import Workspace
 from apps.fyle.models import ExpenseGroup
-from apps.sage_intacct.models import Bill, ExpenseReport, ChargeCardTransaction, APPayment, SageIntacctReimbursement
+from apps.sage_intacct.models import Bill, ExpenseReport, ChargeCardTransaction, APPayment, SageIntacctReimbursement, JournalEntry
 
 
 def get_default():
@@ -28,6 +28,8 @@ class TaskLog(models.Model):
         help_text='Reference to ExpenseReport', null=True)
     charge_card_transaction = models.ForeignKey(ChargeCardTransaction, on_delete=models.PROTECT, \
         help_text='Reference to ChargeCardTransaction', null=True)
+    journal_entry = models.ForeignKey(JournalEntry, on_delete=models.PROTECT, \
+        help_text='Reference to JournalEntry', null=True)
     ap_payment = models.ForeignKey(APPayment, on_delete=models.PROTECT, help_text='Reference to AP Payment', null=True)
     sage_intacct_reimbursement = models.ForeignKey(SageIntacctReimbursement, on_delete=models.PROTECT,
                                                    help_text='Reference to Sage Intacct Reimbursement', null=True)
