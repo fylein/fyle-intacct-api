@@ -485,7 +485,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group)
 
-            journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group)
+            journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
 
             created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object,journal_entry_lineitem_object)
 

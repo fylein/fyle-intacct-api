@@ -775,7 +775,7 @@ class JournalEntryLineitem(models.Model):
         db_table = 'journal_entry_lineitems'
     
     @staticmethod
-    def create_journal_entry_lineitems(expense_group: ExpenseGroup):
+    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration):
         """
         Create journal entry lineitems
         :param expense_group: expense group
@@ -837,7 +837,7 @@ class JournalEntryLineitem(models.Model):
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration) 
                 }
             )
 
