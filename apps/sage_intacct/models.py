@@ -699,7 +699,6 @@ class JournalEntry(models.Model):
     """
     id = models.AutoField(primary_key=True)
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
-    entity_id = models.CharField(max_length=255, help_text='Sage Intacct Entity ID')
     description = models.TextField(help_text='Sage Intacct ExpenseReport Description')
     memo = models.TextField(help_text='Sage Intacct memo', null=True)
     currency = models.CharField(max_length=5, help_text='Expense Report Currency')
@@ -739,7 +738,6 @@ class JournalEntry(models.Model):
             journal_entry_object, _ = JournalEntry.objects.update_or_create(
                 expense_group=expense_group,
                 defaults={
-                    'entity_id': entity_id,
                     'description': description,
                     'memo': memo,
                     'currency': expense.currency,
@@ -758,6 +756,8 @@ class JournalEntryLineitem(models.Model):
     expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
     gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
     project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
+    employee_id = models.CharField(help_text='Sage Intacct employee id', max_length=255, null=True)
+    vendor_id = models.CharField(help_text='Sage Intacct vendor id', max_length=255, null=True)
     location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
     class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
@@ -812,11 +812,28 @@ class JournalEntryLineitem(models.Model):
             if general_mappings.use_intacct_employee_departments:
                 default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
 
+            description = expense_group.description
+
+            employee_mapping_setting = MappingSetting.objects.filter(
+            Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
+            source_field='EMPLOYEE',
+            workspace_id=expense_group.workspace_id
+            ).first().destination_field
+
+            entity_id = Mapping.objects.get(
+                source_type='EMPLOYEE',
+                destination_type=employee_mapping_setting,
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).destination.destination_id
+
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_department_id is None else None
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_location_id is None else None
+            employee_id = entity_id if employee_mapping_setting == 'EMPLOYEE' else None
+            vendor_id = entity_id if employee_mapping_setting == 'VENDOR' else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -834,6 +851,8 @@ class JournalEntryLineitem(models.Model):
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'employee_id': employee_id,
+                    'vendor_id': vendor_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'billable': lineitem.billable if customer_id and item_id else False,

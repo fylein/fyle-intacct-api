@@ -48,7 +48,7 @@ Django Rest Framework API for Fyle Sage Intacct Integration
 * The database can be accessed by this command, on password prompt type `postgres`
 
     ```
-    docker-compose run db psql -h db -U postgres intacct_db
+    docker-compose run -e PGPASSWORD=postgres db psql -h db -U postgres intacct_db
     ```
 
 * To tail the logs a service you can do
