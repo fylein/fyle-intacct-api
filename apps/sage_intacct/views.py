@@ -18,7 +18,7 @@ from apps.workspaces.models import SageIntacctCredential, Workspace, Configurati
 
 from .utils import SageIntacctConnector
 from .helpers import sync_dimensions, check_interval_and_sync_dimension
-from .tasks import create_expense_report, schedule_expense_reports_creation, create_bill, schedule_bills_creation, \
+from .tasks import create_expense_report, schedule_expense_reports_creation,schedule_journal_entries_creation, create_bill, schedule_bills_creation, \
     create_charge_card_transaction, schedule_charge_card_transaction_creation, create_ap_payment, \
     create_sage_intacct_reimbursement, check_sage_intacct_object_status, process_fyle_reimbursements
 from .models import ExpenseReport, Bill, ChargeCardTransaction
@@ -72,6 +72,8 @@ class TriggerExportsView(generics.GenericAPIView):
             schedule_charge_card_transaction_creation(kwargs['workspace_id'], expense_group_ids)
         elif export_type == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(kwargs['workspace_id'], expense_group_ids)
+        elif export_type == 'JOURNAL_ENTRY':
+            schedule_journal_entries_creation(kwargs['workspace_id'], expense_group_ids)
 
         return Response(
             status=status.HTTP_200_OK

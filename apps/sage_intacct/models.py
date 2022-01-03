@@ -2,8 +2,9 @@
 Sage Intacct models
 """
 from datetime import datetime
-from django.db.models import JSONField
+from django.db.models import Q,JSONField
 from django.db import models
+
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute
 
@@ -691,6 +692,178 @@ class ExpenseReportLineitem(models.Model):
             expense_report_lineitem_objects.append(expense_report_lineitem_object)
 
         return expense_report_lineitem_objects
+
+class JournalEntry(models.Model):
+    """
+    Sage Intacct Journal Entry 
+    """
+    id = models.AutoField(primary_key=True)
+    expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
+    description = models.TextField(help_text='Sage Intacct ExpenseReport Description')
+    memo = models.TextField(help_text='Sage Intacct memo', null=True)
+    currency = models.CharField(max_length=5, help_text='Expense Report Currency')
+    supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
+    transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'journal_entries'
+
+    @staticmethod
+    def create_journal_entry(expense_group: ExpenseGroup):
+        """
+        Create journal entry
+        :param expense_group: expense group
+        :return: journal entry object
+        """
+        description = expense_group.description
+        expense = expense_group.expenses.first()
+        memo = get_memo(expense_group)
+
+        employee_mapping_setting = MappingSetting.objects.filter(
+            Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
+            source_field='EMPLOYEE',
+            workspace_id=expense_group.workspace_id
+        ).first().destination_field
+
+        if expense_group.fund_source == 'CCC':
+            entity_id = Mapping.objects.get(
+                source_type='EMPLOYEE',
+                destination_type=employee_mapping_setting,
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).destination.destination_id
+
+            journal_entry_object, _ = JournalEntry.objects.update_or_create(
+                expense_group=expense_group,
+                defaults={
+                    'description': description,
+                    'memo': memo,
+                    'currency': expense.currency,
+                    'transaction_date': get_transaction_date(expense_group)
+                }
+            )
+
+        return journal_entry_object
+
+class JournalEntryLineitem(models.Model):
+    """
+    Sage Intacct Journal Entry Lineitem
+    """
+    id = models.AutoField(primary_key=True)
+    journal_entry = models.ForeignKey(JournalEntry, on_delete=models.PROTECT, help_text='Reference to Journal Entry')
+    expense = models.OneToOneField(Expense, on_delete=models.PROTECT, help_text='Reference to Expense')
+    gl_account_number = models.CharField(help_text='Sage Intacct gl account number', max_length=255, null=True)
+    project_id = models.CharField(help_text='Sage Intacct project id', max_length=255, null=True)
+    employee_id = models.CharField(help_text='Sage Intacct employee id', max_length=255, null=True)
+    vendor_id = models.CharField(help_text='Sage Intacct vendor id', max_length=255, null=True)
+    location_id = models.CharField(help_text='Sage Intacct location id', max_length=255, null=True)
+    class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
+    department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
+    customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
+    item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
+    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
+    amount = models.FloatField(help_text='Bill amount')
+    billable = models.BooleanField(null=True, help_text='Expense Billable or not')
+    transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'journal_entry_lineitems'
+    
+    @staticmethod
+    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration):
+        """
+        Create journal entry lineitems
+        :param expense_group: expense group
+        :return: lineitems objects
+        """
+        expenses = expense_group.expenses.all()
+        journal_entry = JournalEntry.objects.get(expense_group=expense_group)
+
+        default_employee_location_id = None
+        default_employee_department_id = None
+
+        try:
+            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        except GeneralMapping.DoesNotExist:
+            general_mappings = None
+
+        journal_entry_lineitem_objects = []
+
+        for lineitem in expenses:
+            category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+                lineitem.category, lineitem.sub_category)
+
+            if expense_group.fund_source == 'CCC':
+                account: Mapping = Mapping.objects.filter(
+                    destination_type='CCC_ACCOUNT',
+                    source_type='CATEGORY',
+                    source__value=category,
+                    workspace_id=expense_group.workspace_id
+                ).first()
+
+            if general_mappings.use_intacct_employee_locations:
+                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
+
+            if general_mappings.use_intacct_employee_departments:
+                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
+
+            description = expense_group.description
+
+            employee_mapping_setting = MappingSetting.objects.filter(
+                Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
+                source_field='EMPLOYEE',
+                workspace_id=expense_group.workspace_id
+            ).first().destination_field
+
+            entity_id = Mapping.objects.get(
+                source_type='EMPLOYEE',
+                destination_type=employee_mapping_setting,
+                source__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).destination.destination_id
+
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
+                default_employee_department_id is None else None
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
+                default_employee_location_id is None else None
+            employee_id = entity_id if employee_mapping_setting == 'EMPLOYEE' else None
+            vendor_id = entity_id if employee_mapping_setting == 'VENDOR' else None
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
+            customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
+
+            journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
+                journal_entry=journal_entry,
+                expense_id=lineitem.id,
+                defaults={
+                    'gl_account_number': account.destination.destination_id if account else None,
+                    'project_id': project_id,
+                    'department_id': default_employee_department_id if default_employee_department_id
+                    else department_id,
+                    'class_id': class_id,
+                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
+                    'employee_id': employee_id,
+                    'vendor_id': vendor_id,
+                    'user_defined_dimensions': user_defined_dimensions,
+                    'amount': lineitem.amount,
+                    'billable': lineitem.billable if customer_id and item_id else False,
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration) 
+                }
+            )
+
+            journal_entry_lineitem_objects.append(journal_entry_lineitem_object)
+
+        return journal_entry_lineitem_objects
+
 
 
 class ChargeCardTransaction(models.Model):

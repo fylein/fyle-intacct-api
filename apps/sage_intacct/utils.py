@@ -14,7 +14,7 @@ from apps.workspaces.models import SageIntacctCredential, FyleCredential, Worksp
 from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
-    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, SageIntacctReimbursement, \
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
     SageIntacctReimbursementLineitem
 
 logger = logging.getLogger(__name__)
@@ -832,6 +832,97 @@ class SageIntacctConnector:
         }
 
         return charge_card_transaction_payload
+    
+    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
+        """
+        Create a jorunal_entry
+        :param jorunal_entry: JorunalEntry object extracted from database
+        :param jorunal_entry_lineitems: JorunalEntryLineItem objects extracted from database
+        :return: constructed jorunal_entry
+        """
+        journal_entry_payload = []
+
+        for lineitem in journal_entry_lineitems:
+            expense_link = self.get_expense_link(lineitem)
+            credit_line = {
+                'accountno': lineitem.gl_account_number,
+                'currency': journal_entry.currency,
+                'amount': lineitem.amount,
+                'tr_type': -1,
+                'description': journal_entry.memo,
+                'department': lineitem.department_id,
+                'location': lineitem.location_id,
+                'projectid': lineitem.project_id,
+                'customerid': lineitem.customer_id,
+                'vendorid': lineitem.vendor_id,
+                'employeeid': lineitem.employee_id,
+                'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
+                'billable': lineitem.billable,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                }
+            }
+
+            debit_line = {
+                'accountno': lineitem.gl_account_number,
+                'currency': journal_entry.currency,
+                'amount': lineitem.amount,
+                'tr_type': 1,
+                'description': journal_entry.memo,
+                'department': lineitem.department_id,
+                'location': lineitem.location_id,
+                'projectid': lineitem.project_id,
+                'customerid': lineitem.customer_id,
+                'vendorid': lineitem.vendor_id,
+                'employeeid': lineitem.employee_id,
+                'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
+                'billable': lineitem.billable,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                }
+            }
+
+            for dimension in lineitem.user_defined_dimensions:
+                for name, value in dimension.items():
+                    credit_line[name] = value
+                    debit_line[name] = value
+
+            journal_entry_payload.append(credit_line)
+            journal_entry_payload.append(debit_line)
+
+        transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
+        transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
+        
+        
+        journal_entry_payload = {
+            'recordno': recordno if recordno else None,
+            'journal': 'FYLE_JE',
+            'batch_date': transaction_date,
+            'batch_title': journal_entry.memo,
+            'supdocid': supdocid if supdocid else None,
+            'entries':[
+                {
+                    'glentry': journal_entry_payload
+                }
+            ]
+        }
+            
+
+
+        return journal_entry_payload
+
 
     def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: List[ExpenseReportLineitem]):
         """
@@ -849,6 +940,14 @@ class SageIntacctConnector:
         created_bill = self.connection.bills.post(bill_payload)
         return created_bill
 
+    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]):
+        """
+        Post journal_entry  to Sage Intacct
+        """
+        journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
+        created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+        return created_journal_entry
+
     def get_bill(self, bill_id: str, fields: list = None):
         """
         GET bill from SAGE Intacct
@@ -862,6 +961,13 @@ class SageIntacctConnector:
         """
         expense_report = self.connection.expense_reports.get(field='RECORDNO', value=expense_report_id, fields=fields)
         return expense_report
+
+    def get_journal_entry(self, journal_entry_id: str, fields: list = None):
+        """
+        GET journal_entry from SAGE Intacct
+        """
+        journal_entry = self.connection.journal_entries.get(field='RECORDNO', value=journal_entry_id, fields=fields)
+        return journal_entry    
 
     def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
                                      charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]):
@@ -908,6 +1014,16 @@ class SageIntacctConnector:
         :return: response from sage intacct
         """
         return self.connection.charge_card_transactions.update_attachment(key=object_key, supdocid=supdocid)
+
+    def update_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str, recordno : str):
+        """
+        Map posted attachment with Sage Intacct Object
+        :param supdocid: attachments id
+        :param recordno: record no
+        :return: response from sage intacct
+        """
+        journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems, supdocid, recordno)
+        return self.connection.journal_entries.update(journal_entry_payload)
 
     def post_attachments(self, attachments: List[Dict], supdoc_id: str):
         """
