@@ -815,9 +815,9 @@ class JournalEntryLineitem(models.Model):
             description = expense_group.description
 
             employee_mapping_setting = MappingSetting.objects.filter(
-            Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
-            source_field='EMPLOYEE',
-            workspace_id=expense_group.workspace_id
+                Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
+                source_field='EMPLOYEE',
+                workspace_id=expense_group.workspace_id
             ).first().destination_field
 
             entity_id = Mapping.objects.get(
