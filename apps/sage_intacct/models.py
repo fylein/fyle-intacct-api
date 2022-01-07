@@ -875,6 +875,7 @@ class ChargeCardTransaction(models.Model):
     charge_card_id = models.CharField(max_length=255, help_text='Sage Intacct Charge Card ID')
     vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
     description = models.TextField(help_text='Sage Intacct Charge Card Transaction Description')
+    payee = models.CharField(max_length=255, help_text='Sage Intacct Payee', null=True)
     memo = models.TextField(help_text='Sage Intacct referenceno', null=True)
     reference_no = models.CharField(max_length=255, help_text='Sage Intacct Reference number to transaction')
     currency = models.CharField(max_length=5, help_text='Expense Report Currency')
@@ -935,6 +936,7 @@ class ChargeCardTransaction(models.Model):
             defaults={
                 'charge_card_id': charge_card_id,
                 'vendor_id': vendor,
+                'payee' : merchant,
                 'description': description,
                 'memo': memo,
                 'reference_no': expense.expense_number,

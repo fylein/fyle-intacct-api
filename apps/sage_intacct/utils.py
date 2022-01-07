@@ -823,6 +823,7 @@ class SageIntacctConnector:
                 'day': transaction_date.day
             },
             'referenceno': charge_card_transaction.reference_no,
+            'payee': charge_card_transaction.payee,
             'description': charge_card_transaction.memo,
             'currency': charge_card_transaction.currency,
             'exchratetype': None,
