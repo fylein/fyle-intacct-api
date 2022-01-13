@@ -49,6 +49,24 @@ BEGIN
     RAISE NOTICE 'Deleted % charge_card_transactions', rcount;
 
     DELETE
+    FROM journal_entry_lineitems jel
+    WHERE jel.journal_entry_id IN (
+        SELECT je.id FROM journal_entries je WHERE je.expense_group_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % journal_entry_lineitems', rcount;
+
+    DELETE
+    FROM journal_entries je
+    WHERE je.expense_group_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % journal_entries', rcount;
+
+    DELETE
     FROM expense_report_lineitems erl
     WHERE erl.expense_report_id IN (
         SELECT er.id FROM expense_reports er WHERE er.expense_group_id IN (
