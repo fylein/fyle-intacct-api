@@ -56,7 +56,7 @@ class SageIntacctConnector:
         """
         Get accounts
         """
-        accounts = self.connection.accounts.get_all()
+        accounts = self.connection.accounts.get_all(field='STATUS', value='active')
 
         account_attributes = {
             'account': [],
@@ -90,7 +90,7 @@ class SageIntacctConnector:
         """
         Get departments
         """
-        departments = self.connection.departments.get_all()
+        departments = self.connection.departments.get_all(field='STATUS', value='active')
 
         department_attributes = []
 
@@ -111,7 +111,7 @@ class SageIntacctConnector:
         """
         Get expense types
         """
-        expense_types = self.connection.expense_types.get_all()
+        expense_types = self.connection.expense_types.get_all(field='STATUS', value='active')
 
         expense_types_attributes = []
 
@@ -180,7 +180,7 @@ class SageIntacctConnector:
         """
         projects_count = self.connection.projects.count()
         if projects_count < SYNC_UPPER_LIMIT['projects']:
-            projects = self.connection.projects.get_all()
+            projects = self.connection.projects.get_all(field='STATUS', value='active')
 
             project_attributes = []
 
@@ -209,7 +209,7 @@ class SageIntacctConnector:
         """
         Get items
         """
-        items = self.connection.items.get_all()
+        items = self.connection.items.get_all(field='STATUS', value='active')
 
         item_attributes = []
 
@@ -232,7 +232,7 @@ class SageIntacctConnector:
         """
         Get locations
         """
-        locations = self.connection.locations.get_all()
+        locations = self.connection.locations.get_all(field='STATUS', value='active')
 
         location_attributes = []
 
@@ -329,6 +329,7 @@ class SageIntacctConnector:
         Get User Defined Dimensions
         """
 
+        # TODO: sync only active dimensions and dimension values
         dimensions = self.connection.dimensions.get_all()
 
         for dimension in dimensions:
@@ -355,7 +356,7 @@ class SageIntacctConnector:
         """
         Get classes
         """
-        classes = self.connection.classes.get_all(fields=['NAME', 'CLASSID'])
+        classes = self.connection.classes.get_all(field='STATUS', value='active', fields=['NAME', 'CLASSID'])
 
         class_attributes = []
 
@@ -378,7 +379,7 @@ class SageIntacctConnector:
         """
         customers_count = self.connection.customers.count()
         if customers_count < SYNC_UPPER_LIMIT['customers']:
-            customers = self.connection.customers.get_all()
+            customers = self.connection.customers.get_all(field='STATUS', value='active')
 
             customer_attributes = []
 
