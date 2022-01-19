@@ -379,7 +379,7 @@ class SageIntacctConnector:
         """
         customers_count = self.connection.customers.count()
         if customers_count < SYNC_UPPER_LIMIT['customers']:
-            customers = self.connection.customers.get_all(field='STATUS', value='active')
+            customers = self.connection.customers.get_all(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'])
 
             customer_attributes = []
 
