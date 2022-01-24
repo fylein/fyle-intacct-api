@@ -45,16 +45,18 @@ def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: Sage
     if workspace.destination_synced_at is None or time_interval.days > 0:
         sync_dimensions(si_credentials, workspace.id)
         return True
-    
+
     return False
 
 def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, dimensions: list = []) -> None:
-    sage_intacct_connection = import_string('apps.sage_intacct.utils.SageIntacctConnector')(si_credentials, workspace_id)
+    sage_intacct_connection = import_string(
+        'apps.sage_intacct.utils.SageIntacctConnector'
+    )(si_credentials, workspace_id)
     if not dimensions:
         dimensions = [
-            'locations',  'departments', 'projects', 'expense_payment_types',
-            'classes', 'charge_card_accounts','payment_accounts', 'vendors', 'employees', 'accounts', 
-            'expense_types', 'items', 'user_defined_dimensions', 
+            'locations', 'customers', 'departments', 'projects', 'expense_payment_types',
+            'classes', 'charge_card_accounts','payment_accounts', 'vendors', 'employees', 'accounts',
+            'expense_types', 'items', 'user_defined_dimensions'
         ]
 
     for dimension in dimensions:
