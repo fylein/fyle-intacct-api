@@ -193,6 +193,18 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
 
     return class_id
 
+def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None):
+    tax_code = None
+    mapping: Mapping = Mapping.objects.filter(
+        source_type='TAX_GROUP',
+        destination_type='TAX_DETAIL',
+        source__source_id=lineitem.tax_group_id,
+        workspace_id=expense_group.workspace_id
+    ).first()
+    if mapping:
+        tax_code = mapping.destination.destination_id
+
+    return tax_code
 
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
     if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
@@ -434,6 +446,8 @@ class BillLineitem(models.Model):
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Bill amount')
+    tax_amount = models.FloatField(null=True, help_text='Tax amount')
+    tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -520,6 +534,8 @@ class BillLineitem(models.Model):
                     'item_id': item_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
                 }
@@ -598,6 +614,8 @@ class ExpenseReportLineitem(models.Model):
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Expense amount')
+    tax_amount = models.FloatField(null=True, help_text='Tax amount')
+    tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     expense_payment_type = models.CharField(max_length=255, help_text='Expense Payment Type', null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
@@ -683,6 +701,8 @@ class ExpenseReportLineitem(models.Model):
                     'user_defined_dimensions': user_defined_dimensions,
                     'transaction_date': lineitem.spent_at,
                     'amount': lineitem.amount,
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
@@ -766,6 +786,8 @@ class JournalEntryLineitem(models.Model):
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Bill amount')
+    tax_amount = models.FloatField(null=True, help_text='Tax amount')
+    tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
@@ -855,6 +877,8 @@ class JournalEntryLineitem(models.Model):
                     'vendor_id': vendor_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration) 
                 }
@@ -965,6 +989,8 @@ class ChargeCardTransactionLineitem(models.Model):
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Charge Card Transaction amount')
+    tax_amount = models.FloatField(null=True, help_text='Tax amount')
+    tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -1031,6 +1057,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'amount': lineitem.amount,
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_amount': lineitem.tax_amount,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
                 }
             )

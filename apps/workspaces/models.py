@@ -74,6 +74,7 @@ class Configuration(models.Model):
         max_length=50, choices=AUTO_MAP_EMPLOYEE_CHOICES,
         help_text='Auto Map Employees type from Sage Intacct to Fyle', null=True
     )
+    import_tax_codes = models.BooleanField(default=False, help_text='Auto import tax codes to Fyle', null=True)
     memo_structure = ArrayField(
         base_field=models.CharField(max_length=100), default=get_default_memo_fields,
         help_text='list of system fields for creating custom memo'
@@ -110,6 +111,7 @@ class FyleCredential(models.Model):
     id = models.AutoField(primary_key=True)
     refresh_token = models.TextField(help_text='Stores Fyle refresh token')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    cluster_domain = models.CharField(default='https://staging.fyle.tech', max_length=255, help_text='cluster doman')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
