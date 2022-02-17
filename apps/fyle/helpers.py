@@ -54,5 +54,5 @@ def sync_dimensions(refresh_token: str, workspace_id: int) -> None:
             sync()
         except Exception as exception:
             logger.exception(exception)
-    print('nielsh uis here')
+
     platform.tax_groups.sync()

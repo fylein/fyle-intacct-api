@@ -705,37 +705,36 @@ def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_
     existing_tax_codes_name = ExpenseAttribute.objects.filter(
         attribute_type='TAX_GROUP', workspace_id=workspace_id).values_list('value', flat=True)
 
-    qbo_attributes = DestinationAttribute.objects.filter(
+    si_attributes = DestinationAttribute.objects.filter(
         attribute_type='TAX_DETAIL', workspace_id=workspace_id).order_by('value', 'id')
 
-    qbo_attributes = remove_duplicates(qbo_attributes)
+    si_attributes = remove_duplicates(si_attributes)
 
-    fyle_payload: List[Dict] = create_fyle_tax_group_payload(qbo_attributes, existing_tax_codes_name)
+    fyle_payload: List[Dict] = create_fyle_tax_group_payload(si_attributes, existing_tax_codes_name)
     
-    print(fyle_payload)
     if fyle_payload:
         platform_connection.tax_groups.post_bulk(fyle_payload)
 
     platform_connection.tax_groups.sync()
-    Mapping.bulk_create_mappings(qbo_attributes, 'TAX_GROUP', 'TAX_DETAIL', workspace_id)
+    Mapping.bulk_create_mappings(si_attributes, 'TAX_GROUP', 'TAX_DETAIL', workspace_id)
 
 
-def create_fyle_tax_group_payload(qbo_attributes: List[DestinationAttribute], existing_fyle_tax_groups: list):
+def create_fyle_tax_group_payload(si_attributes: List[DestinationAttribute], existing_fyle_tax_groups: list):
     """
-    Create Fyle Cost Centers Payload from QBO Objects
+    Create Fyle Cost Centers Payload from Sage Intacct Objects
     :param existing_fyle_tax_groups: Existing cost center names
-    :param qbo_attributes: QBO Objects
+    :param si_attributes: Sage Intacct Objects
     :return: Fyle Cost Centers Payload
     """
 
     fyle_tax_group_payload = []
-    for qbo_attribute in qbo_attributes:
-        if qbo_attribute.value not in existing_fyle_tax_groups:
+    for si_attribute in si_attributes:
+        if si_attribute.value not in existing_fyle_tax_groups:
             fyle_tax_group_payload.append(
                 {
-                    'name': qbo_attribute.value,
+                    'name': si_attribute.value,
                     'is_enabled': True,
-                    'percentage': round((qbo_attribute.detail['tax_rate']/100), 2)
+                    'percentage': round((si_attribute.detail['tax_rate']/100), 2)
                 }
             )
 

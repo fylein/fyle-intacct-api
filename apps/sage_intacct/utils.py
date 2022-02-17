@@ -62,10 +62,24 @@ class SageIntacctConnector:
         else:
             tax_code = lineitems[0].tax_code
 
-            destination_attribute = DestinationAttribute.objects.get(value=tax_code, workspace_id=self.workspace_id)
-            tax_solution_id = destination_attribute.detail['tax_solution_id']
+            if tax_code:
+                destination_attribute = DestinationAttribute.objects.get(value=tax_code, workspace_id=self.workspace_id)
+                tax_solution_id = destination_attribute.detail['tax_solution_id']
+            else:
+                destination_attribute = DestinationAttribute.objects.get(value=general_mappings.default_tax_code_name, workspace_id=self.workspace_id)
+                tax_solution_id = destination_attribute.detail['tax_solution_id']
+
             return tax_solution_id
 
+
+    def get_tax_inclusive_amount(self, amount, default_tax_code_id):
+
+        tax_attribute = DestinationAttribute.objects.filter(destination_id=default_tax_code_id, attribute_type='TAX_DETAIL',workspace_id=self.workspace_id).first()
+        tax_inclusive_amount = amount
+        if tax_attribute:
+            tax_rate = int(tax_attribute.detail['tax_rate'])
+            tax_inclusive_amount = round((amount - (amount/(tax_rate + 1))), 2)
+        return tax_inclusive_amount
 
     def sync_accounts(self):
         """
@@ -713,6 +727,7 @@ class SageIntacctConnector:
         :return: constructed expense_report
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
 
         expsense_payload = []
         for lineitem in expense_report_lineitems:
@@ -722,13 +737,15 @@ class SageIntacctConnector:
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
                 if lineitem.expense_type_id else lineitem.gl_account_number,
-                'amount': lineitem.amount - lineitem.tax_amount if lineitem.tax_code else lineitem.amount,
+                'amount': lineitem.amount - lineitem.tax_amount if lineitem.tax_code else \
+                        self.get_tax_inclusive_amount(lineitem.amount, None),
                 'expensedate': {
                     'year': transaction_date.year,
                     'month': transaction_date.month,
                     'day': transaction_date.day
                 },
                 'memo': lineitem.memo,
+                'totaltrxamount': lineitem.amount,
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
                 'projectid': lineitem.project_id,
@@ -737,6 +754,11 @@ class SageIntacctConnector:
                 'classid': lineitem.class_id,
                 'billable': lineitem.billable,
                 'exppmttype': lineitem.expense_payment_type,
+                'taxentries': {
+                    'taxentry': {
+                        'detailid': lineitem.tax_code if lineitem.tax_code else general_mappings.default_tax_code_id,
+                    }
+                },
                 'customfields': {
                    'customfield': [
                     {
@@ -763,13 +785,21 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
-            'basecurr': expense_report.currency,
+            'basecurr': 'GBP',
             'currency': expense_report.currency,
             'eexpensesitems': {
                 'eexpensesitem': expsense_payload
             }
         }
 
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        if configuration.import_tax_codes:
+            expense_report_payload.update({
+                'inclusivetax': True,
+                'taxsolutionid': self.get_tax_solution_id_or_none(expense_report_lineitems),
+            })
+
+        print(expense_report_payload)
         return expense_report_payload
 
     def __construct_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]) -> Dict:
@@ -995,7 +1025,6 @@ class SageIntacctConnector:
                 'taxsolutionid': self.get_tax_solution_id_or_none(journal_entry_lineitems),
             })
 
-        print(journal_entry_payload)
         return journal_entry_payload
 
 

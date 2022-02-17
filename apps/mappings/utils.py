@@ -57,6 +57,12 @@ class MappingUtils:
                          'payment account name field is blank')
             assert_valid('payment_account_id' in general_mapping and general_mapping['payment_account_id'],
                          'payment account id field is blank')
+        
+        if configuration.import_tax_codes:
+            assert_valid('default_tax_code_id' in general_mapping and general_mapping['default_tax_code_id'],
+                        'default tax code id is blank')
+            assert_valid('default_tax_code_name' in general_mapping and general_mapping['default_tax_code_name'],
+                        'default tax code name is blank')
 
         general_mapping_object, _ = GeneralMapping.objects.update_or_create(
             workspace_id=self.__workspace_id,
@@ -79,6 +85,8 @@ class MappingUtils:
                 'default_ccc_vendor_id': general_mapping['default_ccc_vendor_id'],
                 'default_item_name': general_mapping['default_item_name'],
                 'default_item_id': general_mapping['default_item_id'],
+                'default_tax_code_id': general_mapping['default_tax_code_id'],
+                'default_tax_code_name': general_mapping['default_tax_code_name'],
                 'default_reimbursable_expense_payment_type_name': \
                     general_mapping['default_reimbursable_expense_payment_type_name'],
                 'default_reimbursable_expense_payment_type_id': \

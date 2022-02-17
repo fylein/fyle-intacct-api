@@ -27,6 +27,8 @@ class GeneralMapping(models.Model):
     default_ccc_vendor_id = models.CharField(max_length=255, help_text='Default ccc vendor ID', null=True)
     default_item_name = models.CharField(max_length=255, help_text='Default item name', null=True)
     default_item_id = models.CharField(max_length=255, help_text='Default item ID', null=True)
+    default_tax_code_id = models.CharField(max_length=255, help_text='DEfault Tax Code Id', null=True)
+    default_tax_code_name = models.CharField(max_length=255, help_text='DEfault Tax Code Id', null=True)
     payment_account_id = models.CharField(max_length=255, help_text='Sage Intacct Payment Account id', null=True)
     payment_account_name = models.CharField(max_length=255, help_text='Sage Intacct Payment Account name', null=True)
     default_reimbursable_expense_payment_type_id = models.CharField(
