@@ -6,6 +6,21 @@ from django.db import models
 from apps.workspaces.models import Workspace
 
 
+class LocationEntityMapping(models.Model):
+    """
+    Location Entity Mapping
+    """
+    id = models.AutoField(primary_key=True)
+    location_entity_name = models.CharField(max_length=255, help_text='NetSuite Subsidiary name')
+    country_name = models.CharField(max_length=255, help_text='Netsuite Subsidiary Country', null=True)
+    destination_id = models.CharField(max_length=255, help_text='NetSuite Subsidiary id')
+    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'location_entity_mappings'
+
 class GeneralMapping(models.Model):
     """
     General Mappings

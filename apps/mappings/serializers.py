@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import GeneralMapping
+from .models import GeneralMapping, LocationEntityMapping
 
 
 class GeneralMappingSerializer(serializers.ModelSerializer):
@@ -9,4 +9,12 @@ class GeneralMappingSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = GeneralMapping
+        fields = '__all__'
+
+class LocationEntityMappingSerializer(serializers.ModelSerializer):
+    """
+    Location Entity Mappings group serializer
+    """
+    class Meta:
+        model = LocationEntityMapping
         fields = '__all__'

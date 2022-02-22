@@ -263,7 +263,11 @@ class SageIntacctConnector:
                 'attribute_type': 'LOCATION_ENTITY',
                 'display_name': 'location entity',
                 'value': location_entity['NAME'],
-                'destination_id': location_entity['LOCATIONID']
+                'destination_id': location_entity['LOCATIONID'],
+                'detail': {
+                    'country': location_entity['OPCOUNTRY'],
+                    'currency': location_entity['CURRENCY']
+                }
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
