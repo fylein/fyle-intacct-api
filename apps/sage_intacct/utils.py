@@ -265,8 +265,7 @@ class SageIntacctConnector:
                 'value': location_entity['NAME'],
                 'destination_id': location_entity['LOCATIONID'],
                 'detail': {
-                    'country': location_entity['OPCOUNTRY'],
-                    'currency': location_entity['CURRENCY']
+                    'country': location_entity['OPCOUNTRY']
                 }
             })
 

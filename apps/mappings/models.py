@@ -13,7 +13,7 @@ class LocationEntityMapping(models.Model):
     id = models.AutoField(primary_key=True)
     location_entity_name = models.CharField(max_length=255, help_text='SageIntacct Location Entity Name')
     country_name = models.CharField(max_length=255, help_text='SageIntacct Location Entities Country', null=True)
-    destination_id = models.CharField(max_length=255, help_text='SageIntacct location entity id')
+    destination_id = models.CharField(max_length=255, help_text='SageIntacct location entity id', null=True)
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')

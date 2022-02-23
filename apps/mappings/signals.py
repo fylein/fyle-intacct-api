@@ -15,9 +15,25 @@ from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
 from fylesdk.exceptions import WrongParamsError
 from apps.mappings.tasks import schedule_projects_creation, schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
     upload_attributes_to_fyle
+from apps.workspaces.models import SageIntacctCredential
+from apps.sage_intacct.helpers import sync_dimensions
+
+
+from .models import LocationEntityMapping
 
 logger = logging.getLogger(__name__)
 
+
+@receiver(post_save, sender=LocationEntityMapping)
+def run_post_location_entity_mappings_triggers(sender, instance: LocationEntityMapping, **kwargs):
+    """
+    :param sender: Sender Class
+    :param instance: Row instance of Sender Class
+    :return: None
+    """
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=int(instance.workspace_id))
+    sync_dimensions(sage_intacct_credentials, int(instance.workspace_id))
 
 @receiver(post_save, sender=MappingSetting)
 def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
