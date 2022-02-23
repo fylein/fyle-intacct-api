@@ -16,9 +16,9 @@ class Migration(migrations.Migration):
             name='LocationEntityMapping',
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('location_entity_name', models.CharField(help_text='NetSuite Subsidiary name', max_length=255)),
-                ('country_name', models.CharField(help_text='Netsuite Subsidiary Country', max_length=255, null=True)),
-                ('destination_id', models.CharField(help_text='NetSuite Subsidiary id', max_length=255)),
+                ('location_entity_name', models.CharField(help_text='SageIntacct Location Entity Name', max_length=255)),
+                ('country_name', models.CharField(help_text='SageIntacct Location Entities Country', max_length=255, null=True)),
+                ('destination_id', models.CharField(help_text='SageIntacct location entity id', max_length=255)),
                 ('created_at', models.DateTimeField(auto_now_add=True, help_text='Created at datetime')),
                 ('updated_at', models.DateTimeField(auto_now=True, help_text='Updated at datetime')),
                 ('workspace', models.OneToOneField(help_text='Reference to Workspace model', on_delete=django.db.models.deletion.PROTECT, to='workspaces.workspace')),

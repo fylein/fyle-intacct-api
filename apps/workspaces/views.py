@@ -66,7 +66,6 @@ class WorkspaceView(viewsets.ViewSet):
             FyleCredential.objects.update_or_create(
                 refresh_token=auth_tokens.refresh_token,
                 workspace_id=workspace.id,
-                cluster_domain=cluster_domain
             )
 
         return Response(
@@ -175,7 +174,6 @@ class ConnectFyleView(viewsets.ViewSet):
                 workspace_id=kwargs['workspace_id'],
                 defaults={
                     'refresh_token': refresh_token,
-                    'cluster_domain': cluster_domain
                 }
             )
 
