@@ -4,12 +4,11 @@ Workspace Signals
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from fyle_accounting_mappings.models import DestinationAttribute
 from apps.fyle.helpers import add_expense_id_to_expense_group_settings
 from apps.sage_intacct.helpers import schedule_payment_sync
 from apps.mappings.helpers import schedule_or_delete_auto_mapping_tasks
 
-from .models import Configuration, SageIntacctCredential
+from .models import Configuration
 
 
 @receiver(post_save, sender=Configuration)

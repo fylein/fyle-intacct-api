@@ -6,6 +6,7 @@ import unidecode
 from cryptography.fernet import Fernet
 
 from django.conf import settings
+from django.db.models import Q
 
 from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
@@ -39,12 +40,7 @@ class SageIntacctConnector:
         decrypted_password = cipher_suite.decrypt(credentials_object.si_user_password.encode('utf-8')).decode('utf-8')
 
         # TODO: Cache general_mappings
-        location_entity_mapping = LocationEntityMapping.objects.filter(workspace_id=workspace_id).first()
-        destination_id = None
-        if location_entity_mapping:
-            if location_entity_mapping.destination_id != 'top-level':
-                destination_id = location_entity_mapping.destination_id
-
+        location_entity_mapping = LocationEntityMapping.objects.filter(~Q(destination_id='top_level'), workspace_id=workspace_id).first()
 
         self.connection = SageIntacctSDK(
             sender_id=sender_id,
@@ -52,7 +48,7 @@ class SageIntacctConnector:
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
             user_password=decrypted_password,
-            entity_id=destination_id
+            entity_id=location_entity_mapping.destination_id if location_entity_mapping else None
         )
 
         self.workspace_id = workspace_id
