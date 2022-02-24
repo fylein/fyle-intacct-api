@@ -35,7 +35,7 @@ def run_post_save_sage_intacct_credentials(sender, instance: SageIntacctCredenti
     """
     attribute = {
         'attribute_type': 'LOCATION_ENTITY',
-        'destination_id':None,
+        'destination_id': 'top-level',
         'active': True,
         'display_name': 'Location Entity',
         'value': 'Top Level',

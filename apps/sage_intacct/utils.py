@@ -9,7 +9,7 @@ from django.conf import settings
 
 from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
-from apps.mappings.models import GeneralMapping
+from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace
 from apps.fyle.connector import FyleConnector
 
@@ -39,7 +39,12 @@ class SageIntacctConnector:
         decrypted_password = cipher_suite.decrypt(credentials_object.si_user_password.encode('utf-8')).decode('utf-8')
 
         # TODO: Cache general_mappings
-        general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+        location_entity_mapping = LocationEntityMapping.objects.filter(workspace_id=workspace_id).first()
+        destination_id = None
+        if location_entity_mapping:
+            if location_entity_mapping.destination_id != 'top-level':
+                destination_id = location_entity_mapping.destination_id
+
 
         self.connection = SageIntacctSDK(
             sender_id=sender_id,
@@ -47,7 +52,7 @@ class SageIntacctConnector:
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
             user_password=decrypted_password,
-            entity_id=general_mappings.location_entity_id if general_mappings else None
+            entity_id=destination_id
         )
 
         self.workspace_id = workspace_id
