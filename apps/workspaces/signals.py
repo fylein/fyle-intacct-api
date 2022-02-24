@@ -24,24 +24,3 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
 
     schedule_or_delete_auto_mapping_tasks(configuration=instance)
     schedule_payment_sync(configuration=instance)
-
-
-@receiver(post_save, sender=SageIntacctCredential)
-def run_post_save_sage_intacct_credentials(sender, instance: SageIntacctCredential, **kwargs):
-    """
-    :param sender: Sender Class
-    :param instance: Row Instance of Sender Class
-    :return: Nonw
-    """
-    attribute = {
-        'attribute_type': 'LOCATION_ENTITY',
-        'destination_id': 'top-level',
-        'active': True,
-        'display_name': 'Location Entity',
-        'value': 'Top Level',
-        'detail': {
-            'country': 'Top Level'
-        }
-    }
-
-    DestinationAttribute.create_or_update_destination_attribute(attribute, int(instance.workspace_id))
