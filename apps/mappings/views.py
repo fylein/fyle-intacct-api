@@ -7,9 +7,35 @@ from django_q.tasks import Chain
 from fyle_intacct_api.utils import assert_valid
 from apps.workspaces.models import Configuration
 
-from .serializers import GeneralMappingSerializer
-from .models import GeneralMapping
+from .serializers import GeneralMappingSerializer, LocationEntityMappingSerializer
+from .models import GeneralMapping, LocationEntityMapping
 from .utils import MappingUtils
+
+
+class LocationEntityMappingView(generics.ListCreateAPIView):
+    """
+    Location Entity mappings view
+    """
+    serializer_class = LocationEntityMappingSerializer
+
+    def get(self, request, *args, **kwargs):
+        """
+        Get location entity mapping
+        """
+        try:
+            location_entity_mappings = LocationEntityMapping.objects.get(workspace_id=kwargs['workspace_id'])
+
+            return Response(
+                data=self.serializer_class(location_entity_mappings).data,
+                status=status.HTTP_200_OK
+            )
+        except LocationEntityMapping.DoesNotExist:
+            return Response(
+                {
+                    'message': 'Location Entity mappings do not exist for the workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class GeneralMappingView(generics.ListCreateAPIView):

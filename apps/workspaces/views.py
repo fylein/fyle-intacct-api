@@ -174,7 +174,7 @@ class ConnectFyleView(viewsets.ViewSet):
                 workspace_id=kwargs['workspace_id'],
                 defaults={
                     'refresh_token': refresh_token,
-                    'cluster_domain': c
+                    'cluster_domain': cluster_domain
                 }
             )
 
