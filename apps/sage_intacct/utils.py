@@ -6,10 +6,11 @@ import unidecode
 from cryptography.fernet import Fernet
 
 from django.conf import settings
+from django.db.models import Q
 
 from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
-from apps.mappings.models import GeneralMapping
+from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace
 from apps.fyle.connector import FyleConnector
 
@@ -39,7 +40,7 @@ class SageIntacctConnector:
         decrypted_password = cipher_suite.decrypt(credentials_object.si_user_password.encode('utf-8')).decode('utf-8')
 
         # TODO: Cache general_mappings
-        general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+        location_entity_mapping = LocationEntityMapping.objects.filter(~Q(destination_id='top_level'), workspace_id=workspace_id).first()
 
         self.connection = SageIntacctSDK(
             sender_id=sender_id,
@@ -47,7 +48,7 @@ class SageIntacctConnector:
             user_id=credentials_object.si_user_id,
             company_id=credentials_object.si_company_id,
             user_password=decrypted_password,
-            entity_id=general_mappings.location_entity_id if general_mappings else None
+            entity_id=location_entity_mapping.destination_id if location_entity_mapping else None
         )
 
         self.workspace_id = workspace_id
@@ -263,7 +264,10 @@ class SageIntacctConnector:
                 'attribute_type': 'LOCATION_ENTITY',
                 'display_name': 'location entity',
                 'value': location_entity['NAME'],
-                'destination_id': location_entity['LOCATIONID']
+                'destination_id': location_entity['LOCATIONID'],
+                'detail': {
+                    'country': location_entity['OPCOUNTRY']
+                }
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(

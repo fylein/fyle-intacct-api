@@ -169,7 +169,7 @@ class ConnectFyleView(viewsets.ViewSet):
             fyle_credentials, _ = FyleCredential.objects.update_or_create(
                 workspace_id=kwargs['workspace_id'],
                 defaults={
-                    'refresh_token': refresh_token,
+                    'refresh_token': refresh_token
                 }
             )
 
