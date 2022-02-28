@@ -454,88 +454,6 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_dimensions(self):
-        try:
-            # TODO: Sync location_entities only once (After Sage Intacct account connection)
-            self.sync_location_entities()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_locations()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_customers()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_departments()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_projects()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_expense_payment_types()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_classes()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_charge_card_accounts()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_payment_accounts()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_vendors()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_employees()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_accounts()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_expense_types()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_items()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_user_defined_dimensions()
-        except Exception as exception:
-            logger.exception(exception)
-
-        try:
-            self.sync_tax_details()
-        except Exception as exception:
-            logger.exception(exception)
-
     def create_destination_attribute(self, attribute: str, name: str, destination_id: str, email: str = None):
         created_attribute = DestinationAttribute.create_or_update_destination_attribute({
             'attribute_type': attribute.upper(),
@@ -789,21 +707,19 @@ class SageIntacctConnector:
             },
             'state': 'Submitted',
             'description': expense_report.memo,
-            'basecurr': 'GBP',
+            'basecurr': expense_report.currency,
             'currency': expense_report.currency,
             'eexpensesitems': {
                 'eexpensesitem': expsense_payload
             }
         }
 
-        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         if configuration.import_tax_codes:
             expense_report_payload.update({
                 'inclusivetax': True,
                 'taxsolutionid': self.get_tax_solution_id_or_none(expense_report_lineitems),
             })
 
-        print(expense_report_payload)
         return expense_report_payload
 
     def __construct_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]) -> Dict:
@@ -860,8 +776,8 @@ class SageIntacctConnector:
             'VENDORID': bill.vendor_id,
             'RECORDID': bill.memo,
             'WHENDUE': current_date,
-            'BASECURR': 'GBP',
-            'CURRENCY': 'GBP',
+            'BASECURR': bill.currency,
+            'CURRENCY': bill.currency,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
             }

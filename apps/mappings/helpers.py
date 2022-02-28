@@ -14,7 +14,7 @@ def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
     schedule_auto_map_employees(
         employee_mapping_preference=configuration.auto_map_employees, workspace_id=int(configuration.workspace_id))
     
-    schedule_tax_groups_creation(import_tax_codes=True, workspace_id=configuration.workspace_id)
+    schedule_tax_groups_creation(import_tax_codes=configuration.import_tax_codes, workspace_id=configuration.workspace_id)
 
     if not configuration.auto_map_employees:
         schedule_auto_map_charge_card_employees(workspace_id=int(configuration.workspace_id))
