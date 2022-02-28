@@ -11,7 +11,7 @@ from django.db.models import Q
 from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
 from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
