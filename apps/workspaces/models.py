@@ -112,7 +112,7 @@ class FyleCredential(models.Model):
     refresh_token = models.TextField(help_text='Stores Fyle refresh token')
     cluster_domain = models.TextField(null=True, help_text='Cluster Domain')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
-    cluster_domain = models.CharField(max_length=255, null=True help_text='cluster doman')
+    cluster_domain = models.TextField(null=True, help_text='Cluster Domain')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
