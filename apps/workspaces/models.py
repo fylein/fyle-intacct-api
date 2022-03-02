@@ -74,6 +74,7 @@ class Configuration(models.Model):
         max_length=50, choices=AUTO_MAP_EMPLOYEE_CHOICES,
         help_text='Auto Map Employees type from Sage Intacct to Fyle', null=True
     )
+    import_tax_codes = models.BooleanField(default=False, help_text='Auto import tax codes to Fyle', null=True)
     memo_structure = ArrayField(
         base_field=models.CharField(max_length=100), default=get_default_memo_fields,
         help_text='list of system fields for creating custom memo'

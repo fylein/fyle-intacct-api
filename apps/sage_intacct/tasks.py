@@ -455,6 +455,15 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                 'type': 'Category Mapping',
                 'message': error_message
             })
+        
+        if configuration.import_tax_codes and not (general_mapping.default_tax_code_id or general_mapping.default_tax_code_name):
+           bulk_errors.append({
+               'row': None,
+               'expense_group_id': expense_group.id,
+               'value': 'Default Tax Code',
+               'type': 'General Mapping',
+               'message': 'Default Tax Code not found'
+          })
 
         row = row + 1
 
