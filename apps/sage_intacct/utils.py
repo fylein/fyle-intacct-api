@@ -73,14 +73,17 @@ class SageIntacctConnector:
             return tax_solution_id
 
 
-    def get_tax_inclusive_amount(self, amount, default_tax_code_id):
+    def get_tax_exclusive_amount(self, amount, default_tax_code_id):
 
         tax_attribute = DestinationAttribute.objects.filter(destination_id=default_tax_code_id, attribute_type='TAX_DETAIL',workspace_id=self.workspace_id).first()
-        tax_inclusive_amount = amount
+        tax_exclusive_amount = amount
+        tax_amount = None
         if tax_attribute:
             tax_rate = int(tax_attribute.detail['tax_rate'])
-            tax_inclusive_amount = round((amount - (amount/(tax_rate + 1))), 2)
-        return tax_inclusive_amount
+            tax_exclusive_amount = round((amount - (amount/(tax_rate + 1))), 2)
+            tax_amount = round((amount - tax_exclusive_amount), 2)
+
+        return tax_exclusive_amount, tax_amount
 
     def sync_accounts(self):
         """
@@ -436,7 +439,7 @@ class SageIntacctConnector:
         attributes = []
         tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
         for tax_detail in tax_details:
-            if float(tax_detail['VALUE']) > 0 and tax_detail['TAXTYPE'] == 'Purchase':
+            if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
                 attributes.append({
                     'attribute_type': 'TAX_DETAIL',
                     'display_name': 'Tax Detail',
@@ -656,11 +659,12 @@ class SageIntacctConnector:
             transaction_date = lineitem.transaction_date
             expense_link = self.get_expense_link(lineitem)
 
+            tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
+
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
                 if lineitem.expense_type_id else lineitem.gl_account_number,
-                'amount': lineitem.amount - lineitem.tax_amount if lineitem.tax_code else \
-                        self.get_tax_inclusive_amount(lineitem.amount, None),
+                'amount': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
                 'expensedate': {
                     'year': transaction_date.year,
                     'month': transaction_date.month,
@@ -678,7 +682,7 @@ class SageIntacctConnector:
                 'exppmttype': lineitem.expense_payment_type,
                 'taxentries': {
                     'taxentry': {
-                        'detailid': lineitem.tax_code if lineitem.tax_code else general_mappings.default_tax_code_id,
+                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
                     }
                 },
                 'customfields': {
@@ -730,13 +734,16 @@ class SageIntacctConnector:
         :return: constructed bill
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
 
         bill_lineitems_payload = []
         for lineitem in bill_lineitems:
             expense_link = self.get_expense_link(lineitem)
+            tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
+
             expense = {
                 'ACCOUNTNO': lineitem.gl_account_number,
-                'TRX_AMOUNT': lineitem.amount - lineitem.tax_amount if lineitem.tax_code else lineitem.amount,
+                'TRX_AMOUNT': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
                 'TOTALTRXAMOUNT': lineitem.amount,
                 'ENTRYDESCRIPTION': lineitem.memo,
                 'LOCATIONID': lineitem.location_id,
@@ -748,7 +755,7 @@ class SageIntacctConnector:
                 'BILLABLE': lineitem.billable,
                 'TAXENTRIES': {
                     'TAXENTRY': {
-                        'DETAILID': lineitem.tax_code
+                        'DETAILID': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id
                     }
                 },
                 'customfields': {
@@ -778,6 +785,7 @@ class SageIntacctConnector:
             'WHENDUE': current_date,
             'BASECURR': bill.currency,
             'CURRENCY': bill.currency,
+            'EXCH_RATE_TYPE_ID': None,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
             }
@@ -853,6 +861,9 @@ class SageIntacctConnector:
         :param jorunal_entry_lineitems: JorunalEntryLineItem objects extracted from database
         :return: constructed jorunal_entry
         """
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
+
         journal_entry_payload = []
 
         for lineitem in journal_entry_lineitems:
@@ -882,10 +893,12 @@ class SageIntacctConnector:
                 }
             }
 
+            tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
+
             debit_line = {
                 'accountno': lineitem.gl_account_number,
                 'currency': journal_entry.currency,
-                'amount': lineitem.amount - lineitem.tax_amount if lineitem.tax_code else lineitem.amount,
+                'amount': round((lineitem.amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount,
                 'tr_type': 1,
                 'description': journal_entry.memo,
                 'department': lineitem.department_id,
@@ -899,8 +912,8 @@ class SageIntacctConnector:
                 'billable': lineitem.billable,
                 'taxentries': {
                     'taxentry': {
-                        'trx_tax': lineitem.tax_amount,
-                        'detailid': lineitem.tax_code,
+                        'trx_tax': lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_amount,
+                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
                     }
                 },
                 'customfields': {
@@ -938,7 +951,6 @@ class SageIntacctConnector:
             ]
         }
 
-        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         if configuration.import_tax_codes:
             journal_entry_payload.update({
                 'taximplications': 'Inbound',
