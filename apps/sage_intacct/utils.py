@@ -957,7 +957,6 @@ class SageIntacctConnector:
                 'taxsolutionid': self.get_tax_solution_id_or_none(journal_entry_lineitems),
             })
 
-        print('journal', journal_entry_payload)
         return journal_entry_payload
 
 
