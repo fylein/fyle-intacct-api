@@ -664,7 +664,7 @@ class SageIntacctConnector:
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
                 if lineitem.expense_type_id else lineitem.gl_account_number,
-                'amount': lineitem.amount - lineitem.tax_amount if lineitem.tax_code else tax_exclusive_amount,
+                'amount': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
                 'expensedate': {
                     'year': transaction_date.year,
                     'month': transaction_date.month,
@@ -682,7 +682,7 @@ class SageIntacctConnector:
                 'exppmttype': lineitem.expense_payment_type,
                 'taxentries': {
                     'taxentry': {
-                        'detailid': lineitem.tax_code if lineitem.tax_code else general_mappings.default_tax_code_id,
+                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
                     }
                 },
                 'customfields': {
@@ -743,7 +743,7 @@ class SageIntacctConnector:
 
             expense = {
                 'ACCOUNTNO': lineitem.gl_account_number,
-                'TRX_AMOUNT': lineitem.amount - lineitem.tax_amount if lineitem.tax_code else tax_exclusive_amount,
+                'TRX_AMOUNT': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
                 'TOTALTRXAMOUNT': lineitem.amount,
                 'ENTRYDESCRIPTION': lineitem.memo,
                 'LOCATIONID': lineitem.location_id,
@@ -755,7 +755,7 @@ class SageIntacctConnector:
                 'BILLABLE': lineitem.billable,
                 'TAXENTRIES': {
                     'TAXENTRY': {
-                        'DETAILID': lineitem.tax_code if lineitem.tax_code else general_mappings.default_tax_code_id
+                        'DETAILID': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id
                     }
                 },
                 'customfields': {
@@ -912,8 +912,8 @@ class SageIntacctConnector:
                 'billable': lineitem.billable,
                 'taxentries': {
                     'taxentry': {
-                        'trx_tax': lineitem.tax_amount if lineitem.tax_amount else tax_amount,
-                        'detailid': lineitem.tax_code if lineitem.tax_code else general_mappings.default_tax_code_id,
+                        'trx_tax': lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_amount,
+                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
                     }
                 },
                 'customfields': {
@@ -957,6 +957,7 @@ class SageIntacctConnector:
                 'taxsolutionid': self.get_tax_solution_id_or_none(journal_entry_lineitems),
             })
 
+        print('journal', journal_entry_payload)
         return journal_entry_payload
 
 
