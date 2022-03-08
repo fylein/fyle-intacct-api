@@ -439,7 +439,7 @@ class SageIntacctConnector:
         attributes = []
         tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
         for tax_detail in tax_details:
-            if float(tax_detail['VALUE']) > 0 and tax_detail['TAXTYPE'] == 'Purchase':
+            if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
                 attributes.append({
                     'attribute_type': 'TAX_DETAIL',
                     'display_name': 'Tax Detail',
