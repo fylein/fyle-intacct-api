@@ -187,7 +187,7 @@ class SageIntacctConnector:
         """
         Get Payment accounts
         """
-        payment_accounts = self.connection.checking_accounts.get_all()
+        payment_accounts = self.connection.checking_accounts.get_all(field='STATUS', value='active')
 
         payment_accounts_attributes = []
 
@@ -284,7 +284,7 @@ class SageIntacctConnector:
         """
         Get location entities
         """
-        location_entities = self.connection.location_entities.get_all()
+        location_entities = self.connection.location_entities.get_all(field='STATUS', value='active')
 
         location_entities_attributes = []
 
@@ -308,7 +308,7 @@ class SageIntacctConnector:
         """
         Get Expense Payment Types
         """
-        expense_payment_types = self.connection.expense_payment_types.get_all()
+        expense_payment_types = self.connection.expense_payment_types.get_all(field='STATUS', value='active')
 
         expense_payment_type_attributes = []
 
@@ -362,7 +362,6 @@ class SageIntacctConnector:
         Get User Defined Dimensions
         """
 
-        # TODO: sync only active dimensions and dimension values
         dimensions = self.connection.dimensions.get_all()
 
         for dimension in dimensions:
