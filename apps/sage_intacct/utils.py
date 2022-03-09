@@ -187,7 +187,7 @@ class SageIntacctConnector:
         """
         Get Payment accounts
         """
-        payment_accounts = self.connection.checking_accounts.get_all(field='STATUS', value='active')
+        payment_accounts = self.connection.checking_accounts.get_all(field='STATUS', value='active') 
 
         payment_accounts_attributes = []
 
