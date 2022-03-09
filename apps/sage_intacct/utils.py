@@ -335,7 +335,7 @@ class SageIntacctConnector:
         """
         Get employees
         """
-        employees = self.connection.employees.get_all()
+        employees = self.connection.employees.get_all(field='STATUS', value='active')
 
         employee_attributes = []
 
