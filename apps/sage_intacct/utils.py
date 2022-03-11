@@ -169,7 +169,7 @@ class SageIntacctConnector:
         """
         Get charge card accounts
         """
-        charge_card_accounts = self.connection.charge_card_accounts.get_all(field='LIABILITYTYPE', value='Credit')
+        charge_card_accounts = self.connection.charge_card_accounts.get_by_query(and_filter=[('equalto', 'LIABILITYTYPE', 'Credit'), ('equalto', 'STATUS', 'active')])
 
         charge_card_accounts_attributes = []
 
