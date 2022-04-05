@@ -264,7 +264,7 @@ def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
                 date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
                 memo = '{} - {}'.format(memo, date)
 
-        return memo
+        return memo.replace('\'', '')
     else:
         # Safety addition
         return 'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email')) \
