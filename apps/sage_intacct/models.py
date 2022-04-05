@@ -354,22 +354,24 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
 def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
     description = expense_group.description
 
-    employee = DestinationAttribute.objects.filter(
-        attribute_type='EMPLOYEE',
-        destination_id=Mapping.objects.get(
-            source_type='EMPLOYEE',
-            destination_type='EMPLOYEE',
-            source__value=description.get('employee_email'),
-            workspace_id=expense_group.workspace_id
-        ).destination.destination_id,
+    mapping = Mapping.objects.filter(
+        source_type='EMPLOYEE',
+        destination_type='EMPLOYEE',
+        source__value=description.get('employee_email'),
         workspace_id=expense_group.workspace_id
-    ).order_by('-updated_at').first()
+    ).first()
 
-    if employee.detail[object_type]:
-        default_employee_object = employee.detail[object_type]
-        return default_employee_object
-    else:
-        return None
+    if mapping:
+        employee = DestinationAttribute.objects.filter(
+            attribute_type='EMPLOYEE',
+            destination_id=mapping.destination.destination_id,
+            workspace_id=expense_group.workspace_id
+        ).order_by('-updated_at').first()
+
+        if employee.detail[object_type]:
+            default_employee_object = employee.detail[object_type]
+            return default_employee_object
+    
 
 
 class Bill(models.Model):
