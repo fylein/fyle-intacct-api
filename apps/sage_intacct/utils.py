@@ -551,11 +551,11 @@ class SageIntacctConnector:
             workspace_id=self.workspace_id, attribute_type='DEPARTMENT',
             value__iexact=employee.detail['department']).first()
 
-        general_mappings = GeneralMapping.objects.get(workspace_id=employee.workspace_id)
-
         location = DestinationAttribute.objects.filter(
             workspace_id=self.workspace_id, attribute_type='LOCATION',
             value__iexact=employee.detail['location']).first()
+
+        general_mappings = GeneralMapping.objects.filter(workspace_id=employee.workspace_id).first()
 
         sage_intacct_display_name = employee.detail['full_name']
 
@@ -575,15 +575,22 @@ class SageIntacctConnector:
         except Exception as e:
             logger.exception(e.response)
 
+        location_id = location.destination_id if location else None
+        department_id = department.destination_id if department else None
+
+        if not location_id and general_mappings:
+            location_id = general_mappings.location_id
+
+        if not department_id and general_mappings:
+            department_id = general_mappings.department_id
+
         employee_payload = {
             'PERSONALINFO': {
                 'CONTACTNAME': sage_intacct_display_name
             },
             'EMPLOYEEID': sage_intacct_display_name,
-            'LOCATIONID': location.destination_id if location \
-                 else general_mappings.default_location_id,
-            'DEPARTMENTID': department.destination_id if department \
-                 else general_mappings.default_department_id
+            'LOCATIONID': location_id,
+            'DEPARTMENTID': department_id
         }
 
         created_employee = self.connection.employees.post(employee_payload)['data']['employee']
