@@ -205,6 +205,48 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
         if chain.length() > 1:
             chain.run()
 
+def schedule_credit_card_charge_creation(workspace_id: int, expense_group_ids: List[str]):
+    """
+    Schedule Credit Card Charge creation
+    :param expense_group_ids: List of expense group ids
+    :param workspace_id: workspace id
+    :return: None
+    """
+    if expense_group_ids:
+        expense_groups = ExpenseGroup.objects.filter(
+            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
+            workspace_id=workspace_id, id__in=expense_group_ids,
+            creditcardcharge__id__isnull=True, exported_at__isnull=True
+        ).all()
+
+        chain = Chain(cached=False)
+
+        for expense_group in expense_groups:
+            expense_amount = expense_group.expenses.first().amount
+            export_type = 'CREATING_CREDIT_CARD_CHARGE'
+            if expense_amount < 0:
+                export_type = 'CREATING_CREDIT_CARD_REFUND'
+
+            task_log, _ = TaskLog.objects.get_or_create(
+                workspace_id=expense_group.workspace_id,
+                expense_group=expense_group,
+                defaults={
+                    'status': 'ENQUEUED',
+                    'type': export_type
+                }
+            )
+
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
+                task_log.type = export_type
+                task_log.status = 'ENQUEUED'
+                task_log.save()
+
+            chain.append('apps.sage_intacct.tasks.create_credit_card_charge', expense_group, task_log.id)
+
+            task_log.save()
+        if chain.length():
+            chain.run()
+
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule expense reports creation
@@ -1272,3 +1314,38 @@ def schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments, worksp
 
         if schedule:
             schedule.delete()
+
+def schedule_journal_entry_creation(workspace_id: int, expense_group_ids: List[str]):
+    """
+    Schedule journal entries creation
+    :param expense_group_ids: List of expense group ids
+    :param workspace_id: workspace id
+    :return: None
+    """
+    if expense_group_ids:
+        expense_groups = ExpenseGroup.objects.filter(
+            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
+            workspace_id=workspace_id, id__in=expense_group_ids, journalentry__id__isnull=True, exported_at__isnull=True
+        ).all()
+
+        chain = Chain(cached=False)
+
+        for expense_group in expense_groups:
+            task_log, _ = TaskLog.objects.get_or_create(
+                workspace_id=expense_group.workspace_id,
+                expense_group=expense_group,
+                defaults={
+                    'status': 'ENQUEUED',
+                    'type': 'CREATING_JOURNAL_ENTRY'
+                }
+            )
+
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
+                task_log.type = 'CREATING_JOURNAL_ENTRY'
+                task_log.status = 'ENQUEUED'
+                task_log.save()
+
+            chain.append('apps.sage_intacct.tasks.create_journal_entry', expense_group, task_log.id)
+            task_log.save()
+        if chain.length():
+            chain.run()

@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.urls import path, include
 
-from .views import WorkspaceView, ClusterDomainView, ConnectFyleView, ConnectSageIntacctView, ConfigurationsView, ReadyView, ScheduleView
+from .views import WorkspaceView, WorkspaceAdminsView, ClusterDomainView, ConnectFyleView, ConnectSageIntacctView, ConfigurationsView, ReadyView, ScheduleView
 
 workspace_app_paths = [
     path('', WorkspaceView.as_view({'get': 'get', 'post': 'post'})),
@@ -23,7 +23,8 @@ workspace_app_paths = [
     path('<int:workspace_id>/', WorkspaceView.as_view({'get': 'get_by_id'})),
     path('<int:workspace_id>/configuration/', ConfigurationsView.as_view()),
     path('ready/', ReadyView.as_view({'get': 'get'})),
-    path('<int:workspace_id>/schedule/', ScheduleView.as_view({'post': 'post', 'get': 'get'}))
+    path('<int:workspace_id>/schedule/', ScheduleView.as_view({'post': 'post', 'get': 'get'})),
+    path('<int:workspace_id>/admins/', WorkspaceAdminsView.as_view({'get': 'get'}), name='admin')
 ]
 
 fyle_connection_api_paths = [
