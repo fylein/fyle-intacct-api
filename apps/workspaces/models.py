@@ -132,7 +132,7 @@ class WorkspaceSchedule(models.Model):
     interval_hours = models.IntegerField(null=True)
     error_count = models.IntegerField(null=True, help_text='Number of errors in export')
     additional_email_options = JSONField(default=list, help_text='Email and Name of person to send email', null=True)
-    emails_selected = ArrayField(base_field=models.CharField(max_length=255), null=True, help_text='File IDs')
+    emails_selected = ArrayField(base_field=models.CharField(max_length=255), null=True, help_text='Emails that has to be send mail')
     schedule = models.OneToOneField(Schedule, on_delete=models.PROTECT, null=True)
 
     class Meta:
