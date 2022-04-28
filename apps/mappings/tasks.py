@@ -778,7 +778,6 @@ def auto_create_tax_codes_mappings(workspace_id: int):
 
 
 def schedule_tax_groups_creation(import_tax_codes, workspace_id):
-    import_tax_codes = True
     if import_tax_codes:
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.auto_create_tax_codes_mappings',
