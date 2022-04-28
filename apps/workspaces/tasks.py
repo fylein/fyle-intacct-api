@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import List
 
 from django.conf import settings
@@ -142,7 +142,7 @@ def run_email_notification(workspace_id):
     )
 
     task_logs = TaskLog.objects.filter(
-        ~Q(type__in=['CREATING_BILLS', 'FETCHING_EXPENSES']),
+        ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']),
         workspace_id=workspace_id,
         status='FAILED'
     )
@@ -168,6 +168,7 @@ def run_email_notification(workspace_id):
                     'fyle_company': workspace.name,
                     'workspace_id': workspace_id,
                     'export_time': workspace.last_synced_at.date(),
+                    'year': date.today().year,
                     'app_url': "{0}/workspaces/{1}/expense_groups".format(settings.FYLE_APP_URL, workspace_id)
                     }
                 message = render_to_string("mail_template.html", context)
