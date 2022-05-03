@@ -553,6 +553,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
         detail = exception.response
         task_log.status = 'FAILED'
         task_log.detail = detail
+        task_log.sage_intacct_errors = None
 
         task_log.save()
 
@@ -659,6 +660,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
         detail = exception.response
         task_log.status = 'FAILED'
         task_log.detail = detail
+        task_log.sage_intacct_errors = None
 
         task_log.save()
 
@@ -755,6 +757,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
         detail = exception.response
         task_log.status = 'FAILED'
         task_log.detail = detail
+        task_log.sage_intacct_errors = None
 
         task_log.save()
 
@@ -848,6 +851,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
         detail = exception.response
         task_log.status = 'FAILED'
         task_log.detail = detail
+        task_log.sage_intacct_errors = None
 
         task_log.save()
 
@@ -929,6 +933,7 @@ def create_ap_payment(workspace_id):
 
                         task_log.detail = created_ap_payment
                         task_log.ap_payment = ap_payment_object
+                        task_log.sage_intacct_errors = None
                         task_log.status = 'COMPLETE'
 
                         task_log.save()
@@ -953,6 +958,7 @@ def create_ap_payment(workspace_id):
                     detail = exception.response
                     task_log.status = 'FAILED'
                     task_log.detail = detail
+                    task_log.sage_intacct_errors = None
 
                     task_log.save()
 
@@ -1052,6 +1058,7 @@ def create_sage_intacct_reimbursement(workspace_id):
 
                     task_log.detail = created__sage_intacct_reimbursement
                     task_log.sage_intacct_reimbursement = sage_intacct_reimbursement_object
+                    task_log.sage_intacct_errors = None
                     task_log.status = 'COMPLETE'
 
                     task_log.save()
@@ -1076,6 +1083,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                 detail = exception.response
                 task_log.status = 'FAILED'
                 task_log.detail = detail
+                task_log.sage_intacct_errors = None
 
                 task_log.save()
 
