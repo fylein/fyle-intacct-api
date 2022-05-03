@@ -275,7 +275,7 @@ SI_SENDER_PASSWORD = os.environ.get('SI_SENDER_PASSWORD')
 CACHE_EXPIRY = 3600
 SENDGRID_API_KEY = os.environ.get('SENDGRID_KEY')
 EMAIL = os.environ.get('SENDGRID_EMAIL')
-EMAIL_BACKEND = os.environ.get('SENDGRID_BACKEND')
+EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 
 CORS_ORIGIN_ALLOW_ALL = True
 
