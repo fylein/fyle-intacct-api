@@ -272,10 +272,11 @@ FYLE_APP_URL = os.environ.get('APP_URL')
 # Sage Intacct Settings
 SI_SENDER_ID = os.environ.get('SI_SENDER_ID')
 SI_SENDER_PASSWORD = os.environ.get('SI_SENDER_PASSWORD')
-CACHE_EXPIRY = 3600
 SENDGRID_API_KEY = os.environ.get('SENDGRID_KEY')
 EMAIL = os.environ.get('SENDGRID_EMAIL')
 EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
+
+CACHE_EXPIRY = 3600
 
 CORS_ORIGIN_ALLOW_ALL = True
 
