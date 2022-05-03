@@ -689,6 +689,7 @@ class SageIntacctConnector:
                 'taxentries': {
                     'taxentry': {
                         'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
+                        'trx_tax': None
                     }
                 },
                 'customfields': {
@@ -814,13 +815,20 @@ class SageIntacctConnector:
         :param charge_card_transaction_lineitems: ChargeCardTransactionLineitem objects extracted from database
         :return: constructed charge_card_transaction
         """
-        charge_card_transaction_payload = []
+
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
+
+        charge_card_transaction_lineitem_payload = []
         for lineitem in charge_card_transaction_lineitems:
             expense_link = self.get_expense_link(lineitem)
+
+            tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
+
             expense = {
                 'glaccountno': lineitem.gl_account_number,
                 'description': lineitem.memo,
-                'paymentamount': lineitem.amount,
+                'paymentamount': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
                 'departmentid': lineitem.department_id,
                 'locationid': lineitem.location_id,
                 'customerid': lineitem.customer_id,
@@ -835,10 +843,15 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
-                }
+                },
+                'taxentries': {
+                    'taxentry': {
+                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
+                    }
+                },
             }
 
-            charge_card_transaction_payload.append(expense)
+            charge_card_transaction_lineitem_payload.append(expense)
 
         transaction_date = datetime.strptime(charge_card_transaction.transaction_date, '%Y-%m-%dT%H:%M:%S')
         charge_card_transaction_payload = {
@@ -851,13 +864,20 @@ class SageIntacctConnector:
             'referenceno': charge_card_transaction.reference_no,
             'payee': charge_card_transaction.payee,
             'description': charge_card_transaction.memo,
-            'currency': charge_card_transaction.currency,
-            'exchratetype': None,
+            'currency': 'AUD',
+            'exchratetype': 'Intacct Daily Rate',
             'ccpayitems': {
-                'ccpayitem': charge_card_transaction_payload
+                'ccpayitem': charge_card_transaction_lineitem_payload
             }
         }
 
+        # if configuration.import_tax_codes:
+        #     charge_card_transaction_payload.update({
+        #        'inclusivetax': True,
+        #        'taxsolutionid': self.get_tax_solution_id_or_none(charge_card_transaction_lineitems),
+        #     })
+
+        print(charge_card_transaction_payload)
         return charge_card_transaction_payload
     
     def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
