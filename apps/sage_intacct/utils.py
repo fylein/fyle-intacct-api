@@ -844,6 +844,7 @@ class SageIntacctConnector:
                     },
                    ]
                 },
+                'totaltrxamount': lineitem.amount,
                 'taxentries': {
                     'taxentry': {
                         'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
@@ -864,20 +865,14 @@ class SageIntacctConnector:
             'referenceno': charge_card_transaction.reference_no,
             'payee': charge_card_transaction.payee,
             'description': charge_card_transaction.memo,
-            'currency': 'AUD',
-            'exchratetype': 'Intacct Daily Rate',
+            'currency': charge_card_transaction.currency,
+            'exchratetype': None,
+            'inclusivetax': True if configuration.import_tax_codes else False,
             'ccpayitems': {
                 'ccpayitem': charge_card_transaction_lineitem_payload
             }
         }
 
-        # if configuration.import_tax_codes:
-        #     charge_card_transaction_payload.update({
-        #        'inclusivetax': True,
-        #        'taxsolutionid': self.get_tax_solution_id_or_none(charge_card_transaction_lineitems),
-        #     })
-
-        print(charge_card_transaction_payload)
         return charge_card_transaction_payload
     
     def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
