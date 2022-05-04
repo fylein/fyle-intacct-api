@@ -689,7 +689,6 @@ class SageIntacctConnector:
                 'taxentries': {
                     'taxentry': {
                         'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
-                        'trx_tax': None
                     }
                 },
                 'customfields': {
