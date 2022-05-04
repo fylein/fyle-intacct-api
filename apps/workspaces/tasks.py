@@ -14,7 +14,7 @@ from apps.fyle.tasks import create_expense_groups
 from apps.sage_intacct.tasks import schedule_expense_reports_creation, schedule_bills_creation, \
     schedule_charge_card_transaction_creation
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import User, Workspace, WorkspaceSchedule, Configuration
+from apps.workspaces.models import User, Workspace, WorkspaceSchedule, Configuration, SageIntacctCredential
 
 
 def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours: int):
@@ -149,6 +149,7 @@ def run_email_notification(workspace_id):
 
     workspace = Workspace.objects.get(id=workspace_id)
     admin_data = WorkspaceSchedule.objects.get(workspace_id=workspace_id)
+    intacct = SageIntacctCredential.objects.get(workspace=workspace)
 
     if ws_schedule.enabled:
         for admin_email in admin_data.emails_selected:
@@ -166,6 +167,7 @@ def run_email_notification(workspace_id):
                     'name': admin_name,
                     'errors': len(task_logs),
                     'fyle_company': workspace.name,
+                    'intacct_company': intacct.si_company_name,
                     'workspace_id': workspace_id,
                     'export_time': workspace.last_synced_at.date(),
                     'year': date.today().year,
