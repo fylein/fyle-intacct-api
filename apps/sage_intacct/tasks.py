@@ -12,6 +12,7 @@ from django_q.tasks import Chain
 from sageintacctsdk.exceptions import WrongParamsError
 
 from fyle_accounting_mappings.models import Mapping, ExpenseAttribute, MappingSetting, DestinationAttribute
+from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle_intacct_api.exceptions import BulkError
 
@@ -885,7 +886,8 @@ def create_ap_payment(workspace_id):
 
     fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
 
-    fyle_connector.sync_reimbursements()
+    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    platform.reimbursements.sync()
 
     bills: List[Bill] = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
@@ -1008,9 +1010,8 @@ def schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments, workspace_i
 def create_sage_intacct_reimbursement(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-
-    fyle_connector.sync_reimbursements()
+    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    platform.reimbursements.sync()
 
     expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
@@ -1237,7 +1238,9 @@ def process_fyle_reimbursements(workspace_id):
 
     fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
 
-    fyle_connector.sync_reimbursements()
+    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
+    platform.reimbursements.sync_reimbursements()
 
     reimbursements = Reimbursement.objects.filter(state='PENDING', workspace_id=workspace_id).all()
 
@@ -1257,7 +1260,7 @@ def process_fyle_reimbursements(workspace_id):
 
     if reimbursement_ids:
         fyle_connector.post_reimbursement(reimbursement_ids)
-        fyle_connector.sync_reimbursements()
+        platform.reimbursements.sync()
 
 
 def schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
