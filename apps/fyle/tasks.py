@@ -6,6 +6,8 @@ from datetime import datetime
 from django.db import transaction
 from django_q.tasks import async_task
 
+from fyle_integrations_platform_connector import PlatformConnector
+
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
 
@@ -15,6 +17,12 @@ from .serializers import ExpenseGroupSerializer
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+
+SOURCE_ACCOUNT_MAP = {
+    'PERSONAL': 'PERSONAL_CASH_ACCOUNT',
+    'CCC': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT'
+}
 
 
 def sync_reimbursements(workspace_id: int):
@@ -56,33 +64,26 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
     """
     try:
         with transaction.atomic():
-            filter_by_timestamp = []
 
             workspace = Workspace.objects.get(pk=workspace_id)
 
             last_synced_at = workspace.last_synced_at
 
-            if last_synced_at:
-                filter_by_timestamp.append(
-                    'gte:{0}'.format(datetime.strftime(last_synced_at, '%Y-%m-%dT%H:%M:%S.000Z'))
-                )
-
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-            fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
 
             expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
 
-            import_state = [expense_group_settings.expense_state]
+            platform = PlatformConnector(fyle_credentials)
+            source_account_type = []
 
-            if import_state[0] == 'PAYMENT_PROCESSING' and last_synced_at is not None:
-                import_state.append('PAID')
+            for source in fund_source:
+                source_account_type.append(SOURCE_ACCOUNT_MAP[source])
 
-            expenses = fyle_connector.get_expenses(
-                state=import_state,
-                fund_source=fund_source,
-                settled_at=filter_by_timestamp if expense_group_settings.expense_state == 'PAYMENT_PROCESSING' \
-                    else None,
-                updated_at=filter_by_timestamp if expense_group_settings.expense_state == 'PAID' else None
+            expenses = platform.expenses.get(
+                source_account_type=source_account_type,
+                state=expense_group_settings.expense_state,
+                settled_at=last_synced_at if expense_group_settings.expense_state == 'PAYMENT_PROCESSING' else None,
+                last_paid_at=last_synced_at if expense_group_settings.expense_state == 'PAID' else None
             )
 
             if expenses:
