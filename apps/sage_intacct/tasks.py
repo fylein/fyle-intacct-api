@@ -548,15 +548,6 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
 
         task_log.save()
 
-    except InvalidTokenError as exception:
-        logger.info(exception.response)
-        detail = exception.response
-        task_log.status = 'FAILED'
-        task_log.detail = detail
-        task_log.sage_intacct_errors = None
-
-        task_log.save()
-
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -567,6 +558,9 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
 
     except WrongParamsError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
+    
+    except InvalidTokenError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
 
     except Exception:
@@ -664,15 +658,6 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
 
         task_log.save()
 
-    except InvalidTokenError as exception:
-        logger.info(exception.response)
-        detail = exception.response
-        task_log.status = 'FAILED'
-        task_log.detail = detail
-        task_log.sage_intacct_errors = None
-
-        task_log.save()
-
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -684,6 +669,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
+
+    except InvalidTokenError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')    
 
     except Exception:
         error = traceback.format_exc()
@@ -770,15 +758,6 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
 
         task_log.save()
     
-    except InvalidTokenError as exception:
-        logger.info(exception.response)
-        detail = exception.response
-        task_log.status = 'FAILED'
-        task_log.detail = detail
-        task_log.sage_intacct_errors = None
-
-        task_log.save()
-
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -789,6 +768,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
 
     except WrongParamsError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
+    
+    except InvalidTokenError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
     except Exception:
@@ -873,15 +855,6 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
 
         task_log.save()
 
-    except InvalidTokenError as exception:
-        logger.info(exception.response)
-        detail = exception.response
-        task_log.status = 'FAILED'
-        task_log.detail = detail
-        task_log.sage_intacct_errors = None
-
-        task_log.save()
-
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -892,6 +865,9 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
 
     except WrongParamsError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+    
+    except InvalidTokenError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
     except Exception:
@@ -988,15 +964,6 @@ def create_ap_payment(workspace_id):
                     task_log.detail = detail
 
                     task_log.save()
-                
-                except InvalidTokenError as exception:
-                    logger.info(exception.response)
-                    detail = exception.response
-                    task_log.status = 'FAILED'
-                    task_log.detail = detail
-                    task_log.sage_intacct_errors = None
-
-                    task_log.save()
 
                 except BulkError as exception:
                     logger.info(exception.response)
@@ -1008,6 +975,13 @@ def create_ap_payment(workspace_id):
                     task_log.save()
 
                 except WrongParamsError as exception:
+                    logger.info(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = exception.response
+
+                    task_log.save()
+
+                except InvalidTokenError as exception:
                     logger.info(exception.response)
                     task_log.status = 'FAILED'
                     task_log.detail = exception.response
@@ -1123,15 +1097,6 @@ def create_sage_intacct_reimbursement(workspace_id):
 
                 task_log.save()
 
-            except InvalidTokenError as exception:
-                logger.info(exception.response)
-                detail = exception.response
-                task_log.status = 'FAILED'
-                task_log.detail = detail
-                task_log.sage_intacct_errors = None
-
-                task_log.save()
-
             except BulkError as exception:
                 logger.info(exception.response)
                 detail = exception.response
@@ -1142,6 +1107,13 @@ def create_sage_intacct_reimbursement(workspace_id):
                 task_log.save()
 
             except WrongParamsError as exception:
+                logger.info(exception.response)
+                task_log.status = 'FAILED'
+                task_log.detail = exception.response
+
+                task_log.save()
+            
+            except InvalidTokenError as exception:
                 logger.info(exception.response)
                 task_log.status = 'FAILED'
                 task_log.detail = exception.response
