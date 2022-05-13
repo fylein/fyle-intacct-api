@@ -1154,7 +1154,7 @@ class APPaymentLineitem(models.Model):
             ap_payment=ap_payment,
             record_key=record_key,
             defaults={
-                'amount': total_amount,
+                'amount': round(total_amount, 2),
             }
         )
         ap_payment_lineitem_objects.append(ap_payment_lineitem_object)
@@ -1247,7 +1247,7 @@ class SageIntacctReimbursementLineitem(models.Model):
             sage_intacct_reimbursement=sage_intacct_reimbursement,
             record_key=record_key,
             defaults={
-                'amount': total_amount,
+                'amount': round(total_amount, 2),
             }
         )
         sage_intacct_reimbursement_lineitem_objects.append(sage_intacct_reimbursement_lineitem_object)
