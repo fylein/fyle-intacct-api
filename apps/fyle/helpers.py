@@ -9,6 +9,7 @@ from apps.workspaces.models import FyleCredential, Workspace
 
 logger = logging.getLogger(__name__)
 
+
 def add_expense_id_to_expense_group_settings(workspace_id: int):
     """
     Add Expense id to card expense grouping
@@ -22,37 +23,24 @@ def add_expense_id_to_expense_group_settings(workspace_id: int):
     expense_group_settings.ccc_export_date_type = 'spent_at'
     expense_group_settings.save()
 
-def check_interval_and_sync_dimension(workspace: Workspace, refresh_token: str) -> bool:
+
+def check_interval_and_sync_dimension(workspace: Workspace, fyle_credentials: FyleCredential) -> bool:
     """
     Check sync interval and sync dimension
     :param workspace: Workspace Instance
-    :param refresh_token: Refresh token of an org
+    :param fyle_credentials: Fyle credentials of an org
     return: True/False based on sync
     """
     if workspace.source_synced_at:
         time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
     if workspace.source_synced_at is None or time_interval.days > 0:
-        sync_dimensions(refresh_token, workspace.id)
+        sync_dimensions(fyle_credentials, workspace.id)
         return True
 
     return False
 
-def sync_dimensions(refresh_token: str, workspace_id: int) -> None:
-    fyle_connection = import_string('apps.fyle.connector.FyleConnector')(refresh_token, workspace_id)
-    
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+
+def sync_dimensions(fyle_credentials: FyleCredential, workspace_id: int) -> None:
     platform = PlatformConnector(fyle_credentials)
-    dimensions = [
-        'employees', 'categories', 'cost_centers',
-        'projects', 'expense_custom_fields'
-    ]
-
-    for dimension in dimensions:
-        try:
-            sync = getattr(fyle_connection, 'sync_{}'.format(dimension))
-            sync()
-        except Exception as exception:
-            logger.exception(exception)
-
-    platform.tax_groups.sync()
+    platform.import_fyle_dimensions(import_taxes=True)
