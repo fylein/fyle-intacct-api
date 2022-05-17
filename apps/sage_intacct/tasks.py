@@ -425,7 +425,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
     expenses = expense_group.expenses.all()
 
     for lineitem in expenses:
-        category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+        category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
         if (expense_group.fund_source == 'PERSONAL') or (expense_group.fund_source == 'CCC' and \
