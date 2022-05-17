@@ -382,7 +382,6 @@ class Reimbursement(models.Model):
                         settlement_id=reimbursement['settlement_id'],
                         reimbursement_id=reimbursement['id'],
                         state=reimbursement['state'],
-                        payment_number=reimbursement['unique_id'],
                         workspace_id=workspace_id
                     )
                 )
