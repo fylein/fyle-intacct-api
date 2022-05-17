@@ -341,7 +341,7 @@ def auto_create_cost_center_mappings(workspace_id: int):
             source_field='COST_CENTER', import_to_fyle=True, workspace_id=workspace_id
         )
 
-        platform.sync_cost_centers()
+        platform.cost_centers.sync()
 
         sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
