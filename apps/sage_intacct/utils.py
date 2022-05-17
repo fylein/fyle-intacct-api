@@ -530,8 +530,7 @@ class SageIntacctConnector:
 
         if not cluster_domain:
             fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
-            fyle_connector = FyleConnector(fyle_credentials.refresh_token, self.workspace_id)
-            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+            cluster_domain = fyle_credentials.cluster_domain
             workspace.cluster_domain = cluster_domain
             workspace.save()
 
