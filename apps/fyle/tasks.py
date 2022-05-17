@@ -27,9 +27,8 @@ SOURCE_ACCOUNT_MAP = {
 
 def sync_reimbursements(workspace_id: int):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-
-    fyle_connector.sync_reimbursements()
+    platform = PlatformConnector(fyle_credentials)
+    platform.reimbursements.sync()
 
 
 def schedule_expense_group_creation(workspace_id: int):

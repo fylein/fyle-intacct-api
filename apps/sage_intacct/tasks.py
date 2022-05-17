@@ -1266,7 +1266,7 @@ def process_fyle_reimbursements(workspace_id):
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    platform.reimbursements.sync_reimbursements()
+    platform.reimbursements.sync()
 
     reimbursements = Reimbursement.objects.filter(state='PENDING', workspace_id=workspace_id).all()
 
