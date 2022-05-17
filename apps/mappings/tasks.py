@@ -102,7 +102,7 @@ def auto_create_project_mappings(workspace_id: int):
 
         sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
-        post_projects_in_batches(fyle_connection, workspace_id, mapping_setting.destination_field)
+        post_projects_in_batches(fyle_connection, platform, workspace_id, mapping_setting.destination_field)
 
     except WrongParamsError as exception:
         logger.error(
