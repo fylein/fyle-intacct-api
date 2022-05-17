@@ -316,6 +316,7 @@ def post_cost_centers_in_batches(fyle_connection: FyleConnector,  platform: Plat
             paginated_si_attributes, existing_cost_center_names)
 
         if fyle_payload:
+            fyle_connection.connection.CostCenters.post(fyle_payload)
             platform.cost_centers.sync()
 
         Mapping.bulk_create_mappings(paginated_si_attributes, 'COST_CENTER', sageintacct_attribute_type, workspace_id)
