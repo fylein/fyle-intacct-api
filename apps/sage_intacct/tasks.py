@@ -41,7 +41,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
         expense_ids = expense_group.expenses.values_list('expense_id', flat=True)
-        fyle_connector = FyleConnector(fyle_credentials.refresh_token, expense_group.workspace_id)
+        fyle_connector = FyleConnector(fyle_credentials.refresh_token)
         attachments = fyle_connector.get_attachments(expense_ids)
         supdoc_id = key
         return sage_intacct_connection.post_attachments(attachments, supdoc_id)
@@ -896,8 +896,6 @@ def check_expenses_reimbursement_status(expenses):
 def create_ap_payment(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     platform.reimbursements.sync()
 
@@ -1262,7 +1260,7 @@ def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments
 def process_fyle_reimbursements(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
+    fyle_connector = FyleConnector(fyle_credentials.refresh_token)
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 

@@ -280,8 +280,7 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configur
         cluster_domain = workspace.cluster_domain
     else:
         fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-        fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-        cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+        cluster_domain = fyle_credentials.cluster_domain
         workspace.cluster_domain = cluster_domain
         workspace.save()
 

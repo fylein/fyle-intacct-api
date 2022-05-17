@@ -88,8 +88,7 @@ def auto_create_project_mappings(workspace_id: int):
     try:
         fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
         fyle_connection = FyleConnector(
-            refresh_token=fyle_credentials.refresh_token,
-            workspace_id=workspace_id
+            refresh_token=fyle_credentials.refresh_token
         )
 
 
@@ -152,7 +151,7 @@ def async_auto_map_employees(workspace_id: int):
     destination_type = mapping_setting.destination_field
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
+    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token)
 
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(
@@ -195,7 +194,7 @@ def async_auto_map_charge_card_account(workspace_id: int):
     default_charge_card_id = general_mappings.default_charge_card_id
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
+    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token)
     fyle_connection.sync_employees()
 
     Mapping.auto_map_ccc_employees('CHARGE_CARD_NUMBER', default_charge_card_id, workspace_id)
@@ -331,8 +330,7 @@ def auto_create_cost_center_mappings(workspace_id: int):
         fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
 
         fyle_connection = FyleConnector(
-            refresh_token=fyle_credentials.refresh_token,
-            workspace_id=workspace_id
+            refresh_token=fyle_credentials.refresh_token
         )
 
         mapping_setting = MappingSetting.objects.get(
@@ -428,7 +426,7 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
 
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
+    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token)
 
     sageintacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
@@ -530,8 +528,7 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
     fyle_connection = FyleConnector(
-        refresh_token=fyle_credentials.refresh_token,
-        workspace_id=workspace_id
+        refresh_token=fyle_credentials.refresh_token
     )
 
     si_connection = SageIntacctConnector(
