@@ -57,7 +57,8 @@ def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_
     return payload
 
 
-def post_projects_in_batches(fyle_connection: FyleConnector, workspace_id: int, destination_field: str):
+def post_projects_in_batches(fyle_connection: FyleConnector, platform: PlatformConnector,
+                             workspace_id: int, destination_field: str):
     existing_project_names = ExpenseAttribute.objects.filter(
         attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
     si_attributes_count = DestinationAttribute.objects.filter(
@@ -536,6 +537,8 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
         refresh_token=fyle_credentials.refresh_token,
         workspace_id=workspace_id
     )
+
+    platform = PlatformConnector(fyle_credentials)
 
     si_connection = SageIntacctConnector(
         credentials_object=si_credentials,
