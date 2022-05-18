@@ -479,7 +479,7 @@ class BillLineitem(models.Model):
         bill_lineitem_objects = []
 
         for lineitem in expenses:
-            category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
             if expense_group.fund_source == 'PERSONAL':
@@ -649,7 +649,7 @@ class ExpenseReportLineitem(models.Model):
         expense_report_lineitem_objects = []
 
         for lineitem in expenses:
-            category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
             account: Mapping = Mapping.objects.filter(
@@ -819,7 +819,7 @@ class JournalEntryLineitem(models.Model):
         journal_entry_lineitem_objects = []
 
         for lineitem in expenses:
-            category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
             if expense_group.fund_source == 'CCC':
@@ -1021,7 +1021,7 @@ class ChargeCardTransactionLineitem(models.Model):
         charge_card_transaction_lineitem_objects = []
 
         for lineitem in expenses:
-            category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
 
             account: Mapping = Mapping.objects.filter(
