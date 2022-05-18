@@ -10,7 +10,6 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, Destination
 
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings
 from apps.mappings.models import GeneralMapping
-from apps.fyle.connector import FyleConnector
 
 from apps.workspaces.models import Configuration, Workspace, FyleCredential
 

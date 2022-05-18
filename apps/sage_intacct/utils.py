@@ -1,4 +1,5 @@
 import logging
+import base64
 from typing import List, Dict
 from datetime import datetime
 import unidecode
@@ -1094,9 +1095,9 @@ class SageIntacctConnector:
             for attachment in attachments:
                 attachment_type = attachment['filename'].split('.')[1]
                 attachment_to_append = {
-                    'attachmentname': '{0} - {1}'.format(attachment['expense_id'], attachment_number),
+                    'attachmentname': '{0}_{1} - {2}'.format(attachment['id'], attachment['name'], attachment_number),
                     'attachmenttype': attachment_type,
-                    'attachmentdata': attachment['content']
+                    'attachmentdata': base64.b64decode(attachment['download_url']),
                 }
 
                 attachments_list.append(attachment_to_append)
