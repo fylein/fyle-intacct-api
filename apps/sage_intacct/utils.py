@@ -1092,7 +1092,7 @@ class SageIntacctConnector:
             attachment_number = 1
             attachments_list = []
             for attachment in attachments:
-                attachment_type = attachment['filename'].split('.')[1]
+                attachment_type = attachment['name'].split('.')[1]
                 attachment_to_append = {
                     'attachmentname': '{0}_{1} - {2}'.format(attachment['id'], attachment['name'], attachment_number),
                     'attachmenttype': attachment_type,
