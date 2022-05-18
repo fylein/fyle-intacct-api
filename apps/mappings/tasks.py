@@ -196,14 +196,10 @@ def async_auto_map_charge_card_account(workspace_id: int):
     default_charge_card_id = general_mappings.default_charge_card_id
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-<<<<<<< HEAD
-    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token)
-    fyle_connection.sync_employees()
 
-=======
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
     platform.employees.sync()
->>>>>>> 91b5d7b7095900b60bf951ae983c441f6506b951
     Mapping.auto_map_ccc_employees('CHARGE_CARD_NUMBER', default_charge_card_id, workspace_id)
 
 
