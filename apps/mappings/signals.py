@@ -3,7 +3,6 @@ Mappings Signal
 """
 import logging
 import json
-from datetime import datetime
 
 from rest_framework.exceptions import ValidationError
 
@@ -12,14 +11,10 @@ from django.dispatch import receiver
 from django_q.tasks import async_task
 
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
-from fylesdk.exceptions import WrongParamsError
+from fyle.platform.exceptions import WrongParamsError
 from apps.mappings.tasks import schedule_projects_creation, schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
     upload_attributes_to_fyle
-from apps.workspaces.models import SageIntacctCredential
-from apps.sage_intacct.helpers import sync_dimensions
 
-
-from .models import LocationEntityMapping
 
 logger = logging.getLogger(__name__)
 

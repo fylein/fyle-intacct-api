@@ -13,7 +13,8 @@ from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from fylesdk import exceptions as fyle_exc
+from fyle.platform import exceptions as fyle_exc
+
 
 from fyle_rest_auth.utils import AuthUtils
 from fyle_rest_auth.models import AuthToken
@@ -23,7 +24,6 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroupSettings
-from apps.fyle.connector import FyleConnector
 from apps.fyle.helpers import get_cluster_domain
 
 from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule
