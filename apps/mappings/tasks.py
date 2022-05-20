@@ -8,10 +8,9 @@ from django_q.models import Schedule
 from django.db.models import Q, Count
 from fyle_integrations_platform_connector import PlatformConnector
 
-from fylesdk import WrongParamsError
+from fyle.platform.exceptions import WrongParamsError
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute
 
-from apps.fyle.connector import FyleConnector
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
@@ -51,13 +50,13 @@ def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_
                     project.value,
                     project.destination_id
                 ),
-                'active': True if project.active is None else project.active
+                'is_enabled': True if project.active is None else project.active
             })
 
     return payload
 
 
-def post_projects_in_batches(fyle_connection: FyleConnector, platform: PlatformConnector,
+def post_projects_in_batches(platform: PlatformConnector,
                              workspace_id: int, destination_field: str):
     existing_project_names = ExpenseAttribute.objects.filter(
         attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
@@ -75,7 +74,7 @@ def post_projects_in_batches(fyle_connection: FyleConnector, platform: PlatformC
         fyle_payload: List[Dict] = create_fyle_projects_payload(
             paginated_si_attributes, existing_project_names)
         if fyle_payload:
-            fyle_connection.connection.Projects.post(fyle_payload)
+            platform.projects.post_bulk(fyle_payload)
             platform.projects.sync()
 
         Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', destination_field, workspace_id)
@@ -88,10 +87,6 @@ def auto_create_project_mappings(workspace_id: int):
     """
     try:
         fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-        fyle_connection = FyleConnector(
-            refresh_token=fyle_credentials.refresh_token,
-            workspace_id=workspace_id
-        )
 
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
         platform.projects.sync()
@@ -102,7 +97,7 @@ def auto_create_project_mappings(workspace_id: int):
 
         sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
-        post_projects_in_batches(fyle_connection, platform, workspace_id, mapping_setting.destination_field)
+        post_projects_in_batches(platform, workspace_id, mapping_setting.destination_field)
 
     except WrongParamsError as exception:
         logger.error(
@@ -153,6 +148,7 @@ def async_auto_map_employees(workspace_id: int):
     destination_type = mapping_setting.destination_field
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -196,7 +192,9 @@ def async_auto_map_charge_card_account(workspace_id: int):
     default_charge_card_id = general_mappings.default_charge_card_id
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
     platform.employees.sync()
     Mapping.auto_map_ccc_employees('CHARGE_CARD_NUMBER', default_charge_card_id, workspace_id)
 
@@ -246,7 +244,8 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
             payload.append({
                 'name': category.value,
                 'code': category.destination_id,
-                'enabled': category.active
+                'is_enabled': category.active,
+                'restricted_project_ids': None
             })
 
     return payload
@@ -287,7 +286,7 @@ def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAtt
         if si_attribute.value not in existing_fyle_cost_centers:
             fyle_cost_centers_payload.append({
                 'name': si_attribute.value,
-                'enabled': True if si_attribute.active is None else si_attribute.active,
+                'is_enabled': True if si_attribute.active is None else si_attribute.active,
                 'description': 'Cost Center - {0}, Id - {1}'.format(
                     si_attribute.value,
                     si_attribute.destination_id
@@ -297,7 +296,7 @@ def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAtt
     return fyle_cost_centers_payload
 
 
-def post_cost_centers_in_batches(fyle_connection: FyleConnector,  platform: PlatformConnector, workspace_id: int, sageintacct_attribute_type: str):
+def post_cost_centers_in_batches(platform: PlatformConnector, workspace_id: int, sageintacct_attribute_type: str):
     existing_cost_center_names = ExpenseAttribute.objects.filter(
         attribute_type='COST_CENTER', workspace_id=workspace_id).values_list('value', flat=True)
 
@@ -317,7 +316,7 @@ def post_cost_centers_in_batches(fyle_connection: FyleConnector,  platform: Plat
             paginated_si_attributes, existing_cost_center_names)
 
         if fyle_payload:
-            fyle_connection.connection.CostCenters.post(fyle_payload)
+            platform.cost_centers.post_bulk(fyle_payload)
             platform.cost_centers.sync()
 
         Mapping.bulk_create_mappings(paginated_si_attributes, 'COST_CENTER', sageintacct_attribute_type, workspace_id)
@@ -330,11 +329,6 @@ def auto_create_cost_center_mappings(workspace_id: int):
     try:
         fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
 
-        fyle_connection = FyleConnector(
-            refresh_token=fyle_credentials.refresh_token,
-            workspace_id=workspace_id
-        )
-
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
         mapping_setting = MappingSetting.objects.get(
@@ -345,7 +339,7 @@ def auto_create_cost_center_mappings(workspace_id: int):
 
         sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
-        post_cost_centers_in_batches(fyle_connection, platform, workspace_id, mapping_setting.destination_field)
+        post_cost_centers_in_batches(platform, workspace_id, mapping_setting.destination_field)
 
     except WrongParamsError as exception:
         logger.error(
@@ -409,16 +403,18 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
         fyle_attribute = fyle_attribute.replace('_', ' ').title()
 
         expense_custom_field_payload = {
-            'id': custom_field_id,
-            'name': fyle_attribute,
+            'field_name': fyle_attribute,
+            "category_ids": [],
             'type': 'SELECT',
-            'active': True,
-            'mandatory': False,
+            'is_enabled': True,
+            'is_mandatory': False,
             'placeholder': 'Select {0}'.format(fyle_attribute),
-            'default_value': None,
             'options': fyle_expense_custom_field_options,
             'code': None
         }
+
+        if custom_field_id:
+            expense_custom_field_payload['id'] = custom_field_id
 
         return expense_custom_field_payload
 
@@ -429,8 +425,6 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
     """
 
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-
-    fyle_connection = FyleConnector(refresh_token=fyle_credentials.refresh_token, workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
@@ -447,7 +441,7 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
     )
 
     if fyle_custom_field_payload:
-        fyle_connection.connection.ExpensesCustomFields.post(fyle_custom_field_payload)
+        platform.expense_custom_fields.post(fyle_custom_field_payload)
         platform.expense_custom_fields.sync()
 
     return sageintacct_attributes
@@ -525,6 +519,7 @@ def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate
         corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
         si_connection.sync_accounts()
 
+
 def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
     corporate_credit_card_expenses_object: str):
     """
@@ -532,11 +527,6 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     """
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-
-    fyle_connection = FyleConnector(
-        refresh_token=fyle_credentials.refresh_token,
-        workspace_id=workspace_id
-    )
 
     platform = PlatformConnector(fyle_credentials)
 
@@ -561,7 +551,7 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
 
     fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id)
     if fyle_payload:
-        fyle_connection.connection.Categories.post(fyle_payload)
+        platform.categories.post_bulk(fyle_payload)
         platform.categories.sync()
 
     return si_attributes
@@ -707,7 +697,7 @@ def schedule_categories_creation(import_categories, workspace_id):
             schedule.delete()
 
 
-def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_id: int):    
+def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_id: int):
     existing_tax_codes_name = ExpenseAttribute.objects.filter(
         attribute_type='TAX_GROUP', workspace_id=workspace_id).values_list('value', flat=True)
 
@@ -717,7 +707,7 @@ def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_
     si_attributes = remove_duplicates(si_attributes)
 
     fyle_payload: List[Dict] = create_fyle_tax_group_payload(si_attributes, existing_tax_codes_name)
-    
+
     if fyle_payload:
         platform_connection.tax_groups.post_bulk(fyle_payload)
 

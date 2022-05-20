@@ -1,4 +1,3 @@
-import json
 import logging
 import traceback
 from typing import List
@@ -20,7 +19,6 @@ from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
-from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
@@ -40,9 +38,19 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
     """
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
-        expense_ids = expense_group.expenses.values_list('expense_id', flat=True)
-        fyle_connector = FyleConnector(fyle_credentials.refresh_token, expense_group.workspace_id)
-        attachments = fyle_connector.get_attachments(expense_ids)
+        file_ids = expense_group.expenses.values_list('file_ids', flat=True)
+        platform = PlatformConnector(fyle_credentials)
+
+        files_list = []
+        attachments = []
+        for file_id in file_ids:
+            for id in file_id:
+                file_object = {'id': id}
+                files_list.append(file_object)
+
+        if files_list:
+            attachments = platform.files.bulk_generate_file_urls(files_list)
+
         supdoc_id = key
         return sage_intacct_connection.post_attachments(attachments, supdoc_id)
     except Exception:
@@ -896,8 +904,6 @@ def check_expenses_reimbursement_status(expenses):
 def create_ap_payment(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     platform.reimbursements.sync()
 
@@ -1262,8 +1268,6 @@ def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments
 def process_fyle_reimbursements(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    fyle_connector = FyleConnector(fyle_credentials.refresh_token, workspace_id)
-
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     platform.reimbursements.sync()
@@ -1285,7 +1289,12 @@ def process_fyle_reimbursements(workspace_id):
                 reimbursement_ids.append(reimbursement.reimbursement_id)
 
     if reimbursement_ids:
-        fyle_connector.post_reimbursement(reimbursement_ids)
+        reimbursements_list = []
+        for reimbursement_id in reimbursement_ids:
+            reimbursement_object = {'id': reimbursement_id}
+            reimbursements_list.append(reimbursement_object)
+
+        platform.reimbursements.bulk_post_reimbursements(reimbursements_list)
         platform.reimbursements.sync()
 
 

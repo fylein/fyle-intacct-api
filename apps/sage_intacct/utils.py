@@ -1,4 +1,5 @@
 import logging
+import base64
 from typing import List, Dict
 from datetime import datetime
 import unidecode
@@ -12,7 +13,6 @@ from sageintacctsdk import SageIntacctSDK
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
-from apps.fyle.connector import FyleConnector
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
@@ -530,8 +530,7 @@ class SageIntacctConnector:
 
         if not cluster_domain:
             fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
-            fyle_connector = FyleConnector(fyle_credentials.refresh_token, self.workspace_id)
-            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+            cluster_domain = fyle_credentials.cluster_domain
             workspace.cluster_domain = cluster_domain
             workspace.save()
 
@@ -1093,11 +1092,11 @@ class SageIntacctConnector:
             attachment_number = 1
             attachments_list = []
             for attachment in attachments:
-                attachment_type = attachment['filename'].split('.')[1]
+                attachment_type = attachment['name'].split('.')[1]
                 attachment_to_append = {
-                    'attachmentname': '{0} - {1}'.format(attachment['expense_id'], attachment_number),
+                    'attachmentname': '{0}_{1} - {2}'.format(attachment['id'], attachment['name'], attachment_number),
                     'attachmenttype': attachment_type,
-                    'attachmentdata': attachment['content']
+                    'attachmentdata': base64.b64decode(attachment['download_url']),
                 }
 
                 attachments_list.append(attachment_to_append)

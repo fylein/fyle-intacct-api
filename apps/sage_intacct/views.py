@@ -107,7 +107,8 @@ class SageIntacctFieldsView(generics.ListAPIView):
             ~Q(attribute_type='EMPLOYEE') & ~Q(attribute_type='VENDOR') & ~Q(attribute_type='CHARGE_CARD_NUMBER') &
             ~Q(attribute_type='EXPENSE_TYPE') & ~Q(attribute_type='ACCOUNT') & ~Q(attribute_type='CCC_ACCOUNT'),
             ~Q(attribute_type='PAYMENT_ACCOUNT'), ~Q(attribute_type='EXPENSE_PAYMENT_TYPE'), ~Q(attribute_type='ITEM'),
-            ~Q(attribute_type='LOCATION_ENTITY'), workspace_id=self.kwargs['workspace_id']
+            ~Q(attribute_type='LOCATION_ENTITY'), ~Q(attribute_type='TAX_DETAIL'),
+            workspace_id=self.kwargs['workspace_id']
         ).values('attribute_type', 'display_name').distinct()
 
         return attributes

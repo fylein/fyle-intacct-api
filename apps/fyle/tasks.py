@@ -12,8 +12,6 @@ from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
 
 from .models import Expense, ExpenseGroup, ExpenseGroupSettings
-from .connector import FyleConnector
-from .serializers import ExpenseGroupSerializer
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO

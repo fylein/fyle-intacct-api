@@ -13,16 +13,18 @@ from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from fylesdk import exceptions as fyle_exc
+from fyle.platform import exceptions as fyle_exc
+
 
 from fyle_rest_auth.utils import AuthUtils
 from fyle_rest_auth.models import AuthToken
+from fyle_rest_auth.helpers import get_fyle_admin
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroupSettings
-from apps.fyle.connector import FyleConnector
+from apps.fyle.helpers import get_cluster_domain
 
 from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
@@ -45,10 +47,10 @@ class WorkspaceView(viewsets.ViewSet):
         Create a Workspace
         """
 
-        auth_tokens = AuthToken.objects.get(user__user_id=request.user)
-        fyle_user = auth_utils.get_fyle_user(auth_tokens.refresh_token)
-        org_name = fyle_user['org_name']
-        org_id = fyle_user['org_id']
+        access_token = request.META.get('HTTP_AUTHORIZATION')
+        fyle_user = get_fyle_admin(access_token.split(' ')[1], None)
+        org_name = fyle_user['data']['org']['name']
+        org_id = fyle_user['data']['org']['id']
 
         workspace = Workspace.objects.filter(fyle_org_id=org_id).first()
 
@@ -56,8 +58,8 @@ class WorkspaceView(viewsets.ViewSet):
             workspace.user.add(User.objects.get(user_id=request.user))
             cache.delete(str(workspace.id))
         else:
-            fyle_connector = FyleConnector(auth_tokens.refresh_token)
-            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+            auth_tokens = AuthToken.objects.get(user__user_id=request.user)
+            cluster_domain = get_cluster_domain(auth_tokens.refresh_token)
 
             workspace = Workspace.objects.create(name=org_name, fyle_org_id=org_id, cluster_domain=cluster_domain)
             ExpenseGroupSettings.objects.create(workspace_id=workspace.id)
@@ -108,40 +110,6 @@ class WorkspaceView(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-class ClusterDomainView(viewsets.ViewSet):
-    """
-    Cluster Domain view
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        """
-        Get cluster domain from Fyle
-        """
-        try:
-            workspace_id = kwargs['workspace_id']
-
-            fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-            fyle_connector = FyleConnector(fyle_credentials.refresh_token)
-            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
-
-            workspace = Workspace.objects.filter(id=workspace_id).first()
-
-            workspace.cluster_domain = cluster_domain
-            workspace.save()
-
-            return Response(
-                data=cluster_domain,
-                status=status.HTTP_200_OK
-            )
-        except FyleCredential.DoesNotExist:
-            return Response(
-                data={
-                    'message': 'Invalid / Expired Token'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
 class ConnectFyleView(viewsets.ViewSet):
     """
@@ -156,10 +124,11 @@ class ConnectFyleView(viewsets.ViewSet):
 
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
 
-            refresh_token = auth_utils.generate_fyle_refresh_token(authorization_code)['refresh_token']
-            fyle_user = auth_utils.get_fyle_user(refresh_token)
-            org_id = fyle_user['org_id']
-            org_name = fyle_user['org_name']
+            tokens = auth_utils.generate_fyle_refresh_token(authorization_code)
+            refresh_token = tokens['refresh_token']
+            fyle_user = get_fyle_admin(tokens['access_token'], None)
+            org_name = fyle_user['data']['org']['name']
+            org_id = fyle_user['data']['org']['id']
 
             assert_valid(workspace.fyle_org_id and workspace.fyle_org_id == org_id,
                          'Please select the correct Fyle account - {0}'.format(workspace.name))
@@ -168,8 +137,7 @@ class ConnectFyleView(viewsets.ViewSet):
             workspace.fyle_org_id = org_id
             workspace.save()
 
-            fyle_connector = FyleConnector(refresh_token)
-            cluster_domain = fyle_connector.get_cluster_domain()['cluster_domain']
+            cluster_domain = get_cluster_domain(refresh_token)
 
             fyle_credentials, _ = FyleCredential.objects.update_or_create(
                 workspace_id=kwargs['workspace_id'],
