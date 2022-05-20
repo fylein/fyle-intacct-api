@@ -82,6 +82,7 @@ class Configuration(models.Model):
         help_text='list of system fields for creating custom memo'
     )
     auto_create_destination_entity = models.BooleanField(default=False, help_text='Auto create vendor / employee')
+    change_accounting_period = models.BooleanField(default=False, help_text='Change the accounting period')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
