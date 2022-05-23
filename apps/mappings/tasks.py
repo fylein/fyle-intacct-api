@@ -404,7 +404,6 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
 
         expense_custom_field_payload = {
             'field_name': fyle_attribute,
-            "category_ids": [],
             'type': 'SELECT',
             'is_enabled': True,
             'is_mandatory': False,
