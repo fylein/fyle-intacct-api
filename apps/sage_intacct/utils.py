@@ -1094,9 +1094,9 @@ class SageIntacctConnector:
             for attachment in attachments:
                 attachment_type = attachment['name'].split('.')[1]
                 attachment_to_append = {
-                    'attachmentname': '{0}_{1} - {2}'.format(attachment['id'], attachment['name'], attachment_number),
+                    'attachmentname': '{0} - {1}'.format(attachment['id'], attachment_number),
                     'attachmenttype': attachment_type,
-                    'attachmentdata': base64.b64decode(attachment['download_url']),
+                    'attachmentdata': attachment['download_url'],
                 }
 
                 attachments_list.append(attachment_to_append)
