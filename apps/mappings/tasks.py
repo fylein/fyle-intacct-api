@@ -1,6 +1,7 @@
 import logging
 import traceback
 from datetime import datetime, timedelta
+from dateutil import parser
 
 from typing import List, Dict
 
@@ -267,6 +268,9 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
 
     elif sageintacct_attribute_type == 'DEPARTMENT':
         sage_intacct_connection.sync_departments()
+
+    elif sageintacct_attribute_type == 'VENDOR':
+        sage_intacct_connection.sync_vendors()
 
     else:
         sage_intacct_connection.sync_user_defined_dimensions()
@@ -735,6 +739,7 @@ def create_fyle_tax_group_payload(si_attributes: List[DestinationAttribute], exi
 
     return fyle_tax_group_payload
 
+
 def auto_create_tax_codes_mappings(workspace_id: int):
     """
     Create Tax Codes Mappings
@@ -745,7 +750,6 @@ def auto_create_tax_codes_mappings(workspace_id: int):
 
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
         platform.tax_groups.sync()
-
 
         mapping_setting = MappingSetting.objects.get(
             source_field='TAX_GROUP', workspace_id=workspace_id
@@ -786,6 +790,92 @@ def schedule_tax_groups_creation(import_tax_codes, workspace_id):
     else:
         schedule: Schedule = Schedule.objects.filter(
             func='apps.mappings.tasks.auto_create_tax_codes_mappings',
+            args='{}'.format(workspace_id),
+        ).first()
+
+        if schedule:
+            schedule.delete()
+
+
+def create_fyle_merchants_payload(vendors, existing_merchants_name):
+    payload: List[str] = []
+    for vendor in vendors:
+        if vendor.value not in existing_merchants_name:
+            payload.append(vendor.value)
+    return payload
+
+
+def post_merchants(platform_connection: PlatformConnector, workspace_id: int, first_run: bool):
+    existing_merchants_name = ExpenseAttribute.objects.filter(
+        attribute_type='MERCHANT', workspace_id=workspace_id).values_list('value', flat=True)
+
+    if first_run:
+        sage_intacct_attributes = DestinationAttribute.objects.filter(
+            attribute_type='VENDOR', workspace_id=workspace_id).order_by('value', 'id')
+    else:
+        merchant = platform_connection.merchants.get()
+        merchant_updated_at = parser.isoparse(merchant['updated_at']).strftime('%Y-%m-%d')
+        today_date = datetime.now().strftime('%Y-%m-%d')
+        sage_intacct_attributes = DestinationAttribute.objects.filter(
+            attribute_type='VENDOR',
+            workspace_id=workspace_id,
+            updated_at__range=[merchant_updated_at, today_date]
+        ).order_by('value', 'id')
+
+    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes)
+
+    fyle_payload: List[str] = create_fyle_merchants_payload(sage_intacct_attributes, existing_merchants_name)
+
+    if fyle_payload:
+        platform_connection.merchants.post(fyle_payload)
+
+    platform_connection.merchants.sync(workspace_id)
+
+
+def auto_create_vendors_as_merchants(workspace_id):
+    try:
+        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+
+        fyle_connection = PlatformConnector(fyle_credentials)
+
+        existing_merchants_name = ExpenseAttribute.objects.filter(attribute_type='MERCHANT', workspace_id=workspace_id)
+        first_run = False if existing_merchants_name else True
+
+        fyle_connection.merchants.sync(workspace_id)
+
+        sync_sage_intacct_attributes('VENDOR', workspace_id)
+        post_merchants(fyle_connection, workspace_id, first_run)
+
+    except WrongParamsError as exception:
+        logger.error(
+            'Error while posting vendors as merchants to fyle for workspace_id - %s in Fyle %s %s',
+            workspace_id, exception.message, {'error': exception.response}
+        )
+
+    except Exception:
+        error = traceback.format_exc()
+        error = {
+            'error': error
+        }
+        logger.exception(
+            'Error while posting vendors as merchants to fyle for workspace_id - %s error: %s',
+            workspace_id, error)
+
+
+def schedule_vendors_as_merchants_creation(import_vendors_as_merchants, workspace_id):
+    if import_vendors_as_merchants:
+        schedule, _ = Schedule.objects.update_or_create(
+            func='apps.mappings.tasks.auto_create_vendors_as_merchants',
+            args='{}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': datetime.now()
+            }
+        )
+    else:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.mappings.tasks.auto_create_vendors_as_merchants',
             args='{}'.format(workspace_id),
         ).first()
 
