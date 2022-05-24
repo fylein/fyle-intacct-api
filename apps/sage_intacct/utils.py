@@ -1003,8 +1003,8 @@ class SageIntacctConnector:
                     },
                     created_expense_report = self.connection.expense_reports.post(expense_report_payload)
                     return created_expense_report
-            else:
-                raise
+                else:
+                    raise
 
     def post_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]):
         """
@@ -1026,8 +1026,8 @@ class SageIntacctConnector:
                     bill_payload['WHENCREATED'] = first_day_of_month
                     created_bill = self.connection.bills.post(bill_payload)
                     return created_bill
-            else:
-                raise
+                else:
+                    raise
 
     def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]):
         """
@@ -1049,8 +1049,8 @@ class SageIntacctConnector:
                     journal_entry_payload['batch_date'] = first_day_of_month
                     created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
                     return created_journal_entry
-            else:
-                raise
+                else:
+                    raise
 
     def get_bill(self, bill_id: str, fields: list = None):
         """
@@ -1104,8 +1104,8 @@ class SageIntacctConnector:
                         charge_card_transaction_payload
                     )
                     return created_charge_card_transaction
-            else:
-                raise
+                else:
+                    raise
 
     def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None):
         """
