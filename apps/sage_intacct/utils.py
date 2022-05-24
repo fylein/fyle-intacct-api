@@ -10,6 +10,8 @@ from django.conf import settings
 from django.db.models import Q
 
 from sageintacctsdk import SageIntacctSDK
+from sageintacctsdk.exceptions import WrongParamsError
+
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
@@ -978,30 +980,77 @@ class SageIntacctConnector:
 
         return journal_entry_payload
 
-
     def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: List[ExpenseReportLineitem]):
         """
         Post expense report to Sage Intacct
         """
-        expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
-        created_expense_report = self.connection.expense_reports.post(expense_report_payload)
-        return created_expense_report
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
+            created_expense_report = self.connection.expense_reports.post(expense_report_payload)
+            return created_expense_report
+        except WrongParamsError as exception:
+            logger.info(exception.response)
+            sage_intacct_errors = exception.response['error']
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+                if configuration.change_accounting_period:
+                    first_day_of_month = datetime.today().date().replace(day=1)
+                    expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
+                    expense_report_payload['datecreated'] = {
+                        'year': first_day_of_month.year,
+                        'month': first_day_of_month.month,
+                        'day': first_day_of_month.day
+                    },
+                    created_expense_report = self.connection.expense_reports.post(expense_report_payload)
+                    return created_expense_report
+            else:
+                raise
 
     def post_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]):
         """
         Post expense report to Sage Intacct
         """
-        bill_payload = self.__construct_bill(bill, bill_lineitems)
-        created_bill = self.connection.bills.post(bill_payload)
-        return created_bill
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            bill_payload = self.__construct_bill(bill, bill_lineitems)
+            created_bill = self.connection.bills.post(bill_payload)
+            return created_bill
+
+        except WrongParamsError as exception:
+            logger.info(exception.response)
+            sage_intacct_errors = exception.response['error']
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+                if configuration.change_accounting_period:
+                    first_day_of_month = datetime.today().date().replace(day=1)
+                    bill_payload = self.__construct_bill(bill, bill_lineitems)
+                    bill_payload['WHENCREATED'] = first_day_of_month
+                    created_bill = self.connection.bills.post(bill_payload)
+                    return created_bill
+            else:
+                raise
 
     def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]):
         """
         Post journal_entry  to Sage Intacct
         """
-        journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
-        created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
-        return created_journal_entry
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
+            created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+            return created_journal_entry
+
+        except WrongParamsError as exception:
+            logger.info(exception.response)
+            sage_intacct_errors = exception.response['error']
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+                if configuration.change_accounting_period:
+                    first_day_of_month = datetime.today().date().replace(day=1)
+                    journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
+                    journal_entry_payload['batch_date'] = first_day_of_month
+                    created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+                    return created_journal_entry
+            else:
+                raise
 
     def get_bill(self, bill_id: str, fields: list = None):
         """
@@ -1029,11 +1078,34 @@ class SageIntacctConnector:
         """
         Post charge card transaction to Sage Intacct
         """
-        created_charge_card_transaction_payload = self.__construct_charge_card_transaction \
-            (charge_card_transaction, charge_card_transaction_lineitems)
-        created_charge_card_transaction = self.connection.charge_card_transactions.post \
-            (created_charge_card_transaction_payload)
-        return created_charge_card_transaction
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            created_charge_card_transaction_payload = self.__construct_charge_card_transaction \
+                (charge_card_transaction, charge_card_transaction_lineitems)
+            created_charge_card_transaction = self.connection.charge_card_transactions.post \
+                (created_charge_card_transaction_payload)
+            return created_charge_card_transaction
+
+        except WrongParamsError as exception:
+            logger.info(exception.response)
+            sage_intacct_errors = exception.response['error']
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+                if configuration.change_accounting_period:
+                    first_day_of_month = datetime.today().date().replace(day=1)
+                    charge_card_transaction_payload = self.__construct_charge_card_transaction(
+                        charge_card_transaction, charge_card_transaction_lineitems
+                    )
+                    charge_card_transaction_payload['paymentdate'] = {
+                        'year': first_day_of_month.year,
+                        'month': first_day_of_month.month,
+                        'day': first_day_of_month.day
+                    },
+                    created_charge_card_transaction = self.connection.charge_card_transactions.post(
+                        charge_card_transaction_payload
+                    )
+                    return created_charge_card_transaction
+            else:
+                raise
 
     def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None):
         """
