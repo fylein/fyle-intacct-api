@@ -992,7 +992,7 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2'] or sage_intacct_errors:
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
@@ -1005,6 +1005,8 @@ class SageIntacctConnector:
                     return created_expense_report
                 else:
                     raise
+            else:
+                raise
 
     def post_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]):
         """
@@ -1019,7 +1021,7 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2'] or sage_intacct_errors:
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     bill_payload = self.__construct_bill(bill, bill_lineitems)
@@ -1028,6 +1030,8 @@ class SageIntacctConnector:
                     return created_bill
                 else:
                     raise
+            else:
+                raise
 
     def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]):
         """
@@ -1042,7 +1046,7 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2'] or sage_intacct_errors:
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
@@ -1051,6 +1055,8 @@ class SageIntacctConnector:
                     return created_journal_entry
                 else:
                     raise
+            else:
+                raise
 
     def get_bill(self, bill_id: str, fields: list = None):
         """
@@ -1089,7 +1095,7 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2'] or sage_intacct_errors:
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     charge_card_transaction_payload = self.__construct_charge_card_transaction(
@@ -1106,6 +1112,8 @@ class SageIntacctConnector:
                     return created_charge_card_transaction
                 else:
                     raise
+            else:
+                raise
 
     def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None):
         """
