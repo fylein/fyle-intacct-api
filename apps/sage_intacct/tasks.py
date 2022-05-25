@@ -619,8 +619,6 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             created_expense_report = sage_intacct_connection.post_expense_report(
                 expense_report_object, expense_report_lineitems_objects)
 
-            print('Created report in tasks.py - ', created_expense_report)
-
             record_no = created_expense_report['data']['eexpenses']['RECORDNO']
             expense_report = sage_intacct_connection.get_expense_report(record_no, ['RECORD_URL'])
             url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
