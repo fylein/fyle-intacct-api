@@ -988,11 +988,13 @@ class SageIntacctConnector:
         try:
             expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
             created_expense_report = self.connection.expense_reports.post(expense_report_payload)
+            print('report created - ', created_expense_report)
             return created_expense_report
         except WrongParamsError as exception:
+            print('Catched wrong params exception in post report - ')
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+            if 'Date must be on or after' in sage_intacct_errors[0]['description2'] or sage_intacct_errors:
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
@@ -1004,7 +1006,11 @@ class SageIntacctConnector:
                     created_expense_report = self.connection.expense_reports.post(expense_report_payload)
                     return created_expense_report
                 else:
+                    print('Raise exception in else case for change_accounting_period')
                     raise
+        except Exception as e:
+            print('Raising General exception', e)
+            raise
 
     def post_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]):
         """
