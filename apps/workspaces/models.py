@@ -83,6 +83,8 @@ class Configuration(models.Model):
     )
     auto_create_destination_entity = models.BooleanField(default=False, help_text='Auto create vendor / employee')
     change_accounting_period = models.BooleanField(default=False, help_text='Change the accounting period')
+    import_vendors_as_merchants = models.BooleanField(default=False, help_text='Auto import vendors from sage intacct '
+                                                                               'as merchants to Fyle')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
