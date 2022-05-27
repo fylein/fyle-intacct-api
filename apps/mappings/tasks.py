@@ -27,9 +27,9 @@ def remove_duplicates(si_attributes: List[DestinationAttribute]):
     attribute_values = []
 
     for attribute in si_attributes:
-        if attribute.value not in attribute_values:
+        if attribute.value.lower() not in attribute_values:
             unique_attributes.append(attribute)
-            attribute_values.append(attribute.value)
+            attribute_values.append(attribute.value.lower())
 
     return unique_attributes
 
