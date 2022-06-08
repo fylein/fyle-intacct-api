@@ -992,7 +992,8 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+            error_words_list = ['period', 'closed', 'Date must be on or after']
+            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
@@ -1021,7 +1022,8 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+            error_words_list = ['period', 'closed', 'Date must be on or after']
+            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     bill_payload = self.__construct_bill(bill, bill_lineitems)
@@ -1046,7 +1048,8 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+            error_words_list = ['period', 'closed', 'Date must be on or after']
+            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
@@ -1095,7 +1098,8 @@ class SageIntacctConnector:
         except WrongParamsError as exception:
             logger.info(exception.response)
             sage_intacct_errors = exception.response['error']
-            if 'Date must be on or after' in sage_intacct_errors[0]['description2']:
+            error_words_list = ['period', 'closed', 'Date must be on or after']
+            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
                 if configuration.change_accounting_period:
                     first_day_of_month = datetime.today().date().replace(day=1)
                     charge_card_transaction_payload = self.__construct_charge_card_transaction(
