@@ -229,7 +229,10 @@ def schedule_auto_map_charge_card_employees(workspace_id: int):
 
 
 def get_all_categories_from_fyle(platform: PlatformConnector):
-    categories_generator = platform.categories.get_all_generator()
+    categories_generator = platform.connection.v1beta.admin.categories.list_all(query_params={
+            'order': 'id.desc'
+        })
+
     categories = []
 
     for response in categories_generator:
@@ -240,7 +243,7 @@ def get_all_categories_from_fyle(platform: PlatformConnector):
     for category in categories:
         if category['sub_category'] and category['name'] != category['sub_category']:
                     category['name'] = '{0} / {1}'.format(category['name'], category['sub_category'])
-        category_name_map[category['name']] = category
+        category_name_map[category['name'].lower()] = category
 
     return category_name_map
 
@@ -255,7 +258,7 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
     payload = []
 
     for category in categories:
-        if category.value not in category_map:
+        if category.value.lower() not in category_map:
             payload.append({
                 'name': category.value,
                 'code': category.destination_id,
@@ -264,7 +267,7 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
             })
         else:
             payload.append({
-                'id': category_map[category.value]['id'],
+                'id': category_map[category.value.lower()]['id'],
                 'name': category.value,
                 'code': category.destination_id,
                 'is_enabled': True,
