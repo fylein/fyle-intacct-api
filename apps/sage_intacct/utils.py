@@ -987,7 +987,6 @@ class SageIntacctConnector:
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
             expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
-            print('expense_report_payload',expense_report_payload)
             created_expense_report = self.connection.expense_reports.post(expense_report_payload)
             return created_expense_report
         except WrongParamsError as exception:
