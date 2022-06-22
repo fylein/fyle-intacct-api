@@ -48,6 +48,11 @@ AUTO_MAP_EMPLOYEE_CHOICES = (
     ('EMPLOYEE_CODE', 'EMPLOYEE_CODE'),
 )
 
+EMPLOYEE_FIELD_MAPPING_CHOICES = (
+    ('EMPLOYEE', 'EMPLOYEE'),
+    ('VENDOR', 'VENDOR')
+)
+
 
 def get_default_memo_fields():
     return ['employee_email', 'category', 'spent_on', 'report_number', 'purpose', 'expense_link']
@@ -59,6 +64,9 @@ class Configuration(models.Model):
     """
     id = models.AutoField(primary_key=True, help_text='Unique Id to identify a workspace')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    employee_field_mapping = models.CharField(
+        max_length=50, choices=EMPLOYEE_FIELD_MAPPING_CHOICES, help_text='Employee field mapping', null=True
+    )
     reimbursable_expenses_object = models.CharField(
         max_length=50, choices=REIMBURSABLE_EXPENSES_OBJECT_CHOICES, help_text='Mapping Settings ( BILL / EXPENSE_REPORT )'
     )

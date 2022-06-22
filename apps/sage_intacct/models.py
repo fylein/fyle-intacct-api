@@ -731,21 +731,18 @@ class JournalEntry(models.Model):
         db_table = 'journal_entries'
 
     @staticmethod
-    def create_journal_entry(expense_group: ExpenseGroup):
+    def create_journal_entry(expense_group: ExpenseGroup, configuration: Configuration):
         """
         Create journal entry
         :param expense_group: expense group
+        :param configuration: Workspace configuration
         :return: journal entry object
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
         memo = get_memo(expense_group)
 
-        employee_mapping_setting = MappingSetting.objects.filter(
-            Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
-            source_field='EMPLOYEE',
-            workspace_id=expense_group.workspace_id
-        ).first().destination_field
+        employee_mapping_setting = configuration.employee_field_mapping
 
         if expense_group.fund_source == 'CCC':
             entity_id = Mapping.objects.get(
@@ -836,11 +833,7 @@ class JournalEntryLineitem(models.Model):
 
             description = expense_group.description
 
-            employee_mapping_setting = MappingSetting.objects.filter(
-                Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
-                source_field='EMPLOYEE',
-                workspace_id=expense_group.workspace_id
-            ).first().destination_field
+            employee_mapping_setting = configuration.employee_field_mapping
 
             entity_id = Mapping.objects.get(
                 source_type='EMPLOYEE',

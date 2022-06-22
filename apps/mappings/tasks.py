@@ -142,11 +142,7 @@ def async_auto_map_employees(workspace_id: int):
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     employee_mapping_preference = configuration.auto_map_employees
 
-    mapping_setting = MappingSetting.objects.filter(
-        ~Q(destination_field='CHARGE_CARD_NUMBER'),
-        source_field='EMPLOYEE', workspace_id=workspace_id
-    ).first()
-    destination_type = mapping_setting.destination_field
+    destination_type = configuration.employee_field_mapping
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
