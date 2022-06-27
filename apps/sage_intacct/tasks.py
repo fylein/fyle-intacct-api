@@ -60,8 +60,9 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
             expense_group.id, expense_group.workspace_id, {'error': error}
         )
 
+
 def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_connection: SageIntacctConnector,
-                                     auto_map_employees_preference: str):
+                                      auto_map_employees_preference: str, employee_field_mapping: str):
     try:
         Mapping.objects.get(
             Q(destination_type='VENDOR') | Q(destination_type='EMPLOYEE'),
@@ -71,12 +72,6 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
         )
 
     except Mapping.DoesNotExist:
-        employee_mapping_setting = MappingSetting.objects.filter(
-            Q(destination_field='VENDOR') | Q(destination_field='EMPLOYEE'),
-            source_field='EMPLOYEE',
-            workspace_id=expense_group.workspace_id
-        ).first().destination_field
-
         source_employee = ExpenseAttribute.objects.get(
             workspace_id=expense_group.workspace_id,
             attribute_type='EMPLOYEE',
@@ -87,13 +82,13 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             if auto_map_employees_preference == 'EMAIL':
                 filters = {
                     'detail__email__iexact': source_employee.value,
-                    'attribute_type': employee_mapping_setting
+                    'attribute_type': employee_field_mapping
                 }
 
             elif auto_map_employees_preference == 'NAME':
                 filters = {
                     'value__iexact': source_employee.detail['full_name'],
-                    'attribute_type': employee_mapping_setting
+                    'attribute_type': employee_field_mapping
                 }
 
             entity = DestinationAttribute.objects.filter(
@@ -102,7 +97,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                 ).first()
 
             if entity is None:
-                if employee_mapping_setting == 'EMPLOYEE':
+                if employee_field_mapping == 'EMPLOYEE':
                     entity: DestinationAttribute = sage_intacct_connection.get_or_create_employee(source_employee)
                 else:
                     entity: DestinationAttribute = sage_intacct_connection.get_or_create_vendor(
@@ -112,7 +107,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             mapping = Mapping.create_or_update_mapping(
                 source_type='EMPLOYEE',
                 source_value=expense_group.description.get('employee_email'),
-                destination_type=employee_mapping_setting,
+                destination_type=employee_field_mapping,
                 destination_id=entity.destination_id,
                 destination_value=entity.value,
                 workspace_id=int(expense_group.workspace_id)
@@ -135,14 +130,14 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                 sage_intacct_entity = DestinationAttribute.objects.filter(
                     value=sage_intacct_display_name,
                     workspace_id=expense_group.workspace_id,
-                    attribute_type=employee_mapping_setting
+                    attribute_type=employee_field_mapping
                 ).first()
 
                 if sage_intacct_entity:
                     mapping = Mapping.create_or_update_mapping(
                         source_type='EMPLOYEE',
                         source_value=expense_group.description.get('employee_email'),
-                        destination_type=employee_mapping_setting,
+                        destination_type=employee_field_mapping,
                         destination_id=sage_intacct_entity.destination_id,
                         destination_value=sage_intacct_entity.value,
                         workspace_id=int(expense_group.workspace_id)
@@ -155,6 +150,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         source_employee.detail['full_name'],
                         expense_group.workspace_id
                     )
+
 
 def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
     """
@@ -496,12 +492,14 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
         if configuration.auto_map_employees and configuration.auto_create_destination_entity \
             and configuration.auto_map_employees != 'EMPLOYEE_CODE':
             create_or_update_employee_mapping(
-                expense_group, sage_intacct_connection, configuration.auto_map_employees)
+                expense_group, sage_intacct_connection, configuration.auto_map_employees,
+                configuration.employee_field_mapping
+            )
 
         with transaction.atomic():
             __validate_expense_group(expense_group, configuration)
 
-            journal_entry_object = JournalEntry.create_journal_entry(expense_group)
+            journal_entry_object = JournalEntry.create_journal_entry(expense_group, configuration)
 
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
 
@@ -601,7 +599,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
         if configuration.auto_map_employees and configuration.auto_create_destination_entity \
             and configuration.auto_map_employees != 'EMPLOYEE_CODE':
             create_or_update_employee_mapping(
-                expense_group, sage_intacct_connection, configuration.auto_map_employees)
+                expense_group, sage_intacct_connection, configuration.auto_map_employees,
+                configuration.employee_field_mapping
+            )
 
         with transaction.atomic():
             __validate_expense_group(expense_group, configuration)
@@ -710,7 +710,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             and expense_group.fund_source == 'PERSONAL' and \
                 configuration.auto_map_employees != 'EMPLOYEE_CODE':
             create_or_update_employee_mapping(
-                expense_group, sage_intacct_connection, configuration.auto_map_employees)
+                expense_group, sage_intacct_connection, configuration.auto_map_employees,
+                configuration.employee_field_mapping
+            )
 
         with transaction.atomic():
             __validate_expense_group(expense_group, configuration)
