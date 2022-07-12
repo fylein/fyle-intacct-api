@@ -511,9 +511,10 @@ class SageIntacctConnector:
 
         if not vendor:
             if create:
-                created_vendor = self.post_vendor(vendor_name, email)
+                vendor_id = vendor_name.replace(',', '')
+                created_vendor = self.post_vendor(vendor_id, vendor_name, email)
                 return self.create_destination_attribute(
-                    'vendor', created_vendor['VENDORID'], created_vendor['VENDORID'], email)
+                    'vendor', vendor_name, created_vendor['VENDORID'], email)
             else:
                 return
         else:
@@ -624,7 +625,7 @@ class SageIntacctConnector:
 
         return []
 
-    def post_vendor(self, vendor_name: str, email: str = None):
+    def post_vendor(self, vendor_id: str, vendor_name: str, email: str = None):
         """
         Create a Vendor on Sage Intacct
         :param vendor: vendor attribute to be created
@@ -637,7 +638,7 @@ class SageIntacctConnector:
 
         vendor_payload = {
             'NAME': sage_intacct_display_name,
-            'VENDORID': sage_intacct_display_name,
+            'VENDORID': vendor_id,
             'DISPLAYCONTACT': {
                 'PRINTAS': sage_intacct_display_name,
                 'EMAIL1': email,
