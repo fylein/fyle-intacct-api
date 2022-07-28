@@ -625,7 +625,6 @@ def bulk_create_ccc_category_mappings(workspace_id: int):
         mapping_updation_batch.append(
             CategoryMapping(
                 id=category_mapping.id,
-                source_category_id=category_mapping.source_category.id,
                 destination_account_id=ccc_account_id
             )
         )
