@@ -10,7 +10,9 @@ from django_q.tasks import Chain
 
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError
 
-from fyle_accounting_mappings.models import Mapping, ExpenseAttribute, MappingSetting, DestinationAttribute
+from fyle_accounting_mappings.models import Mapping, ExpenseAttribute, MappingSetting, DestinationAttribute, \
+    CategoryMapping
+
 from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle_intacct_api.exceptions import BulkError
@@ -432,33 +434,30 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        if (expense_group.fund_source == 'PERSONAL') or (expense_group.fund_source == 'CCC' and \
-            configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'):
-            error_message = 'Category Mapping Not Found'
-            account = Mapping.objects.filter(
-                Q(destination_type='ACCOUNT') | Q(destination_type='EXPENSE_TYPE'),
-                source_type='CATEGORY',
-                source__value=category,
-                workspace_id=expense_group.workspace_id
-            ).first()
+        category_mapping = CategoryMapping.objects.filter(
+            source_category__value=category,
+            workspace_id=expense_group.workspace_id
+        ).first()
 
-        elif expense_group.fund_source == 'CCC' and \
-            configuration.corporate_credit_card_expenses_object != 'EXPENSE_REPORT':
-            error_message = 'Credit Card Expense Account Mapping Not Found'
-            account = Mapping.objects.filter(
-                source_type='CATEGORY',
-                source__value=category,
-                destination_type='CCC_ACCOUNT',
-                workspace_id=expense_group.workspace_id
-            ).first()
+        if category_mapping:
+            if expense_group.fund_source == 'PERSONAL':
+                if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
+                    category_mapping = category_mapping.destination_expense_head
+                else:
+                    category_mapping = category_mapping.destination_account
+            else:
+                if configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+                    category_mapping = category_mapping.destination_expense_head
+                else:
+                    category_mapping = category_mapping.destination_account
 
-        if account is None:
+        if not category_mapping:
             bulk_errors.append({
                 'row': row,
                 'expense_group_id': expense_group.id,
                 'value': category,
                 'type': 'Category Mapping',
-                'message': error_message
+                'message': 'Category Mapping Not Found'
             })
         
         if configuration.import_tax_codes and not (general_mapping.default_tax_code_id or general_mapping.default_tax_code_name):
@@ -474,6 +473,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
 
     if bulk_errors:
         raise BulkError('Mappings are missing', bulk_errors)
+
 
 def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
     task_log = TaskLog.objects.get(id=task_log_id)
