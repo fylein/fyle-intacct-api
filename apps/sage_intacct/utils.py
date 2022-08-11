@@ -107,14 +107,6 @@ class SageIntacctConnector:
                 'destination_id': account['ACCOUNTNO']
             })
 
-            account_attributes['ccc_account'].append({
-                'attribute_type': 'CCC_ACCOUNT',
-                'active': True if account['STATUS'] == 'active' else None,
-                'display_name': 'Credit Card Account',
-                'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
-                'destination_id': account['ACCOUNTNO']
-            })
-
         for attribute_type, account_attribute in account_attributes.items():
             if account_attribute:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
