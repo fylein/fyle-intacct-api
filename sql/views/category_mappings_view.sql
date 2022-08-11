@@ -32,7 +32,7 @@ from
     category_mappings_view_temp cm
 left join destination_attributes da on cm.destination_account_id = da.id
 left join destination_attributes nda on (
-    da.destination_id =  nda.destination_id and nda.attribute_type = 'EXPENSE_TYPE' and nda.workspace_id = da.workspace_id
+    da.destination_id =  nda.destination_id and nda.attribute_type = 'ACCOUNT' and nda.workspace_id = da.workspace_id
 )
 left join destination_attributes deh on cm.destination_expense_head_id = deh.id
 left join destination_attributes ndeh on (
