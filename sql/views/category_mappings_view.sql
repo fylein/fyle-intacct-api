@@ -6,7 +6,7 @@ create or replace view category_mappings_view_temp as
 select
     m.source_id as source_category_id,
     max(
-            case when m.destination_type in ('ACCOUNT', 'EXPENSE_TYPE') then m.destination_id else null end
+            case when m.destination_type in ('EXPENSE_TYPE') then m.destination_id else null end
         ) as destination_expense_head_id,
     max(
             case when m.destination_type in ('ACCOUNT', 'CCC_ACCOUNT') then m.destination_id else null end
@@ -82,15 +82,6 @@ select count(*) from (
     from category_mappings_view cm left join destination_attributes da on cm.destination_account_id = da.id
     where da.attribute_type = 'CCC_ACCOUNT'
 ) s;
-
-
---- No CCC_EXPENSE_CATEGORY in the new view
-select count(*) from (
-    select cm.destination_expense_head_id, cm.destination_account_id, da.value, da.attribute_type
-    from category_mappings_view cm left join destination_attributes da on cm.destination_expense_head_id = da.id
-    where da.attribute_type = 'EXPENSE_TYPE'
-) s;
-
 
 --- No of rows match
 select count(*) from category_mappings_view_temp;
