@@ -496,6 +496,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
                 configuration.employee_field_mapping
             )
 
+        created_attachment_id = None
         with transaction.atomic():
             __validate_expense_group(expense_group, configuration)
 
@@ -521,24 +522,24 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             url_id = journal_entry['glbatch']['RECORD_URL'].split('?.r=', 1)[1]
             created_journal_entry['url_id'] = url_id
 
-            if created_attachment_id:
-                try:
-                    sage_intacct_connection.update_journal_entry(journal_entry_object, journal_entry_lineitem_object, created_attachment_id, created_journal_entry['data']['glbatch']['RECORDNO'])
-                    journal_entry_object.supdoc_id = created_attachment_id
-                    journal_entry_object.save()
-                except Exception:
-                    error = traceback.format_exc()
-                    logger.error(
-                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
-                        expense_group.id, expense_group.workspace_id, {'error': error}
-                    )
-
             task_log.detail = created_journal_entry
 
             task_log.save()
 
             expense_group.exported_at = datetime.now()
             expense_group.save()
+
+        if created_attachment_id:
+            try:
+                sage_intacct_connection.update_journal_entry(journal_entry_object, journal_entry_lineitem_object, created_attachment_id, created_journal_entry['data']['glbatch']['RECORDNO'])
+                journal_entry_object.supdoc_id = created_attachment_id
+                journal_entry_object.save()
+            except Exception:
+                error = traceback.format_exc()
+                logger.error(
+                    'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                    expense_group.id, expense_group.workspace_id, {'error': error}
+                )
     
     except SageIntacctCredential.DoesNotExist:
         logger.info(
