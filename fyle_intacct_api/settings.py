@@ -180,7 +180,7 @@ Q_CLUSTER = {
     'retry': 14400,
     'timeout': 3600,
     'catch_up': False,
-    'workers': 1,
+    'workers': 4,
     'queue_limit': 30,
     'cached': False,
     'orm': 'default',
