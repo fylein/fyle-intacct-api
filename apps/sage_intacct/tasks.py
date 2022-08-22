@@ -515,9 +515,6 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             expense_group.exported_at = datetime.now()
             expense_group.save()
 
-            created_attachment_id = load_attachments(sage_intacct_connection, \
-                                                     created_journal_entry['data']['glbatch']['RECORDNO'], expense_group)
-
             journal_entry = sage_intacct_connection.get_journal_entry(created_journal_entry['data']['glbatch']['RECORDNO'], ['RECORD_URL'])
             url_id = journal_entry['glbatch']['RECORD_URL'].split('?.r=', 1)[1]
             created_journal_entry['url_id'] = url_id
@@ -528,6 +525,8 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
 
             expense_group.exported_at = datetime.now()
             expense_group.save()
+
+        created_attachment_id = load_attachments(sage_intacct_connection, created_journal_entry['data']['glbatch']['RECORDNO'], expense_group)
 
         if created_attachment_id:
             try:
@@ -624,21 +623,6 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             expense_report = sage_intacct_connection.get_expense_report(record_no, ['RECORD_URL'])
             url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
 
-            created_attachment_id = load_attachments(
-                sage_intacct_connection, record_no, expense_group)
-            if created_attachment_id:
-                try:
-                    sage_intacct_connection.update_expense_report(
-                        record_no, created_attachment_id)
-                    expense_report_object.supdoc_id = created_attachment_id
-                    expense_report_object.save()
-                except Exception:
-                    error = traceback.format_exc()
-                    logger.error(
-                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
-                        expense_group.id, expense_group.workspace_id, {'error': error}
-                    )
-
             details = {
                 'key': record_no,
                 'url_id': url_id
@@ -653,6 +637,18 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             expense_group.exported_at = datetime.now()
             expense_group.save()
 
+        created_attachment_id = load_attachments(sage_intacct_connection, record_no, expense_group)
+        if created_attachment_id:
+            try:
+                sage_intacct_connection.update_expense_report(record_no, created_attachment_id)
+                expense_report_object.supdoc_id = created_attachment_id
+                expense_report_object.save()
+            except Exception:
+                error = traceback.format_exc()
+                logger.error(
+                    'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                    expense_group.id, expense_group.workspace_id, {'error': error}
+                )
     except SageIntacctCredential.DoesNotExist:
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
@@ -725,25 +721,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             created_bill = sage_intacct_connection.post_bill(bill_object, \
                                                              bill_lineitems_objects)
 
-            created_attachment_id = load_attachments(sage_intacct_connection, \
-                                                     created_bill['data']['apbill']['RECORDNO'], expense_group)
-
             bill = sage_intacct_connection.get_bill(created_bill['data']['apbill']['RECORDNO'], ['RECORD_URL'])
             url_id = bill['apbill']['RECORD_URL'].split('?.r=', 1)[1]
             created_bill['url_id'] = url_id
-
-            if created_attachment_id:
-                try:
-                    sage_intacct_connection.update_bill(created_bill['data']['apbill']['RECORDNO'], \
-                                                        created_attachment_id)
-                    bill_object.supdoc_id = created_attachment_id
-                    bill_object.save()
-                except Exception:
-                    error = traceback.format_exc()
-                    logger.error(
-                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
-                        expense_group.id, expense_group.workspace_id, {'error': error}
-                    )
 
             task_log.detail = created_bill
             task_log.bill = bill_object
@@ -754,6 +734,19 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
 
             expense_group.exported_at = datetime.now()
             expense_group.save()
+
+        created_attachment_id = load_attachments(sage_intacct_connection, created_bill['data']['apbill']['RECORDNO'], expense_group)
+        if created_attachment_id:
+            try:
+                sage_intacct_connection.update_bill(created_bill['data']['apbill']['RECORDNO'], created_attachment_id)
+                bill_object.supdoc_id = created_attachment_id
+                bill_object.save()
+            except Exception:
+                error = traceback.format_exc()
+                logger.error(
+                    'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                    expense_group.id, expense_group.workspace_id, {'error': error}
+                )
 
     except SageIntacctCredential.DoesNotExist:
         logger.info(
@@ -827,21 +820,6 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             url_id = charge_card_transaction['cctransaction']['RECORD_URL'].split('?.r=', 1)[1]
             created_charge_card_transaction['url_id'] = url_id
 
-            created_attachment_id = load_attachments(sage_intacct_connection,
-                                                     created_charge_card_transaction['key'], expense_group)
-            if created_attachment_id:
-                try:
-                    sage_intacct_connection.update_charge_card_transaction(
-                        created_charge_card_transaction['key'], created_attachment_id)
-                    charge_card_transaction_object.supdoc_id = created_attachment_id
-                    charge_card_transaction_object.save()
-                except Exception:
-                    error = traceback.format_exc()
-                    logger.error(
-                        'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
-                        expense_group.id, expense_group.workspace_id, {'error': error}
-                    )
-
             task_log.detail = created_charge_card_transaction
             task_log.charge_card_transaction = charge_card_transaction_object
             task_log.sage_intacct_errors = None
@@ -852,6 +830,19 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             expense_group.exported_at = datetime.now()
             expense_group.save()
 
+
+        created_attachment_id = load_attachments(sage_intacct_connection, created_charge_card_transaction['key'], expense_group)
+        if created_attachment_id:
+            try:
+                sage_intacct_connection.update_charge_card_transaction(created_charge_card_transaction['key'], created_attachment_id)
+                charge_card_transaction_object.supdoc_id = created_attachment_id
+                charge_card_transaction_object.save()
+            except Exception:
+                error = traceback.format_exc()
+                logger.error(
+                    'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
+                    expense_group.id, expense_group.workspace_id, {'error': error}
+                )
     except SageIntacctCredential.DoesNotExist:
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
