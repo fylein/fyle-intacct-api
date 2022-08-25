@@ -196,7 +196,9 @@ def async_auto_map_charge_card_account(workspace_id: int):
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     platform.employees.sync()
-    EmployeesAutoMappingHelper(workspace_id, 'CHARGE_CARD_NUMBER').ccc_mapping(default_charge_card_id)
+    EmployeesAutoMappingHelper(workspace_id, 'CHARGE_CARD_NUMBER').ccc_mapping(
+        default_charge_card_id, attribute_type='CHARGE_CARD_NUMBER'
+    )
 
 
 def schedule_auto_map_charge_card_employees(workspace_id: int):

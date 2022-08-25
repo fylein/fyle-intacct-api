@@ -193,6 +193,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
 
     return class_id
 
+
 def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None):
     tax_code = None
     mapping: Mapping = Mapping.objects.filter(
@@ -205,6 +206,7 @@ def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = Non
         tax_code = mapping.destination.destination_id
 
     return tax_code
+
 
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
     if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
@@ -351,19 +353,15 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
 
 
 def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
-    description = expense_group.description
-
-    mapping = Mapping.objects.filter(
-        source_type='EMPLOYEE',
-        destination_type='EMPLOYEE',
-        source__value=description.get('employee_email'),
+    mapping = EmployeeMapping.objects.filter(
+        source_employee__value=expense_group.description.get('employee_email'),
         workspace_id=expense_group.workspace_id
     ).first()
 
     if mapping:
         employee = DestinationAttribute.objects.filter(
             attribute_type='EMPLOYEE',
-            destination_id=mapping.destination.destination_id,
+            destination_id=mapping.destination_employee_id,
             workspace_id=expense_group.workspace_id
         ).order_by('-updated_at').first()
 
@@ -371,7 +369,6 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             default_employee_object = employee.detail[object_type]
             return default_employee_object
     
-
 
 class Bill(models.Model):
     """
