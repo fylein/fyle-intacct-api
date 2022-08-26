@@ -454,12 +454,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                     workspace_id=expense_group.workspace_id
                 )
 
-                if configuration.employee_field_mapping == 'EMPLOYEE':
-                    entity = entity.destination_employee
-                else:
-                    entity = entity.destination_vendor
-
-                if not entity:
+                if not entity.destination_employee:
                     raise EmployeeMapping.DoesNotExist
 
     except EmployeeMapping.DoesNotExist:
