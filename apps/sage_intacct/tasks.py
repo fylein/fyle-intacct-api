@@ -108,11 +108,10 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
             destination = {}
             if employee_field_mapping == 'EMPLOYEE':
                 if entity is None:
-                    if employee_field_mapping == 'EMPLOYEE':
-                        entity: DestinationAttribute = sage_intacct_connection.get_or_create_employee(source_employee)
-                        destination['destination_employee_id'] = entity.id
-                    elif existing_employee_mapping and existing_employee_mapping.destination_employee:
-                        destination['destination_employee_id'] = existing_employee_mapping.destination_employee.id
+                    entity: DestinationAttribute = sage_intacct_connection.get_or_create_employee(source_employee)
+                    destination['destination_employee_id'] = entity.id
+                elif existing_employee_mapping and existing_employee_mapping.destination_employee:
+                    destination['destination_employee_id'] = existing_employee_mapping.destination_employee.id
 
             else:
                 if entity is None:
@@ -436,17 +435,32 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
 
             elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
                 error_message = 'Employee Mapping not found'
-                EmployeeMapping.objects.get(
+                entity = EmployeeMapping.objects.get(
+                    source_employee__value=expense_group.description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                )
+                if configuration.employee_field_mapping == 'EMPLOYEE':
+                    entity = entity.destination_employee
+                else:
+                    entity = entity.destination_vendor
+
+                if not entity:
+                    raise EmployeeMapping.DoesNotExist
+
+            elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+                error_message = 'Employee Mapping not found'
+                entity = EmployeeMapping.objects.get(
                     source_employee__value=expense_group.description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
                 )
 
-            elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-                error_message = 'Employee Mapping not found'
-                EmployeeMapping.objects.get(
-                    source_employee__value=expense_group.description.get('employee_email'),
-                    workspace_id=expense_group.workspace_id
-                )
+                if configuration.employee_field_mapping == 'EMPLOYEE':
+                    entity = entity.destination_employee
+                else:
+                    entity = entity.destination_vendor
+
+                if not entity:
+                    raise EmployeeMapping.DoesNotExist
 
     except EmployeeMapping.DoesNotExist:
         bulk_errors.append({
