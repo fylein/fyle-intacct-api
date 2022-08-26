@@ -10,6 +10,8 @@ from django.db.models import Q, Count
 from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle.platform.exceptions import WrongParamsError
+
+from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
     CategoryMapping
 
@@ -159,7 +161,7 @@ def async_auto_map_employees(workspace_id: int):
     else:
         sage_intacct_connection.sync_vendors()
 
-    Mapping.auto_map_employees(destination_type, employee_mapping_preference, workspace_id)
+    EmployeesAutoMappingHelper(workspace_id, destination_type, employee_mapping_preference).reimburse_mapping()
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
@@ -194,7 +196,9 @@ def async_auto_map_charge_card_account(workspace_id: int):
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     platform.employees.sync()
-    Mapping.auto_map_ccc_employees('CHARGE_CARD_NUMBER', default_charge_card_id, workspace_id)
+    EmployeesAutoMappingHelper(workspace_id, 'CHARGE_CARD_NUMBER').ccc_mapping(
+        default_charge_card_id, attribute_type='CHARGE_CARD_NUMBER'
+    )
 
 
 def schedule_auto_map_charge_card_employees(workspace_id: int):

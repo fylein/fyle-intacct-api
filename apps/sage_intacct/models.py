@@ -6,7 +6,8 @@ from django.db.models import Q,JSONField
 from django.db import models
 
 
-from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping
+from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
+    EmployeeMapping
 
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings
 from apps.mappings.models import GeneralMapping
@@ -192,6 +193,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
 
     return class_id
 
+
 def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None):
     tax_code = None
     mapping: Mapping = Mapping.objects.filter(
@@ -204,6 +206,7 @@ def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = Non
         tax_code = mapping.destination.destination_id
 
     return tax_code
+
 
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
     if 'spent_at' in expense_group.description and expense_group.description['spent_at']:
@@ -350,19 +353,15 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
 
 
 def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
-    description = expense_group.description
-
-    mapping = Mapping.objects.filter(
-        source_type='EMPLOYEE',
-        destination_type='EMPLOYEE',
-        source__value=description.get('employee_email'),
+    mapping = EmployeeMapping.objects.filter(
+        source_employee__value=expense_group.description.get('employee_email'),
         workspace_id=expense_group.workspace_id
     ).first()
 
     if mapping:
         employee = DestinationAttribute.objects.filter(
             attribute_type='EMPLOYEE',
-            destination_id=mapping.destination.destination_id,
+            destination_id=mapping.destination_employee_id,
             workspace_id=expense_group.workspace_id
         ).order_by('-updated_at').first()
 
@@ -370,7 +369,6 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             default_employee_object = employee.detail[object_type]
             return default_employee_object
     
-
 
 class Bill(models.Model):
     """
@@ -405,12 +403,10 @@ class Bill(models.Model):
         memo = get_memo(expense_group)
 
         if expense_group.fund_source == 'PERSONAL':
-            vendor_id = Mapping.objects.get(
-                source_type='EMPLOYEE',
-                destination_type='VENDOR',
-                source__value=description.get('employee_email'),
+            vendor_id = EmployeeMapping.objects.get(
+                source_employee__value=description.get('employee_email'),
                 workspace_id=expense_group.workspace_id
-            ).destination.destination_id
+            ).destination_vendor.destination_id
 
         elif expense_group.fund_source == 'CCC':
             vendor_id = general_mappings.default_ccc_vendor_id
@@ -564,12 +560,10 @@ class ExpenseReport(models.Model):
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
             defaults={
-                'employee_id': Mapping.objects.get(
-                    source_type='EMPLOYEE',
-                    destination_type='EMPLOYEE',
-                    source__value=description.get('employee_email'),
+                'employee_id': EmployeeMapping.objects.get(
+                    source_employee__value=description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
-                ).destination.destination_id,
+                ).destination_employee.destination_id,
                 'description': description,
                 'memo': memo,
                 'currency': expense.currency,
@@ -709,7 +703,7 @@ class JournalEntry(models.Model):
         db_table = 'journal_entries'
 
     @staticmethod
-    def create_journal_entry(expense_group: ExpenseGroup, configuration: Configuration):
+    def create_journal_entry(expense_group: ExpenseGroup):
         """
         Create journal entry
         :param expense_group: expense group
@@ -720,16 +714,7 @@ class JournalEntry(models.Model):
         expense = expense_group.expenses.first()
         memo = get_memo(expense_group)
 
-        employee_mapping_setting = configuration.employee_field_mapping
-
         if expense_group.fund_source == 'CCC':
-            entity_id = Mapping.objects.get(
-                source_type='EMPLOYEE',
-                destination_type=employee_mapping_setting,
-                source__value=description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            ).destination.destination_id
-
             journal_entry_object, _ = JournalEntry.objects.update_or_create(
                 expense_group=expense_group,
                 defaults={
@@ -741,6 +726,7 @@ class JournalEntry(models.Model):
             )
 
         return journal_entry_object
+
 
 class JournalEntryLineitem(models.Model):
     """
@@ -810,20 +796,18 @@ class JournalEntryLineitem(models.Model):
 
             employee_mapping_setting = configuration.employee_field_mapping
 
-            entity_id = Mapping.objects.get(
-                source_type='EMPLOYEE',
-                destination_type=employee_mapping_setting,
-                source__value=description.get('employee_email'),
+            entity = EmployeeMapping.objects.get(
+                source_employee__value=description.get('employee_email'),
                 workspace_id=expense_group.workspace_id
-            ).destination.destination_id
+            )
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_department_id is None else None
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_location_id is None else None
-            employee_id = entity_id if employee_mapping_setting == 'EMPLOYEE' else None
-            vendor_id = entity_id if employee_mapping_setting == 'VENDOR' else None
+            employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
+            vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -856,7 +840,6 @@ class JournalEntryLineitem(models.Model):
             journal_entry_lineitem_objects.append(journal_entry_lineitem_object)
 
         return journal_entry_lineitem_objects
-
 
 
 class ChargeCardTransaction(models.Model):
@@ -909,15 +892,13 @@ class ChargeCardTransaction(models.Model):
                 value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
 
         charge_card_id = None
-        mapping: Mapping = Mapping.objects.filter(
-            source_type='EMPLOYEE',
-            destination_type='CHARGE_CARD_NUMBER',
-            source__value=description.get('employee_email'),
+        mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+            source_employee__value=description.get('employee_email'),
             workspace_id=expense_group.workspace_id
         ).first()
 
         if mapping:
-            charge_card_id = mapping.destination.destination_id
+            charge_card_id = mapping.destination_card_account
 
         else:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
@@ -929,7 +910,7 @@ class ChargeCardTransaction(models.Model):
             defaults={
                 'charge_card_id': charge_card_id,
                 'vendor_id': vendor,
-                'payee' : merchant,
+                'payee': merchant,
                 'description': description,
                 'memo': memo,
                 'reference_no': expense.expense_number,
@@ -1063,12 +1044,10 @@ class APPayment(models.Model):
         expense = expense_group.expenses.first()
         memo = get_memo(expense_group, 'Bill')
 
-        vendor_id = Mapping.objects.get(
-            source_type='EMPLOYEE',
-            destination_type='VENDOR',
-            source__value=description.get('employee_email'),
+        vendor_id = EmployeeMapping.objects.get(
+            source_employee__value=description.get('employee_email'),
             workspace_id=expense_group.workspace_id
-        ).destination.destination_id
+        ).destination_vendor.destination_id
 
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
 
@@ -1155,12 +1134,10 @@ class SageIntacctReimbursement(models.Model):
         description = expense_group.description
         memo = get_memo(expense_group, 'Expense Report')
 
-        employee_id = Mapping.objects.get(
-            source_type='EMPLOYEE',
-            destination_type='EMPLOYEE',
-            source__value=description.get('employee_email'),
+        employee_id = EmployeeMapping.objects.get(
+            source_employee__value=description.get('employee_email'),
             workspace_id=expense_group.workspace_id
-        ).destination.destination_id
+        ).destination_employee.destination_id
 
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
 
