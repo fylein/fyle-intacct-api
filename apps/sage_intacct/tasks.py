@@ -538,7 +538,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
         with transaction.atomic():
             __validate_expense_group(expense_group, configuration)
 
-            journal_entry_object = JournalEntry.create_journal_entry(expense_group, configuration)
+            journal_entry_object = JournalEntry.create_journal_entry(expense_group)
 
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
 
