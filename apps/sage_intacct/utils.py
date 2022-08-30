@@ -573,10 +573,10 @@ class SageIntacctConnector:
         department_id = department.destination_id if department else None
 
         if not location_id and general_mappings:
-            location_id = general_mappings.location_id
+            location_id = general_mappings.default_location_id
 
         if not department_id and general_mappings:
-            department_id = general_mappings.department_id
+            department_id = general_mappings.default_department_id
 
         employee_payload = {
             'PERSONALINFO': {
