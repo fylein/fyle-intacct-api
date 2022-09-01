@@ -538,7 +538,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
         with transaction.atomic():
             __validate_expense_group(expense_group, configuration)
 
-            journal_entry_object = JournalEntry.create_journal_entry(expense_group, configuration)
+            journal_entry_object = JournalEntry.create_journal_entry(expense_group)
 
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
 
@@ -617,8 +617,6 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
-
-    
 
 def create_expense_report(expense_group: ExpenseGroup, task_log_id):
     task_log = TaskLog.objects.get(id=task_log_id)
