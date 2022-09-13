@@ -361,7 +361,7 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
     if mapping:
         employee = DestinationAttribute.objects.filter(
             attribute_type='EMPLOYEE',
-            destination_id=mapping.destination_employee_id,
+            destination_id=mapping.destination_employee.destination_id,
             workspace_id=expense_group.workspace_id
         ).order_by('-updated_at').first()
 
