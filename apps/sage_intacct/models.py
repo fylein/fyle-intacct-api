@@ -358,7 +358,7 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
         workspace_id=expense_group.workspace_id
     ).first()
 
-    if mapping:
+    if mapping.destination_employee:
         employee = DestinationAttribute.objects.filter(
             attribute_type='EMPLOYEE',
             destination_id=mapping.destination_employee.destination_id,
