@@ -287,4 +287,4 @@ CORS_ALLOW_HEADERS = [
 SENDGRID_SANDBOX_MODE_IN_DEBUG=False
 
 # echo to stdout or any other file-like object that is passed to the backend via the stream kwarg.
-SENDGRID_ECHO_TO_STDOUT=True
+SENDGRID_ECHO_TO_STDOUT=False
