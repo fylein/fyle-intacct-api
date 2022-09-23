@@ -11,11 +11,18 @@ __pycache__/
 .idea
 .vscode
 
+
+# Test files
+test.py
+
 # Cache
 demo_cache.sqlite
+__pycache__
+.DS_Store
 
 # Setup File
 setup.sh
+local_run.sh
 
 # Distribution / packaging
 .Python
@@ -60,6 +67,9 @@ coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
+.pytest_cache/
+test-reports/
+pytest-coverage.txt
 .pytest_cache/
 
 # Translations
