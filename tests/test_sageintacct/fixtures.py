@@ -271,128 +271,128 @@ data = {
         },
     ],
     'bill_object': {
-        "Id": "21a31ed7-0a35-44d4-b4a1-64c0fdc65a1a",
-        "Status": "OK",
-        "ProviderName": "Fyle Staging",
-        "DateTimeUTC": "/Date(1660833015693)/",
-        "Invoices": [
+        'Id': '21a31ed7-0a35-44d4-b4a1-64c0fdc65a1a',
+        'Status': 'OK',
+        'ProviderName': 'Fyle Staging',
+        'DateTimeUTC': '/Date(1660833015693)/',
+        'Invoices': [
             {
-                "Type": "ACCPAY",
-                "InvoiceID": "c35cf4b3-784a-408b-9ddf-df111dd2e073",
-                "InvoiceNumber": "",
-                "Reference": "2 - ashwin.t@fyle.in",
-                "Prepayments": [
+                'Type': 'ACCPAY',
+                'InvoiceID': 'c35cf4b3-784a-408b-9ddf-df111dd2e073',
+                'InvoiceNumber': '',
+                'Reference': '2 - ashwin.t@fyle.in',
+                'Prepayments': [
 
                 ],
-                "Overpayments":[
+                'Overpayments':[
 
                 ],
-                "AmountDue":5.0,
-                "AmountPaid":0.0,
-                "SentToContact":False,
-                "CurrencyRate":1.0,
-                "IsDiscounted":False,
-                "HasAttachments":False,
-                "HasErrors":False,
-                "Attachments":[
+                'AmountDue':5.0,
+                'AmountPaid':0.0,
+                'SentToContact':False,
+                'CurrencyRate':1.0,
+                'IsDiscounted':False,
+                'HasAttachments':False,
+                'HasErrors':False,
+                'Attachments':[
 
                 ],
-                "Contact":{
-                    "ContactID": "9eecdd86-78bb-47c9-95df-986369748151",
-                    "ContactStatus": "ACTIVE",
-                    "Name": "Joanna",
-                    "FirstName": "Joanna",
-                    "LastName": "",
-                    "EmailAddress": "ashwin.t@fyle.in",
-                    "BankAccountDetails": "",
-                    "Addresses": [
+                'Contact':{
+                    'ContactID': '9eecdd86-78bb-47c9-95df-986369748151',
+                    'ContactStatus': 'ACTIVE',
+                    'Name': 'Joanna',
+                    'FirstName': 'Joanna',
+                    'LastName': '',
+                    'EmailAddress': 'ashwin.t@fyle.in',
+                    'BankAccountDetails': '',
+                    'Addresses': [
                         {
-                            "AddressType": "STREET",
-                            "City": "",
-                            "Region": "",
-                            "PostalCode": "",
-                            "Country": ""
+                            'AddressType': 'STREET',
+                            'City': '',
+                            'Region': '',
+                            'PostalCode': '',
+                            'Country': ''
                         },
                         {
-                            "AddressType": "POBOX",
-                            "City": "",
-                            "Region": "",
-                            "PostalCode": "",
-                            "Country": ""
+                            'AddressType': 'POBOX',
+                            'City': '',
+                            'Region': '',
+                            'PostalCode': '',
+                            'Country': ''
                         }
                     ],
-                    "Phones": [
+                    'Phones': [
                         {
-                            "PhoneType": "DEFAULT",
-                            "PhoneNumber": "",
-                            "PhoneAreaCode": "",
-                            "PhoneCountryCode": ""
+                            'PhoneType': 'DEFAULT',
+                            'PhoneNumber': '',
+                            'PhoneAreaCode': '',
+                            'PhoneCountryCode': ''
                         },
                         {
-                            "PhoneType": "DDI",
-                            "PhoneNumber": "",
-                            "PhoneAreaCode": "",
-                            "PhoneCountryCode": ""
+                            'PhoneType': 'DDI',
+                            'PhoneNumber': '',
+                            'PhoneAreaCode': '',
+                            'PhoneCountryCode': ''
                         },
                         {
-                            "PhoneType": "FAX",
-                            "PhoneNumber": "",
-                            "PhoneAreaCode": "",
-                            "PhoneCountryCode": ""
+                            'PhoneType': 'FAX',
+                            'PhoneNumber': '',
+                            'PhoneAreaCode': '',
+                            'PhoneCountryCode': ''
                         },
                         {
-                            "PhoneType": "MOBILE",
-                            "PhoneNumber": "",
-                            "PhoneAreaCode": "",
-                            "PhoneCountryCode": ""
+                            'PhoneType': 'MOBILE',
+                            'PhoneNumber': '',
+                            'PhoneAreaCode': '',
+                            'PhoneCountryCode': ''
                         }
                     ],
-                    "UpdatedDateUTC": "/Date(1659085778640+0000)/",
-                    "ContactGroups": [
+                    'UpdatedDateUTC': '/Date(1659085778640+0000)/',
+                    'ContactGroups': [
 
                     ],
-                    "IsSupplier":True,
-                    "IsCustomer":False,
-                    "SalesTrackingCategories":[
+                    'IsSupplier':True,
+                    'IsCustomer':False,
+                    'SalesTrackingCategories':[
 
                     ],
-                    "PurchasesTrackingCategories":[
+                    'PurchasesTrackingCategories':[
 
                     ],
-                    "ContactPersons":[
+                    'ContactPersons':[
 
                     ],
-                    "HasValidationErrors":False
+                    'HasValidationErrors':False
                 },
-                "DateString":"2022-08-02T00:00:00",
-                "Date":"/Date(1659398400000+0000)/",
-                "DueDateString":"2022-08-16T00:00:00",
-                "DueDate":"/Date(1660608000000+0000)/",
-                "Status":"PAID",
-                "LineAmountTypes":"Exclusive",
-                "LineItems":[
+                'DateString':'2022-08-02T00:00:00',
+                'Date':'/Date(1659398400000+0000)/',
+                'DueDateString':'2022-08-16T00:00:00',
+                'DueDate':'/Date(1660608000000+0000)/',
+                'Status':'PAID',
+                'LineAmountTypes':'Exclusive',
+                'LineItems':[
                     {
-                        "Description": "ashwin.t@fyle.in, category - Food spent on 2020-05-25, report number - C/2022/05/R/16  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txUDvDmEV4ep?org_id=orPJvXuoLqvJ",
-                        "UnitAmount": 4.62,
-                        "TaxType": "INPUT",
-                        "TaxAmount": 0.38,
-                        "LineAmount": 4.62,
-                        "AccountCode": "429",
-                        "Tracking": [
+                        'Description': 'ashwin.t@fyle.in, category - Food spent on 2020-05-25, report number - C/2022/05/R/16  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txUDvDmEV4ep?org_id=orPJvXuoLqvJ',
+                        'UnitAmount': 4.62,
+                        'TaxType': 'INPUT',
+                        'TaxAmount': 0.38,
+                        'LineAmount': 4.62,
+                        'AccountCode': '429',
+                        'Tracking': [
 
                         ],
-                        "Quantity":1.0,
-                        "LineItemID":"51cca2e7-5bef-452c-83fb-2ca8c0865f37",
-                        "ValidationErrors":[
+                        'Quantity':1.0,
+                        'LineItemID':'51cca2e7-5bef-452c-83fb-2ca8c0865f37',
+                        'ValidationErrors':[
 
                         ]
                     }
                 ],
-                "SubTotal":4.62,
-                "TotalTax":0.38,
-                "Total":5.0,
-                "UpdatedDateUTC":"/Date(1659472064663+0000)/",
-                "CurrencyCode":"USD"
+                'SubTotal':4.62,
+                'TotalTax':0.38,
+                'Total':5.0,
+                'UpdatedDateUTC':'/Date(1659472064663+0000)/',
+                'CurrencyCode':'USD'
             }
         ]
     },
@@ -446,25 +446,281 @@ data = {
             'Version': 'GLOBAL'
         }
     ],
-    'get_projects': [{'RECORDNO': '111', 'PROJECTID': '10064', 'NAME': 'Direct Mail Campaign', 'DESCRIPTION': None, 'CURRENCY': 'AUD', 'PROJECTCATEGORY': 'Contract', 'PROJECTSTATUS': 'In Progress', 'PARENTKEY': None, 'PARENTID': None, 'PARENTNAME': None, 'STATUS': 'active', 'CUSTOMERKEY': '42', 'CUSTOMERID': '10064', 'CUSTOMERNAME': 'Med dot', 'PROJECTTYPE': 'AMP-Marketing', 'DEPARTMENTNAME': 'Services', 'LOCATIONID': '600', 'LOCATIONNAME': 'Australia', 'BUDGETID': None, 'MEGAENTITYID': '600', 'MEGAENTITYNAME': 'Australia'}],
-    'get_departments': [{'RECORDNO': '3', 'DEPARTMENTID': '300', 'TITLE': 'Admin', 'PARENTKEY': None, 'PARENTID': None, 'SUPERVISORNAME': 'Tesla, Nikki', 'STATUS': 'active', 'CUSTTITLE': None}],
-    'get_charge_card_accounts': [{'RECORDNO': '3', 'CARDID': 'Charge Card 1', 'DESCRIPTION': None, 'CARDTYPE': 'Visa', 'EXP_MONTH': 'January', 'EXP_YEAR': '2021', 'COMMCARD': 'C', 'STATUS': 'active', 'VENDORID': '20003', 'DEPT': None, 'LOCATION': None, 'LIABILITYTYPE': 'Credit', 'OUTSOURCECARD': None}],
-    'get_classes':
-    [{'NAME': 'Small Business', 'CLASSID': '400'}],
-    'get_expense_payment_types':
-    [{'RECORDNO': '1', 'NAME': 'Company Credit Card', 'DESCRIPTION': None, 'NONREIMBURSABLE': 'true', 'OFFSETACCTNO': None, 'OFFSETACCTTITLE': None, 'STATUS': 'active', 'WHENCREATED': '03/03/2020 20:27:09', 'WHENMODIFIED': '03/03/2020 20:27:09', 'CREATEDBY': '8', 'MODIFIEDBY': '8', 'MEGAENTITYKEY': None, 'MEGAENTITYID': None, 'MEGAENTITYNAME': None}],
-    'get_location_entities':
-    [{'RECORDNO': '9', 'LOCATIONID': '600', 'NAME': 'Australia', 'REPORTPRINTAS': None, 'SUPERVISORID': None, 'FIRSTMONTH': '1', 'FIRSTMONTHTAX': None, 'WEEKSTART': None, 'FEDERALID': '10-0000351', 'STARTDATE': None, 'ENDDATE': None, 'STATUS': 'active', 'HAS_IE_RELATION': 'false', 'CUSTOMERID': None, 'CUSTOMERNAME': None, 'VENDORID': None, 'VENDORNAME': None, 'CURRENCY': 'AUD', 'TAXID': '51976067581', 'ENABLELEGALCONTACT': 'false', 'LEGALNAME': None, 'LEGALADDRESS1': None, 'LEGALADDRESS2': None, 'LEGALCITY': None, 'LEGALSTATE': None, 'LEGALZIPCODE': None, 'LEGALCOUNTRY': None, 'OPCOUNTRY': 'Australia', 'ADDRESSCOUNTRYDEFAULT': 'Australia', 'RECORD_URL': 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r=5jqUgbnTPWSyfcQt2WN8R_O-Kf-mmZi3S99kptb_bT0'}],
-    'get_locations':
-    [{'RECORDNO': '9', 'LOCATIONID': '600', 'NAME': 'Australia', 'PARENTID': None, 'STATUS': 'active', 'CURRENCY': 'AUD'}],
-    'get_payment_accounts': [{'BANKACCOUNTID': '500_CHK', 'BANKACCOUNTNO': '525751035443', 'GLACCOUNTNO': '10050', 'BANKNAME': 'Demo Bank', 'ROUTINGNO': '121010303', 'BRANCHID': '101/1', 'BANKACCOUNTTYPE': 'checking', 'DEPARTMENTID': None, 'LOCATIONID': '500', 'STATUS': 'active', 'RECORDNO': '10', 'ACHBANKID': None, 'COMPANYNAME': None}],
-    'get_tax_details': [{'RECORDNO': '78', 'DETAILID': 'UK Import Services Zero Rate', 'TAXUID': 'GB.EXInputServices_GB.ZeroGB.VAT', 'DESCRIPTION': 'UK Import Services Zero Rate', 'TAXTYPE': 'Purchase', 'VALUE': '0', 'MINTAXABLE': None, 'MAXTAXABLE': None, 'INCLUDE': None, 'MINTAX': None, 'MAXTAX': None, 'GLACCOUNT': '12620', 'TAXAUTHORITY': None, 'STATUS': 'active', 'REVERSECHARGE': 'false', 'TAXRATE': 'Zero', 'TAXSOLUTIONID': 'United Kingdom - VAT', 'MEGAENTITYKEY': None, 'MEGAENTITYID': None, 'MEGAENTITYNAME': None}],
-    'get_dimensions':
-    [{'objectName': 'DEPARTMENT', 'objectLabel': 'Department', 'termLabel': 'Department', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}],
-    'get_accounts': [{'RECORDNO': '287', 'ACCOUNTNO': '16200', 'TITLE': 'Patents & Licenses', 'ACCOUNTTYPE': 'balancesheet', 'NORMALBALANCE': 'debit', 'CLOSINGTYPE': 'non-closing account', 'STATUS': 'active', 'CATEGORY': 'Patents', 'ALTERNATIVEACCOUNT': 'None'}],
-    'get_employees':
-[{'RECORDNO': '6', 'EMPLOYEEID': '1005', 'SSN': '246602649', 'TITLE': 'Project Manager', 'LOCATIONID': None, 'DEPARTMENTID': '100', 'BIRTHDATE': '11/11/1982', 'STARTDATE': '08/17/2014', 'ENDDATE': None, 'STATUS': 'active', 'EMPLOYEETYPE': 'Full Time', 'EMPLOYEETYPE1099TYPE': None, 'GENDER': 'male', 'TERMINATIONTYPE': None, 'CONTACT.CONTACTNAME': 'Franco, Ryan', 'CONTACT.PREFIX': None, 'CONTACT.FIRSTNAME': 'Ryan', 'CONTACT.INITIAL': None, 'CONTACT.LASTNAME': 'Franco', 'CONTACT.COMPANYNAME': None, 'CONTACT.PRINTAS': 'Franco, Ryan', 'CONTACT.PHONE1': '415-468-5786', 'CONTACT.PHONE2': None, 'CONTACT.CELLPHONE': None, 'CONTACT.PAGER': None, 'CONTACT.FAX': None, 'CONTACT.EMAIL1': 'ryan@demo.com', 'CONTACT.EMAIL2': None, 'CONTACT.URL1': None, 'CONTACT.URL2': None, 'CONTACT.MAILADDRESS.ADDRESS1': '12401 Clinton Ave', 'CONTACT.MAILADDRESS.ADDRESS2': None, 'CONTACT.MAILADDRESS.CITY': 'NY', 'CONTACT.MAILADDRESS.STATE': 'NY', 'CONTACT.MAILADDRESS.ZIP': '10010', 'CONTACT.MAILADDRESS.COUNTRY': 'United States', 'CONTACT.MAILADDRESS.COUNTRYCODE': 'US', 'CURRENCY': None, 'WHENCREATED': '02/10/2020 19:57:41', 'WHENMODIFIED': '03/03/2020 19:03:33', 'PAYMETHODKEY': None, 'CONTACTKEY': '31', 'MEGAENTITYKEY': None, 'MEGAENTITYID': None, 'MEGAENTITYNAME': None}],
-'get_customers': [{'NAME': 'AB SQUARE', 'CUSTOMERID': '10001'}],
-'get_vendors': [{'RECORDNO': '51', 'NAME': 'Ashwin', 'VENDORID': 'Ashwin', 'PARENTKEY': None, 'PARENTID': None, 'PARENTNAME': None, 'DISPLAYCONTACT.CONTACTNAME': 'Ashwin(VAshwin)', 'DISPLAYCONTACT.COMPANYNAME': 'Ashwin', 'DISPLAYCONTACT.FIRSTNAME': 'FyleT', 'DISPLAYCONTACT.LASTNAME': 'FyleT', 'DISPLAYCONTACT.INITIAL': None, 'DISPLAYCONTACT.PRINTAS': 'Ashwin', 'DISPLAYCONTACT.PHONE1': None, 'DISPLAYCONTACT.PHONE2': None, 'DISPLAYCONTACT.EMAIL1': 'ashwin.t@fyle.in', 'DISPLAYCONTACT.EMAIL2': None, 'VENDORACCOUNTNO': None, 'VENDTYPE': None, 'ACCOUNTLABEL': None, 'APACCOUNT': None, 'APACCOUNTTITLE': None, 'STATUS': 'active'}],
-'get_expense_types': [{'RECORDNO': '1', 'ACCOUNTLABEL': 'Airfare', 'DESCRIPTION': 'Airfare', 'GLACCOUNTNO': '60200', 'GLACCOUNTTITLE': 'Travel', 'STATUS': 'active', 'ITEMID': '1004'}],
+    'get_projects':[
+        {
+            'RECORDNO':'111',
+            'PROJECTID':'10064',
+            'NAME':'Direct Mail Campaign',
+            'DESCRIPTION':'None',
+            'CURRENCY':'AUD',
+            'PROJECTCATEGORY':'Contract',
+            'PROJECTSTATUS':'In Progress',
+            'PARENTKEY':'None',
+            'PARENTID':'None',
+            'PARENTNAME':'None',
+            'STATUS':'active',
+            'CUSTOMERKEY':'42',
+            'CUSTOMERID':'10064',
+            'CUSTOMERNAME':'Med dot',
+            'PROJECTTYPE':'AMP-Marketing',
+            'DEPARTMENTNAME':'Services',
+            'LOCATIONID':'600',
+            'LOCATIONNAME':'Australia',
+            'BUDGETID':'None',
+            'MEGAENTITYID':'600',
+            'MEGAENTITYNAME':'Australia'
+        }
+    ],
+    'get_departments':[
+        {
+            'RECORDNO':'3',
+            'DEPARTMENTID':'300',
+            'TITLE':'Admin',
+            'PARENTKEY':'None',
+            'PARENTID':'None',
+            'SUPERVISORNAME':'Tesla, Nikki',
+            'STATUS':'active',
+            'CUSTTITLE':'None'
+        }
+    ],
+    'get_charge_card_accounts':[
+        {
+            'RECORDNO':'3',
+            'CARDID':'Charge Card 1',
+            'DESCRIPTION':'None',
+            'CARDTYPE':'Visa',
+            'EXP_MONTH':'January',
+            'EXP_YEAR':'2021',
+            'COMMCARD':'C',
+            'STATUS':'active',
+            'VENDORID':'20003',
+            'DEPT':'None',
+            'LOCATION':'None',
+            'LIABILITYTYPE':'Credit',
+            'OUTSOURCECARD':'None'
+        }
+    ],
+    'get_classes':[
+        {
+            'NAME':'Small Business',
+            'CLASSID':'400'
+        }
+    ],
+    'get_expense_payment_types':[
+        {
+            'RECORDNO':'1',
+            'NAME':'Company Credit Card',
+            'DESCRIPTION':'None',
+            'NONREIMBURSABLE':'true',
+            'OFFSETACCTNO':'None',
+            'OFFSETACCTTITLE':'None',
+            'STATUS':'active',
+            'WHENCREATED':'03/03/2020 20:27:09',
+            'WHENMODIFIED':'03/03/2020 20:27:09',
+            'CREATEDBY':'8',
+            'MODIFIEDBY':'8',
+            'MEGAENTITYKEY':'None',
+            'MEGAENTITYID':'None',
+            'MEGAENTITYNAME':'None'
+        }
+    ],
+    'get_location_entities':[
+        {
+            'RECORDNO':'9',
+            'LOCATIONID':'600',
+            'NAME':'Australia',
+            'REPORTPRINTAS':'None',
+            'SUPERVISORID':'None',
+            'FIRSTMONTH':'1',
+            'FIRSTMONTHTAX':'None',
+            'WEEKSTART':'None',
+            'FEDERALID':'10-0000351',
+            'STARTDATE':'None',
+            'ENDDATE':'None',
+            'STATUS':'active',
+            'HAS_IE_RELATION':'false',
+            'CUSTOMERID':'None',
+            'CUSTOMERNAME':'None',
+            'VENDORID':'None',
+            'VENDORNAME':'None',
+            'CURRENCY':'AUD',
+            'TAXID':'51976067581',
+            'ENABLELEGALCONTACT':'false',
+            'LEGALNAME':'None',
+            'LEGALADDRESS1':'None',
+            'LEGALADDRESS2':'None',
+            'LEGALCITY':'None',
+            'LEGALSTATE':'None',
+            'LEGALZIPCODE':'None',
+            'LEGALCOUNTRY':'None',
+            'OPCOUNTRY':'Australia',
+            'ADDRESSCOUNTRYDEFAULT':'Australia',
+            'RECORD_URL':'https://www-p02.intacct.com/ia/acct/ur.phtml?.r=5jqUgbnTPWSyfcQt2WN8R_O-Kf-mmZi3S99kptb_bT0'
+        }
+    ],
+    'get_locations':[
+        {
+            'RECORDNO':'9',
+            'LOCATIONID':'600',
+            'NAME':'Australia',
+            'PARENTID':'None',
+            'STATUS':'active',
+            'CURRENCY':'AUD'
+        }
+    ],
+    'get_payment_accounts':[
+        {
+            'BANKACCOUNTID':'500_CHK',
+            'BANKACCOUNTNO':'525751035443',
+            'GLACCOUNTNO':'10050',
+            'BANKNAME':'Demo Bank',
+            'ROUTINGNO':'121010303',
+            'BRANCHID':'101/1',
+            'BANKACCOUNTTYPE':'checking',
+            'DEPARTMENTID':'None',
+            'LOCATIONID':'500',
+            'STATUS':'active',
+            'RECORDNO':'10',
+            'ACHBANKID':'None',
+            'COMPANYNAME':'None'
+        }
+    ],
+    'get_tax_details':[
+        {
+            'RECORDNO':'78',
+            'DETAILID':'UK Import Services Zero Rate',
+            'TAXUID':'GB.EXInputServices_GB.ZeroGB.VAT',
+            'DESCRIPTION':'UK Import Services Zero Rate',
+            'TAXTYPE':'Purchase',
+            'VALUE':'0',
+            'MINTAXABLE':'None',
+            'MAXTAXABLE':'None',
+            'INCLUDE':'None',
+            'MINTAX':'None',
+            'MAXTAX':'None',
+            'GLACCOUNT':'12620',
+            'TAXAUTHORITY':'None',
+            'STATUS':'active',
+            'REVERSECHARGE':'false',
+            'TAXRATE':'Zero',
+            'TAXSOLUTIONID':'United Kingdom - VAT',
+            'MEGAENTITYKEY':'None',
+            'MEGAENTITYID':'None',
+            'MEGAENTITYNAME':'None'
+        }
+    ],
+    'get_dimensions':[
+        {
+            'objectName':'DEPARTMENT',
+            'objectLabel':'Department',
+            'termLabel':'Department',
+            'userDefinedDimension':'false',
+            'enabledInGL':'true'
+        }
+    ],
+    'get_accounts':[
+        {
+            'RECORDNO':'287',
+            'ACCOUNTNO':'16200',
+            'TITLE':'Patents & Licenses',
+            'ACCOUNTTYPE':'balancesheet',
+            'NORMALBALANCE':'debit',
+            'CLOSINGTYPE':'non-closing account',
+            'STATUS':'active',
+            'CATEGORY':'Patents',
+            'ALTERNATIVEACCOUNT':'None'
+        }
+    ],
+    'get_employees':[
+        {
+            'RECORDNO':'6',
+            'EMPLOYEEID':'1005',
+            'SSN':'246602649',
+            'TITLE':'Project Manager',
+            'LOCATIONID':'None',
+            'DEPARTMENTID':'100',
+            'BIRTHDATE':'11/11/1982',
+            'STARTDATE':'08/17/2014',
+            'ENDDATE':'None',
+            'STATUS':'active',
+            'EMPLOYEETYPE':'Full Time',
+            'EMPLOYEETYPE1099TYPE':'None',
+            'GENDER':'male',
+            'TERMINATIONTYPE':'None',
+            'CONTACT.CONTACTNAME':'Franco, Ryan',
+            'CONTACT.PREFIX':'None',
+            'CONTACT.FIRSTNAME':'Ryan',
+            'CONTACT.INITIAL':'None',
+            'CONTACT.LASTNAME':'Franco',
+            'CONTACT.COMPANYNAME':'None',
+            'CONTACT.PRINTAS':'Franco, Ryan',
+            'CONTACT.PHONE1':'415-468-5786',
+            'CONTACT.PHONE2':'None',
+            'CONTACT.CELLPHONE':'None',
+            'CONTACT.PAGER':'None',
+            'CONTACT.FAX':'None',
+            'CONTACT.EMAIL1':'ryan@demo.com',
+            'CONTACT.EMAIL2':'None',
+            'CONTACT.URL1':'None',
+            'CONTACT.URL2':'None',
+            'CONTACT.MAILADDRESS.ADDRESS1':'12401 Clinton Ave',
+            'CONTACT.MAILADDRESS.ADDRESS2':'None',
+            'CONTACT.MAILADDRESS.CITY':'NY',
+            'CONTACT.MAILADDRESS.STATE':'NY',
+            'CONTACT.MAILADDRESS.ZIP':'10010',
+            'CONTACT.MAILADDRESS.COUNTRY':'United States',
+            'CONTACT.MAILADDRESS.COUNTRYCODE':'US',
+            'CURRENCY':'None',
+            'WHENCREATED':'02/10/2020 19:57:41',
+            'WHENMODIFIED':'03/03/2020 19:03:33',
+            'PAYMETHODKEY':'None',
+            'CONTACTKEY':'31',
+            'MEGAENTITYKEY':'None',
+            'MEGAENTITYID':'None',
+            'MEGAENTITYNAME':'None'
+        }
+    ],
+    'get_customers':[
+        {
+            'NAME':'AB SQUARE',
+            'CUSTOMERID':'10001'
+        }
+    ],
+    'get_vendors':[
+        {
+            'RECORDNO':'51',
+            'NAME':'Ashwin',
+            'VENDORID':'Ashwin',
+            'PARENTKEY':'None',
+            'PARENTID':'None',
+            'PARENTNAME':'None',
+            'DISPLAYCONTACT.CONTACTNAME':'Ashwin(VAshwin)',
+            'DISPLAYCONTACT.COMPANYNAME':'Ashwin',
+            'DISPLAYCONTACT.FIRSTNAME':'FyleT',
+            'DISPLAYCONTACT.LASTNAME':'FyleT',
+            'DISPLAYCONTACT.INITIAL':'None',
+            'DISPLAYCONTACT.PRINTAS':'Ashwin',
+            'DISPLAYCONTACT.PHONE1':'None',
+            'DISPLAYCONTACT.PHONE2':'None',
+            'DISPLAYCONTACT.EMAIL1':'ashwin.t@fyle.in',
+            'DISPLAYCONTACT.EMAIL2':'None',
+            'VENDORACCOUNTNO':'None',
+            'VENDTYPE':'None',
+            'ACCOUNTLABEL':'None',
+            'APACCOUNT':'None',
+            'APACCOUNTTITLE':'None',
+            'STATUS':'active'
+        }
+    ],
+    'get_expense_types':[
+        {
+            'RECORDNO':'1',
+            'ACCOUNTLABEL':'Airfare',
+            'DESCRIPTION':'Airfare',
+            'GLACCOUNTNO':'60200',
+            'GLACCOUNTTITLE':'Travel',
+            'STATUS':'active',
+            'ITEMID':'1004'
+        }
+    ]
 }
