@@ -1,4 +1,10 @@
 data = {
+    "get_merchant": {
+        "id": 1234,
+        "created_at": "2020-06-01T13:14:54.804+00:00",
+        "updated_at": "2020-06-11T13:14:55.201598+00:00",
+        "display_name": "Uber"
+    },
     "expenses": [
         {
             'id': 'tx4ziVSAyIsv',
