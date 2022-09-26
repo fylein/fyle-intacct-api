@@ -897,7 +897,7 @@ class ChargeCardTransaction(models.Model):
             workspace_id=expense_group.workspace_id
         ).first()
 
-        if mapping:
+        if mapping and mapping.destination_card_account:
             charge_card_id = mapping.destination_card_account.destination_id
 
         else:
