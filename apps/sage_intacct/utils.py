@@ -496,7 +496,7 @@ class SageIntacctConnector:
         :return: Vendor
         """
         vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
-        vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')
+        vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
 
         if 'vendor' in vendor:
             vendor = vendor['vendor'][0] if int(vendor['@totalcount']) > 1 else vendor['vendor']
