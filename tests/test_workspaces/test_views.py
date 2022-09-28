@@ -50,7 +50,6 @@ def test_get_workspace_by_id(api_client, test_connection):
     assert response.status_code == 200
 
     response = json.loads(response.content)
-    print(response)
     assert dict_compare_keys(response, data['workspace']) == [], 'workspaces api returns a diff in the keys'
 
     workspace_id = 5
@@ -312,7 +311,6 @@ def test_workspace_schedule(api_client, test_connection):
     response = api_client.get(url)
 
     response = json.loads(response.content)
-    print(response)
     assert dict_compare_keys(response, data['workspace_schedule']) == [], 'workspace_schedule api returns a diff in keys'
 
     response = api_client.post(
@@ -330,7 +328,6 @@ def test_workspace_schedule(api_client, test_connection):
     assert response.status_code == 200
 
     response = json.loads(response.content)
-    print(response)
     assert dict_compare_keys(response, data['workspace_schedule']) == [], 'workspace_schedule api returns a diff in keys'
 
 
