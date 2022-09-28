@@ -212,12 +212,12 @@ else:
         }
     }
 
-DATABASES['cache_db'] = {
-    'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': 'cache.db'
-}
+# DATABASES['cache_db'] = {
+#     'ENGINE': 'django.db.backends.sqlite3',
+#     'NAME': 'cache.db'
+# }
 
-DATABASE_ROUTERS = ['fyle_intacct_api.cache_router.CacheRouter']
+# DATABASE_ROUTERS = ['fyle_intacct_api.cache_router.CacheRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -266,6 +266,7 @@ FYLE_APP_URL = os.environ.get('APP_URL')
 FYLE_CLIENT_ID = os.environ.get('FYLE_CLIENT_ID')
 FYLE_CLIENT_SECRET = os.environ.get('FYLE_CLIENT_SECRET')
 FYLE_REFRESH_TOKEN = os.environ.get('FYLE_REFRESH_TOKEN')
+FYLE_SERVER_URL = os.environ.get('FYLE_SERVER_URL')
 
 # Sage Intacct Settings
 SENDGRID_API_KEY = os.environ.get('SENDGRID_KEY')
