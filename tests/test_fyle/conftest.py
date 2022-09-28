@@ -26,6 +26,6 @@ def create_temp_workspace(db):
         expense_state='PAYMENT PROCESSING',
         workspace_id=98,
         reimbursable_export_date_type='current_date',
-        ccc_export_date_type='spent_at'
+        ccc_export_date_type='current_date'
     )
     
