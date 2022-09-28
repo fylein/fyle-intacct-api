@@ -2368,6 +2368,7 @@ COPY public.category_mappings (id, created_at, updated_at, destination_account_i
 7	2022-09-20 08:40:38.708547+00	2022-09-20 08:40:38.708578+00	796	926	25	1
 8	2022-09-20 08:40:38.70874+00	2022-09-20 08:40:38.708764+00	792	925	24	1
 9	2022-09-20 08:49:07.95636+00	2022-09-20 08:49:07.956416+00	896	\N	325	1
+10	2022-09-28 11:56:20.729414+00	2022-09-28 11:56:20.729471+00	756	\N	327	1
 \.
 
 
@@ -3550,11 +3551,11 @@ COPY public.django_q_ormq (id, key, payload, lock) FROM stdin;
 --
 
 COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repeats, next_run, task, name, minutes, cron) FROM stdin;
-5	apps.mappings.tasks.auto_create_project_mappings	\N	1	\N	I	-3	2022-09-21 08:46:24.989603+00	3728e698bc884e77a6571dfd037b8827	\N	1440	\N
-2	apps.mappings.tasks.async_auto_map_employees	\N	1	\N	I	-3	2022-09-21 08:46:24.994645+00	3cffad1235aa46b1b8ba30535aa7dc31	\N	1440	\N
-3	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	1	\N	I	-3	2022-09-21 08:46:25.03867+00	8ed8aa314cf54df5ae67917d12e1c3f8	\N	1440	\N
-4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-3	2022-09-21 08:46:25.0608+00	a7bd586d911648619bf727c2def3119a	\N	1440	\N
-6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-2	2022-09-21 08:47:19.647275+00	ef431c8b04584d98bf1cedbe816fb1d0	\N	1440	\N
+5	apps.mappings.tasks.auto_create_project_mappings	\N	1	\N	I	-4	2022-09-29 08:46:24.989603+00	a86d100ffd8945a089bd639a1c1a917f	\N	1440	\N
+2	apps.mappings.tasks.async_auto_map_employees	\N	1	\N	I	-4	2022-09-29 08:46:24.994645+00	1eb4c884d91543749bf8306cfbe1a711	\N	1440	\N
+3	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	1	\N	I	-4	2022-09-29 08:46:25.03867+00	6c59343bf7f04fada99d065f6361c3f9	\N	1440	\N
+4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-4	2022-09-29 08:46:25.0608+00	8c3b10abff37448ba38bcf6b1d635e23	\N	1440	\N
+6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-3	2022-09-29 08:47:19.647275+00	446b5f1ff9644556a81230d709ee84b9	\N	1440	\N
 \.
 
 
@@ -3581,6 +3582,10 @@ oven-helium-vermont-alabama	apps.sage_intacct.tasks.create_bill	\N	gASVXgMAAAAAA
 vegan-nuts-ten-salami	apps.fyle.tasks.create_expense_groups	\N	gASVWwIAAAAAAABLAV2UKIwIUEVSU09OQUyUjANDQ0OUZYwVZGphbmdvLmRiLm1vZGVscy5iYXNllIwObW9kZWxfdW5waWNrbGWUk5SMBXRhc2tzlIwHVGFza0xvZ5SGlIWUUpR9lCiMBl9zdGF0ZZRoA4wKTW9kZWxTdGF0ZZSTlCmBlH2UKIwMZmllbGRzX2NhY2hllH2UjAZhZGRpbmeUiYwCZGKUjAdkZWZhdWx0lHVijAJpZJRLAYwMd29ya3NwYWNlX2lklEsBjAR0eXBllIwRRkVUQ0hJTkdfRVhQRU5TRVOUjAd0YXNrX2lklE6MEGV4cGVuc2VfZ3JvdXBfaWSUTowHYmlsbF9pZJROjBFleHBlbnNlX3JlcG9ydF9pZJROjBpjaGFyZ2VfY2FyZF90cmFuc2FjdGlvbl9pZJROjBBqb3VybmFsX2VudHJ5X2lklE6MDWFwX3BheW1lbnRfaWSUTowdc2FnZV9pbnRhY2N0X3JlaW1idXJzZW1lbnRfaWSUTowGc3RhdHVzlIwIQ09NUExFVEWUjAZkZXRhaWyUfZSMB2RlZmF1bHSUjA1kZWZhdWx0IHZhbHVllHOME3NhZ2VfaW50YWNjdF9lcnJvcnOUTowKY3JlYXRlZF9hdJSMCGRhdGV0aW1llIwIZGF0ZXRpbWWUk5RDCgfmCRQIMBUAAnaUjARweXR6lIwEX1VUQ5STlClSlIaUUpSMCnVwZGF0ZWRfYXSUaCxDCgfmCRQIMxsKOP6UaDGGlFKUjA9fZGphbmdvX3ZlcnNpb26UjAYzLjEuMTSUdWKHlC4=	gAR9lC4=	\N	2022-09-20 08:51:26.412218+00	2022-09-20 08:51:27.680767+00	t	20f78db05a22479fa0fa66e6348de9ef	\N	1
 aspen-king-football-july	apps.fyle.tasks.sync_reimbursements	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-20 08:51:33.400089+00	2022-09-20 08:51:34.085655+00	t	1eb88d2796a44c0c892ab058956351ca	03e74dbb40794336811835d3bbd78800	1
 fanta-zebra-red-failed	apps.fyle.tasks.sync_reimbursements	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-20 08:51:33.202866+00	2022-09-20 08:51:34.095834+00	t	f06271a131164f96beb945fa139dd31c	9850400d7ae1446498d1cce14bdea90a	1
+kansas-missouri-high-ten	apps.sage_intacct.tasks.create_ap_payment	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-28 11:20:39.441124+00	2022-09-28 11:20:41.346546+00	t	446b5f1ff9644556a81230d709ee84b9	6	1
+undress-xray-enemy-paris	apps.mappings.tasks.async_auto_map_employees	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-28 11:20:39.412662+00	2022-09-28 11:20:46.951256+00	t	1eb4c884d91543749bf8306cfbe1a711	2	1
+aspen-april-mirror-alaska	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-28 11:20:39.430756+00	2022-09-28 11:20:47.741487+00	t	8c3b10abff37448ba38bcf6b1d635e23	4	1
+ten-monkey-sodium-uranus	apps.mappings.tasks.auto_create_project_mappings	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-28 11:20:39.389393+00	2022-09-28 11:20:48.080556+00	t	a86d100ffd8945a089bd639a1c1a917f	5	1
 delta-california-apart-sierra	apps.sage_intacct.tasks.create_bill	\N	gASVhQMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQoaAloCymBlH2UKIwCZGKUjAdkZWZhdWx0lGgOfZSMDWV4cGVuc2VfZ3JvdXCUaAdzjAZhZGRpbmeUiXVijAJpZJRLAowQZXhwZW5zZV9ncm91cF9pZJRLAowJdmVuZG9yX2lklIwFMjAwNDOUjAtkZXNjcmlwdGlvbpR9lCiMCXJlcG9ydF9pZJSMDHJwU1RZTzhBZlVWQZSMCmV4cGVuc2VfaWSUjAx0eENxTHFzRW5BamaUjAtmdW5kX3NvdXJjZZSMA0NDQ5SMDGNsYWltX251bWJlcpSMDkMvMjAyMi8wOS9SLzIylIwOZW1wbG95ZWVfZW1haWyUjBBhc2h3aW4udEBmeWxlLmlulHWMBG1lbW+UjDtDb3Jwb3JhdGUgQ3JlZGl0IENhcmQgZXhwZW5zZSAtIEMvMjAyMi8wOS9SLzIyIC0gMjAvMDkvMjAyMpSMCGN1cnJlbmN5lIwDVVNElIwJc3VwZG9jX2lklE6MEHRyYW5zYWN0aW9uX2RhdGWUjBMyMDIyLTA5LTIwVDA4OjUxOjM2lIwOcGF5bWVudF9zeW5jZWSUiYwUcGFpZF9vbl9zYWdlX2ludGFjY3SUiYwKY3JlYXRlZF9hdJSMCGRhdGV0aW1llIwIZGF0ZXRpbWWUk5RDCgfmCRQIMyQCuRyUjARweXR6lIwEX1VUQ5STlClSlIaUUpSMCnVwZGF0ZWRfYXSUaDpDCgfmCRQIMyQCuUeUaD+GlFKUjA9fZGphbmdvX3ZlcnNpb26UjAYzLjEuMTSUdWJzaB2JaBmMB2RlZmF1bHSUdWJoHksCjAtmdW5kX3NvdXJjZZSMA0NDQ5SMDHdvcmtzcGFjZV9pZJRLAWgiaCNoN2g6QwoH5gkUCDMbCe9rlGg/hpRSlIwLZXhwb3J0ZWRfYXSUTmhCaDpDCgfmCRQIMxsJ75+UaD+GlFKUjA9fZGphbmdvX3ZlcnNpb26UaEd1YksDhpQu	gAR9lC4=	\N	2022-09-20 08:51:34.094557+00	2022-09-20 08:51:38.08379+00	t	05d919f7e8fe4b4396358623b7c59423	03e74dbb40794336811835d3bbd78800	1
 lake-quebec-beryllium-yellow	apps.sage_intacct.tasks.create_bill	\N	gASVXgMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQoaAloCymBlH2UKIwCZGKUjAdkZWZhdWx0lGgOfZSMDWV4cGVuc2VfZ3JvdXCUaAdzjAZhZGRpbmeUiXVijAJpZJRLA4wQZXhwZW5zZV9ncm91cF9pZJRLAYwJdmVuZG9yX2lklIwGQXNod2lulIwLZGVzY3JpcHRpb26UfZQojAlyZXBvcnRfaWSUjAxycEVaR3FWQ3lXeFGUjAtmdW5kX3NvdXJjZZSMCFBFUlNPTkFMlIwMY2xhaW1fbnVtYmVylIwOQy8yMDIyLzA5L1IvMjGUjA5lbXBsb3llZV9lbWFpbJSMEGFzaHdpbi50QGZ5bGUuaW6UdYwEbWVtb5SMJVJlaW1idXJzYWJsZSBleHBlbnNlIC0gQy8yMDIyLzA5L1IvMjGUjAhjdXJyZW5jeZSMA1VTRJSMCXN1cGRvY19pZJROjBB0cmFuc2FjdGlvbl9kYXRllIwTMjAyMi0wOS0yMFQwODo1MTozNpSMDnBheW1lbnRfc3luY2VklImMFHBhaWRfb25fc2FnZV9pbnRhY2N0lImMCmNyZWF0ZWRfYXSUjAhkYXRldGltZZSMCGRhdGV0aW1llJOUQwoH5gkUCDMkDOlTlIwEcHl0epSMBF9VVEOUk5QpUpSGlFKUjAp1cGRhdGVkX2F0lGg4QwoH5gkUCDMkDOl1lGg9hpRSlIwPX2RqYW5nb192ZXJzaW9ulIwGMy4xLjE0lHVic2gdiWgZjAdkZWZhdWx0lHViaB5LAYwLZnVuZF9zb3VyY2WUjAhQRVJTT05BTJSMDHdvcmtzcGFjZV9pZJRLAWgiaCNoNWg4QwoH5gkUCDAVC63XlGg9hpRSlIwLZXhwb3J0ZWRfYXSUTmhAaDhDCgfmCRQIMBULrgWUaD2GlFKUjA9fZGphbmdvX3ZlcnNpb26UaEV1YksChpQu	gAR9lC4=	\N	2022-09-20 08:51:34.197425+00	2022-09-20 08:51:38.764149+00	t	7b8631b94a25409a9ec48ac51ca41356	9850400d7ae1446498d1cce14bdea90a	1
 foxtrot-papa-gee-carbon	apps.fyle.tasks.create_expense_groups	\N	gASVWwIAAAAAAABLAV2UKIwIUEVSU09OQUyUjANDQ0OUZYwVZGphbmdvLmRiLm1vZGVscy5iYXNllIwObW9kZWxfdW5waWNrbGWUk5SMBXRhc2tzlIwHVGFza0xvZ5SGlIWUUpR9lCiMBl9zdGF0ZZRoA4wKTW9kZWxTdGF0ZZSTlCmBlH2UKIwMZmllbGRzX2NhY2hllH2UjAZhZGRpbmeUiYwCZGKUjAdkZWZhdWx0lHVijAJpZJRLAYwMd29ya3NwYWNlX2lklEsBjAR0eXBllIwRRkVUQ0hJTkdfRVhQRU5TRVOUjAd0YXNrX2lklE6MEGV4cGVuc2VfZ3JvdXBfaWSUTowHYmlsbF9pZJROjBFleHBlbnNlX3JlcG9ydF9pZJROjBpjaGFyZ2VfY2FyZF90cmFuc2FjdGlvbl9pZJROjBBqb3VybmFsX2VudHJ5X2lklE6MDWFwX3BheW1lbnRfaWSUTowdc2FnZV9pbnRhY2N0X3JlaW1idXJzZW1lbnRfaWSUTowGc3RhdHVzlIwIQ09NUExFVEWUjAZkZXRhaWyUfZSMB2RlZmF1bHSUjA1kZWZhdWx0IHZhbHVllHOME3NhZ2VfaW50YWNjdF9lcnJvcnOUTowKY3JlYXRlZF9hdJSMCGRhdGV0aW1llIwIZGF0ZXRpbWWUk5RDCgfmCRQIMBUAAnaUjARweXR6lIwEX1VUQ5STlClSlIaUUpSMCnVwZGF0ZWRfYXSUaCxDCgfmCRQIODICTFaUaDGGlFKUjA9fZGphbmdvX3ZlcnNpb26UjAYzLjEuMTSUdWKHlC4=	gAR9lC4=	\N	2022-09-20 08:56:49.260438+00	2022-09-20 08:56:50.158376+00	t	2313225c5df34247a6c12510256abcec	\N	1
@@ -3589,6 +3594,12 @@ double-apart-mirror-stream	apps.fyle.tasks.sync_reimbursements	\N	gASVBQAAAAAAAA
 uranus-december-orange-ink	apps.sage_intacct.tasks.create_bill	\N	gASVXgMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQoaAloCymBlH2UKIwCZGKUjAdkZWZhdWx0lGgOfZSMDWV4cGVuc2VfZ3JvdXCUaAdzjAZhZGRpbmeUiXVijAJpZJRLBIwQZXhwZW5zZV9ncm91cF9pZJRLAYwJdmVuZG9yX2lklIwGQXNod2lulIwLZGVzY3JpcHRpb26UfZQojAlyZXBvcnRfaWSUjAxycEVaR3FWQ3lXeFGUjAtmdW5kX3NvdXJjZZSMCFBFUlNPTkFMlIwMY2xhaW1fbnVtYmVylIwOQy8yMDIyLzA5L1IvMjGUjA5lbXBsb3llZV9lbWFpbJSMEGFzaHdpbi50QGZ5bGUuaW6UdYwEbWVtb5SMJVJlaW1idXJzYWJsZSBleHBlbnNlIC0gQy8yMDIyLzA5L1IvMjGUjAhjdXJyZW5jeZSMA1VTRJSMCXN1cGRvY19pZJROjBB0cmFuc2FjdGlvbl9kYXRllIwTMjAyMi0wOS0yMFQwODo1NzowNZSMDnBheW1lbnRfc3luY2VklImMFHBhaWRfb25fc2FnZV9pbnRhY2N0lImMCmNyZWF0ZWRfYXSUjAhkYXRldGltZZSMCGRhdGV0aW1llJOUQwoH5gkUCDkFBPS8lIwEcHl0epSMBF9VVEOUk5QpUpSGlFKUjAp1cGRhdGVkX2F0lGg4QwoH5gkUCDkFBPTnlGg9hpRSlIwPX2RqYW5nb192ZXJzaW9ulIwGMy4xLjE0lHVic2gdiWgZjAdkZWZhdWx0lHViaB5LAYwLZnVuZF9zb3VyY2WUjAhQRVJTT05BTJSMDHdvcmtzcGFjZV9pZJRLAWgiaCNoNWg4QwoH5gkUCDAVC63XlGg9hpRSlIwLZXhwb3J0ZWRfYXSUTmhAaDhDCgfmCRQIMBULrgWUaD2GlFKUjA9fZGphbmdvX3ZlcnNpb26UaEV1YksChpQu	gAR9lC4=	\N	2022-09-20 08:57:03.089187+00	2022-09-20 08:57:06.870381+00	t	8bd9ce74882d4adf958f0cb39d68e777	02277d4db84343239a89541cec3c7b82	1
 nebraska-leopard-romeo-pennsylvania	apps.sage_intacct.tasks.create_bill	\N	gASVhQMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQoaAloCymBlH2UKIwCZGKUjAdkZWZhdWx0lGgOfZSMDWV4cGVuc2VfZ3JvdXCUaAdzjAZhZGRpbmeUiXVijAJpZJRLBYwQZXhwZW5zZV9ncm91cF9pZJRLAowJdmVuZG9yX2lklIwFMjAwNDOUjAtkZXNjcmlwdGlvbpR9lCiMCXJlcG9ydF9pZJSMDHJwU1RZTzhBZlVWQZSMCmV4cGVuc2VfaWSUjAx0eENxTHFzRW5BamaUjAtmdW5kX3NvdXJjZZSMA0NDQ5SMDGNsYWltX251bWJlcpSMDkMvMjAyMi8wOS9SLzIylIwOZW1wbG95ZWVfZW1haWyUjBBhc2h3aW4udEBmeWxlLmlulHWMBG1lbW+UjDtDb3Jwb3JhdGUgQ3JlZGl0IENhcmQgZXhwZW5zZSAtIEMvMjAyMi8wOS9SLzIyIC0gMjAvMDkvMjAyMpSMCGN1cnJlbmN5lIwDVVNElIwJc3VwZG9jX2lklE6MEHRyYW5zYWN0aW9uX2RhdGWUjBMyMDIyLTA5LTIwVDA4OjU3OjA1lIwOcGF5bWVudF9zeW5jZWSUiYwUcGFpZF9vbl9zYWdlX2ludGFjY3SUiYwKY3JlYXRlZF9hdJSMCGRhdGV0aW1llIwIZGF0ZXRpbWWUk5RDCgfmCRQIOQUNJJeUjARweXR6lIwEX1VUQ5STlClSlIaUUpSMCnVwZGF0ZWRfYXSUaDpDCgfmCRQIOQUNJLqUaD+GlFKUjA9fZGphbmdvX3ZlcnNpb26UjAYzLjEuMTSUdWJzaB2JaBmMB2RlZmF1bHSUdWJoHksCjAtmdW5kX3NvdXJjZZSMA0NDQ5SMDHdvcmtzcGFjZV9pZJRLAWgiaCNoN2g6QwoH5gkUCDMbCe9rlGg/hpRSlIwLZXhwb3J0ZWRfYXSUTmhCaDpDCgfmCRQIMxsJ75+UaD+GlFKUjA9fZGphbmdvX3ZlcnNpb26UaEd1YksDhpQu	gAR9lC4=	\N	2022-09-20 08:57:03.248067+00	2022-09-20 08:57:07.929346+00	t	5fec2004d21d4dfab405e6ebb3e557af	acc928ba6bf4400c8268331a29189313	1
 utah-uncle-king-orange	apps.sage_intacct.tasks.create_bill	\N	gASV/wEAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBmFkZGluZ5SJjAJkYpSMB2RlZmF1bHSUdWKMAmlklEsDjAtmdW5kX3NvdXJjZZSMA0NDQ5SMDHdvcmtzcGFjZV9pZJRLAYwLZGVzY3JpcHRpb26UfZQojAlyZXBvcnRfaWSUjAxycEJmNWlicVVUNkKUjApleHBlbnNlX2lklIwMdHhUSGZFUFdPRU9wlIwLZnVuZF9zb3VyY2WUjANDQ0OUjAxjbGFpbV9udW1iZXKUjA5DLzIwMjIvMDkvUi8yM5SMDmVtcGxveWVlX2VtYWlslIwQYXNod2luLnRAZnlsZS5pbpR1jApjcmVhdGVkX2F0lIwIZGF0ZXRpbWWUjAhkYXRldGltZZSTlEMKB+YJFAg4MgI/TJSMBHB5dHqUjARfVVRDlJOUKVKUhpRSlIwLZXhwb3J0ZWRfYXSUTowKdXBkYXRlZF9hdJRoJkMKB+YJFAg4MgI/fJRoK4aUUpSMD19kamFuZ29fdmVyc2lvbpSMBjMuMS4xNJR1YksEhpQu	gAR9lC4=	\N	2022-09-20 08:57:07.930662+00	2022-09-20 08:57:10.250024+00	t	092706c1f82f42708b17f7190f0558f7	acc928ba6bf4400c8268331a29189313	1
+edward-uncle-july-east	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-28 11:20:39.419171+00	2022-09-28 11:20:40.74238+00	t	6c59343bf7f04fada99d065f6361c3f9	3	1
+yellow-montana-paris-utah	apps.fyle.tasks.sync_reimbursements	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-28 11:56:27.975206+00	2022-09-28 11:56:29.172725+00	t	93f23aa67d394197925f59388b487a50	cfdf480bf3fc455685e5b8b3a11977d0	1
+blue-king-single-hawaii	apps.fyle.tasks.sync_reimbursements	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-28 11:56:28.025405+00	2022-09-28 11:56:29.204256+00	t	629646aa0a0e4137ba09ec99581affe6	8411b791379d452c90d082aa158668a4	1
+yankee-eleven-fanta-lamp	apps.sage_intacct.tasks.create_bill	\N	gASVsQMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQojAZfc3RhdGWUaAspgZR9lCiMAmRilIwHZGVmYXVsdJRoDn2UjA1leHBlbnNlX2dyb3VwlGgHc4wGYWRkaW5nlIl1YowCaWSUSweMEGV4cGVuc2VfZ3JvdXBfaWSUSwKMCXZlbmRvcl9pZJSMBTIwMDQzlIwLZGVzY3JpcHRpb26UfZQojAlyZXBvcnRfaWSUjAxycFNUWU84QWZVVkGUjApleHBlbnNlX2lklIwMdHhDcUxxc0VuQWpmlIwLZnVuZF9zb3VyY2WUjANDQ0OUjAxjbGFpbV9udW1iZXKUjA5DLzIwMjIvMDkvUi8yMpSMDmVtcGxveWVlX2VtYWlslIwQYXNod2luLnRAZnlsZS5pbpR1jARtZW1vlIw7Q29ycG9yYXRlIENyZWRpdCBDYXJkIGV4cGVuc2UgLSBDLzIwMjIvMDkvUi8yMiAtIDI4LzA5LzIwMjKUjAhjdXJyZW5jeZSMA1VTRJSMCXN1cGRvY19pZJROjBB0cmFuc2FjdGlvbl9kYXRllIwTMjAyMi0wOS0yOFQxMTo1NjozMZSMDnBheW1lbnRfc3luY2VklImMFHBhaWRfb25fc2FnZV9pbnRhY2N0lImMCmNyZWF0ZWRfYXSUjAhkYXRldGltZZSMCGRhdGV0aW1llJOUQwoH5gkcCzgfDOlBlIwEcHl0epSMBF9VVEOUk5QpUpSGlFKUjAp1cGRhdGVkX2F0lGg7QwoH5gkcCzgfDOl1lGhAhpRSlIwPX2RqYW5nb192ZXJzaW9ulIwGMy4xLjE0lHVic2geiWgajAdkZWZhdWx0lHVijAJpZJRLAowLZnVuZF9zb3VyY2WUjANDQ0OUjAx3b3Jrc3BhY2VfaWSUSwGMC2Rlc2NyaXB0aW9ulGgkjApjcmVhdGVkX2F0lGg7QwoH5gkUCDMbCe9rlGhAhpRSlIwLZXhwb3J0ZWRfYXSUTowKdXBkYXRlZF9hdJRoO0MKB+YJFAgzGwnvn5RoQIaUUpSMD19kamFuZ29fdmVyc2lvbpRoSHViSwOGlC4=	gAR9lC4=	\N	2022-09-28 11:56:29.46252+00	2022-09-28 11:56:33.943154+00	t	f1f296693ae042a5b8933158e4529c5c	8411b791379d452c90d082aa158668a4	1
+virginia-tango-three-connecticut	apps.sage_intacct.tasks.create_bill	\N	gASVigMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQojAZfc3RhdGWUaAspgZR9lCiMAmRilIwHZGVmYXVsdJRoDn2UjA1leHBlbnNlX2dyb3VwlGgHc4wGYWRkaW5nlIl1YowCaWSUSwaMEGV4cGVuc2VfZ3JvdXBfaWSUSwGMCXZlbmRvcl9pZJSMBkFzaHdpbpSMC2Rlc2NyaXB0aW9ulH2UKIwJcmVwb3J0X2lklIwMcnBFWkdxVkN5V3hRlIwLZnVuZF9zb3VyY2WUjAhQRVJTT05BTJSMDGNsYWltX251bWJlcpSMDkMvMjAyMi8wOS9SLzIxlIwOZW1wbG95ZWVfZW1haWyUjBBhc2h3aW4udEBmeWxlLmlulHWMBG1lbW+UjCVSZWltYnVyc2FibGUgZXhwZW5zZSAtIEMvMjAyMi8wOS9SLzIxlIwIY3VycmVuY3mUjANVU0SUjAlzdXBkb2NfaWSUTowQdHJhbnNhY3Rpb25fZGF0ZZSMEzIwMjItMDktMjhUMTE6NTY6MzGUjA5wYXltZW50X3N5bmNlZJSJjBRwYWlkX29uX3NhZ2VfaW50YWNjdJSJjApjcmVhdGVkX2F0lIwIZGF0ZXRpbWWUjAhkYXRldGltZZSTlEMKB+YJHAs4Hwt0spSMBHB5dHqUjARfVVRDlJOUKVKUhpRSlIwKdXBkYXRlZF9hdJRoOUMKB+YJHAs4Hwt1EZRoPoaUUpSMD19kamFuZ29fdmVyc2lvbpSMBjMuMS4xNJR1YnNoHoloGowHZGVmYXVsdJR1YowCaWSUSwGMC2Z1bmRfc291cmNllIwIUEVSU09OQUyUjAx3b3Jrc3BhY2VfaWSUSwGMC2Rlc2NyaXB0aW9ulGgkjApjcmVhdGVkX2F0lGg5QwoH5gkUCDAVC63XlGg+hpRSlIwLZXhwb3J0ZWRfYXSUTowKdXBkYXRlZF9hdJRoOUMKB+YJFAgwFQuuBZRoPoaUUpSMD19kamFuZ29fdmVyc2lvbpRoRnViSwKGlC4=	gAR9lC4=	\N	2022-09-28 11:56:29.226213+00	2022-09-28 11:56:34.697792+00	t	e5adc37ba5e646dc96486766f90fff25	cfdf480bf3fc455685e5b8b3a11977d0	1
+zulu-violet-mirror-equal	apps.sage_intacct.tasks.create_bill	\N	gASVsQMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQojAZfc3RhdGWUaAspgZR9lCiMAmRilIwHZGVmYXVsdJRoDn2UjA1leHBlbnNlX2dyb3VwlGgHc4wGYWRkaW5nlIl1YowCaWSUSwiMEGV4cGVuc2VfZ3JvdXBfaWSUSwOMCXZlbmRvcl9pZJSMBTIwMDQzlIwLZGVzY3JpcHRpb26UfZQojAlyZXBvcnRfaWSUjAxycEJmNWlicVVUNkKUjApleHBlbnNlX2lklIwMdHhUSGZFUFdPRU9wlIwLZnVuZF9zb3VyY2WUjANDQ0OUjAxjbGFpbV9udW1iZXKUjA5DLzIwMjIvMDkvUi8yM5SMDmVtcGxveWVlX2VtYWlslIwQYXNod2luLnRAZnlsZS5pbpR1jARtZW1vlIw7Q29ycG9yYXRlIENyZWRpdCBDYXJkIGV4cGVuc2UgLSBDLzIwMjIvMDkvUi8yMyAtIDI4LzA5LzIwMjKUjAhjdXJyZW5jeZSMA1VTRJSMCXN1cGRvY19pZJROjBB0cmFuc2FjdGlvbl9kYXRllIwTMjAyMi0wOS0yOFQxMTo1NjozNpSMDnBheW1lbnRfc3luY2VklImMFHBhaWRfb25fc2FnZV9pbnRhY2N0lImMCmNyZWF0ZWRfYXSUjAhkYXRldGltZZSMCGRhdGV0aW1llJOUQwoH5gkcCzgkA/lVlIwEcHl0epSMBF9VVEOUk5QpUpSGlFKUjAp1cGRhdGVkX2F0lGg7QwoH5gkcCzgkA/mulGhAhpRSlIwPX2RqYW5nb192ZXJzaW9ulIwGMy4xLjE0lHVic2geiWgajAdkZWZhdWx0lHVijAJpZJRLA4wLZnVuZF9zb3VyY2WUjANDQ0OUjAx3b3Jrc3BhY2VfaWSUSwGMC2Rlc2NyaXB0aW9ulGgkjApjcmVhdGVkX2F0lGg7QwoH5gkUCDgyAj9MlGhAhpRSlIwLZXhwb3J0ZWRfYXSUTowKdXBkYXRlZF9hdJRoO0MKB+YJFAg4MgI/fJRoQIaUUpSMD19kamFuZ29fdmVyc2lvbpRoSHViSwSGlC4=	gAR9lC4=	\N	2022-09-28 11:56:33.945362+00	2022-09-28 11:56:37.756708+00	t	c9cef20a69ac4e64b21cd6f460435330	8411b791379d452c90d082aa158668a4	1
 \.
 
 
@@ -3932,13 +3943,13 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 323	CATEGORY	Category	Utility	135449	2022-09-20 08:39:05.265236+00	2022-09-20 08:39:05.265266+00	1	\N	\N	f	f
 324	CATEGORY	Category	Others	135451	2022-09-20 08:39:05.265329+00	2022-09-20 08:39:05.265356+00	1	\N	\N	f	f
 326	CATEGORY	Category	Bus	135455	2022-09-20 08:39:05.26577+00	2022-09-20 08:39:05.265841+00	1	\N	\N	f	f
-327	CATEGORY	Category	Taxi	135457	2022-09-20 08:39:05.276717+00	2022-09-20 08:39:05.276743+00	1	\N	\N	f	f
 328	CATEGORY	Category	Courier	135458	2022-09-20 08:39:05.276799+00	2022-09-20 08:39:05.27723+00	1	\N	\N	f	f
 329	CATEGORY	Category	Hotel	135459	2022-09-20 08:39:05.27731+00	2022-09-20 08:39:05.277332+00	1	\N	\N	f	f
 330	CATEGORY	Category	Professional Services	135460	2022-09-20 08:39:05.277386+00	2022-09-20 08:39:05.277406+00	1	\N	\N	f	f
 331	CATEGORY	Category	Phone	135461	2022-09-20 08:39:05.277459+00	2022-09-20 08:39:05.279024+00	1	\N	\N	f	f
 332	CATEGORY	Category	Travel Expenses which supports National - International	135542	2022-09-20 08:39:05.279713+00	2022-09-20 08:39:05.279758+00	1	\N	\N	f	f
 333	CATEGORY	Category	Bad Debt Expense	135544	2022-09-20 08:39:05.279837+00	2022-09-20 08:39:05.279868+00	1	\N	\N	f	f
+327	CATEGORY	Category	Taxi	135457	2022-09-20 08:39:05.276717+00	2022-09-28 11:56:20.660976+00	1	\N	\N	f	f
 334	CATEGORY	Category	Travel	135545	2022-09-20 08:39:05.279951+00	2022-09-20 08:39:05.279975+00	1	\N	\N	f	f
 335	CATEGORY	Category	Notes Payable	135546	2022-09-20 08:39:05.280029+00	2022-09-20 08:39:05.280216+00	1	\N	\N	f	f
 336	CATEGORY	Category	Employee Benefits	135553	2022-09-20 08:39:05.281702+00	2022-09-20 08:39:05.281781+00	1	\N	\N	f	f
@@ -6835,6 +6846,12 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 26	CATEGORY	Category	Ground Transportation-Parking	149332	2022-09-20 08:39:03.252505+00	2022-09-20 08:39:03.252534+00	1	\N	\N	t	f
 27	CATEGORY	Category	Hotel-Lodging	149333	2022-09-20 08:39:03.252594+00	2022-09-20 08:39:03.252623+00	1	\N	\N	t	f
 325	CATEGORY	Category	Food	135453	2022-09-20 08:39:05.265411+00	2022-09-20 08:49:07.925686+00	1	\N	\N	f	f
+3222	TAX_GROUP	Tax Group	N27HHEOEY8	tgA7LDFGfctm	2022-09-28 11:20:40.693894+00	2022-09-28 11:20:40.693975+00	1	\N	{"tax_rate": 0.18}	f	f
+3223	TAX_GROUP	Tax Group	H7FH7Q9WJ6	tghvvY536lD4	2022-09-28 11:20:40.694094+00	2022-09-28 11:20:40.694113+00	1	\N	{"tax_rate": 0.18}	f	f
+3224	TAX_GROUP	Tax Group	FML12E68S6	tgYjjc9hfkNP	2022-09-28 11:20:40.694203+00	2022-09-28 11:20:40.694237+00	1	\N	{"tax_rate": 0.18}	f	f
+3225	CATEGORY	Category	FML12E68S6 / Turbo charged	209304	2022-09-28 11:55:41.765972+00	2022-09-28 11:55:41.766025+00	1	\N	\N	f	f
+3226	CATEGORY	Category	N27HHEOEY8 / Turbo charged	209303	2022-09-28 11:55:41.766086+00	2022-09-28 11:55:41.766117+00	1	\N	\N	f	f
+3227	CATEGORY	Category	H7FH7Q9WJ6 / Turbo charged	209299	2022-09-28 11:55:41.76618+00	2022-09-28 11:55:41.766211+00	1	\N	\N	f	f
 \.
 
 
@@ -6974,7 +6991,7 @@ COPY public.mappings (id, source_type, destination_type, created_at, updated_at,
 13	PROJECT	PROJECT	2022-09-20 08:40:25.873601+00	2022-09-20 08:40:25.873804+00	603	1866	1
 14	PROJECT	PROJECT	2022-09-20 08:40:25.874137+00	2022-09-20 08:40:25.87417+00	604	1867	1
 15	PROJECT	PROJECT	2022-09-20 08:40:25.874787+00	2022-09-20 08:40:25.874823+00	607	1868	1
-16	PROJECT	PROJECT	2022-09-20 08:40:25.874882+00	2022-09-20 08:40:25.874912+00	608	1869	1
+16	PROJECT	CUSTOMER	2022-09-20 08:40:25.874882+00	2022-09-20 08:40:25.874912+00	608	1869	1
 \.
 
 
@@ -7273,9 +7290,9 @@ COPY public.sage_intacct_reimbursements (id, account_id, employee_id, memo, paym
 --
 
 COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id) FROM stdin;
-2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: rILNJEB032~YymAYP0a2gh-8uVWmIZXwwAAAAM]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-20 08:57:06.84397+00	\N	\N	1	1	\N	\N	\N	\N
-3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: 6F6v9EB034~YymAYP082VK-S8WW0GM-XQAAAA4]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 20/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-20 08:57:07.921757+00	\N	\N	2	1	\N	\N	\N	\N
-4	CREATING_BILLS	\N	FAILED	[{"row": 0, "type": "Category Mapping", "value": "Taxi", "message": "Category Mapping Not Found", "expense_group_id": 3}]	\N	2022-09-20 08:57:02.308154+00	2022-09-20 08:57:10.237139+00	\N	\N	3	1	\N	\N	\N	\N
+2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N
+4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N
+3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N
 1	FETCHING_EXPENSES	\N	COMPLETE	{"default": "default value"}	\N	2022-09-20 08:48:21.00063+00	2022-09-20 08:56:50.150614+00	\N	\N	\N	1	\N	\N	\N	\N
 \.
 
@@ -7302,7 +7319,7 @@ COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, sc
 --
 
 COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain) FROM stdin;
-1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-20 08:40:27.770343+00	2022-09-20 08:39:12.023205+00	https://staging.fyle.tech
+1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech
 \.
 
 
@@ -7354,7 +7371,7 @@ SELECT pg_catalog.setval('public.auth_permission_id_seq', 168, true);
 -- Name: category_mappings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.category_mappings_id_seq', 9, true);
+SELECT pg_catalog.setval('public.category_mappings_id_seq', 10, true);
 
 
 --
@@ -7382,7 +7399,7 @@ SELECT pg_catalog.setval('public.django_migrations_id_seq', 125, true);
 -- Name: django_q_ormq_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 26, true);
+SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 36, true);
 
 
 --
@@ -7417,7 +7434,7 @@ SELECT pg_catalog.setval('public.fyle_accounting_mappings_destinationattribute_i
 -- Name: fyle_accounting_mappings_expenseattribute_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_expenseattribute_id_seq', 3221, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_expenseattribute_id_seq', 3227, true);
 
 
 --
@@ -7501,14 +7518,14 @@ SELECT pg_catalog.setval('public.reimbursements_id_seq', 257, true);
 -- Name: sage_intacct_bill_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_bill_id_seq', 5, true);
+SELECT pg_catalog.setval('public.sage_intacct_bill_id_seq', 8, true);
 
 
 --
 -- Name: sage_intacct_billlineitem_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_billlineitem_id_seq', 5, true);
+SELECT pg_catalog.setval('public.sage_intacct_billlineitem_id_seq', 8, true);
 
 
 --
@@ -7599,7 +7616,7 @@ SELECT pg_catalog.setval('public.workspaces_workspace_id_seq', 1, true);
 -- Name: workspaces_workspace_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.workspaces_workspace_user_id_seq', 1, true);
+SELECT pg_catalog.setval('public.workspaces_workspace_user_id_seq', 2, true);
 
 
 --
