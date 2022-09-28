@@ -175,7 +175,7 @@ def test_upload_categories_to_fyle(mocker, db):
 
 def test_create_fyle_category_payload(mocker, db):
     workspace_id = 1
-    qbo_attributes = DestinationAttribute.objects.filter(
+    intacct_attributes = DestinationAttribute.objects.filter(
         workspace_id=1, attribute_type='ACCOUNT'
     )
 
@@ -184,13 +184,13 @@ def test_create_fyle_category_payload(mocker, db):
         return_value=fyle_data['get_all_categories']
     )
 
-    qbo_attributes = remove_duplicates(qbo_attributes)
+    intacct_attributes = remove_duplicates(intacct_attributes)
 
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
     category_map = get_all_categories_from_fyle(platform=platform)
-    fyle_category_payload = create_fyle_categories_payload(qbo_attributes, 2, category_map)
+    fyle_category_payload = create_fyle_categories_payload(intacct_attributes, 2, category_map)
     
     assert dict_compare_keys(fyle_category_payload[0], data['fyle_category_payload'][0]) == [], 'category upload api return diffs in keys'
 
