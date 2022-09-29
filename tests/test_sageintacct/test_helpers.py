@@ -1,0 +1,22 @@
+from apps.sage_intacct.helpers import schedule_payment_sync, check_interval_and_sync_dimension
+from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
+
+
+def test_schedule_payment_sync(db):
+    workspace_id = 1
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    schedule_payment_sync(configuration)
+
+
+def test_check_interval_and_sync_dimension(db):
+    workspace_id = 1
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    workspace = Workspace.objects.get(id=workspace_id)
+
+    check_interval_and_sync_dimension(workspace, intacct_credentials)
+
+    workspace.destination_synced_at = None
+    workspace.save()
+
+    check_interval_and_sync_dimension(workspace, intacct_credentials)
