@@ -1,17 +1,14 @@
 from apps.mappings.models import GeneralMapping
-import pytest
-from datetime import datetime, timezone
-from fyle_rest_auth.models import User
+from datetime import datetime
 from apps.sage_intacct.utils import Bill,BillLineitem
-from apps.fyle.models import ExpenseGroup
-from apps.workspaces.models import Configuration
-from fyle_accounting_mappings.models import Mapping, MappingSetting
+from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
+from apps.workspaces.models import Configuration, Workspace
+from fyle_accounting_mappings.models import MappingSetting
 from apps.sage_intacct.models import get_department_id_or_none,get_tax_code_id_or_none, get_customer_id_or_none, \
     get_project_id_or_none, get_class_id_or_none, get_expense_purpose, get_transaction_date, get_location_id_or_none, \
-        get_intacct_employee_object, \
+        get_intacct_employee_object, get_memo, \
     APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, ExpenseReport, ExpenseReportLineitem, \
         ChargeCardTransaction, ChargeCardTransactionLineitem, SageIntacctReimbursement, SageIntacctReimbursementLineitem
-from apps.tasks.models import TaskLog
 
 
 def test_create_bill(db):
@@ -146,14 +143,14 @@ def test_get_project_id_or_none(mocker, db):
     mapping_setting.source_field = 'TEAM_2_POSTMAN'
     mapping_setting.save()
     for lineitem in expenses:
-        location_id = get_department_id_or_none(expense_group, lineitem, general_mapping)
-        assert location_id == '300'
+        location_id = get_project_id_or_none(expense_group, lineitem, general_mapping)
+        assert location_id == '10061'
 
     mapping_setting.source_field = 'COST_CENTER'
     mapping_setting.save()
     for lineitem in expenses:
-        location_id = get_department_id_or_none(expense_group, lineitem, general_mapping)
-        assert location_id == '300'
+        location_id = get_project_id_or_none(expense_group, lineitem, general_mapping)
+        assert location_id == '10061'
 
 
 def test_get_department_id_or_none(mocker, db):
@@ -317,6 +314,17 @@ def test_get_expense_purpose(db):
 
         assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
+    workspace = Workspace.objects.get(id=workspace_id)
+    workspace.cluster_domain = ''
+    workspace.save()
+
+    for lineitem in expenses:
+        category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            lineitem.category, lineitem.sub_category)
+    
+        expense_purpose = get_expense_purpose(workspace_id, lineitem, category, workspace_general_settings)
+        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+
 
 def test_get_transaction_date(mocker, db):
 
@@ -377,3 +385,18 @@ def test_get_intacct_employee_object(db):
     
     default_employee_object = get_intacct_employee_object('email', expense_group)
     assert default_employee_object == 'ashwin.t@fyle.in'
+
+
+def test_get_memo(db):
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.description.update({'settlement_id': 'setqwcKcC9q1k'})
+
+    expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get( 
+        workspace_id=expense_group.workspace_id 
+    )
+    expense_group_settings.reimbursable_export_date_type = 'spent_at'
+    expense_group_settings.save()
+
+    get_memo(expense_group, '')

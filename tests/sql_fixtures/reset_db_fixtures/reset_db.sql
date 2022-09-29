@@ -6991,7 +6991,8 @@ COPY public.mappings (id, source_type, destination_type, created_at, updated_at,
 13	PROJECT	PROJECT	2022-09-20 08:40:25.873601+00	2022-09-20 08:40:25.873804+00	603	1866	1
 14	PROJECT	PROJECT	2022-09-20 08:40:25.874137+00	2022-09-20 08:40:25.87417+00	604	1867	1
 15	PROJECT	PROJECT	2022-09-20 08:40:25.874787+00	2022-09-20 08:40:25.874823+00	607	1868	1
-16	PROJECT	CUSTOMER	2022-09-20 08:40:25.874882+00	2022-09-20 08:40:25.874912+00	608	1869	1
+16	PROJECT	PROJECT	2022-09-20 08:40:25.874882+00	2022-09-20 08:40:25.874912+00	608	1869	1
+160	PROJECT	CUSTOMER	2022-09-20 08:40:25.874882+00	2022-09-20 08:40:25.874912+00	614	1	1
 \.
 
 
@@ -7293,7 +7294,6 @@ COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, c
 2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N
 4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N
 3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N
-1	FETCHING_EXPENSES	\N	COMPLETE	{"default": "default value"}	\N	2022-09-20 08:48:21.00063+00	2022-09-20 08:56:50.150614+00	\N	\N	\N	1	\N	\N	\N	\N
 \.
 
 

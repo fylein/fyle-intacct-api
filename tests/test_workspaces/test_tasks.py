@@ -43,31 +43,30 @@ def test_schedule_sync(db):
 def test_run_sync_schedule(mocker,db):
     workspace_id = 1
 
-    general_settings = Configuration.objects.get(workspace_id=workspace_id)
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
     mocker.patch(
         'fyle_integrations_platform_connector.apis.Expenses.get',
         return_value=data['expenses']
     )
 
     run_sync_schedule(workspace_id)
-
-    task_log = TaskLog.objects.filter(
-        workspace_id=workspace_id
-    ).first()
     
-    assert task_log.status == 'COMPLETE'
-
-    general_settings.reimbursable_expenses_object = 'PURCHASE BILL'
-    general_settings.corporate_credit_card_expenses_object = 'BANK TRANSACTION'
-    general_settings.save()
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    configuration.save()
 
     run_sync_schedule(workspace_id)
     
+    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    run_sync_schedule(workspace_id)
+
     task_log = TaskLog.objects.filter(
         workspace_id=workspace_id
     ).first()
     
-    assert task_log.status == 'COMPLETE'
+    assert task_log.status == 'ENQUEUED'
 
 
 def test_email_notification(db):

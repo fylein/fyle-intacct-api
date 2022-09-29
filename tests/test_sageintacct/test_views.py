@@ -4,7 +4,7 @@ import pytest
 import json
 from unittest import mock
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import SageIntacctCredential
+from apps.workspaces.models import SageIntacctCredential, Configuration
 from apps.fyle.models import Reimbursement, ExpenseGroup
 from .fixtures import data
 
@@ -30,7 +30,11 @@ def test_destination_attributes(api_client, test_connection):
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
 
-    response = api_client.get(url)
+    response = api_client.get(
+        url,
+        data={
+            'attribute_types': 'DEPARTMENT'
+        })
 
     assert response != None
 
@@ -58,7 +62,36 @@ def test_exports_trigger(api_client, test_connection):
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
 
-    response = api_client.post(url)
+    response = api_client.post(
+        url,
+        data={
+            'expense_group_ids': [1],
+            'export_type': 'BILL'
+        })
+    assert response.status_code == 200
+
+    response = api_client.post(
+        url,
+        data={
+            'expense_group_ids': [2],
+            'export_type': 'CHARGE_CARD_TRANSACTION'
+        })
+    assert response.status_code == 200
+
+    response = api_client.post(
+        url,
+        data={
+            'expense_group_ids': [2],
+            'export_type': 'EXPENSE_REPORT'
+        })
+    assert response.status_code == 200
+
+    response = api_client.post(
+        url,
+        data={
+            'expense_group_ids': [2],
+            'export_type': 'JOURNAL_ENTRY'
+        })
     assert response.status_code == 200
 
 
@@ -73,6 +106,14 @@ def test_payments_trigger(api_client, test_connection, mocker):
     url = '/api/workspaces/{}/sage_intacct/payments/trigger/'.format(workspace_id)
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+    response = api_client.post(url)
+    assert response.status_code == 200
+
+    configurations = Configuration.objects.get(workspace_id=workspace_id)
+    configurations.sync_fyle_to_sage_intacct_payments = False
+    configurations.sync_sage_intacct_to_fyle_payments = True
+    configurations.save()
 
     response = api_client.post(url)
     assert response.status_code == 200

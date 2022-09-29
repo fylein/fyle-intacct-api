@@ -116,7 +116,7 @@ def test_sync_charge_card_accounts(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.ChargeCardAccounts.get_all',
+        'sageintacctsdk.apis.ChargeCardAccounts.get_by_query',
         return_value=data['get_charge_card_accounts']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -156,6 +156,10 @@ def test_sync_projects(mocker, db):
     mocker.patch(
         'sageintacctsdk.apis.Projects.get_all',
         return_value=data['get_projects']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Projects.count',
+        return_value=5
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
@@ -594,7 +598,7 @@ def test_post_journal_entry_exception(mocker, db, create_journal_entry):
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
                 'type': 'Invalid_params'
             }), None]
-            sage_intacct_connection.post_journal_entry(journal_entry, journal_entry_lineitems, True)
+            sage_intacct_connection.post_journal_entry(journal_entry, journal_entry_lineitems)
     except:
         logger.info("Account period error")
 
