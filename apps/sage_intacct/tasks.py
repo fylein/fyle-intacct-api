@@ -551,6 +551,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
 
             journal_entry = sage_intacct_connection.get_journal_entry(created_journal_entry['data']['glbatch']['RECORDNO'], ['RECORD_URL'])
@@ -562,6 +563,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_journal_entry['data']['glbatch']['RECORDNO'], expense_group)
@@ -671,6 +673,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.export_type = 'EXPENSE_REPORT'
             expense_group.save()
 
         created_attachment_id = load_attachments(sage_intacct_connection, record_no, expense_group)
@@ -769,6 +772,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.export_type = 'BILL'
             expense_group.save()
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_bill['data']['apbill']['RECORDNO'], expense_group)
@@ -864,6 +868,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.export_type = 'CHARGE_CARD_TRANSACTION'
             expense_group.save()
 
 
