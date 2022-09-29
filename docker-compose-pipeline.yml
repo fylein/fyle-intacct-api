@@ -17,18 +17,19 @@ services:
       ALLOWED_HOSTS: "*"
       DEBUG: "False"
       NO_WORKERS: 1
-      API_URL: http://localhost:8004/api
+      API_URL: ${API_URL}
       DATABASE_URL: postgres://postgres:postgres@db:5432/intacct_db
       DB_HOST: db
-      FYLE_BASE_URL: ${FYLE_BASE_URL}
-      FYLE_CLIENT_ID: ''
-      FYLE_CLIENT_SECRET: ''
-      FYLE_REFRESH_TOKEN: ''
-      SI_SENDER_PASSWORD: ''
-      SI_SENDER_ID: ''
+      FYLE_BASE_URL: 'https://sample.fyle.tech'
+      FYLE_CLIENT_ID: 'sample'
+      FYLE_CLIENT_SECRET: 'sample'
+      FYLE_REFRESH_TOKEN: 'sample.sample.sample'
+      SI_SENDER_PASSWORD: 'sample'
+      SI_SENDER_ID: 'sample'
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      FYLE_TOKEN_URI: ${FYLE_TOKEN_URI}
-      FYLE_SERVER_URL: ${FYLE_SERVER_URL}
+      FYLE_TOKEN_URI: 'https://sample.fyle.tech'
+      FYLE_SERVER_URL: 'https://sample.fyle.tech'
+      FYLE_JOBS_URL: 'https://sample.fyle.tech'
   db:
     image: "postgres:latest"
     environment: 
