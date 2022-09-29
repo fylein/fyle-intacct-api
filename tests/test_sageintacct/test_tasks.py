@@ -869,7 +869,7 @@ def test_process_fyle_reimbursements(db, mocker):
 
     reimbursement = Reimbursement.objects.filter(workspace_id=workspace_id).count()
 
-    assert reimbursement == 257
+    assert reimbursement == 258
 
 
 def test_schedule_sage_intacct_objects_status_sync(db):

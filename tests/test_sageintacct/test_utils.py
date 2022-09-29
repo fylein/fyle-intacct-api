@@ -66,12 +66,12 @@ def test_sync_vendors(mocker, db):
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
     vendor_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
-    assert vendor_count == 67
+    assert vendor_count == 68
 
     sage_intacct_connection.sync_vendors()
 
     new_vendor_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
-    assert new_vendor_count == 67
+    assert new_vendor_count == 68
 
 
 def test_sync_departments(mocker, db):

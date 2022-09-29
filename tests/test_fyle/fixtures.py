@@ -256,6 +256,7 @@ data = {
         'exported_at': '2022-08-02T20:27:52.017417Z',
         'updated_at': '2022-08-02T20:27:52.017711Z',
         'workspace': 1,
+        'export_type': 'JOURNAL_ENTRY',
         'expenses': [
             1
         ]

@@ -746,7 +746,8 @@ CREATE TABLE public.expense_groups (
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     fund_source character varying(255) NOT NULL,
-    exported_at timestamp with time zone
+    exported_at timestamp with time zone,
+    export_type character varying(50)
 );
 
 
@@ -3344,6 +3345,7 @@ COPY public.destination_attributes (id, attribute_type, display_name, value, des
 940	ITEM	item	New item to be added	1011	2022-09-20 08:40:22.464804+00	2022-09-20 08:40:22.464833+00	1	\N	\N	f
 941	TEAM	team	CCC	10003	2022-09-20 08:40:27.76449+00	2022-09-20 08:40:27.764531+00	1	\N	\N	f
 942	TEAM	team	Integrations	10002	2022-09-20 08:40:27.764587+00	2022-09-20 08:40:27.764615+00	1	\N	\N	f
+943	VENDOR	vendor	test Sharma	test Sharma	2022-09-29 12:09:25.990678+00	2022-09-29 12:09:25.99074+00	1	\N	{"email": "test@fyle.in"}	f
 \.
 
 
@@ -3535,6 +3537,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 123	workspaces	0020_configuration_change_accounting_period	2022-09-20 08:34:47.001754+00
 124	workspaces	0021_configuration_import_vendors_as_merchants	2022-09-20 08:34:47.365985+00
 125	workspaces	0022_configuration_employee_field_mapping	2022-09-20 08:34:47.637128+00
+126	fyle	0015_expensegroup_export_type	2022-09-29 12:08:22.995468+00
 \.
 
 
@@ -3551,11 +3554,11 @@ COPY public.django_q_ormq (id, key, payload, lock) FROM stdin;
 --
 
 COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repeats, next_run, task, name, minutes, cron) FROM stdin;
-5	apps.mappings.tasks.auto_create_project_mappings	\N	1	\N	I	-4	2022-09-29 08:46:24.989603+00	a86d100ffd8945a089bd639a1c1a917f	\N	1440	\N
-2	apps.mappings.tasks.async_auto_map_employees	\N	1	\N	I	-4	2022-09-29 08:46:24.994645+00	1eb4c884d91543749bf8306cfbe1a711	\N	1440	\N
-3	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	1	\N	I	-4	2022-09-29 08:46:25.03867+00	6c59343bf7f04fada99d065f6361c3f9	\N	1440	\N
-4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-4	2022-09-29 08:46:25.0608+00	8c3b10abff37448ba38bcf6b1d635e23	\N	1440	\N
-6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-3	2022-09-29 08:47:19.647275+00	446b5f1ff9644556a81230d709ee84b9	\N	1440	\N
+5	apps.mappings.tasks.auto_create_project_mappings	\N	1	\N	I	-5	2022-09-30 08:46:24.989603+00	54ab7ab7396741eea35de26e72b73c18	\N	1440	\N
+2	apps.mappings.tasks.async_auto_map_employees	\N	1	\N	I	-5	2022-09-30 08:46:24.994645+00	7820d0fa2f7f4ac78c1a5e283560a143	\N	1440	\N
+3	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	1	\N	I	-5	2022-09-30 08:46:25.03867+00	72495cee26334ea9ad64b337f757c4a6	\N	1440	\N
+4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-5	2022-09-30 08:46:25.0608+00	3bdcf280bd6c42a197ad24f932ce39c7	\N	1440	\N
+6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-4	2022-09-30 08:47:19.647275+00	334370e333c54c669f6bc9e876d3ec60	\N	1440	\N
 \.
 
 
@@ -3600,6 +3603,11 @@ blue-king-single-hawaii	apps.fyle.tasks.sync_reimbursements	\N	gASVBQAAAAAAAABLA
 yankee-eleven-fanta-lamp	apps.sage_intacct.tasks.create_bill	\N	gASVsQMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQojAZfc3RhdGWUaAspgZR9lCiMAmRilIwHZGVmYXVsdJRoDn2UjA1leHBlbnNlX2dyb3VwlGgHc4wGYWRkaW5nlIl1YowCaWSUSweMEGV4cGVuc2VfZ3JvdXBfaWSUSwKMCXZlbmRvcl9pZJSMBTIwMDQzlIwLZGVzY3JpcHRpb26UfZQojAlyZXBvcnRfaWSUjAxycFNUWU84QWZVVkGUjApleHBlbnNlX2lklIwMdHhDcUxxc0VuQWpmlIwLZnVuZF9zb3VyY2WUjANDQ0OUjAxjbGFpbV9udW1iZXKUjA5DLzIwMjIvMDkvUi8yMpSMDmVtcGxveWVlX2VtYWlslIwQYXNod2luLnRAZnlsZS5pbpR1jARtZW1vlIw7Q29ycG9yYXRlIENyZWRpdCBDYXJkIGV4cGVuc2UgLSBDLzIwMjIvMDkvUi8yMiAtIDI4LzA5LzIwMjKUjAhjdXJyZW5jeZSMA1VTRJSMCXN1cGRvY19pZJROjBB0cmFuc2FjdGlvbl9kYXRllIwTMjAyMi0wOS0yOFQxMTo1NjozMZSMDnBheW1lbnRfc3luY2VklImMFHBhaWRfb25fc2FnZV9pbnRhY2N0lImMCmNyZWF0ZWRfYXSUjAhkYXRldGltZZSMCGRhdGV0aW1llJOUQwoH5gkcCzgfDOlBlIwEcHl0epSMBF9VVEOUk5QpUpSGlFKUjAp1cGRhdGVkX2F0lGg7QwoH5gkcCzgfDOl1lGhAhpRSlIwPX2RqYW5nb192ZXJzaW9ulIwGMy4xLjE0lHVic2geiWgajAdkZWZhdWx0lHVijAJpZJRLAowLZnVuZF9zb3VyY2WUjANDQ0OUjAx3b3Jrc3BhY2VfaWSUSwGMC2Rlc2NyaXB0aW9ulGgkjApjcmVhdGVkX2F0lGg7QwoH5gkUCDMbCe9rlGhAhpRSlIwLZXhwb3J0ZWRfYXSUTowKdXBkYXRlZF9hdJRoO0MKB+YJFAgzGwnvn5RoQIaUUpSMD19kamFuZ29fdmVyc2lvbpRoSHViSwOGlC4=	gAR9lC4=	\N	2022-09-28 11:56:29.46252+00	2022-09-28 11:56:33.943154+00	t	f1f296693ae042a5b8933158e4529c5c	8411b791379d452c90d082aa158668a4	1
 virginia-tango-three-connecticut	apps.sage_intacct.tasks.create_bill	\N	gASVigMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQojAZfc3RhdGWUaAspgZR9lCiMAmRilIwHZGVmYXVsdJRoDn2UjA1leHBlbnNlX2dyb3VwlGgHc4wGYWRkaW5nlIl1YowCaWSUSwaMEGV4cGVuc2VfZ3JvdXBfaWSUSwGMCXZlbmRvcl9pZJSMBkFzaHdpbpSMC2Rlc2NyaXB0aW9ulH2UKIwJcmVwb3J0X2lklIwMcnBFWkdxVkN5V3hRlIwLZnVuZF9zb3VyY2WUjAhQRVJTT05BTJSMDGNsYWltX251bWJlcpSMDkMvMjAyMi8wOS9SLzIxlIwOZW1wbG95ZWVfZW1haWyUjBBhc2h3aW4udEBmeWxlLmlulHWMBG1lbW+UjCVSZWltYnVyc2FibGUgZXhwZW5zZSAtIEMvMjAyMi8wOS9SLzIxlIwIY3VycmVuY3mUjANVU0SUjAlzdXBkb2NfaWSUTowQdHJhbnNhY3Rpb25fZGF0ZZSMEzIwMjItMDktMjhUMTE6NTY6MzGUjA5wYXltZW50X3N5bmNlZJSJjBRwYWlkX29uX3NhZ2VfaW50YWNjdJSJjApjcmVhdGVkX2F0lIwIZGF0ZXRpbWWUjAhkYXRldGltZZSTlEMKB+YJHAs4Hwt0spSMBHB5dHqUjARfVVRDlJOUKVKUhpRSlIwKdXBkYXRlZF9hdJRoOUMKB+YJHAs4Hwt1EZRoPoaUUpSMD19kamFuZ29fdmVyc2lvbpSMBjMuMS4xNJR1YnNoHoloGowHZGVmYXVsdJR1YowCaWSUSwGMC2Z1bmRfc291cmNllIwIUEVSU09OQUyUjAx3b3Jrc3BhY2VfaWSUSwGMC2Rlc2NyaXB0aW9ulGgkjApjcmVhdGVkX2F0lGg5QwoH5gkUCDAVC63XlGg+hpRSlIwLZXhwb3J0ZWRfYXSUTowKdXBkYXRlZF9hdJRoOUMKB+YJFAgwFQuuBZRoPoaUUpSMD19kamFuZ29fdmVyc2lvbpRoRnViSwKGlC4=	gAR9lC4=	\N	2022-09-28 11:56:29.226213+00	2022-09-28 11:56:34.697792+00	t	e5adc37ba5e646dc96486766f90fff25	cfdf480bf3fc455685e5b8b3a11977d0	1
 zulu-violet-mirror-equal	apps.sage_intacct.tasks.create_bill	\N	gASVsQMAAAAAAACMFWRqYW5nby5kYi5tb2RlbHMuYmFzZZSMDm1vZGVsX3VucGlja2xllJOUjARmeWxllIwMRXhwZW5zZUdyb3VwlIaUhZRSlH2UKIwGX3N0YXRllGgAjApNb2RlbFN0YXRllJOUKYGUfZQojAxmaWVsZHNfY2FjaGWUfZSMBGJpbGyUaAKMDHNhZ2VfaW50YWNjdJSMBEJpbGyUhpSFlFKUfZQojAZfc3RhdGWUaAspgZR9lCiMAmRilIwHZGVmYXVsdJRoDn2UjA1leHBlbnNlX2dyb3VwlGgHc4wGYWRkaW5nlIl1YowCaWSUSwiMEGV4cGVuc2VfZ3JvdXBfaWSUSwOMCXZlbmRvcl9pZJSMBTIwMDQzlIwLZGVzY3JpcHRpb26UfZQojAlyZXBvcnRfaWSUjAxycEJmNWlicVVUNkKUjApleHBlbnNlX2lklIwMdHhUSGZFUFdPRU9wlIwLZnVuZF9zb3VyY2WUjANDQ0OUjAxjbGFpbV9udW1iZXKUjA5DLzIwMjIvMDkvUi8yM5SMDmVtcGxveWVlX2VtYWlslIwQYXNod2luLnRAZnlsZS5pbpR1jARtZW1vlIw7Q29ycG9yYXRlIENyZWRpdCBDYXJkIGV4cGVuc2UgLSBDLzIwMjIvMDkvUi8yMyAtIDI4LzA5LzIwMjKUjAhjdXJyZW5jeZSMA1VTRJSMCXN1cGRvY19pZJROjBB0cmFuc2FjdGlvbl9kYXRllIwTMjAyMi0wOS0yOFQxMTo1NjozNpSMDnBheW1lbnRfc3luY2VklImMFHBhaWRfb25fc2FnZV9pbnRhY2N0lImMCmNyZWF0ZWRfYXSUjAhkYXRldGltZZSMCGRhdGV0aW1llJOUQwoH5gkcCzgkA/lVlIwEcHl0epSMBF9VVEOUk5QpUpSGlFKUjAp1cGRhdGVkX2F0lGg7QwoH5gkcCzgkA/mulGhAhpRSlIwPX2RqYW5nb192ZXJzaW9ulIwGMy4xLjE0lHVic2geiWgajAdkZWZhdWx0lHVijAJpZJRLA4wLZnVuZF9zb3VyY2WUjANDQ0OUjAx3b3Jrc3BhY2VfaWSUSwGMC2Rlc2NyaXB0aW9ulGgkjApjcmVhdGVkX2F0lGg7QwoH5gkUCDgyAj9MlGhAhpRSlIwLZXhwb3J0ZWRfYXSUTowKdXBkYXRlZF9hdJRoO0MKB+YJFAg4MgI/fJRoQIaUUpSMD19kamFuZ29fdmVyc2lvbpRoSHViSwSGlC4=	gAR9lC4=	\N	2022-09-28 11:56:33.945362+00	2022-09-28 11:56:37.756708+00	t	c9cef20a69ac4e64b21cd6f460435330	8411b791379d452c90d082aa158668a4	1
+king-texas-timing-quiet	apps.mappings.tasks.async_auto_map_employees	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-29 12:09:11.665781+00	2022-09-29 12:09:26.068827+00	t	7820d0fa2f7f4ac78c1a5e283560a143	2	1
+twenty-tennis-stream-cold	apps.sage_intacct.tasks.create_ap_payment	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-29 12:09:11.684809+00	2022-09-29 12:09:26.511365+00	t	334370e333c54c669f6bc9e876d3ec60	6	1
+muppet-delta-uniform-alanine	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-29 12:09:11.677356+00	2022-09-29 12:09:27.232264+00	t	3bdcf280bd6c42a197ad24f932ce39c7	4	1
+delta-washington-king-triple	apps.mappings.tasks.auto_create_project_mappings	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-29 12:09:11.659031+00	2022-09-29 12:09:30.836702+00	t	54ab7ab7396741eea35de26e72b73c18	5	1
+michigan-west-fourteen-seven	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	gASVBQAAAAAAAABLAYWULg==	gAR9lC4=	\N	2022-09-29 12:09:11.671086+00	2022-09-29 12:09:34.826193+00	t	72495cee26334ea9ad64b337f757c4a6	3	1
 \.
 
 
@@ -4032,6 +4040,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 413	CATEGORY	Category	747DS1JYZB / Turbo charged	191852	2022-09-20 08:39:05.394157+00	2022-09-20 08:39:05.394177+00	1	\N	\N	f	f
 414	CATEGORY	Category	C72U5RL80N / Turbo charged	191851	2022-09-20 08:39:05.39422+00	2022-09-20 08:39:05.39424+00	1	\N	\N	f	f
 415	CATEGORY	Category	BNDNQCGL2A / Turbo charged	191850	2022-09-20 08:39:05.394301+00	2022-09-20 08:39:05.394322+00	1	\N	\N	f	f
+921	PROJECT	Project	Celia Corp	247033	2022-09-20 08:39:07.403966+00	2022-09-20 08:39:07.403997+00	1	\N	\N	f	f
 416	CATEGORY	Category	R6KJ5YA4U9 / Turbo charged	191848	2022-09-20 08:39:05.394374+00	2022-09-20 08:39:05.394746+00	1	\N	\N	f	f
 417	CATEGORY	Category	D1IO8OGBJ7 / Turbo charged	191847	2022-09-20 08:39:05.394814+00	2022-09-20 08:39:05.394843+00	1	\N	\N	f	f
 418	CATEGORY	Category	XEC9NORGDY / Turbo charged	191846	2022-09-20 08:39:05.952614+00	2022-09-20 08:39:05.952721+00	1	\N	\N	f	f
@@ -4536,7 +4545,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 918	PROJECT	Project	Casuse Liquors Inc.	247030	2022-09-20 08:39:07.40343+00	2022-09-20 08:39:07.403458+00	1	\N	\N	f	f
 919	PROJECT	Project	Cathy Thoms	247031	2022-09-20 08:39:07.403533+00	2022-09-20 08:39:07.403653+00	1	\N	\N	f	f
 920	PROJECT	Project	Cawthron and Ullo Windows Corporation	247032	2022-09-20 08:39:07.403834+00	2022-09-20 08:39:07.403879+00	1	\N	\N	f	f
-921	PROJECT	Project	Celia Corp	247033	2022-09-20 08:39:07.403966+00	2022-09-20 08:39:07.403997+00	1	\N	\N	f	f
 922	PROJECT	Project	Central Islip Antiques Fabricators	247034	2022-09-20 08:39:07.404073+00	2022-09-20 08:39:07.404106+00	1	\N	\N	f	f
 923	PROJECT	Project	Cerritos Telecom and Associates	247035	2022-09-20 08:39:07.404202+00	2022-09-20 08:39:07.404237+00	1	\N	\N	f	f
 924	PROJECT	Project	Chamberlain Service Ltd	247036	2022-09-20 08:39:07.404472+00	2022-09-20 08:39:07.404495+00	1	\N	\N	f	f
@@ -5039,6 +5047,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 1420	PROJECT	Project	Oceanside Hardware	247532	2022-09-20 08:39:08.429845+00	2022-09-20 08:39:08.429873+00	1	\N	\N	f	f
 1421	PROJECT	Project	Oconner _ Holding Corp.	247533	2022-09-20 08:39:08.429931+00	2022-09-20 08:39:08.429958+00	1	\N	\N	f	f
 1422	PROJECT	Project	Oeder Liquors Company	247534	2022-09-20 08:39:08.430177+00	2022-09-20 08:39:08.430345+00	1	\N	\N	f	f
+1494	PROJECT	Project	Randy James	247606	2022-09-20 08:39:08.957653+00	2022-09-20 08:39:08.957764+00	1	\N	\N	f	f
 1423	PROJECT	Project	Oestreich Liquors Inc.	247535	2022-09-20 08:39:08.430912+00	2022-09-20 08:39:08.430951+00	1	\N	\N	f	f
 1424	PROJECT	Project	Office Remodel	247536	2022-09-20 08:39:08.431023+00	2022-09-20 08:39:08.431052+00	1	\N	\N	f	f
 1425	PROJECT	Project	Oiler Corporation	247537	2022-09-20 08:39:08.431111+00	2022-09-20 08:39:08.431138+00	1	\N	\N	f	f
@@ -5110,7 +5119,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 1491	PROJECT	Project	Ralphs Attorneys Group	247603	2022-09-20 08:39:08.957198+00	2022-09-20 08:39:08.957228+00	1	\N	\N	f	f
 1492	PROJECT	Project	Ramal Builders Incorporated	247604	2022-09-20 08:39:08.957289+00	2022-09-20 08:39:08.957301+00	1	\N	\N	f	f
 1493	PROJECT	Project	Ramsy Publishing Company	247605	2022-09-20 08:39:08.957448+00	2022-09-20 08:39:08.957512+00	1	\N	\N	f	f
-1494	PROJECT	Project	Randy James	247606	2022-09-20 08:39:08.957653+00	2022-09-20 08:39:08.957764+00	1	\N	\N	f	f
 1495	PROJECT	Project	Randy Rudd	247607	2022-09-20 08:39:08.958152+00	2022-09-20 08:39:08.958327+00	1	\N	\N	f	f
 1496	PROJECT	Project	Ras Windows -	247608	2022-09-20 08:39:08.959693+00	2022-09-20 08:39:08.959921+00	1	\N	\N	f	f
 1497	PROJECT	Project	Rastorfer Automotive Holding Corp.	247609	2022-09-20 08:39:08.960099+00	2022-09-20 08:39:08.960144+00	1	\N	\N	f	f
@@ -5255,6 +5263,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 1636	PROJECT	Project	Stofflet Hardware Incorporated	247748	2022-09-20 08:39:09.280185+00	2022-09-20 08:39:09.280214+00	1	\N	\N	f	f
 1637	PROJECT	Project	Stone & Cox	247749	2022-09-20 08:39:09.280275+00	2022-09-20 08:39:09.280304+00	1	\N	\N	f	f
 1638	PROJECT	Project	Stonum Catering Group	247750	2022-09-20 08:39:09.280453+00	2022-09-20 08:39:09.280483+00	1	\N	\N	f	f
+3178	MERCHANT	Merchant	Entity V500	852	2022-09-20 08:40:24.029136+00	2022-09-20 08:40:24.029271+00	1	\N	\N	f	f
 1639	PROJECT	Project	Storch Title Manufacturing	247751	2022-09-20 08:39:09.280545+00	2022-09-20 08:39:09.280574+00	1	\N	\N	f	f
 1640	PROJECT	Project	Stotelmyer and Conelly Metal Fabricators Group	247752	2022-09-20 08:39:09.280634+00	2022-09-20 08:39:09.280664+00	1	\N	\N	f	f
 1641	PROJECT	Project	Stower Electric Company	247753	2022-09-20 08:39:09.280725+00	2022-09-20 08:39:09.280754+00	1	\N	\N	f	f
@@ -5544,6 +5553,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 1936	COST_CENTER	Cost Center	Serrano Genomics	10234	2022-09-20 08:39:10.34091+00	2022-09-20 08:39:10.340938+00	1	\N	\N	f	f
 1937	COST_CENTER	Cost Center	Shinra Electric	10235	2022-09-20 08:39:10.340998+00	2022-09-20 08:39:10.341027+00	1	\N	\N	f	f
 1938	COST_CENTER	Cost Center	Shoprite	10236	2022-09-20 08:39:10.341087+00	2022-09-20 08:39:10.341115+00	1	\N	\N	f	f
+3179	MERCHANT	Merchant	Entity V600	852	2022-09-20 08:40:24.029339+00	2022-09-20 08:40:24.029366+00	1	\N	\N	f	f
 1939	COST_CENTER	Cost Center	Simeon	10237	2022-09-20 08:39:10.341175+00	2022-09-20 08:39:10.341204+00	1	\N	\N	f	f
 1940	COST_CENTER	Cost Center	Skimia	10238	2022-09-20 08:39:10.341263+00	2022-09-20 08:39:10.341292+00	1	\N	\N	f	f
 1941	COST_CENTER	Cost Center	Skinte	10239	2022-09-20 08:39:10.341518+00	2022-09-20 08:39:10.341582+00	1	\N	\N	f	f
@@ -6047,6 +6057,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2440	SYSTEM_OPERATING	System Operating	Support-M	expense_custom_field.system operating.1	2022-09-20 08:39:10.752946+00	2022-09-20 08:39:10.752986+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
 2441	SYSTEM_OPERATING	System Operating	GB3-White	expense_custom_field.system operating.2	2022-09-20 08:39:10.753043+00	2022-09-20 08:39:10.753065+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
 2442	SYSTEM_OPERATING	System Operating	TSM - Black	expense_custom_field.system operating.3	2022-09-20 08:39:10.753128+00	2022-09-20 08:39:10.759395+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
+3180	MERCHANT	Merchant	Entity V700	852	2022-09-20 08:40:24.029423+00	2022-09-20 08:40:24.02945+00	1	\N	\N	f	f
 2443	SYSTEM_OPERATING	System Operating	GB1-White	expense_custom_field.system operating.4	2022-09-20 08:39:10.768644+00	2022-09-20 08:39:10.768789+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
 2444	SYSTEM_OPERATING	System Operating	DevD	expense_custom_field.system operating.5	2022-09-20 08:39:10.768964+00	2022-09-20 08:39:10.769008+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
 2445	SYSTEM_OPERATING	System Operating	DevH	expense_custom_field.system operating.6	2022-09-20 08:39:10.769123+00	2022-09-20 08:39:10.769164+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
@@ -6112,6 +6123,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2503	USER_DIMENSION_COPY	User Dimension Copy	Shara Barnett	expense_custom_field.user dimension copy.43	2022-09-20 08:39:10.851145+00	2022-09-20 08:39:10.851351+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2504	USER_DIMENSION_COPY	User Dimension Copy	Video Games by Dan	expense_custom_field.user dimension copy.44	2022-09-20 08:39:10.851575+00	2022-09-20 08:39:10.851654+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2505	USER_DIMENSION_COPY	User Dimension Copy	Service	expense_custom_field.user dimension copy.45	2022-09-20 08:39:10.851748+00	2022-09-20 08:39:10.851781+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
+2745	TAX_GROUP	Tax Group	ITS-AU @0.0%	tg9e1bqo5zgV	2022-09-20 08:39:11.626516+00	2022-09-20 08:39:11.626589+00	1	\N	{"tax_rate": 0.0}	f	f
 2506	USER_DIMENSION_COPY	User Dimension Copy	Engineering	expense_custom_field.user dimension copy.46	2022-09-20 08:39:10.851863+00	2022-09-20 08:39:10.851885+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2507	USER_DIMENSION_COPY	User Dimension Copy	Jeff's Jalopies	expense_custom_field.user dimension copy.47	2022-09-20 08:39:10.851945+00	2022-09-20 08:39:10.851965+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2508	USER_DIMENSION_COPY	User Dimension Copy	Sonnenschein Family Store	expense_custom_field.user dimension copy.48	2022-09-20 08:39:10.852026+00	2022-09-20 08:39:10.852063+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
@@ -6149,6 +6161,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2541	TEAM_COPY	Team Copy	Support Taxes	expense_custom_field.team copy.7	2022-09-20 08:39:10.933712+00	2022-09-20 08:39:10.933737+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
 2542	TEAM_COPY	Team Copy	labhvam	expense_custom_field.team copy.8	2022-09-20 08:39:10.933797+00	2022-09-20 08:39:10.933827+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
 2543	TEAM_COPY	Team Copy	Fyle NetSuite Integration	expense_custom_field.team copy.9	2022-09-20 08:39:10.933895+00	2022-09-20 08:39:10.933924+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
+2746	TAX_GROUP	Tax Group	2VD4DE3305	tg9KXJlbl0fo	2022-09-20 08:39:11.626755+00	2022-09-20 08:39:11.62773+00	1	\N	{"tax_rate": 0.18}	f	f
 2544	TEAM_COPY	Team Copy	T&M Project with Five Tasks	expense_custom_field.team copy.10	2022-09-20 08:39:10.933982+00	2022-09-20 08:39:10.933993+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
 2545	TEAM_COPY	Team Copy	Fixed Fee Project with Five Tasks	expense_custom_field.team copy.11	2022-09-20 08:39:10.934048+00	2022-09-20 08:39:10.934078+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
 2546	TEAM_COPY	Team Copy	Mobile App Redesign	expense_custom_field.team copy.12	2022-09-20 08:39:10.934146+00	2022-09-20 08:39:10.934176+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
@@ -6183,6 +6196,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2575	LOCATION_ENTITY	Location Entity	Kate Whelan	expense_custom_field.location entity.29	2022-09-20 08:39:10.948268+00	2022-09-20 08:39:10.948295+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2576	LOCATION_ENTITY	Location Entity	Freeman Sporting Goods	expense_custom_field.location entity.30	2022-09-20 08:39:10.948373+00	2022-09-20 08:39:10.948536+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2577	LOCATION_ENTITY	Location Entity	Shara Barnett	expense_custom_field.location entity.31	2022-09-20 08:39:10.948648+00	2022-09-20 08:39:10.948667+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
+3100	MERCHANT	Merchant	Blob Johnson	852	2022-09-20 08:40:15.970071+00	2022-09-20 08:40:15.970199+00	1	\N	\N	f	f
 2578	LOCATION_ENTITY	Location Entity	Rondonuwu Fruit and Vegi	expense_custom_field.location entity.32	2022-09-20 08:39:10.948717+00	2022-09-20 08:39:10.948739+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2579	LOCATION_ENTITY	Location Entity	Video Games by Dan	expense_custom_field.location entity.33	2022-09-20 08:39:10.948808+00	2022-09-20 08:39:10.948838+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2580	LOCATION_ENTITY	Location Entity	Sushi by Katsuyuki	expense_custom_field.location entity.34	2022-09-20 08:39:10.948902+00	2022-09-20 08:39:10.948913+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
@@ -6222,6 +6236,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2614	CLASS	Class	naruto uzumaki	expense_custom_field.class.31	2022-09-20 08:39:10.967404+00	2022-09-20 08:39:10.967445+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
 2615	CLASS	Class	Paulsen Medical Supplies	expense_custom_field.class.32	2022-09-20 08:39:10.967513+00	2022-09-20 08:39:10.967541+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
 2616	CLASS	Class	Gevelber Photography	expense_custom_field.class.33	2022-09-20 08:39:10.967605+00	2022-09-20 08:39:10.967633+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
+3101	MERCHANT	Merchant	Blooper Bloop	852	2022-09-20 08:40:15.970263+00	2022-09-20 08:40:15.970292+00	1	\N	\N	f	f
 2617	USER_DIMENSION	User Dimension	Services	expense_custom_field.user dimension.1	2022-09-20 08:39:10.980758+00	2022-09-20 08:39:10.980797+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
 2618	USER_DIMENSION	User Dimension	Sales	expense_custom_field.user dimension.2	2022-09-20 08:39:10.980866+00	2022-09-20 08:39:10.980894+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
 2619	USER_DIMENSION	User Dimension	Marketing	expense_custom_field.user dimension.3	2022-09-20 08:39:10.98096+00	2022-09-20 08:39:10.980988+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
@@ -6256,6 +6271,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2648	TEAM_2_POSTMAN	Team 2 Postman	Ashwinn	expense_custom_field.team 2 postman.27	2022-09-20 08:39:10.996999+00	2022-09-20 08:39:10.997026+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2649	TEAM_2_POSTMAN	Team 2 Postman	Paulsen Medical Supplies	expense_custom_field.team 2 postman.28	2022-09-20 08:39:10.997091+00	2022-09-20 08:39:10.997118+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2650	TEAM_2_POSTMAN	Team 2 Postman	wraith squad	expense_custom_field.team 2 postman.29	2022-09-20 08:39:10.997183+00	2022-09-20 08:39:10.99721+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
+2688	CORPORATE_CARD	Corporate Card	American Express - 29578	bacce3rbqv5Veb	2022-09-20 08:39:11.194168+00	2022-09-20 08:39:11.194195+00	1	\N	{"cardholder_name": "Monica E. Geller-Bing's account"}	f	f
 2651	TEAM_2_POSTMAN	Team 2 Postman	Weiskopf Consulting	expense_custom_field.team 2 postman.30	2022-09-20 08:39:10.997275+00	2022-09-20 08:39:10.997302+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2652	TEAM_2_POSTMAN	Team 2 Postman	octane squad	expense_custom_field.team 2 postman.31	2022-09-20 08:39:10.997483+00	2022-09-20 08:39:10.997513+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2653	TEAM_2_POSTMAN	Team 2 Postman	naruto uzumaki	expense_custom_field.team 2 postman.32	2022-09-20 08:39:10.997589+00	2022-09-20 08:39:10.997616+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
@@ -6294,11 +6310,9 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2685	CORPORATE_CARD	Corporate Card	American Express - 97584	bacc3gPRo0BFI4	2022-09-20 08:39:11.193716+00	2022-09-20 08:39:11.193815+00	1	\N	{"cardholder_name": "Monica E. Geller-Bing's account"}	f	f
 2686	CORPORATE_CARD	Corporate Card	American Express - 27881	baccT6Cr2LOoCU	2022-09-20 08:39:11.193978+00	2022-09-20 08:39:11.194008+00	1	\N	{"cardholder_name": "Monica E. Geller-Bing's account"}	f	f
 2687	CORPORATE_CARD	Corporate Card	American Express - 40414	baccChwshlFsT5	2022-09-20 08:39:11.194076+00	2022-09-20 08:39:11.194104+00	1	\N	{"cardholder_name": "Monica E. Geller-Bing's account"}	f	f
-2688	CORPORATE_CARD	Corporate Card	American Express - 29578	bacce3rbqv5Veb	2022-09-20 08:39:11.194168+00	2022-09-20 08:39:11.194195+00	1	\N	{"cardholder_name": "Monica E. Geller-Bing's account"}	f	f
 2689	CORPORATE_CARD	Corporate Card	American Express - 93356	baccUhWPMgn4EB	2022-09-20 08:39:11.19426+00	2022-09-20 08:39:11.194288+00	1	\N	{"cardholder_name": "Dr. Ross Eustace Geller's account"}	f	f
 2690	CORPORATE_CARD	Corporate Card	American Express - 64504	baccE0fU1LTqxm	2022-09-20 08:39:11.194353+00	2022-09-20 08:39:11.19439+00	1	\N	{"cardholder_name": "Joseph Francis Tribbiani, Jr's account"}	f	f
 2691	CORPORATE_CARD	Corporate Card	American Express - 69115	baccKzSkYJjBQt	2022-09-20 08:39:11.194549+00	2022-09-20 08:39:11.194575+00	1	\N	{"cardholder_name": "Joseph Francis Tribbiani, Jr's account"}	f	f
-2692	TAX_GROUP	Tax Group	EC Purchase Goods Standard Rate Input	tg03sPKjNkKq	2022-09-20 08:39:11.565395+00	2022-09-20 08:39:11.565464+00	1	\N	{"tax_rate": 0.2}	f	f
 2693	TAX_GROUP	Tax Group	LTFKCOG3FH	tg06xvLojY5h	2022-09-20 08:39:11.565609+00	2022-09-20 08:39:11.565649+00	1	\N	{"tax_rate": 0.18}	f	f
 2694	TAX_GROUP	Tax Group	GST: NCF-AU @0.0%	tg09S3rMTTpo	2022-09-20 08:39:11.565774+00	2022-09-20 08:39:11.56581+00	1	\N	{"tax_rate": 0.0}	f	f
 2695	TAX_GROUP	Tax Group	CGST	tg0fPRBFMZj7	2022-09-20 08:39:11.566245+00	2022-09-20 08:39:11.566304+00	1	\N	{"tax_rate": 0.5}	f	f
@@ -6326,12 +6340,10 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2717	TAX_GROUP	Tax Group	XN7QJZBTGW	tg4UlWDpIpOz	2022-09-20 08:39:11.579801+00	2022-09-20 08:39:11.579961+00	1	\N	{"tax_rate": 0.18}	f	f
 2718	TAX_GROUP	Tax Group	Tax on Goods @8.75%	tg4Zf3dJR6TA	2022-09-20 08:39:11.581067+00	2022-09-20 08:39:11.581192+00	1	\N	{"tax_rate": 0.09}	f	f
 2719	TAX_GROUP	Tax Group	WWBU4JTK1W	tg4zTkLu4CGR	2022-09-20 08:39:11.582506+00	2022-09-20 08:39:11.582595+00	1	\N	{"tax_rate": 0.18}	f	f
-2720	TAX_GROUP	Tax Group	UK Purchase Goods Reduced Rate	tg51CNoNSxiO	2022-09-20 08:39:11.582902+00	2022-09-20 08:39:11.582963+00	1	\N	{"tax_rate": 0.05}	f	f
 2721	TAX_GROUP	Tax Group	HBKP7A0DNR	tg555KAYmC0B	2022-09-20 08:39:11.583118+00	2022-09-20 08:39:11.58317+00	1	\N	{"tax_rate": 0.18}	f	f
 2722	TAX_GROUP	Tax Group	HOUPXN0V9X	tg5lJAlaYA8W	2022-09-20 08:39:11.583458+00	2022-09-20 08:39:11.583516+00	1	\N	{"tax_rate": 0.18}	f	f
 2723	TAX_GROUP	Tax Group	EOHGT9QJO4	tg5MZxx4nAkU	2022-09-20 08:39:11.583643+00	2022-09-20 08:39:11.583686+00	1	\N	{"tax_rate": 0.18}	f	f
 2724	TAX_GROUP	Tax Group	GST: TFS-AU @0.0%	tg5uf1kTpljU	2022-09-20 08:39:11.583804+00	2022-09-20 08:39:11.583845+00	1	\N	{"tax_rate": 0.0}	f	f
-2725	TAX_GROUP	Tax Group	EC Purchase Services Reduced Rate Input	tg6icu6uquJZ	2022-09-20 08:39:11.583955+00	2022-09-20 08:39:11.584005+00	1	\N	{"tax_rate": 0.05}	f	f
 2726	TAX_GROUP	Tax Group	MB - GST/RST on Sales @12.0%	tg6rxcPps3Dd	2022-09-20 08:39:11.58412+00	2022-09-20 08:39:11.585432+00	1	\N	{"tax_rate": 0.12}	f	f
 2727	TAX_GROUP	Tax Group	Out of scope @0%	tg6TnmXD9sUE	2022-09-20 08:39:11.586393+00	2022-09-20 08:39:11.586469+00	1	\N	{"tax_rate": 0.0}	f	f
 2728	TAX_GROUP	Tax Group	62WRSSZKV3	tg6uJjoWWr5a	2022-09-20 08:39:11.586793+00	2022-09-20 08:39:11.586842+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6342,7 +6354,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2734	TAX_GROUP	Tax Group	Pant Tax @0%	tg7JTybZgV72	2022-09-20 08:39:11.592078+00	2022-09-20 08:39:11.592109+00	1	\N	{"tax_rate": 0.0}	f	f
 2735	TAX_GROUP	Tax Group	NVV6A35DEB	tg7MUaF3jn8g	2022-09-20 08:39:11.592181+00	2022-09-20 08:39:11.592204+00	1	\N	{"tax_rate": 0.18}	f	f
 2736	TAX_GROUP	Tax Group	ERWLSCCF5Y	tg7nwnwdF4dT	2022-09-20 08:39:11.592283+00	2022-09-20 08:39:11.592313+00	1	\N	{"tax_rate": 0.18}	f	f
-2737	TAX_GROUP	Tax Group	UK Import Goods Standard Rate	tg7sE7ZSw5Yn	2022-09-20 08:39:11.592389+00	2022-09-20 08:39:11.592419+00	1	\N	{"tax_rate": 0.2}	f	f
 2738	TAX_GROUP	Tax Group	UNDEF-AU @0.0%	tg7TABrTPI9Y	2022-09-20 08:39:11.592493+00	2022-09-20 08:39:11.592522+00	1	\N	{"tax_rate": 0.0}	f	f
 2739	TAX_GROUP	Tax Group	3TBA1Y8XTJ	tg82dF3hhe5n	2022-09-20 08:39:11.592597+00	2022-09-20 08:39:11.592627+00	1	\N	{"tax_rate": 0.18}	f	f
 2740	TAX_GROUP	Tax Group	asdads	tg8H1IYs5tK1	2022-09-20 08:39:11.5927+00	2022-09-20 08:39:11.59273+00	1	\N	{"tax_rate": 0.98}	f	f
@@ -6350,13 +6361,9 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2742	TAX_GROUP	Tax Group	XEC9NORGDY	tg8KRs4k8dzZ	2022-09-20 08:39:11.625617+00	2022-09-20 08:39:11.625706+00	1	\N	{"tax_rate": 0.18}	f	f
 2743	TAX_GROUP	Tax Group	GST on capital - 10%	tg8NsXbzhPL9	2022-09-20 08:39:11.625904+00	2022-09-20 08:39:11.625974+00	1	\N	{"tax_rate": 0.28}	f	f
 2744	TAX_GROUP	Tax Group	G5HSJNY9V8	tg8u6LIgEveF	2022-09-20 08:39:11.626184+00	2022-09-20 08:39:11.626355+00	1	\N	{"tax_rate": 0.18}	f	f
-2745	TAX_GROUP	Tax Group	ITS-AU @0.0%	tg9e1bqo5zgV	2022-09-20 08:39:11.626516+00	2022-09-20 08:39:11.626589+00	1	\N	{"tax_rate": 0.0}	f	f
-2746	TAX_GROUP	Tax Group	2VD4DE3305	tg9KXJlbl0fo	2022-09-20 08:39:11.626755+00	2022-09-20 08:39:11.62773+00	1	\N	{"tax_rate": 0.18}	f	f
-2747	TAX_GROUP	Tax Group	UK Purchase Services Reduced Rate	tg9Q7Ppb49qU	2022-09-20 08:39:11.631836+00	2022-09-20 08:39:11.631913+00	1	\N	{"tax_rate": 0.05}	f	f
 2748	TAX_GROUP	Tax Group	13GI6S3UYN	tga0lMbZ6RBf	2022-09-20 08:39:11.632026+00	2022-09-20 08:39:11.632049+00	1	\N	{"tax_rate": 0.18}	f	f
 2749	TAX_GROUP	Tax Group	AQB26CI4C2	tga8X5feRpon	2022-09-20 08:39:11.632113+00	2022-09-20 08:39:11.63215+00	1	\N	{"tax_rate": 0.18}	f	f
 2750	TAX_GROUP	Tax Group	1PKB8P46QU	tga95PVTYDvs	2022-09-20 08:39:11.632329+00	2022-09-20 08:39:11.632354+00	1	\N	{"tax_rate": 0.18}	f	f
-2751	TAX_GROUP	Tax Group	Other Output Tax Adjustments	tga9OiFNWcDh	2022-09-20 08:39:11.632416+00	2022-09-20 08:39:11.632436+00	1	\N	{"tax_rate": 1.0}	f	f
 2752	TAX_GROUP	Tax Group	FDU2ZPCGV4	tgadQszc73ls	2022-09-20 08:39:11.632508+00	2022-09-20 08:39:11.632593+00	1	\N	{"tax_rate": 0.18}	f	f
 2753	TAX_GROUP	Tax Group	WRVEPSQLUO	tgaDUDX0wKfx	2022-09-20 08:39:11.632681+00	2022-09-20 08:39:11.632704+00	1	\N	{"tax_rate": 0.18}	f	f
 2754	TAX_GROUP	Tax Group	QE0PQSDQPB	tgAfGyr9gLcC	2022-09-20 08:39:11.632777+00	2022-09-20 08:39:11.632807+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6428,7 +6435,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2819	TAX_GROUP	Tax Group	XZXC2AN5UM	tgGedy1BnUMN	2022-09-20 08:39:11.655613+00	2022-09-20 08:39:11.655642+00	1	\N	{"tax_rate": 0.18}	f	f
 2820	TAX_GROUP	Tax Group	WET: WET-AU @29.0%	tggmh4xFPIrY	2022-09-20 08:39:11.655726+00	2022-09-20 08:39:11.655756+00	1	\N	{"tax_rate": 0.29}	f	f
 2821	TAX_GROUP	Tax Group	5VD52OUE8G	tgGMJFyqFBD0	2022-09-20 08:39:11.655821+00	2022-09-20 08:39:11.655841+00	1	\N	{"tax_rate": 0.18}	f	f
-2822	TAX_GROUP	Tax Group	Standard Rate (Capital Goods) Input	tgGn1oIv0odS	2022-09-20 08:39:11.65591+00	2022-09-20 08:39:11.655941+00	1	\N	{"tax_rate": 0.15}	f	f
 2823	TAX_GROUP	Tax Group	WQAYU3EVN9	tggps3ozYWXc	2022-09-20 08:39:11.656015+00	2022-09-20 08:39:11.656035+00	1	\N	{"tax_rate": 0.18}	f	f
 2824	TAX_GROUP	Tax Group	GST CA_E @0.0%	tggQgp1T8mNX	2022-09-20 08:39:11.656156+00	2022-09-20 08:39:11.656311+00	1	\N	{"tax_rate": 0.0}	f	f
 2825	TAX_GROUP	Tax Group	GST-free capital - 0%	tggu76WXIdjY	2022-09-20 08:39:11.656416+00	2022-09-20 08:39:11.656436+00	1	\N	{"tax_rate": 0.28}	f	f
@@ -6440,13 +6446,11 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2831	TAX_GROUP	Tax Group	T5G8M4IVT8	tgHsUgpvwEAv	2022-09-20 08:39:11.656995+00	2022-09-20 08:39:11.657018+00	1	\N	{"tax_rate": 0.18}	f	f
 2832	TAX_GROUP	Tax Group	GLBTYBKH0W	tgHUR0p5j9MU	2022-09-20 08:39:11.657101+00	2022-09-20 08:39:11.657138+00	1	\N	{"tax_rate": 0.18}	f	f
 2833	TAX_GROUP	Tax Group	Q230CP6HS8	tghVa6A2bxhj	2022-09-20 08:39:11.65733+00	2022-09-20 08:39:11.657362+00	1	\N	{"tax_rate": 0.18}	f	f
-2834	TAX_GROUP	Tax Group	G13 Purchases for Input Tax Sales	tghyBGpukx04	2022-09-20 08:39:11.657436+00	2022-09-20 08:39:11.657456+00	1	\N	{"tax_rate": 0.1}	f	f
 2835	TAX_GROUP	Tax Group	tax for ten @10.0%	tghYeIKavACw	2022-09-20 08:39:11.657514+00	2022-09-20 08:39:11.657526+00	1	\N	{"tax_rate": 0.1}	f	f
 2836	TAX_GROUP	Tax Group	Exempt Sales @0.0%	tghz8Mq9SXTg	2022-09-20 08:39:11.657585+00	2022-09-20 08:39:11.657618+00	1	\N	{"tax_rate": 0.0}	f	f
 2837	TAX_GROUP	Tax Group	M75YLYFLX2	tgIbiM63m7mV	2022-09-20 08:39:11.657739+00	2022-09-20 08:39:11.657769+00	1	\N	{"tax_rate": 0.18}	f	f
 2838	TAX_GROUP	Tax Group	D1A81KCH82	tgIdDHOoKVzm	2022-09-20 08:39:11.65784+00	2022-09-20 08:39:11.657875+00	1	\N	{"tax_rate": 0.18}	f	f
 2839	TAX_GROUP	Tax Group	RBJU6PV6UZ	tgIIYAOtOZ8o	2022-09-20 08:39:11.658003+00	2022-09-20 08:39:11.658025+00	1	\N	{"tax_rate": 0.18}	f	f
-2840	TAX_GROUP	Tax Group	G15 Capital Purchases for Private Use	tginkDefSKP7	2022-09-20 08:39:11.658091+00	2022-09-20 08:39:11.658111+00	1	\N	{"tax_rate": 0.1}	f	f
 2841	TAX_GROUP	Tax Group	Q17J4DV6PY	tgiuRUp65soc	2022-09-20 08:39:11.658285+00	2022-09-20 08:39:11.659648+00	1	\N	{"tax_rate": 0.18}	f	f
 2842	TAX_GROUP	Tax Group	CA-PST-AB @0.0%	tgiYnjwl2RtN	2022-09-20 08:39:11.672814+00	2022-09-20 08:39:11.672843+00	1	\N	{"tax_rate": 0.0}	f	f
 2843	TAX_GROUP	Tax Group	GST: ITS-AU @0.0%	tgIyxnneqKm4	2022-09-20 08:39:11.672896+00	2022-09-20 08:39:11.672916+00	1	\N	{"tax_rate": 0.0}	f	f
@@ -6463,7 +6467,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2854	TAX_GROUP	Tax Group	4CF762Q721	tgk3oVtid3iD	2022-09-20 08:39:11.674031+00	2022-09-20 08:39:11.674052+00	1	\N	{"tax_rate": 0.18}	f	f
 2855	TAX_GROUP	Tax Group	27Z4X2C201	tgKjEijcJFBE	2022-09-20 08:39:11.674113+00	2022-09-20 08:39:11.674133+00	1	\N	{"tax_rate": 0.18}	f	f
 2856	TAX_GROUP	Tax Group	DJJWB6F4HM	tgKNmUyduTjf	2022-09-20 08:39:11.674185+00	2022-09-20 08:39:11.674204+00	1	\N	{"tax_rate": 0.18}	f	f
-2857	TAX_GROUP	Tax Group	Standard Rate Input	tgkrTg3hsBGo	2022-09-20 08:39:11.674255+00	2022-09-20 08:39:11.674277+00	1	\N	{"tax_rate": 0.15}	f	f
 2858	TAX_GROUP	Tax Group	Z9EDD2VZC3	tgKSmIhciv9X	2022-09-20 08:39:11.674456+00	2022-09-20 08:39:11.674487+00	1	\N	{"tax_rate": 0.18}	f	f
 2859	TAX_GROUP	Tax Group	BEOCQYS8EN	tgKwbHu63m6h	2022-09-20 08:39:11.674558+00	2022-09-20 08:39:11.674585+00	1	\N	{"tax_rate": 0.18}	f	f
 2860	TAX_GROUP	Tax Group	VPJJOTDBCR	tgl4w9N3rm96	2022-09-20 08:39:11.674648+00	2022-09-20 08:39:11.674679+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6475,13 +6478,10 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2866	TAX_GROUP	Tax Group	O4Z369SVSU	tgLhjywOOpvH	2022-09-20 08:39:11.6758+00	2022-09-20 08:39:11.675834+00	1	\N	{"tax_rate": 0.18}	f	f
 2867	TAX_GROUP	Tax Group	UX47SL7LOE	tgLHqwTlJ7cv	2022-09-20 08:39:11.675939+00	2022-09-20 08:39:11.675965+00	1	\N	{"tax_rate": 0.18}	f	f
 2868	TAX_GROUP	Tax Group	GSTv2	tglItKJPWBfD	2022-09-20 08:39:11.676064+00	2022-09-20 08:39:11.676093+00	1	\N	{"tax_rate": 0.18}	f	f
-2869	TAX_GROUP	Tax Group	G10 Capital Acquisition	tgLj0KdoNp6n	2022-09-20 08:39:11.676154+00	2022-09-20 08:39:11.676176+00	1	\N	{"tax_rate": 0.1}	f	f
 2870	TAX_GROUP	Tax Group	611ZFAT5SM	tgLMpEVQmvzR	2022-09-20 08:39:11.676368+00	2022-09-20 08:39:11.676396+00	1	\N	{"tax_rate": 0.18}	f	f
 2871	TAX_GROUP	Tax Group	Nilesh Tax @0%	tglmrXAQ8A5f	2022-09-20 08:39:11.676458+00	2022-09-20 08:39:11.67648+00	1	\N	{"tax_rate": 0.0}	f	f
 2872	TAX_GROUP	Tax Group	9SI9Y9A036	tglnSdoifDoA	2022-09-20 08:39:11.676712+00	2022-09-20 08:39:11.676814+00	1	\N	{"tax_rate": 0.18}	f	f
-2873	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Reduced Rate UK Input	tgLq1ZgwHe2N	2022-09-20 08:39:11.676895+00	2022-09-20 08:39:11.676915+00	1	\N	{"tax_rate": 0.05}	f	f
 2874	TAX_GROUP	Tax Group	OW43OS7WUO	tgLYWgsbLTpG	2022-09-20 08:39:11.676991+00	2022-09-20 08:39:11.67703+00	1	\N	{"tax_rate": 0.18}	f	f
-2875	TAX_GROUP	Tax Group	G13 Capital Purchases for Input Tax Sales	tgm1nnhMeKs4	2022-09-20 08:39:11.677165+00	2022-09-20 08:39:11.677204+00	1	\N	{"tax_rate": 0.1}	f	f
 2876	TAX_GROUP	Tax Group	CD5C1P0EBC	tgmANuJ1Lyyw	2022-09-20 08:39:11.677346+00	2022-09-20 08:39:11.677361+00	1	\N	{"tax_rate": 0.18}	f	f
 2877	TAX_GROUP	Tax Group	5JHCVQD5SS	tgmEH8tzx7Fs	2022-09-20 08:39:11.677415+00	2022-09-20 08:39:11.677436+00	1	\N	{"tax_rate": 0.18}	f	f
 2878	TAX_GROUP	Tax Group	03QBRUQL9Y	tgMJPwgwqLjl	2022-09-20 08:39:11.677732+00	2022-09-20 08:39:11.677764+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6490,7 +6490,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2881	TAX_GROUP	Tax Group	DWK2H94RM7	tgMslNJflABK	2022-09-20 08:39:11.678522+00	2022-09-20 08:39:11.678542+00	1	\N	{"tax_rate": 0.18}	f	f
 2882	TAX_GROUP	Tax Group	WFRIUTX9C7	tgMu6kwxCgQ5	2022-09-20 08:39:11.678663+00	2022-09-20 08:39:11.67869+00	1	\N	{"tax_rate": 0.18}	f	f
 2883	TAX_GROUP	Tax Group	6OJKRIJ9CD	tgmyCZ1JPg4G	2022-09-20 08:39:11.678745+00	2022-09-20 08:39:11.678802+00	1	\N	{"tax_rate": 0.18}	f	f
-2884	TAX_GROUP	Tax Group	EC Purchase Goods Reduced Rate Input	tgMYde7GlsXF	2022-09-20 08:39:11.67889+00	2022-09-20 08:39:11.678912+00	1	\N	{"tax_rate": 0.05}	f	f
 2885	TAX_GROUP	Tax Group	County: New York County @1.5%	tgn16RsBIa8O	2022-09-20 08:39:11.678974+00	2022-09-20 08:39:11.678995+00	1	\N	{"tax_rate": 0.01}	f	f
 2886	TAX_GROUP	Tax Group	M8MES6DZKB	tgn18EUCd2TJ	2022-09-20 08:39:11.679057+00	2022-09-20 08:39:11.679077+00	1	\N	{"tax_rate": 0.18}	f	f
 2887	TAX_GROUP	Tax Group	UTJEMXABWZ	tgN1c7PcZnTf	2022-09-20 08:39:11.679163+00	2022-09-20 08:39:11.679183+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6499,7 +6498,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2890	TAX_GROUP	Tax Group	VAT	tgnci8BWh2e2	2022-09-20 08:39:11.68124+00	2022-09-20 08:39:11.681428+00	1	\N	{"tax_rate": 0.1}	f	f
 2891	TAX_GROUP	Tax Group	PO4UXUPB2Z	tgNDXVEuaGj4	2022-09-20 08:39:11.68155+00	2022-09-20 08:39:11.681577+00	1	\N	{"tax_rate": 0.18}	f	f
 2892	TAX_GROUP	Tax Group	1A8A84WBA2	tgnGUH2NVrEA	2022-09-20 08:39:11.972666+00	2022-09-20 08:39:11.972784+00	1	\N	{"tax_rate": 0.18}	f	f
-2893	TAX_GROUP	Tax Group	UK Purchase Reverse Charge Standard Rate Input	tgNqkGml9EGM	2022-09-20 08:39:11.972991+00	2022-09-20 08:39:11.973059+00	1	\N	{"tax_rate": 0.2}	f	f
 2894	TAX_GROUP	Tax Group	I4XUSD23KB	tgnvrN8trjBP	2022-09-20 08:39:11.973165+00	2022-09-20 08:39:11.973383+00	1	\N	{"tax_rate": 0.18}	f	f
 2895	TAX_GROUP	Tax Group	TFS-AU @0.0%	tgO2rqAAcZTd	2022-09-20 08:39:11.973581+00	2022-09-20 08:39:11.973624+00	1	\N	{"tax_rate": 0.0}	f	f
 2896	TAX_GROUP	Tax Group	GST: CPF-AU @0.0%	tgO8oQwXP01L	2022-09-20 08:39:11.973704+00	2022-09-20 08:39:11.973778+00	1	\N	{"tax_rate": 0.0}	f	f
@@ -6511,24 +6509,20 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2902	TAX_GROUP	Tax Group	TG1OG645TP	tgoiydGXa6RI	2022-09-20 08:39:11.97495+00	2022-09-20 08:39:11.975021+00	1	\N	{"tax_rate": 0.18}	f	f
 2903	TAX_GROUP	Tax Group	GP2UXTORT6	tgoK6ws8L40m	2022-09-20 08:39:11.975179+00	2022-09-20 08:39:11.975227+00	1	\N	{"tax_rate": 0.18}	f	f
 2904	TAX_GROUP	Tax Group	H4FLZPRDRU	tgoRFNG0JKDV	2022-09-20 08:39:11.975596+00	2022-09-20 08:39:11.975747+00	1	\N	{"tax_rate": 0.18}	f	f
-2905	TAX_GROUP	Tax Group	UK Import Services Reduced Rate	tgOULxUfH6EV	2022-09-20 08:39:11.975849+00	2022-09-20 08:39:11.975876+00	1	\N	{"tax_rate": 0.05}	f	f
 2906	TAX_GROUP	Tax Group	PNSOA0VKSF	tgOvm9YaBGPa	2022-09-20 08:39:11.975955+00	2022-09-20 08:39:11.975985+00	1	\N	{"tax_rate": 0.18}	f	f
 2907	TAX_GROUP	Tax Group	6QLNH6Y4UM	tgoWBF2LV1DY	2022-09-20 08:39:11.976064+00	2022-09-20 08:39:11.976092+00	1	\N	{"tax_rate": 0.18}	f	f
 2908	TAX_GROUP	Tax Group	Input tax - 0%	tgP2csYPZYr1	2022-09-20 08:39:11.976158+00	2022-09-20 08:39:11.976185+00	1	\N	{"tax_rate": 0.28}	f	f
-2909	TAX_GROUP	Tax Group	UK Purchase Services Standard Rate	tgp3usmS2kNN	2022-09-20 08:39:11.976251+00	2022-09-20 08:39:11.976278+00	1	\N	{"tax_rate": 0.2}	f	f
 2910	TAX_GROUP	Tax Group	QHGZ8OB0QW	tgp7Hi8kNwiw	2022-09-20 08:39:11.976465+00	2022-09-20 08:39:11.97651+00	1	\N	{"tax_rate": 0.18}	f	f
 2911	TAX_GROUP	Tax Group	GG10QAP2S5	tgP8qUkLoAcJ	2022-09-20 08:39:11.976611+00	2022-09-20 08:39:11.976641+00	1	\N	{"tax_rate": 0.18}	f	f
 2912	TAX_GROUP	Tax Group	1NIPCD4AIV	tgPBQtd1JY9j	2022-09-20 08:39:11.976724+00	2022-09-20 08:39:11.976753+00	1	\N	{"tax_rate": 0.18}	f	f
 2913	TAX_GROUP	Tax Group	KF5LT1RF09	tgPDsE2wRsQz	2022-09-20 08:39:11.976831+00	2022-09-20 08:39:11.976858+00	1	\N	{"tax_rate": 0.18}	f	f
 2914	TAX_GROUP	Tax Group	Tax on Consulting @8.25%	tgpgTQbdAQTE	2022-09-20 08:39:11.976924+00	2022-09-20 08:39:11.976951+00	1	\N	{"tax_rate": 0.08}	f	f
 2915	TAX_GROUP	Tax Group	NCF-AU @0.0%	tgpIyPXp7YbJ	2022-09-20 08:39:11.977016+00	2022-09-20 08:39:11.977043+00	1	\N	{"tax_rate": 0.0}	f	f
-2916	TAX_GROUP	Tax Group	UK Purchase Goods Standard Rate	tgPM90wg21fN	2022-09-20 08:39:11.977108+00	2022-09-20 08:39:11.977135+00	1	\N	{"tax_rate": 0.2}	f	f
 2917	TAX_GROUP	Tax Group	9GZBIA2Z9H	tgPnK7or3K9x	2022-09-20 08:39:11.9772+00	2022-09-20 08:39:11.977227+00	1	\N	{"tax_rate": 0.18}	f	f
 2918	TAX_GROUP	Tax Group	9KAP9QWA44	tgPOXTd5DoZ3	2022-09-20 08:39:11.977293+00	2022-09-20 08:39:11.97732+00	1	\N	{"tax_rate": 0.18}	f	f
 2919	TAX_GROUP	Tax Group	Tax on Purchases @8.25%	tgPoY58NUJbl	2022-09-20 08:39:11.977523+00	2022-09-20 08:39:11.977562+00	1	\N	{"tax_rate": 0.08}	f	f
 2920	TAX_GROUP	Tax Group	JQTAKMBYNJ	tgPs7otMgPlA	2022-09-20 08:39:11.977628+00	2022-09-20 08:39:11.977655+00	1	\N	{"tax_rate": 0.18}	f	f
 2921	TAX_GROUP	Tax Group	O020KR52QV	tgPwj9u0NQHN	2022-09-20 08:39:11.97772+00	2022-09-20 08:39:11.977747+00	1	\N	{"tax_rate": 0.18}	f	f
-2922	TAX_GROUP	Tax Group	G11 Other Acquisition	tgPzaJl9YEIy	2022-09-20 08:39:11.977813+00	2022-09-20 08:39:11.97784+00	1	\N	{"tax_rate": 0.1}	f	f
 2923	TAX_GROUP	Tax Group	Pant Tax @20%	tgq2mKV86LWz	2022-09-20 08:39:11.977905+00	2022-09-20 08:39:11.977933+00	1	\N	{"tax_rate": 0.2}	f	f
 2924	TAX_GROUP	Tax Group	CA-E @0.0%	tgQC13IAQIR6	2022-09-20 08:39:11.977997+00	2022-09-20 08:39:11.978024+00	1	\N	{"tax_rate": 0.0}	f	f
 2925	TAX_GROUP	Tax Group	K9ZTD8WVCG	tgqC2qkdsqic	2022-09-20 08:39:11.97809+00	2022-09-20 08:39:11.978117+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6545,7 +6539,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2936	TAX_GROUP	Tax Group	5OJBS10VAC	tgRDxtr0jV61	2022-09-20 08:39:11.979661+00	2022-09-20 08:39:11.979705+00	1	\N	{"tax_rate": 0.18}	f	f
 2937	TAX_GROUP	Tax Group	T1WP4WBELF	tgrEYpYAIhJh	2022-09-20 08:39:11.979922+00	2022-09-20 08:39:11.97996+00	1	\N	{"tax_rate": 0.18}	f	f
 2938	TAX_GROUP	Tax Group	. @0.0%	tgrGkDS30KOf	2022-09-20 08:39:11.98027+00	2022-09-20 08:39:11.980328+00	1	\N	{"tax_rate": 0.0}	f	f
-2939	TAX_GROUP	Tax Group	Change in Use Input	tgRi0weoxcIg	2022-09-20 08:39:11.981003+00	2022-09-20 08:39:11.981102+00	1	\N	{"tax_rate": 0.15}	f	f
 2940	TAX_GROUP	Tax Group	UNDEF-GB @0.0%	tgRieT5aVKOi	2022-09-20 08:39:11.981845+00	2022-09-20 08:39:11.981912+00	1	\N	{"tax_rate": 0.0}	f	f
 2941	TAX_GROUP	Tax Group	City: New York City @0.5%	tgrihEBRsqmk	2022-09-20 08:39:11.982079+00	2022-09-20 08:39:11.982125+00	1	\N	{"tax_rate": 0.01}	f	f
 2942	TAX_GROUP	Tax Group	W6RV83BFWU	tgril32Nl0pB	2022-09-20 08:39:11.988754+00	2022-09-20 08:39:11.988795+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6553,14 +6546,12 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2944	TAX_GROUP	Tax Group	ABN: Nilesh @54.0%	tgRPkX7ymV2K	2022-09-20 08:39:11.988959+00	2022-09-20 08:39:11.988986+00	1	\N	{"tax_rate": 0.54}	f	f
 2945	TAX_GROUP	Tax Group	7ZAAQDCQQN	tgRqeA5a9h0W	2022-09-20 08:39:11.989052+00	2022-09-20 08:39:11.98908+00	1	\N	{"tax_rate": 0.18}	f	f
 2946	TAX_GROUP	Tax Group	GST: CPT-AU @10.0%	tgrSg9F7Y9sK	2022-09-20 08:39:11.989146+00	2022-09-20 08:39:11.989173+00	1	\N	{"tax_rate": 0.1}	f	f
-2947	TAX_GROUP	Tax Group	UK Import Services Standard Rate	tgRuU4aJDtp0	2022-09-20 08:39:11.98924+00	2022-09-20 08:39:11.989267+00	1	\N	{"tax_rate": 0.2}	f	f
 2948	TAX_GROUP	Tax Group	ABN: Ashwin Tax Group @6.0%	tgrVpyLhsOsw	2022-09-20 08:39:11.989334+00	2022-09-20 08:39:11.989361+00	1	\N	{"tax_rate": 0.06}	f	f
 2949	TAX_GROUP	Tax Group	MD8XPYK2C6	tgRz68cIQU2p	2022-09-20 08:39:11.98957+00	2022-09-20 08:39:11.98961+00	1	\N	{"tax_rate": 0.18}	f	f
 2950	TAX_GROUP	Tax Group	D47UDLB4F8	tgS0DHQJFw70	2022-09-20 08:39:11.989969+00	2022-09-20 08:39:11.990003+00	1	\N	{"tax_rate": 0.18}	f	f
 2951	TAX_GROUP	Tax Group	JQUIDWM0VG	tgsaNXWrKCc5	2022-09-20 08:39:11.990078+00	2022-09-20 08:39:11.990106+00	1	\N	{"tax_rate": 0.18}	f	f
 2952	TAX_GROUP	Tax Group	CA-PST-ON @0.0%	tgSAZ4hJlF7y	2022-09-20 08:39:11.990171+00	2022-09-20 08:39:11.990198+00	1	\N	{"tax_rate": 0.0}	f	f
 2953	TAX_GROUP	Tax Group	MB - GST/RST on Purchases @12.0%	tgSbMd0X3I3O	2022-09-20 08:39:11.990264+00	2022-09-20 08:39:11.99043+00	1	\N	{"tax_rate": 0.12}	f	f
-2954	TAX_GROUP	Tax Group	G15 Purchases for Private Use	tgsFw1s5tPre	2022-09-20 08:39:11.990512+00	2022-09-20 08:39:11.99054+00	1	\N	{"tax_rate": 0.1}	f	f
 3045	MERCHANT	Merchant	sravan	852	2022-09-20 08:40:15.786308+00	2022-09-20 08:40:15.786337+00	1	\N	\N	f	f
 2955	TAX_GROUP	Tax Group	49BVB05MSS	tgsGJxfNb01o	2022-09-20 08:39:11.990605+00	2022-09-20 08:39:11.990632+00	1	\N	{"tax_rate": 0.18}	f	f
 2956	TAX_GROUP	Tax Group	1KPDKITYMO	tgSLadNhUC0f	2022-09-20 08:39:11.990698+00	2022-09-20 08:39:11.990726+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6575,7 +6566,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2965	TAX_GROUP	Tax Group	YG9ZHOW03L	tgtnlAuPccmU	2022-09-20 08:39:11.99168+00	2022-09-20 08:39:11.991707+00	1	\N	{"tax_rate": 0.18}	f	f
 2966	TAX_GROUP	Tax Group	E2ZA5DOLZP	tgTVkrIoFyPv	2022-09-20 08:39:11.991773+00	2022-09-20 08:39:11.991801+00	1	\N	{"tax_rate": 0.18}	f	f
 2967	TAX_GROUP	Tax Group	37YWNDJGXS	tgTz2uOpFEAG	2022-09-20 08:39:11.991866+00	2022-09-20 08:39:11.991893+00	1	\N	{"tax_rate": 0.18}	f	f
-2968	TAX_GROUP	Tax Group	EC Purchase Services Standard Rate Input	tgU4rY4PFZpv	2022-09-20 08:39:11.991959+00	2022-09-20 08:39:11.991986+00	1	\N	{"tax_rate": 0.2}	f	f
 2969	TAX_GROUP	Tax Group	CPI-AU @0.0%	tgUcIG8nhjfj	2022-09-20 08:39:11.992052+00	2022-09-20 08:39:11.992079+00	1	\N	{"tax_rate": 0.0}	f	f
 2970	TAX_GROUP	Tax Group	N234JZCM07	tguDb9LHWbNf	2022-09-20 08:39:11.992145+00	2022-09-20 08:39:11.992172+00	1	\N	{"tax_rate": 0.18}	f	f
 2971	TAX_GROUP	Tax Group	Z8STSQH7B8	tgufmQT6nguV	2022-09-20 08:39:11.992238+00	2022-09-20 08:39:11.992265+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6589,9 +6579,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2979	TAX_GROUP	Tax Group	7TF6ZC4WT9	tguu3K3w002b	2022-09-20 08:39:11.993135+00	2022-09-20 08:39:11.993162+00	1	\N	{"tax_rate": 0.18}	f	f
 2980	TAX_GROUP	Tax Group	NY - Manhattan @8.5%	tgV1E80ArlhG	2022-09-20 08:39:11.993228+00	2022-09-20 08:39:11.993256+00	1	\N	{"tax_rate": 0.09}	f	f
 2981	TAX_GROUP	Tax Group	IZJZZ3S9E7	tgVDrNQDr1Mw	2022-09-20 08:39:11.993321+00	2022-09-20 08:39:11.993359+00	1	\N	{"tax_rate": 0.18}	f	f
-2982	TAX_GROUP	Tax Group	UK Purchase Reverse Charge Reduced Rate Input	tgVKGWKL7pPt	2022-09-20 08:39:11.993562+00	2022-09-20 08:39:11.99359+00	1	\N	{"tax_rate": 0.05}	f	f
 2983	TAX_GROUP	Tax Group	GST on capital @10%	tgVlVvok652A	2022-09-20 08:39:11.993655+00	2022-09-20 08:39:11.993682+00	1	\N	{"tax_rate": 0.1}	f	f
-2984	TAX_GROUP	Tax Group	UK Import Goods Reduced Rate	tgVnRMSNQpKK	2022-09-20 08:39:11.993748+00	2022-09-20 08:39:11.993775+00	1	\N	{"tax_rate": 0.05}	f	f
 2985	TAX_GROUP	Tax Group	VFDBWILTZT	tgVpULIa6cnN	2022-09-20 08:39:11.99384+00	2022-09-20 08:39:11.993868+00	1	\N	{"tax_rate": 0.18}	f	f
 2986	TAX_GROUP	Tax Group	OONDUAK3WT	tgVT2VnaV3Kt	2022-09-20 08:39:11.993933+00	2022-09-20 08:39:11.99396+00	1	\N	{"tax_rate": 0.18}	f	f
 2987	TAX_GROUP	Tax Group	C72U5RL80N	tgvtS0wCmlx8	2022-09-20 08:39:11.994025+00	2022-09-20 08:39:11.994053+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6626,7 +6614,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3016	TAX_GROUP	Tax Group	GWNYCAUI7U	tgY6OZ8p4lMB	2022-09-20 08:39:12.00574+00	2022-09-20 08:39:12.005767+00	1	\N	{"tax_rate": 0.18}	f	f
 3017	TAX_GROUP	Tax Group	Z07A9NN1DM	tgy6SBVsh5HM	2022-09-20 08:39:12.005833+00	2022-09-20 08:39:12.00586+00	1	\N	{"tax_rate": 0.18}	f	f
 3018	TAX_GROUP	Tax Group	I3LOOW56KF	tgY9sJwvbriq	2022-09-20 08:39:12.005926+00	2022-09-20 08:39:12.005953+00	1	\N	{"tax_rate": 0.18}	f	f
-3019	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Standard Rate UK Input	tgYDec7KVOw4	2022-09-20 08:39:12.006019+00	2022-09-20 08:39:12.006046+00	1	\N	{"tax_rate": 0.2}	f	f
 3020	TAX_GROUP	Tax Group	50Q5KYEKC7	tgYdzyKe756m	2022-09-20 08:39:12.006112+00	2022-09-20 08:39:12.006138+00	1	\N	{"tax_rate": 0.18}	f	f
 3021	TAX_GROUP	Tax Group	D1IO8OGBJ7	tgYIpi3wxhGt	2022-09-20 08:39:12.006205+00	2022-09-20 08:39:12.006232+00	1	\N	{"tax_rate": 0.18}	f	f
 3022	TAX_GROUP	Tax Group	36TEBIWA0N	tgyjcu8nrbTy	2022-09-20 08:39:12.006297+00	2022-09-20 08:39:12.006325+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6648,7 +6635,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3038	TAX_GROUP	Tax Group	IZZG6UH5Y8	tgzkV4S2Yw1h	2022-09-20 08:39:12.008018+00	2022-09-20 08:39:12.008045+00	1	\N	{"tax_rate": 0.18}	f	f
 3039	TAX_GROUP	Tax Group	IKIJX0TM8Y	tgzKVrUU5UNa	2022-09-20 08:39:12.008111+00	2022-09-20 08:39:12.008138+00	1	\N	{"tax_rate": 0.18}	f	f
 3040	TAX_GROUP	Tax Group	EGJMQFKSKM	tgzL3ZYEzsoZ	2022-09-20 08:39:12.008203+00	2022-09-20 08:39:12.00823+00	1	\N	{"tax_rate": 0.18}	f	f
-3041	TAX_GROUP	Tax Group	G10 Motor Vehicle Acquisition	tgZUh8neIfxC	2022-09-20 08:39:12.008296+00	2022-09-20 08:39:12.008323+00	1	\N	{"tax_rate": 0.1}	f	f
 3042	TAX_GROUP	Tax Group	Nilesh Tax - 10%	tgzVoKWXqWFB	2022-09-20 08:39:12.015868+00	2022-09-20 08:39:12.015907+00	1	\N	{"tax_rate": 0.28}	f	f
 3046	MERCHANT	Merchant	light	852	2022-09-20 08:40:15.786398+00	2022-09-20 08:40:15.786428+00	1	\N	\N	f	f
 3047	MERCHANT	Merchant	Abhishek 2	852	2022-09-20 08:40:15.786489+00	2022-09-20 08:40:15.786518+00	1	\N	\N	f	f
@@ -6704,8 +6690,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3097	MERCHANT	Merchant	Anne Jackson	852	2022-09-20 08:40:15.969803+00	2022-09-20 08:40:15.969831+00	1	\N	\N	f	f
 3098	MERCHANT	Merchant	Ashwin from NetSuite	852	2022-09-20 08:40:15.969892+00	2022-09-20 08:40:15.969921+00	1	\N	\N	f	f
 3099	MERCHANT	Merchant	Basket Case	852	2022-09-20 08:40:15.969982+00	2022-09-20 08:40:15.970011+00	1	\N	\N	f	f
-3100	MERCHANT	Merchant	Blob Johnson	852	2022-09-20 08:40:15.970071+00	2022-09-20 08:40:15.970199+00	1	\N	\N	f	f
-3101	MERCHANT	Merchant	Blooper Bloop	852	2022-09-20 08:40:15.970263+00	2022-09-20 08:40:15.970292+00	1	\N	\N	f	f
 3102	MERCHANT	Merchant	Brenda Hawkins	852	2022-09-20 08:40:15.970353+00	2022-09-20 08:40:15.970382+00	1	\N	\N	f	f
 3103	MERCHANT	Merchant	Central Coalfields	852	2022-09-20 08:40:15.970441+00	2022-09-20 08:40:15.97047+00	1	\N	\N	f	f
 3104	MERCHANT	Merchant	Chris Curtis	852	2022-09-20 08:40:15.970531+00	2022-09-20 08:40:15.970559+00	1	\N	\N	f	f
@@ -6782,9 +6766,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3175	MERCHANT	Merchant	Entity V200	852	2022-09-20 08:40:24.028874+00	2022-09-20 08:40:24.028901+00	1	\N	\N	f	f
 3176	MERCHANT	Merchant	Entity V300	852	2022-09-20 08:40:24.028958+00	2022-09-20 08:40:24.028985+00	1	\N	\N	f	f
 3177	MERCHANT	Merchant	Entity V400	852	2022-09-20 08:40:24.029041+00	2022-09-20 08:40:24.029068+00	1	\N	\N	f	f
-3178	MERCHANT	Merchant	Entity V500	852	2022-09-20 08:40:24.029136+00	2022-09-20 08:40:24.029271+00	1	\N	\N	f	f
-3179	MERCHANT	Merchant	Entity V600	852	2022-09-20 08:40:24.029339+00	2022-09-20 08:40:24.029366+00	1	\N	\N	f	f
-3180	MERCHANT	Merchant	Entity V700	852	2022-09-20 08:40:24.029423+00	2022-09-20 08:40:24.02945+00	1	\N	\N	f	f
 3181	MERCHANT	Merchant	Global Printing	852	2022-09-20 08:40:24.029507+00	2022-09-20 08:40:24.029534+00	1	\N	\N	f	f
 3182	MERCHANT	Merchant	Global Properties Inc.	852	2022-09-20 08:40:24.029591+00	2022-09-20 08:40:24.029618+00	1	\N	\N	f	f
 3183	MERCHANT	Merchant	gokul	852	2022-09-20 08:40:24.029675+00	2022-09-20 08:40:24.029702+00	1	\N	\N	f	f
@@ -6852,6 +6833,60 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3225	CATEGORY	Category	FML12E68S6 / Turbo charged	209304	2022-09-28 11:55:41.765972+00	2022-09-28 11:55:41.766025+00	1	\N	\N	f	f
 3226	CATEGORY	Category	N27HHEOEY8 / Turbo charged	209303	2022-09-28 11:55:41.766086+00	2022-09-28 11:55:41.766117+00	1	\N	\N	f	f
 3227	CATEGORY	Category	H7FH7Q9WJ6 / Turbo charged	209299	2022-09-28 11:55:41.76618+00	2022-09-28 11:55:41.766211+00	1	\N	\N	f	f
+2692	TAX_GROUP	Tax Group	EC Purchase Goods Standard Rate Input	tg03sPKjNkKq	2022-09-20 08:39:11.565395+00	2022-09-20 08:39:11.565464+00	1	\N	{"tax_rate": 0.2}	t	f
+2720	TAX_GROUP	Tax Group	UK Purchase Goods Reduced Rate	tg51CNoNSxiO	2022-09-20 08:39:11.582902+00	2022-09-20 08:39:11.582963+00	1	\N	{"tax_rate": 0.05}	t	f
+2725	TAX_GROUP	Tax Group	EC Purchase Services Reduced Rate Input	tg6icu6uquJZ	2022-09-20 08:39:11.583955+00	2022-09-20 08:39:11.584005+00	1	\N	{"tax_rate": 0.05}	t	f
+2737	TAX_GROUP	Tax Group	UK Import Goods Standard Rate	tg7sE7ZSw5Yn	2022-09-20 08:39:11.592389+00	2022-09-20 08:39:11.592419+00	1	\N	{"tax_rate": 0.2}	t	f
+2751	TAX_GROUP	Tax Group	Other Output Tax Adjustments	tga9OiFNWcDh	2022-09-20 08:39:11.632416+00	2022-09-20 08:39:11.632436+00	1	\N	{"tax_rate": 1.0}	t	f
+2822	TAX_GROUP	Tax Group	Standard Rate (Capital Goods) Input	tgGn1oIv0odS	2022-09-20 08:39:11.65591+00	2022-09-20 08:39:11.655941+00	1	\N	{"tax_rate": 0.15}	t	f
+2834	TAX_GROUP	Tax Group	G13 Purchases for Input Tax Sales	tghyBGpukx04	2022-09-20 08:39:11.657436+00	2022-09-20 08:39:11.657456+00	1	\N	{"tax_rate": 0.1}	t	f
+2840	TAX_GROUP	Tax Group	G15 Capital Purchases for Private Use	tginkDefSKP7	2022-09-20 08:39:11.658091+00	2022-09-20 08:39:11.658111+00	1	\N	{"tax_rate": 0.1}	t	f
+2857	TAX_GROUP	Tax Group	Standard Rate Input	tgkrTg3hsBGo	2022-09-20 08:39:11.674255+00	2022-09-20 08:39:11.674277+00	1	\N	{"tax_rate": 0.15}	t	f
+2869	TAX_GROUP	Tax Group	G10 Capital Acquisition	tgLj0KdoNp6n	2022-09-20 08:39:11.676154+00	2022-09-20 08:39:11.676176+00	1	\N	{"tax_rate": 0.1}	t	f
+2873	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Reduced Rate UK Input	tgLq1ZgwHe2N	2022-09-20 08:39:11.676895+00	2022-09-20 08:39:11.676915+00	1	\N	{"tax_rate": 0.05}	t	f
+2875	TAX_GROUP	Tax Group	G13 Capital Purchases for Input Tax Sales	tgm1nnhMeKs4	2022-09-20 08:39:11.677165+00	2022-09-20 08:39:11.677204+00	1	\N	{"tax_rate": 0.1}	t	f
+2884	TAX_GROUP	Tax Group	EC Purchase Goods Reduced Rate Input	tgMYde7GlsXF	2022-09-20 08:39:11.67889+00	2022-09-20 08:39:11.678912+00	1	\N	{"tax_rate": 0.05}	t	f
+2893	TAX_GROUP	Tax Group	UK Purchase Reverse Charge Standard Rate Input	tgNqkGml9EGM	2022-09-20 08:39:11.972991+00	2022-09-20 08:39:11.973059+00	1	\N	{"tax_rate": 0.2}	t	f
+2905	TAX_GROUP	Tax Group	UK Import Services Reduced Rate	tgOULxUfH6EV	2022-09-20 08:39:11.975849+00	2022-09-20 08:39:11.975876+00	1	\N	{"tax_rate": 0.05}	t	f
+2916	TAX_GROUP	Tax Group	UK Purchase Goods Standard Rate	tgPM90wg21fN	2022-09-20 08:39:11.977108+00	2022-09-20 08:39:11.977135+00	1	\N	{"tax_rate": 0.2}	t	f
+2922	TAX_GROUP	Tax Group	G11 Other Acquisition	tgPzaJl9YEIy	2022-09-20 08:39:11.977813+00	2022-09-20 08:39:11.97784+00	1	\N	{"tax_rate": 0.1}	t	f
+2939	TAX_GROUP	Tax Group	Change in Use Input	tgRi0weoxcIg	2022-09-20 08:39:11.981003+00	2022-09-20 08:39:11.981102+00	1	\N	{"tax_rate": 0.15}	t	f
+2947	TAX_GROUP	Tax Group	UK Import Services Standard Rate	tgRuU4aJDtp0	2022-09-20 08:39:11.98924+00	2022-09-20 08:39:11.989267+00	1	\N	{"tax_rate": 0.2}	t	f
+2954	TAX_GROUP	Tax Group	G15 Purchases for Private Use	tgsFw1s5tPre	2022-09-20 08:39:11.990512+00	2022-09-20 08:39:11.99054+00	1	\N	{"tax_rate": 0.1}	t	f
+2968	TAX_GROUP	Tax Group	EC Purchase Services Standard Rate Input	tgU4rY4PFZpv	2022-09-20 08:39:11.991959+00	2022-09-20 08:39:11.991986+00	1	\N	{"tax_rate": 0.2}	t	f
+2982	TAX_GROUP	Tax Group	UK Purchase Reverse Charge Reduced Rate Input	tgVKGWKL7pPt	2022-09-20 08:39:11.993562+00	2022-09-20 08:39:11.99359+00	1	\N	{"tax_rate": 0.05}	t	f
+2984	TAX_GROUP	Tax Group	UK Import Goods Reduced Rate	tgVnRMSNQpKK	2022-09-20 08:39:11.993748+00	2022-09-20 08:39:11.993775+00	1	\N	{"tax_rate": 0.05}	t	f
+3019	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Standard Rate UK Input	tgYDec7KVOw4	2022-09-20 08:39:12.006019+00	2022-09-20 08:39:12.006046+00	1	\N	{"tax_rate": 0.2}	t	f
+3041	TAX_GROUP	Tax Group	G10 Motor Vehicle Acquisition	tgZUh8neIfxC	2022-09-20 08:39:12.008296+00	2022-09-20 08:39:12.008323+00	1	\N	{"tax_rate": 0.1}	t	f
+3248	TAX_GROUP	Tax Group	No Input VAT	tgUIrIce3bbR	2022-09-29 12:09:34.570694+00	2022-09-29 12:09:34.570723+00	1	\N	{"tax_rate": 0.0}	t	f
+3228	TAX_GROUP	Tax Group	G15 GST Free Purchases for Private Use	tg1mbgnpCD74	2022-09-29 12:09:34.562145+00	2022-09-29 12:09:34.562208+00	1	\N	{"tax_rate": 0.0}	t	f
+3229	TAX_GROUP	Tax Group	1F Luxury Car Tax Refundable	tg2vcq1pLm4T	2022-09-29 12:09:34.562296+00	2022-09-29 12:09:34.562326+00	1	\N	{"tax_rate": 0.0}	t	f
+3230	TAX_GROUP	Tax Group	EC Purchase Goods Exempt Rate	tgAJLZUDLsNQ	2022-09-29 12:09:34.562396+00	2022-09-29 12:09:34.562425+00	1	\N	{"tax_rate": 0.0}	t	f
+3232	TAX_GROUP	Tax Group	G13 GST Free Capital Purchases for Input Tax Sales	tgbMrQbQlYQy	2022-09-29 12:09:34.562592+00	2022-09-29 12:09:34.562622+00	1	\N	{"tax_rate": 0.0}	t	f
+3233	TAX_GROUP	Tax Group	1D Wine Equalisation Tax Refundable	tgcn2gXFEHY7	2022-09-29 12:09:34.562691+00	2022-09-29 12:09:34.562721+00	1	\N	{"tax_rate": 0.0}	t	f
+3234	TAX_GROUP	Tax Group	G13 GST Free Purchases for Input Tax Sales	tgdoF2v8wmrE	2022-09-29 12:09:34.562789+00	2022-09-29 12:09:34.562818+00	1	\N	{"tax_rate": 0.0}	t	f
+3235	TAX_GROUP	Tax Group	G14 GST Free Non-Capital Purchases	tgemain9bLa7	2022-09-29 12:09:34.562886+00	2022-09-29 12:09:34.562915+00	1	\N	{"tax_rate": 0.0}	t	f
+3236	TAX_GROUP	Tax Group	Other Goods Imported (Not Capital Goods)	tgkxSRv2TaRu	2022-09-29 12:09:34.569172+00	2022-09-29 12:09:34.569223+00	1	\N	{"tax_rate": 0.0}	t	f
+3237	TAX_GROUP	Tax Group	G14 GST Free Capital Purchases	tgl1DZ4CwRD4	2022-09-29 12:09:34.569334+00	2022-09-29 12:09:34.569364+00	1	\N	{"tax_rate": 0.0}	t	f
+3238	TAX_GROUP	Tax Group	UK Import Goods Exempt Rate	tgMiYO0TshL4	2022-09-29 12:09:34.569436+00	2022-09-29 12:09:34.569465+00	1	\N	{"tax_rate": 0.0}	t	f
+3239	TAX_GROUP	Tax Group	UK Purchase Services Exempt Rate	tgmL0gaIk8QA	2022-09-29 12:09:34.569535+00	2022-09-29 12:09:34.569575+00	1	\N	{"tax_rate": 0.0}	t	f
+3240	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Zero Rate UK	tgoP36Onf0Zk	2022-09-29 12:09:34.569787+00	2022-09-29 12:09:34.569824+00	1	\N	{"tax_rate": 0.0}	t	f
+3241	TAX_GROUP	Tax Group	G15 GST Free Capital Purchases for Private Use	tgq53BJYGByc	2022-09-29 12:09:34.569901+00	2022-09-29 12:09:34.569931+00	1	\N	{"tax_rate": 0.0}	t	f
+3242	TAX_GROUP	Tax Group	UK Import Services Zero Rate	tgQgmFdOAuCf	2022-09-29 12:09:34.5701+00	2022-09-29 12:09:34.57013+00	1	\N	{"tax_rate": 0.0}	t	f
+3243	TAX_GROUP	Tax Group	UK Purchase Goods Exempt Rate	tgQXbB0B4ayf	2022-09-29 12:09:34.5702+00	2022-09-29 12:09:34.570229+00	1	\N	{"tax_rate": 0.0}	t	f
+3245	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Exempt UK	tgS7uGNdnU3G	2022-09-29 12:09:34.570397+00	2022-09-29 12:09:34.570427+00	1	\N	{"tax_rate": 0.0}	t	f
+3246	TAX_GROUP	Tax Group	Capital Goods Imported	tgtJswuKZ0Tm	2022-09-29 12:09:34.570497+00	2022-09-29 12:09:34.570526+00	1	\N	{"tax_rate": 0.0}	t	f
+3247	TAX_GROUP	Tax Group	UK Import Goods Zero Rate	tgU9adO9cZ0v	2022-09-29 12:09:34.570596+00	2022-09-29 12:09:34.570625+00	1	\N	{"tax_rate": 0.0}	t	f
+3249	TAX_GROUP	Tax Group	UK Purchase Goods Zero Rate	tgUMN1LbRgQn	2022-09-29 12:09:34.570792+00	2022-09-29 12:09:34.570821+00	1	\N	{"tax_rate": 0.0}	t	f
+3250	TAX_GROUP	Tax Group	EC Purchase Services Zero Rate	tgv3qq4c4SkN	2022-09-29 12:09:34.57089+00	2022-09-29 12:09:34.57092+00	1	\N	{"tax_rate": 0.0}	t	f
+3251	TAX_GROUP	Tax Group	G18 Input Tax Credit Adjustment	tgVdyPpozeoS	2022-09-29 12:09:34.571078+00	2022-09-29 12:09:34.571107+00	1	\N	{"tax_rate": 0.0}	t	f
+3252	TAX_GROUP	Tax Group	EC Purchase Goods Zero Rate	tgXpOAMeNMux	2022-09-29 12:09:34.571177+00	2022-09-29 12:09:34.571206+00	1	\N	{"tax_rate": 0.0}	t	f
+3253	TAX_GROUP	Tax Group	UK Import Services Exempt Rate	tgzgsasJ22yi	2022-09-29 12:09:34.571275+00	2022-09-29 12:09:34.571304+00	1	\N	{"tax_rate": 0.0}	t	f
+3254	TAX_GROUP	Tax Group	EC Purchase Services Exempt Rate	tgzxd7JcZbz0	2022-09-29 12:09:34.571374+00	2022-09-29 12:09:34.571403+00	1	\N	{"tax_rate": 0.0}	t	f
+2747	TAX_GROUP	Tax Group	UK Purchase Services Reduced Rate	tg9Q7Ppb49qU	2022-09-20 08:39:11.631836+00	2022-09-20 08:39:11.631913+00	1	\N	{"tax_rate": 0.05}	t	f
+2909	TAX_GROUP	Tax Group	UK Purchase Services Standard Rate	tgp3usmS2kNN	2022-09-20 08:39:11.976251+00	2022-09-20 08:39:11.976278+00	1	\N	{"tax_rate": 0.2}	t	f
+3231	TAX_GROUP	Tax Group	UK Purchase Services Zero Rate	tgb414CpV8wg	2022-09-29 12:09:34.562494+00	2022-09-29 12:09:34.562523+00	1	\N	{"tax_rate": 0.0}	t	f
+3244	TAX_GROUP	Tax Group	W4 Withholding Tax	tgrpuUs8G1x2	2022-09-29 12:09:34.570298+00	2022-09-29 12:09:34.570327+00	1	\N	{"tax_rate": 0.0}	t	f
 \.
 
 
@@ -6868,10 +6903,10 @@ COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corpo
 -- Data for Name: expense_groups; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at) FROM stdin;
-1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N
-2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N
-3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N
+COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at, export_type) FROM stdin;
+1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N	\N
+2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N	\N
+3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N	\N
 \.
 
 
@@ -6993,6 +7028,60 @@ COPY public.mappings (id, source_type, destination_type, created_at, updated_at,
 15	PROJECT	PROJECT	2022-09-20 08:40:25.874787+00	2022-09-20 08:40:25.874823+00	607	1868	1
 16	PROJECT	PROJECT	2022-09-20 08:40:25.874882+00	2022-09-20 08:40:25.874912+00	608	1869	1
 160	PROJECT	CUSTOMER	2022-09-20 08:40:25.874882+00	2022-09-20 08:40:25.874912+00	614	1	1
+17	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625158+00	2022-09-29 12:09:34.625202+00	589	3233	1
+18	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625256+00	2022-09-29 12:09:34.625286+00	583	3229	1
+19	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625338+00	2022-09-29 12:09:34.625368+00	594	3246	1
+20	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.62542+00	2022-09-29 12:09:34.625449+00	593	2939	1
+21	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625501+00	2022-09-29 12:09:34.62553+00	559	3230	1
+22	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625582+00	2022-09-29 12:09:34.625612+00	560	2884	1
+23	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625663+00	2022-09-29 12:09:34.625693+00	561	2692	1
+24	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625745+00	2022-09-29 12:09:34.625774+00	562	3252	1
+25	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625826+00	2022-09-29 12:09:34.625855+00	563	3254	1
+26	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.625907+00	2022-09-29 12:09:34.625936+00	564	2725	1
+27	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.62752+00	2022-09-29 12:09:34.628546+00	565	2968	1
+28	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.628792+00	2022-09-29 12:09:34.629404+00	566	3250	1
+29	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.630356+00	2022-09-29 12:09:34.630412+00	579	2869	1
+30	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.631269+00	2022-09-29 12:09:34.631309+00	584	3041	1
+31	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.634545+00	2022-09-29 12:09:34.634583+00	585	2922	1
+32	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.634639+00	2022-09-29 12:09:34.634668+00	575	2875	1
+33	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.634721+00	2022-09-29 12:09:34.63475+00	576	3232	1
+34	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.634803+00	2022-09-29 12:09:34.634832+00	582	3234	1
+35	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.635751+00	2022-09-29 12:09:34.636281+00	581	2834	1
+36	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.636474+00	2022-09-29 12:09:34.636518+00	580	3237	1
+37	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.63658+00	2022-09-29 12:09:34.63661+00	586	3235	1
+38	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.636662+00	2022-09-29 12:09:34.636692+00	577	2840	1
+39	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.636744+00	2022-09-29 12:09:34.636773+00	578	3241	1
+40	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.636826+00	2022-09-29 12:09:34.636855+00	588	3228	1
+41	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.636907+00	2022-09-29 12:09:34.637467+00	587	2954	1
+42	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.63805+00	2022-09-29 12:09:34.638087+00	574	3251	1
+43	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.639538+00	2022-09-29 12:09:34.639569+00	597	3248	1
+44	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.639745+00	2022-09-29 12:09:34.639776+00	595	3236	1
+45	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.639934+00	2022-09-29 12:09:34.639964+00	596	2751	1
+46	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640017+00	2022-09-29 12:09:34.640046+00	592	2822	1
+47	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640098+00	2022-09-29 12:09:34.640127+00	591	2857	1
+48	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640179+00	2022-09-29 12:09:34.640208+00	567	3238	1
+49	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.64026+00	2022-09-29 12:09:34.640289+00	568	2984	1
+50	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640341+00	2022-09-29 12:09:34.64037+00	569	2737	1
+51	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640422+00	2022-09-29 12:09:34.640451+00	570	3247	1
+52	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640503+00	2022-09-29 12:09:34.640532+00	571	3253	1
+53	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640584+00	2022-09-29 12:09:34.640613+00	572	2905	1
+54	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640665+00	2022-09-29 12:09:34.640694+00	573	2947	1
+55	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640746+00	2022-09-29 12:09:34.640775+00	544	3242	1
+56	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640827+00	2022-09-29 12:09:34.640856+00	545	3243	1
+57	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640908+00	2022-09-29 12:09:34.640937+00	546	2720	1
+58	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.640989+00	2022-09-29 12:09:34.641199+00	547	2916	1
+59	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641253+00	2022-09-29 12:09:34.641282+00	548	3249	1
+60	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641334+00	2022-09-29 12:09:34.641364+00	549	3245	1
+61	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641415+00	2022-09-29 12:09:34.641444+00	550	2873	1
+62	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641496+00	2022-09-29 12:09:34.641525+00	551	3019	1
+63	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641577+00	2022-09-29 12:09:34.641607+00	552	3240	1
+64	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641659+00	2022-09-29 12:09:34.641702+00	553	2982	1
+65	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641755+00	2022-09-29 12:09:34.641784+00	554	2893	1
+66	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.641836+00	2022-09-29 12:09:34.641865+00	555	3239	1
+67	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.699518+00	2022-09-29 12:09:34.699563+00	556	2747	1
+68	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.699623+00	2022-09-29 12:09:34.699655+00	557	2909	1
+69	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.69971+00	2022-09-29 12:09:34.699741+00	558	3231	1
+70	TAX_GROUP	TAX_DETAIL	2022-09-29 12:09:34.699794+00	2022-09-29 12:09:34.699824+00	590	3244	1
 \.
 
 
@@ -7258,6 +7347,7 @@ COPY public.reimbursements (id, settlement_id, reimbursement_id, state, created_
 255	setvGxsBVkZh4	reimYTokyRgXGY	COMPLETE	2022-09-20 08:47:52.182501+00	2022-09-20 08:47:52.18253+00	1	P/2021/04/R/2
 256	setzhjuqQ6Pl5	reimYKDswIkdVo	PENDING	2022-09-20 08:51:34.07695+00	2022-09-20 08:51:34.077116+00	1	P/2022/09/R/19
 257	set0SnAq66Zbq	reimRyIMU9MJzg	PENDING	2022-09-20 08:57:03.080411+00	2022-09-20 08:57:03.080539+00	1	P/2022/09/R/20
+258	setzZCuAPxIsB	reimdGLTKKZwpK	PENDING	2022-09-29 12:09:26.484722+00	2022-09-29 12:09:26.484765+00	1	P/2022/09/R/21
 \.
 
 
@@ -7392,14 +7482,14 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 42, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 125, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 126, true);
 
 
 --
 -- Name: django_q_ormq_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 36, true);
+SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 41, true);
 
 
 --
@@ -7427,21 +7517,21 @@ SELECT pg_catalog.setval('public.expense_group_settings_id_seq', 1, true);
 -- Name: fyle_accounting_mappings_destinationattribute_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_destinationattribute_id_seq', 942, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_destinationattribute_id_seq', 943, true);
 
 
 --
 -- Name: fyle_accounting_mappings_expenseattribute_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_expenseattribute_id_seq', 3227, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_expenseattribute_id_seq', 3254, true);
 
 
 --
 -- Name: fyle_accounting_mappings_mapping_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_mapping_id_seq', 16, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_mapping_id_seq', 70, true);
 
 
 --
@@ -7511,7 +7601,7 @@ SELECT pg_catalog.setval('public.mappings_generalmapping_id_seq', 1, true);
 -- Name: reimbursements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.reimbursements_id_seq', 257, true);
+SELECT pg_catalog.setval('public.reimbursements_id_seq', 258, true);
 
 
 --

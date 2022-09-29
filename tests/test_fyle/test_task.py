@@ -80,4 +80,4 @@ def test_sync_reimbursements(mocker, db):
     sync_reimbursements(workspace_id)
 
     reimbursements = Reimbursement.objects.filter().count()
-    assert reimbursements == 257
+    assert reimbursements == 258

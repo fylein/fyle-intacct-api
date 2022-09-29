@@ -543,7 +543,7 @@ def test_auto_create_vendors_as_merchants(db, mocker):
     merchants = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='VENDOR').count()
     
-    assert merchants == 67
+    assert merchants == 68
     assert mappings == 0
 
     auto_create_vendors_as_merchants(workspace_id=workspace_id)
