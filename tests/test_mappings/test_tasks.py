@@ -217,7 +217,7 @@ def test_auto_create_category_mappings(db, mocker):
 
     mappings = CategoryMapping.objects.filter(workspace_id=workspace_id)
 
-    assert len(mappings) == 174
+    assert len(mappings) == 75
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()

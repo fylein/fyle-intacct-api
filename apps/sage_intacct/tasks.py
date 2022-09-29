@@ -1126,7 +1126,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                     expense_report.expense_group
                 )
                 detail = {
-                    'expense_group_id': expense_report.expense_group,
+                    'expense_group_id': expense_report.expense_group.id,
                     'message': 'Sage-Intacct Account not connected'
                 }
                 task_log.status = 'FAILED'
