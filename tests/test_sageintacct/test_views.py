@@ -21,7 +21,6 @@ def test_sage_intacct_fields(api_client, test_connection):
     assert response.status_code == 200
 
 
-
 def test_destination_attributes(api_client, test_connection):
     workspace_id = 1
 
@@ -33,10 +32,16 @@ def test_destination_attributes(api_client, test_connection):
     response = api_client.get(
         url,
         data={
-            'attribute_types': 'DEPARTMENT'
+            'attribute_types': "'DEPARTMENT', 'BALANCESHEET_GL_ACCOUNT'"
         })
+    assert response.status_code == 200
 
-    assert response != None
+    response = api_client.get(
+        url,
+        data={
+            'attribute_types': 'ACCOUNT'
+        })
+    assert response.status_code == 200
 
 
 def test_destination_attributes_count(api_client, test_connection):
