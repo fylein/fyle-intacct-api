@@ -1,3 +1,4 @@
+import re
 from django.db.models import Q
 from itertools import chain
 from datetime import datetime
@@ -36,19 +37,21 @@ class DestinationAttributesView(generics.ListAPIView):
 
     def get_queryset(self):
         attribute_types = self.request.query_params.get('attribute_types').split(',')
-        destination_attributes_list = []
+        params = {
+            'attribute_type__in': attribute_types,
+            'workspace_id': self.kwargs['workspace_id']
+        }
+        balancesheet_account_params = {}
 
         if 'BALANCESHEET_GL_ACCOUNT' in attribute_types:
-            attribute_types.remove('BALANCESHEET_GL_ACCOUNT')
-            destination_attributes = DestinationAttribute.objects.filter(
-                attribute_type__in=attribute_types, workspace_id=self.kwargs['workspace_id']).order_by('value')
-            gl_accounts = DestinationAttribute.objects.filter(
-                attribute_type='ACCOUNT', detail__contains={'account_type': 'balancesheet'}, workspace_id=self.kwargs['workspace_id']).order_by('value')
-            destination_attributes_list = list(chain(destination_attributes, gl_accounts))
-            return destination_attributes_list
-        else:
-            return DestinationAttribute.objects.filter(
-                attribute_type__in=attribute_types, workspace_id=self.kwargs['workspace_id']).order_by('value')
+            balancesheet_account_params = {
+                'attribute_type': 'ACCOUNT',
+                'detail__contains': {'account_type': 'balancesheet'}
+            }
+
+        destination_attributes = DestinationAttribute.objects.filter(
+            Q(**params) | Q(**balancesheet_account_params)).order_by('value')
+        return destination_attributes
 
 
 class DestinationAttributesCountView(generics.RetrieveAPIView):
