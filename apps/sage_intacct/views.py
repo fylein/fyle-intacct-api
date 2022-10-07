@@ -36,20 +36,22 @@ class DestinationAttributesView(generics.ListAPIView):
 
     def get_queryset(self):
         attribute_types = self.request.query_params.get('attribute_types').split(',')
+        account_type = self.request.query_params.get('account_type')
+
         params = {
             'attribute_type__in': attribute_types,
             'workspace_id': self.kwargs['workspace_id']
         }
-        balancesheet_account_params = {}
-
-        if 'BALANCESHEET_GL_ACCOUNT' in attribute_types:
-            balancesheet_account_params = {
-                'attribute_type': 'ACCOUNT',
-                'detail__contains': {'account_type': 'balancesheet'}
-            }
-
         destination_attributes = DestinationAttribute.objects.filter(
-            Q(**params) | Q(**balancesheet_account_params)).order_by('value')
+            **params).order_by('value')
+
+        if account_type == 'balancesheet':
+            params = {
+                'attribute_type': 'ACCOUNT',
+                'detail__contains': {'account_type': 'incomestatement'}
+            }
+            destination_attributes = destination_attributes.exclude(**params)
+
         return destination_attributes
 
 

@@ -32,12 +32,13 @@ def test_destination_attributes(api_client, test_connection):
     response = api_client.get(
         url,
         data={
-            'attribute_types': 'DEPARTMENT,BALANCESHEET_GL_ACCOUNT'
+            'attribute_types': 'DEPARTMENT,ACCOUNT',
+            'account_type': 'balancesheet'
         })
     assert response.status_code == 200
 
     response = json.loads(response.content)
-    assert len(response) == 6
+    assert len(response) == 95
 
     response = api_client.get(
         url,
