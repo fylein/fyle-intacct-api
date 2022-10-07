@@ -1,6 +1,5 @@
 import re
 from django.db.models import Q
-from itertools import chain
 from datetime import datetime
 
 from rest_framework.response import Response
