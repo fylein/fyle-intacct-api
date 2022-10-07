@@ -3157,7 +3157,7 @@ COPY public.destination_attributes (id, attribute_type, display_name, value, des
 752	EMPLOYEE	employee	Harman	1100	2022-09-20 08:40:08.50943+00	2022-09-20 08:40:08.509459+00	1	\N	{"email": "expensify@thatharmansingh.com", "full_name": "Harman", "location_id": "600", "department_id": null}	f
 753	EMPLOYEE	employee	Theresa Brown	Theresa Brown	2022-09-20 08:40:08.509526+00	2022-09-20 08:40:08.509555+00	1	\N	{"email": "admin1@fyleforfyle.cleanup", "full_name": "Theresa Brown", "location_id": null, "department_id": "300"}	f
 754	EMPLOYEE	employee	uchicha, itachi	1101	2022-09-20 08:40:08.509622+00	2022-09-20 08:40:08.509651+00	1	\N	{"email": null, "full_name": "uchicha, itachi", "location_id": "600", "department_id": null}	f
-755	ACCOUNT	account	Patents & Licenses	16200	2022-09-20 08:40:13.410332+00	2022-09-20 08:40:13.410376+00	1	t	\N	f
+755	ACCOUNT	account	Patents & Licenses	16200	2022-09-20 08:40:13.410332+00	2022-09-20 08:40:13.410376+00	1	t	{"account_type": "balancesheet"}	f
 756	ACCOUNT	account	Bank Charges	60600	2022-09-20 08:40:13.410441+00	2022-09-20 08:40:13.41047+00	1	t	\N	f
 757	ACCOUNT	account	COGS - Sales	50100	2022-09-20 08:40:13.410527+00	2022-09-20 08:40:13.410555+00	1	t	\N	f
 758	ACCOUNT	account	Employee Benefits	60110	2022-09-20 08:40:13.410612+00	2022-09-20 08:40:13.41064+00	1	t	\N	f
