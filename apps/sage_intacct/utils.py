@@ -104,7 +104,10 @@ class SageIntacctConnector:
                 'active': True if account['STATUS'] == 'active' else None,
                 'display_name': 'account',
                 'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
-                'destination_id': account['ACCOUNTNO']
+                'destination_id': account['ACCOUNTNO'],
+                'detail': {
+                    'account_type': account['ACCOUNTTYPE']
+                }
             })
 
         for attribute_type, account_attribute in account_attributes.items():
@@ -885,7 +888,7 @@ class SageIntacctConnector:
         for lineitem in journal_entry_lineitems:
             expense_link = self.get_expense_link(lineitem)
             credit_line = {
-                'accountno': lineitem.gl_account_number,
+                'accountno': general_mappings.default_credit_card_id,
                 'currency': journal_entry.currency,
                 'amount': lineitem.amount,
                 'tr_type': -1,

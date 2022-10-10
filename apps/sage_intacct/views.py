@@ -35,9 +35,23 @@ class DestinationAttributesView(generics.ListAPIView):
 
     def get_queryset(self):
         attribute_types = self.request.query_params.get('attribute_types').split(',')
+        account_type = self.request.query_params.get('account_type')
 
-        return DestinationAttribute.objects.filter(
-            attribute_type__in=attribute_types, workspace_id=self.kwargs['workspace_id']).order_by('value')
+        params = {
+            'attribute_type__in': attribute_types,
+            'workspace_id': self.kwargs['workspace_id']
+        }
+        destination_attributes = DestinationAttribute.objects.filter(
+            **params).order_by('value')
+
+        if account_type:
+            params = {
+                'attribute_type': 'ACCOUNT',
+                'detail__account_type': account_type
+            }
+            destination_attributes = destination_attributes.exclude(**params) #to filter out data with account_type='incomestatement
+
+        return destination_attributes
 
 
 class DestinationAttributesCountView(generics.RetrieveAPIView):

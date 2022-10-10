@@ -1127,7 +1127,9 @@ CREATE TABLE public.general_mappings (
     default_class_id character varying(255),
     default_class_name character varying(255),
     default_tax_code_id character varying(255),
-    default_tax_code_name character varying(255)
+    default_tax_code_name character varying(255),
+    default_credit_card_id character varying(255),
+    default_credit_card_name character varying(255)
 );
 
 
@@ -3157,176 +3159,176 @@ COPY public.destination_attributes (id, attribute_type, display_name, value, des
 752	EMPLOYEE	employee	Harman	1100	2022-09-20 08:40:08.50943+00	2022-09-20 08:40:08.509459+00	1	\N	{"email": "expensify@thatharmansingh.com", "full_name": "Harman", "location_id": "600", "department_id": null}	f
 753	EMPLOYEE	employee	Theresa Brown	Theresa Brown	2022-09-20 08:40:08.509526+00	2022-09-20 08:40:08.509555+00	1	\N	{"email": "admin1@fyleforfyle.cleanup", "full_name": "Theresa Brown", "location_id": null, "department_id": "300"}	f
 754	EMPLOYEE	employee	uchicha, itachi	1101	2022-09-20 08:40:08.509622+00	2022-09-20 08:40:08.509651+00	1	\N	{"email": null, "full_name": "uchicha, itachi", "location_id": "600", "department_id": null}	f
-755	ACCOUNT	account	Patents & Licenses	16200	2022-09-20 08:40:13.410332+00	2022-09-20 08:40:13.410376+00	1	t	\N	f
-756	ACCOUNT	account	Bank Charges	60600	2022-09-20 08:40:13.410441+00	2022-09-20 08:40:13.41047+00	1	t	\N	f
-757	ACCOUNT	account	COGS - Sales	50100	2022-09-20 08:40:13.410527+00	2022-09-20 08:40:13.410555+00	1	t	\N	f
-758	ACCOUNT	account	Employee Benefits	60110	2022-09-20 08:40:13.410612+00	2022-09-20 08:40:13.41064+00	1	t	\N	f
-759	ACCOUNT	account	Commission	60120	2022-09-20 08:40:13.410695+00	2022-09-20 08:40:13.410723+00	1	t	\N	f
-760	ACCOUNT	account	Office Supplies	60340	2022-09-20 08:40:13.410778+00	2022-09-20 08:40:13.410806+00	1	t	\N	f
-761	ACCOUNT	account	Rent	60300	2022-09-20 08:40:13.410861+00	2022-09-20 08:40:13.410889+00	1	t	\N	f
-762	ACCOUNT	account	COGS - Subcontractors	50300	2022-09-20 08:40:13.410944+00	2022-09-20 08:40:13.410971+00	1	t	\N	f
-763	ACCOUNT	account	Contract Usage - Unbilled	40800-101	2022-09-20 08:40:13.411026+00	2022-09-20 08:40:13.411054+00	1	t	\N	f
-764	ACCOUNT	account	Contract Usage - Billed	40800-102	2022-09-20 08:40:13.411108+00	2022-09-20 08:40:13.411387+00	1	t	\N	f
-765	ACCOUNT	account	Contract Subscriptions - Unbilled	40600-101	2022-09-20 08:40:13.411479+00	2022-09-20 08:40:13.411508+00	1	t	\N	f
-766	ACCOUNT	account	OE Subscriptions	40500	2022-09-20 08:40:13.411563+00	2022-09-20 08:40:13.411591+00	1	t	\N	f
-767	ACCOUNT	account	Contract Subscriptions	40600	2022-09-20 08:40:13.411645+00	2022-09-20 08:40:13.411673+00	1	t	\N	f
-768	ACCOUNT	account	Contract Usage	40800	2022-09-20 08:40:13.411727+00	2022-09-20 08:40:13.411754+00	1	t	\N	f
-769	ACCOUNT	account	Contract Subscriptions - Billed	40600-102	2022-09-20 08:40:13.411808+00	2022-09-20 08:40:13.411835+00	1	t	\N	f
-770	ACCOUNT	account	Contract Usage - Paid	40800-103	2022-09-20 08:40:13.411889+00	2022-09-20 08:40:13.411916+00	1	t	\N	f
-771	ACCOUNT	account	Contract Subscriptions - Paid	40600-103	2022-09-20 08:40:13.41197+00	2022-09-20 08:40:13.411998+00	1	t	\N	f
-772	ACCOUNT	account	Contract Services - Billed	40700-102	2022-09-20 08:40:13.412052+00	2022-09-20 08:40:13.412079+00	1	t	\N	f
-773	ACCOUNT	account	Revenue - Services	40100	2022-09-20 08:40:13.412261+00	2022-09-20 08:40:13.412299+00	1	t	\N	f
-774	ACCOUNT	account	Revenue - Subcontractors	40300	2022-09-20 08:40:13.412353+00	2022-09-20 08:40:13.41238+00	1	t	\N	f
-775	ACCOUNT	account	Contract Services - Paid	40700-103	2022-09-20 08:40:13.412435+00	2022-09-20 08:40:13.412462+00	1	t	\N	f
-776	ACCOUNT	account	Revenue - Reimbursed Expenses	40200	2022-09-20 08:40:13.412516+00	2022-09-20 08:40:13.412543+00	1	t	\N	f
-777	ACCOUNT	account	Contract Services	40700	2022-09-20 08:40:13.412597+00	2022-09-20 08:40:13.412624+00	1	t	\N	f
-778	ACCOUNT	account	Contract Services - Unbilled	40700-101	2022-09-20 08:40:13.412678+00	2022-09-20 08:40:13.412705+00	1	t	\N	f
-779	ACCOUNT	account	Spot Bonus	60150	2022-09-20 08:40:13.412759+00	2022-09-20 08:40:13.412787+00	1	t	\N	f
-780	ACCOUNT	account	CTA	36000	2022-09-20 08:40:13.41284+00	2022-09-20 08:40:13.412868+00	1	t	\N	f
-781	ACCOUNT	account	COGS - Other	50900	2022-09-20 08:40:13.412922+00	2022-09-20 08:40:13.41295+00	1	t	\N	f
-782	ACCOUNT	account	Allowance For Doubtful Accounts	12200	2022-09-20 08:40:13.413004+00	2022-09-20 08:40:13.413032+00	1	t	\N	f
-783	ACCOUNT	account	Prepaid Insurance	14100	2022-09-20 08:40:13.413085+00	2022-09-20 08:40:13.413113+00	1	t	\N	f
-784	ACCOUNT	account	Prepaid Rent	14200	2022-09-20 08:40:13.413405+00	2022-09-20 08:40:13.413435+00	1	t	\N	f
-785	ACCOUNT	account	Prepaid Other	14300	2022-09-20 08:40:13.413489+00	2022-09-20 08:40:13.413517+00	1	t	\N	f
-786	ACCOUNT	account	Employee Advances	12500	2022-09-20 08:40:13.413571+00	2022-09-20 08:40:13.413598+00	1	t	\N	f
-787	ACCOUNT	account	Accrued Expense	20600	2022-09-20 08:40:13.413652+00	2022-09-20 08:40:13.41368+00	1	t	\N	f
-788	ACCOUNT	account	Inventory - GRNI	20680	2022-09-20 08:40:13.413734+00	2022-09-20 08:40:13.413761+00	1	t	\N	f
-789	ACCOUNT	account	Accrued Payroll Tax Payable	20650	2022-09-20 08:40:13.413815+00	2022-09-20 08:40:13.413843+00	1	t	\N	f
-790	ACCOUNT	account	Accr. Sales Tax Payable	20610	2022-09-20 08:40:13.413896+00	2022-09-20 08:40:13.413924+00	1	t	\N	f
-791	ACCOUNT	account	Bad Debt Expense	60650	2022-09-20 08:40:13.413979+00	2022-09-20 08:40:13.414006+00	1	t	\N	f
-792	ACCOUNT	account	Travel	60200	2022-09-20 08:40:13.41406+00	2022-09-20 08:40:13.414087+00	1	t	\N	f
-793	ACCOUNT	account	Interest Expense	70200	2022-09-20 08:40:13.414297+00	2022-09-20 08:40:13.414327+00	1	t	\N	f
-794	ACCOUNT	account	Other G&A	60660	2022-09-20 08:40:13.414386+00	2022-09-20 08:40:13.414415+00	1	t	\N	f
-795	ACCOUNT	account	Currency Gain-Loss	70500	2022-09-20 08:40:13.414472+00	2022-09-20 08:40:13.414511+00	1	t	\N	f
-796	ACCOUNT	account	Telecommunications	60220	2022-09-20 08:40:13.414566+00	2022-09-20 08:40:13.414593+00	1	t	\N	f
-797	ACCOUNT	account	Valuation Reserves	13500	2022-09-20 08:40:13.414647+00	2022-09-20 08:40:13.414674+00	1	t	\N	f
-798	ACCOUNT	account	Goodwill	16100	2022-09-20 08:40:13.414728+00	2022-09-20 08:40:13.414768+00	1	t	\N	f
-799	ACCOUNT	account	Depreciation Expense	60630	2022-09-20 08:40:13.414918+00	2022-09-20 08:40:13.414953+00	1	t	\N	f
-800	ACCOUNT	account	Printing and Reproduction	60360	2022-09-20 08:40:13.41501+00	2022-09-20 08:40:13.415038+00	1	t	\N	f
-801	ACCOUNT	account	Notes Payable	20200	2022-09-20 08:40:13.415092+00	2022-09-20 08:40:13.415141+00	1	t	\N	f
-802	ACCOUNT	account	Long Term Debt	20400	2022-09-20 08:40:13.415323+00	2022-09-20 08:40:13.415351+00	1	t	\N	f
-803	ACCOUNT	account	Unrealized Currency Gain and Loss	30310	2022-09-20 08:40:13.415405+00	2022-09-20 08:40:13.415433+00	1	t	\N	f
-804	ACCOUNT	account	Trade Shows and Exhibits	60510	2022-09-20 08:40:13.415487+00	2022-09-20 08:40:13.415515+00	1	t	\N	f
-805	ACCOUNT	account	Marketing and Advertising	60500	2022-09-20 08:40:13.422642+00	2022-09-20 08:40:13.422714+00	1	t	\N	f
-806	ACCOUNT	account	Insurance	60330	2022-09-20 08:40:13.422839+00	2022-09-20 08:40:13.423003+00	1	t	\N	f
-807	ACCOUNT	account	Meals and Entertainment	60210	2022-09-20 08:40:13.423097+00	2022-09-20 08:40:13.423151+00	1	t	\N	f
-808	ACCOUNT	account	Postage and Delivery	60350	2022-09-20 08:40:13.423343+00	2022-09-20 08:40:13.423371+00	1	t	\N	f
-809	ACCOUNT	account	Professional Fees Expense	60410	2022-09-20 08:40:13.423427+00	2022-09-20 08:40:13.423454+00	1	t	\N	f
-810	ACCOUNT	account	Repairs and Maintenance	60320	2022-09-20 08:40:13.42351+00	2022-09-20 08:40:13.423538+00	1	t	\N	f
-811	ACCOUNT	account	Salaries and Wages	60100	2022-09-20 08:40:13.423593+00	2022-09-20 08:40:13.42362+00	1	t	\N	f
-812	ACCOUNT	account	Gain for Sale of an Asset	80500	2022-09-20 08:40:13.423675+00	2022-09-20 08:40:13.423702+00	1	t	\N	f
-813	ACCOUNT	account	Dividends	80400	2022-09-20 08:40:13.423757+00	2022-09-20 08:40:13.423784+00	1	t	\N	f
-814	ACCOUNT	account	Cash	10100	2022-09-20 08:40:13.423839+00	2022-09-20 08:40:13.423866+00	1	t	\N	f
-815	ACCOUNT	account	Checking 4 - Bank Of Canada	10040	2022-09-20 08:40:13.423921+00	2022-09-20 08:40:13.423949+00	1	t	\N	f
-816	ACCOUNT	account	Checking 5 - Bank Of England	10050	2022-09-20 08:40:13.424113+00	2022-09-20 08:40:13.424153+00	1	t	\N	f
-817	ACCOUNT	account	Checking 6 - Bank Of Australia	10060	2022-09-20 08:40:13.424219+00	2022-09-20 08:40:13.424368+00	1	t	\N	f
-818	ACCOUNT	account	Checking 7 - Bank Of South Africa	10070	2022-09-20 08:40:13.424435+00	2022-09-20 08:40:13.424463+00	1	t	\N	f
-819	ACCOUNT	account	Investments and Securities	10400	2022-09-20 08:40:13.424517+00	2022-09-20 08:40:13.424545+00	1	t	\N	f
-820	ACCOUNT	account	Checking 1 - SVB	10010	2022-09-20 08:40:13.424599+00	2022-09-20 08:40:13.424627+00	1	t	\N	f
-821	ACCOUNT	account	Checking 2 - SVB	10020	2022-09-20 08:40:13.42468+00	2022-09-20 08:40:13.424708+00	1	t	\N	f
-822	ACCOUNT	account	Checking 3 - SVB	10030	2022-09-20 08:40:13.424762+00	2022-09-20 08:40:13.42479+00	1	t	\N	f
-823	ACCOUNT	account	Due from Entity 400	12900-400	2022-09-20 08:40:13.424844+00	2022-09-20 08:40:13.424871+00	1	t	\N	f
-824	ACCOUNT	account	Due from Entity 700	12900-700	2022-09-20 08:40:13.424925+00	2022-09-20 08:40:13.424952+00	1	t	\N	f
-825	ACCOUNT	account	Due from Entity 600	12900-600	2022-09-20 08:40:13.425005+00	2022-09-20 08:40:13.425033+00	1	t	\N	f
-826	ACCOUNT	account	Due from Entity 500	12900-500	2022-09-20 08:40:13.425086+00	2022-09-20 08:40:13.425328+00	1	t	\N	f
-827	ACCOUNT	account	Due from Entity 200	12900-200	2022-09-20 08:40:13.425398+00	2022-09-20 08:40:13.425426+00	1	t	\N	f
-828	ACCOUNT	account	Due from Entity 300	12900-300	2022-09-20 08:40:13.425479+00	2022-09-20 08:40:13.425507+00	1	t	\N	f
-829	ACCOUNT	account	Due from Entity 100	12900-100	2022-09-20 08:40:13.425595+00	2022-09-20 08:40:13.425662+00	1	t	\N	f
-830	ACCOUNT	account	Intercompany Receivables	12900	2022-09-20 08:40:13.425753+00	2022-09-20 08:40:13.425774+00	1	t	\N	f
-831	ACCOUNT	account	Unbilled AR - Contract Services	12701-200	2022-09-20 08:40:13.425824+00	2022-09-20 08:40:13.425854+00	1	t	\N	f
-832	ACCOUNT	account	Unbilled AR - Contract Usage	12701-300	2022-09-20 08:40:13.425909+00	2022-09-20 08:40:13.425927+00	1	t	\N	f
-833	ACCOUNT	account	Deferred Expense - Commission	17710-001	2022-09-20 08:40:13.425973+00	2022-09-20 08:40:13.426002+00	1	t	\N	f
-834	ACCOUNT	account	Deferred Expense - Royalty	17710-002	2022-09-20 08:40:13.426059+00	2022-09-20 08:40:13.426178+00	1	t	\N	f
-835	ACCOUNT	account	Tax Receivable	12620	2022-09-20 08:40:13.426227+00	2022-09-20 08:40:13.426248+00	1	t	\N	f
-836	ACCOUNT	account	Deferred Expense	17710	2022-09-20 08:40:13.426305+00	2022-09-20 08:40:13.426335+00	1	t	\N	f
-837	ACCOUNT	account	Unbilled AR - Contract Subscriptions	12701-100	2022-09-20 08:40:13.426688+00	2022-09-20 08:40:13.426707+00	1	t	\N	f
-838	ACCOUNT	account	WIP (Labor Only)	12600	2022-09-20 08:40:13.426754+00	2022-09-20 08:40:13.426778+00	1	t	\N	f
-839	ACCOUNT	account	Unbilled AR	12701	2022-09-20 08:40:13.426822+00	2022-09-20 08:40:13.426837+00	1	t	\N	f
-840	ACCOUNT	account	Buildings Accm. Depr.	15110	2022-09-20 08:40:13.426883+00	2022-09-20 08:40:13.426922+00	1	t	\N	f
-841	ACCOUNT	account	Capitalized Software Costs	16300	2022-09-20 08:40:13.427102+00	2022-09-20 08:40:13.427141+00	1	t	\N	f
-842	ACCOUNT	account	Buildings	15100	2022-09-20 08:40:13.427196+00	2022-09-20 08:40:13.427223+00	1	t	\N	f
-843	ACCOUNT	account	DR - Contract Subscriptions - Unbilled	20701-101	2022-09-20 08:40:13.427278+00	2022-09-20 08:40:13.427305+00	1	t	\N	f
-844	ACCOUNT	account	DR - Contract Usage - Unbilled	20701-301	2022-09-20 08:40:13.427359+00	2022-09-20 08:40:13.427387+00	1	t	\N	f
-845	ACCOUNT	account	DR - Contract Subscriptions - Billed	20701-102	2022-09-20 08:40:13.427441+00	2022-09-20 08:40:13.427468+00	1	t	\N	f
-846	ACCOUNT	account	DR - Contract Services - Billed	20701-202	2022-09-20 08:40:13.427522+00	2022-09-20 08:40:13.42755+00	1	t	\N	f
-847	ACCOUNT	account	DR - Contract Usage - Billed	20701-302	2022-09-20 08:40:13.427637+00	2022-09-20 08:40:13.427727+00	1	t	\N	f
-848	ACCOUNT	account	DR - Contract Usage - Paid	20701-303	2022-09-20 08:40:13.427793+00	2022-09-20 08:40:13.427821+00	1	t	\N	f
-849	ACCOUNT	account	DR - Contract Services - Paid	20701-203	2022-09-20 08:40:13.427875+00	2022-09-20 08:40:13.427903+00	1	t	\N	f
-850	ACCOUNT	account	DR - Contract Subscriptions - Paid	20701-103	2022-09-20 08:40:13.427957+00	2022-09-20 08:40:13.427985+00	1	t	\N	f
-851	ACCOUNT	account	DR - Contract Services - Unbilled	20701-201	2022-09-20 08:40:13.428038+00	2022-09-20 08:40:13.428066+00	1	t	\N	f
-852	ACCOUNT	account	Deferred Revenue Contra	20702	2022-09-20 08:40:13.42812+00	2022-09-20 08:40:13.428147+00	1	t	\N	f
-853	ACCOUNT	account	Deferred Revenue	20701	2022-09-20 08:40:13.428318+00	2022-09-20 08:40:13.428346+00	1	t	\N	f
-854	ACCOUNT	account	Due to Entity 700	20900-700	2022-09-20 08:40:13.428399+00	2022-09-20 08:40:13.428427+00	1	t	\N	f
-855	ACCOUNT	account	Due to Entity 500	20900-500	2022-09-20 08:40:13.434257+00	2022-09-20 08:40:13.4343+00	1	t	\N	f
-856	ACCOUNT	account	Due to Entity 400	20900-400	2022-09-20 08:40:13.434366+00	2022-09-20 08:40:13.434395+00	1	t	\N	f
-857	ACCOUNT	account	Due to Entity 600	20900-600	2022-09-20 08:40:13.434453+00	2022-09-20 08:40:13.434481+00	1	t	\N	f
-858	ACCOUNT	account	Due to Entity 300	20900-300	2022-09-20 08:40:13.434538+00	2022-09-20 08:40:13.434566+00	1	t	\N	f
-859	ACCOUNT	account	Due to Entity 100	20900-100	2022-09-20 08:40:13.434622+00	2022-09-20 08:40:13.43465+00	1	t	\N	f
-860	ACCOUNT	account	Due to Entity 200	20900-200	2022-09-20 08:40:13.434705+00	2022-09-20 08:40:13.434733+00	1	t	\N	f
-861	ACCOUNT	account	Intercompany Payables	20900	2022-09-20 08:40:13.434788+00	2022-09-20 08:40:13.434815+00	1	t	\N	f
-862	ACCOUNT	account	Interest Income	80200	2022-09-20 08:40:13.43487+00	2022-09-20 08:40:13.434898+00	1	t	\N	f
-863	ACCOUNT	account	Journal Entry Rounding	70400	2022-09-20 08:40:13.434953+00	2022-09-20 08:40:13.43498+00	1	t	\N	f
-864	ACCOUNT	account	Intercompany Professional Fees	40400	2022-09-20 08:40:13.435035+00	2022-09-20 08:40:13.435062+00	1	t	\N	f
-865	ACCOUNT	account	Accumulated OCI	30300	2022-09-20 08:40:13.435117+00	2022-09-20 08:40:13.435773+00	1	t	\N	f
-866	ACCOUNT	account	Amortization Expense	60640	2022-09-20 08:40:13.43647+00	2022-09-20 08:40:13.436515+00	1	t	\N	f
-867	ACCOUNT	account	Revenue - Other	40900	2022-09-20 08:40:13.436692+00	2022-09-20 08:40:13.436726+00	1	t	\N	f
-868	ACCOUNT	account	Employee Deductions	60140	2022-09-20 08:40:13.436794+00	2022-09-20 08:40:13.436824+00	1	t	\N	f
-869	ACCOUNT	account	Payroll Taxes	60130	2022-09-20 08:40:13.436889+00	2022-09-20 08:40:13.436919+00	1	t	\N	f
-870	ACCOUNT	account	Other Taxes	60620	2022-09-20 08:40:13.43698+00	2022-09-20 08:40:13.43701+00	1	t	\N	f
-871	ACCOUNT	account	Excise Tax	60610	2022-09-20 08:40:13.437256+00	2022-09-20 08:40:13.437289+00	1	t	\N	f
-872	ACCOUNT	account	Reserved Inventory	13400	2022-09-20 08:40:13.437352+00	2022-09-20 08:40:13.437381+00	1	t	\N	f
-873	ACCOUNT	account	Supplies	13300	2022-09-20 08:40:13.437443+00	2022-09-20 08:40:13.437473+00	1	t	\N	f
-874	ACCOUNT	account	Goods in Transit	13200	2022-09-20 08:40:13.437558+00	2022-09-20 08:40:13.437602+00	1	t	\N	f
-875	ACCOUNT	account	Inventory	13100	2022-09-20 08:40:13.437946+00	2022-09-20 08:40:13.438066+00	1	t	\N	f
-876	ACCOUNT	account	Inventory - Other	13900	2022-09-20 08:40:13.43814+00	2022-09-20 08:40:13.438171+00	1	t	\N	f
-877	ACCOUNT	account	Other Intangible Assets	16900	2022-09-20 08:40:13.438466+00	2022-09-20 08:40:13.438489+00	1	t	\N	f
-878	ACCOUNT	account	Other Assets	17000	2022-09-20 08:40:13.43854+00	2022-09-20 08:40:13.438569+00	1	t	\N	f
-879	ACCOUNT	account	Credit Card Offset	20500	2022-09-20 08:40:13.438632+00	2022-09-20 08:40:13.438655+00	1	t	\N	f
-880	ACCOUNT	account	Sales Tax Payable	20620	2022-09-20 08:40:13.438713+00	2022-09-20 08:40:13.438742+00	1	t	\N	f
-881	ACCOUNT	account	Common Stock	30100	2022-09-20 08:40:13.438801+00	2022-09-20 08:40:13.43884+00	1	t	\N	f
-882	ACCOUNT	account	Preferred Stock	30200	2022-09-20 08:40:13.438895+00	2022-09-20 08:40:13.438922+00	1	t	\N	f
-883	ACCOUNT	account	Retained Earnings	35000	2022-09-20 08:40:13.438987+00	2022-09-20 08:40:13.439129+00	1	t	\N	f
-884	ACCOUNT	account	COGS - Materials	50200	2022-09-20 08:40:13.439188+00	2022-09-20 08:40:13.439227+00	1	t	\N	f
-885	ACCOUNT	account	Paid Time Off	70303	2022-09-20 08:40:13.439282+00	2022-09-20 08:40:13.439309+00	1	t	\N	f
-886	ACCOUNT	account	Indirect Labor	70300	2022-09-20 08:40:13.439364+00	2022-09-20 08:40:13.439391+00	1	t	\N	f
-887	ACCOUNT	account	Holiday	70301	2022-09-20 08:40:13.439446+00	2022-09-20 08:40:13.439473+00	1	t	\N	f
-888	ACCOUNT	account	Company Credit Card Offset	60700	2022-09-20 08:40:13.439527+00	2022-09-20 08:40:13.439555+00	1	t	\N	f
-889	ACCOUNT	account	Other Expense	70100	2022-09-20 08:40:13.439609+00	2022-09-20 08:40:13.439636+00	1	t	\N	f
-890	ACCOUNT	account	Professional Development	70302	2022-09-20 08:40:13.439691+00	2022-09-20 08:40:13.439719+00	1	t	\N	f
-891	ACCOUNT	account	Indirect Labor Offset	70304	2022-09-20 08:40:13.439773+00	2022-09-20 08:40:13.439801+00	1	t	\N	f
-892	ACCOUNT	account	Other Income	80100	2022-09-20 08:40:13.439855+00	2022-09-20 08:40:13.439883+00	1	t	\N	f
-893	ACCOUNT	account	AR - Retainage	12710	2022-09-20 08:40:13.439937+00	2022-09-20 08:40:13.439965+00	1	t	\N	f
-894	ACCOUNT	account	Accounts Receivable	12100	2022-09-20 08:40:13.440019+00	2022-09-20 08:40:13.440046+00	1	t	\N	f
-895	ACCOUNT	account	Accounts Payable - Employees	20300	2022-09-20 08:40:13.4401+00	2022-09-20 08:40:13.440127+00	1	t	\N	f
-896	ACCOUNT	account	Accounts Payable	20100	2022-09-20 08:40:13.440306+00	2022-09-20 08:40:13.440346+00	1	t	\N	f
-897	ACCOUNT	account	Billable Overtime Hours	51708	2022-09-20 08:40:13.440401+00	2022-09-20 08:40:13.440428+00	1	t	\N	f
-898	ACCOUNT	account	Non-Billable Overtime Hours	51709	2022-09-20 08:40:13.440482+00	2022-09-20 08:40:13.44051+00	1	t	\N	f
-899	ACCOUNT	account	Billable Hours	51701	2022-09-20 08:40:13.440564+00	2022-09-20 08:40:13.440591+00	1	t	\N	f
-900	ACCOUNT	account	Labor Cost Variance	51711	2022-09-20 08:40:13.440646+00	2022-09-20 08:40:13.440673+00	1	t	\N	f
-901	ACCOUNT	account	Labor Cost Offset	51710	2022-09-20 08:40:13.440829+00	2022-09-20 08:40:13.440863+00	1	t	\N	f
-902	ACCOUNT	account	Non-Billable Hours	51702	2022-09-20 08:40:13.440923+00	2022-09-20 08:40:13.440951+00	1	t	\N	f
-903	ACCOUNT	account	COGS - Burden on Projects	51703	2022-09-20 08:40:13.441005+00	2022-09-20 08:40:13.441033+00	1	t	\N	f
-904	ACCOUNT	account	COGS - Overhead on Projects	51704	2022-09-20 08:40:13.441087+00	2022-09-20 08:40:13.441257+00	1	t	\N	f
-905	ACCOUNT	account	COGS - G&A on Projects	51705	2022-09-20 08:40:13.44715+00	2022-09-20 08:40:13.447201+00	1	t	\N	f
-906	ACCOUNT	account	COGS - Indirect Projects Costs Offset	51706	2022-09-20 08:40:13.447282+00	2022-09-20 08:40:13.447329+00	1	t	\N	f
-907	ACCOUNT	account	COGS - Reimbursed Expenses	51707	2022-09-20 08:40:13.447396+00	2022-09-20 08:40:13.447423+00	1	t	\N	f
-908	ACCOUNT	account	Software and Licenses	60400	2022-09-20 08:40:13.447468+00	2022-09-20 08:40:13.447489+00	1	t	\N	f
-909	ACCOUNT	account	Utilities	60310	2022-09-20 08:40:13.447542+00	2022-09-20 08:40:13.447553+00	1	t	\N	f
-910	ACCOUNT	account	Downgrade	90006	2022-09-20 08:40:13.447601+00	2022-09-20 08:40:13.447626+00	1	t	\N	f
-911	ACCOUNT	account	Contract Royalty Expense	50400	2022-09-20 08:40:13.447676+00	2022-09-20 08:40:13.447714+00	1	t	\N	f
-912	ACCOUNT	account	Contract Commission	60160	2022-09-20 08:40:13.447769+00	2022-09-20 08:40:13.447796+00	1	t	\N	f
-913	ACCOUNT	account	CMRR Offset	90009	2022-09-20 08:40:13.447851+00	2022-09-20 08:40:13.447878+00	1	t	\N	f
-914	ACCOUNT	account	CMRR New	90002	2022-09-20 08:40:13.447932+00	2022-09-20 08:40:13.447959+00	1	t	\N	f
-915	ACCOUNT	account	CMRR Add-On	90003	2022-09-20 08:40:13.448013+00	2022-09-20 08:40:13.44804+00	1	t	\N	f
-916	ACCOUNT	account	Renewal Upgrade	90004	2022-09-20 08:40:13.448094+00	2022-09-20 08:40:13.448232+00	1	t	\N	f
-917	ACCOUNT	account	Renewal Downgrade	90005	2022-09-20 08:40:13.448341+00	2022-09-20 08:40:13.44837+00	1	t	\N	f
-918	ACCOUNT	account	CMRR Churn	90007	2022-09-20 08:40:13.448425+00	2022-09-20 08:40:13.448452+00	1	t	\N	f
-919	ACCOUNT	account	CMRR Renewal	90008	2022-09-20 08:40:13.448506+00	2022-09-20 08:40:13.448533+00	1	t	\N	f
-920	ACCOUNT	account	nilewh	12221	2022-09-20 08:40:13.448587+00	2022-09-20 08:40:13.448614+00	1	t	\N	f
-921	ACCOUNT	account	Potential Billings	90000	2022-09-20 08:40:13.448668+00	2022-09-20 08:40:13.448695+00	1	t	\N	f
-922	ACCOUNT	account	Potential Billings Offset	90001	2022-09-20 08:40:13.448749+00	2022-09-20 08:40:13.448776+00	1	t	\N	f
-923	ACCOUNT	account	Elimination Adjustment	70600	2022-09-20 08:40:13.44883+00	2022-09-20 08:40:13.448857+00	1	t	\N	f
-924	ACCOUNT	account	Transactor Clearing	12610	2022-09-20 08:40:13.448911+00	2022-09-20 08:40:13.448939+00	1	t	\N	f
+755	ACCOUNT	account	Patents & Licenses	16200	2022-09-20 08:40:13.410332+00	2022-09-20 08:40:13.410376+00	1	t	{"account_type": "balancesheet"}	f
+756	ACCOUNT	account	Bank Charges	60600	2022-09-20 08:40:13.410441+00	2022-09-20 08:40:13.41047+00	1	t	{"account_type": "incomestatement"}	f
+757	ACCOUNT	account	COGS - Sales	50100	2022-09-20 08:40:13.410527+00	2022-09-20 08:40:13.410555+00	1	t	{"account_type": "incomestatement"}	f
+758	ACCOUNT	account	Employee Benefits	60110	2022-09-20 08:40:13.410612+00	2022-09-20 08:40:13.41064+00	1	t	{"account_type": "incomestatement"}	f
+759	ACCOUNT	account	Commission	60120	2022-09-20 08:40:13.410695+00	2022-09-20 08:40:13.410723+00	1	t	{"account_type": "incomestatement"}	f
+760	ACCOUNT	account	Office Supplies	60340	2022-09-20 08:40:13.410778+00	2022-09-20 08:40:13.410806+00	1	t	{"account_type": "incomestatement"}	f
+761	ACCOUNT	account	Rent	60300	2022-09-20 08:40:13.410861+00	2022-09-20 08:40:13.410889+00	1	t	{"account_type": "incomestatement"}	f
+762	ACCOUNT	account	COGS - Subcontractors	50300	2022-09-20 08:40:13.410944+00	2022-09-20 08:40:13.410971+00	1	t	{"account_type": "incomestatement"}	f
+763	ACCOUNT	account	Contract Usage - Unbilled	40800-101	2022-09-20 08:40:13.411026+00	2022-09-20 08:40:13.411054+00	1	t	{"account_type": "incomestatement"}	f
+764	ACCOUNT	account	Contract Usage - Billed	40800-102	2022-09-20 08:40:13.411108+00	2022-09-20 08:40:13.411387+00	1	t	{"account_type": "incomestatement"}	f
+765	ACCOUNT	account	Contract Subscriptions - Unbilled	40600-101	2022-09-20 08:40:13.411479+00	2022-09-20 08:40:13.411508+00	1	t	{"account_type": "incomestatement"}	f
+766	ACCOUNT	account	OE Subscriptions	40500	2022-09-20 08:40:13.411563+00	2022-09-20 08:40:13.411591+00	1	t	{"account_type": "incomestatement"}	f
+767	ACCOUNT	account	Contract Subscriptions	40600	2022-09-20 08:40:13.411645+00	2022-09-20 08:40:13.411673+00	1	t	{"account_type": "incomestatement"}	f
+768	ACCOUNT	account	Contract Usage	40800	2022-09-20 08:40:13.411727+00	2022-09-20 08:40:13.411754+00	1	t	{"account_type": "incomestatement"}	f
+769	ACCOUNT	account	Contract Subscriptions - Billed	40600-102	2022-09-20 08:40:13.411808+00	2022-09-20 08:40:13.411835+00	1	t	{"account_type": "incomestatement"}	f
+770	ACCOUNT	account	Contract Usage - Paid	40800-103	2022-09-20 08:40:13.411889+00	2022-09-20 08:40:13.411916+00	1	t	{"account_type": "incomestatement"}	f
+771	ACCOUNT	account	Contract Subscriptions - Paid	40600-103	2022-09-20 08:40:13.41197+00	2022-09-20 08:40:13.411998+00	1	t	{"account_type": "incomestatement"}	f
+772	ACCOUNT	account	Contract Services - Billed	40700-102	2022-09-20 08:40:13.412052+00	2022-09-20 08:40:13.412079+00	1	t	{"account_type": "incomestatement"}	f
+773	ACCOUNT	account	Revenue - Services	40100	2022-09-20 08:40:13.412261+00	2022-09-20 08:40:13.412299+00	1	t	{"account_type": "incomestatement"}	f
+774	ACCOUNT	account	Revenue - Subcontractors	40300	2022-09-20 08:40:13.412353+00	2022-09-20 08:40:13.41238+00	1	t	{"account_type": "incomestatement"}	f
+775	ACCOUNT	account	Contract Services - Paid	40700-103	2022-09-20 08:40:13.412435+00	2022-09-20 08:40:13.412462+00	1	t	{"account_type": "incomestatement"}	f
+776	ACCOUNT	account	Revenue - Reimbursed Expenses	40200	2022-09-20 08:40:13.412516+00	2022-09-20 08:40:13.412543+00	1	t	{"account_type": "incomestatement"}	f
+777	ACCOUNT	account	Contract Services	40700	2022-09-20 08:40:13.412597+00	2022-09-20 08:40:13.412624+00	1	t	{"account_type": "incomestatement"}	f
+778	ACCOUNT	account	Contract Services - Unbilled	40700-101	2022-09-20 08:40:13.412678+00	2022-09-20 08:40:13.412705+00	1	t	{"account_type": "incomestatement"}	f
+779	ACCOUNT	account	Spot Bonus	60150	2022-09-20 08:40:13.412759+00	2022-09-20 08:40:13.412787+00	1	t	{"account_type": "incomestatement"}	f
+780	ACCOUNT	account	CTA	36000	2022-09-20 08:40:13.41284+00	2022-09-20 08:40:13.412868+00	1	t	{"account_type": "balancesheet"}	f
+781	ACCOUNT	account	COGS - Other	50900	2022-09-20 08:40:13.412922+00	2022-09-20 08:40:13.41295+00	1	t	{"account_type": "incomestatement"}	f
+782	ACCOUNT	account	Allowance For Doubtful Accounts	12200	2022-09-20 08:40:13.413004+00	2022-09-20 08:40:13.413032+00	1	t	{"account_type": "balancesheet"}	f
+783	ACCOUNT	account	Prepaid Insurance	14100	2022-09-20 08:40:13.413085+00	2022-09-20 08:40:13.413113+00	1	t	{"account_type": "balancesheet"}	f
+784	ACCOUNT	account	Prepaid Rent	14200	2022-09-20 08:40:13.413405+00	2022-09-20 08:40:13.413435+00	1	t	{"account_type": "balancesheet"}	f
+785	ACCOUNT	account	Prepaid Other	14300	2022-09-20 08:40:13.413489+00	2022-09-20 08:40:13.413517+00	1	t	{"account_type": "balancesheet"}	f
+786	ACCOUNT	account	Employee Advances	12500	2022-09-20 08:40:13.413571+00	2022-09-20 08:40:13.413598+00	1	t	{"account_type": "balancesheet"}	f
+787	ACCOUNT	account	Accrued Expense	20600	2022-09-20 08:40:13.413652+00	2022-09-20 08:40:13.41368+00	1	t	{"account_type": "balancesheet"}	f
+788	ACCOUNT	account	Inventory - GRNI	20680	2022-09-20 08:40:13.413734+00	2022-09-20 08:40:13.413761+00	1	t	{"account_type": "balancesheet"}	f
+789	ACCOUNT	account	Accrued Payroll Tax Payable	20650	2022-09-20 08:40:13.413815+00	2022-09-20 08:40:13.413843+00	1	t	{"account_type": "balancesheet"}	f
+790	ACCOUNT	account	Accr. Sales Tax Payable	20610	2022-09-20 08:40:13.413896+00	2022-09-20 08:40:13.413924+00	1	t	{"account_type": "balancesheet"}	f
+791	ACCOUNT	account	Bad Debt Expense	60650	2022-09-20 08:40:13.413979+00	2022-09-20 08:40:13.414006+00	1	t	{"account_type": "incomestatement"}	f
+792	ACCOUNT	account	Travel	60200	2022-09-20 08:40:13.41406+00	2022-09-20 08:40:13.414087+00	1	t	{"account_type": "incomestatement"}	f
+793	ACCOUNT	account	Interest Expense	70200	2022-09-20 08:40:13.414297+00	2022-09-20 08:40:13.414327+00	1	t	{"account_type": "incomestatement"}	f
+794	ACCOUNT	account	Other G&A	60660	2022-09-20 08:40:13.414386+00	2022-09-20 08:40:13.414415+00	1	t	{"account_type": "incomestatement"}	f
+795	ACCOUNT	account	Currency Gain-Loss	70500	2022-09-20 08:40:13.414472+00	2022-09-20 08:40:13.414511+00	1	t	{"account_type": "incomestatement"}	f
+796	ACCOUNT	account	Telecommunications	60220	2022-09-20 08:40:13.414566+00	2022-09-20 08:40:13.414593+00	1	t	{"account_type": "incomestatement"}	f
+797	ACCOUNT	account	Valuation Reserves	13500	2022-09-20 08:40:13.414647+00	2022-09-20 08:40:13.414674+00	1	t	{"account_type": "balancesheet"}	f
+798	ACCOUNT	account	Goodwill	16100	2022-09-20 08:40:13.414728+00	2022-09-20 08:40:13.414768+00	1	t	{"account_type": "balancesheet"}	f
+799	ACCOUNT	account	Depreciation Expense	60630	2022-09-20 08:40:13.414918+00	2022-09-20 08:40:13.414953+00	1	t	{"account_type": "incomestatement"}	f
+800	ACCOUNT	account	Printing and Reproduction	60360	2022-09-20 08:40:13.41501+00	2022-09-20 08:40:13.415038+00	1	t	{"account_type": "incomestatement"}	f
+801	ACCOUNT	account	Notes Payable	20200	2022-09-20 08:40:13.415092+00	2022-09-20 08:40:13.415141+00	1	t	{"account_type": "balancesheet"}	f
+802	ACCOUNT	account	Long Term Debt	20400	2022-09-20 08:40:13.415323+00	2022-09-20 08:40:13.415351+00	1	t	{"account_type": "balancesheet"}	f
+803	ACCOUNT	account	Unrealized Currency Gain and Loss	30310	2022-09-20 08:40:13.415405+00	2022-09-20 08:40:13.415433+00	1	t	{"account_type": "balancesheet"}	f
+804	ACCOUNT	account	Trade Shows and Exhibits	60510	2022-09-20 08:40:13.415487+00	2022-09-20 08:40:13.415515+00	1	t	{"account_type": "incomestatement"}	f
+805	ACCOUNT	account	Marketing and Advertising	60500	2022-09-20 08:40:13.422642+00	2022-09-20 08:40:13.422714+00	1	t	{"account_type": "incomestatement"}	f
+806	ACCOUNT	account	Insurance	60330	2022-09-20 08:40:13.422839+00	2022-09-20 08:40:13.423003+00	1	t	{"account_type": "incomestatement"}	f
+807	ACCOUNT	account	Meals and Entertainment	60210	2022-09-20 08:40:13.423097+00	2022-09-20 08:40:13.423151+00	1	t	{"account_type": "incomestatement"}	f
+808	ACCOUNT	account	Postage and Delivery	60350	2022-09-20 08:40:13.423343+00	2022-09-20 08:40:13.423371+00	1	t	{"account_type": "incomestatement"}	f
+809	ACCOUNT	account	Professional Fees Expense	60410	2022-09-20 08:40:13.423427+00	2022-09-20 08:40:13.423454+00	1	t	{"account_type": "incomestatement"}	f
+810	ACCOUNT	account	Repairs and Maintenance	60320	2022-09-20 08:40:13.42351+00	2022-09-20 08:40:13.423538+00	1	t	{"account_type": "incomestatement"}	f
+811	ACCOUNT	account	Salaries and Wages	60100	2022-09-20 08:40:13.423593+00	2022-09-20 08:40:13.42362+00	1	t	{"account_type": "incomestatement"}	f
+812	ACCOUNT	account	Gain for Sale of an Asset	80500	2022-09-20 08:40:13.423675+00	2022-09-20 08:40:13.423702+00	1	t	{"account_type": "incomestatement"}	f
+813	ACCOUNT	account	Dividends	80400	2022-09-20 08:40:13.423757+00	2022-09-20 08:40:13.423784+00	1	t	{"account_type": "incomestatement"}	f
+814	ACCOUNT	account	Cash	10100	2022-09-20 08:40:13.423839+00	2022-09-20 08:40:13.423866+00	1	t	{"account_type": "balancesheet"}	f
+815	ACCOUNT	account	Checking 4 - Bank Of Canada	10040	2022-09-20 08:40:13.423921+00	2022-09-20 08:40:13.423949+00	1	t	{"account_type": "balancesheet"}	f
+816	ACCOUNT	account	Checking 5 - Bank Of England	10050	2022-09-20 08:40:13.424113+00	2022-09-20 08:40:13.424153+00	1	t	{"account_type": "balancesheet"}	f
+817	ACCOUNT	account	Checking 6 - Bank Of Australia	10060	2022-09-20 08:40:13.424219+00	2022-09-20 08:40:13.424368+00	1	t	{"account_type": "balancesheet"}	f
+818	ACCOUNT	account	Checking 7 - Bank Of South Africa	10070	2022-09-20 08:40:13.424435+00	2022-09-20 08:40:13.424463+00	1	t	{"account_type": "balancesheet"}	f
+819	ACCOUNT	account	Investments and Securities	10400	2022-09-20 08:40:13.424517+00	2022-09-20 08:40:13.424545+00	1	t	{"account_type": "balancesheet"}	f
+820	ACCOUNT	account	Checking 1 - SVB	10010	2022-09-20 08:40:13.424599+00	2022-09-20 08:40:13.424627+00	1	t	{"account_type": "balancesheet"}	f
+821	ACCOUNT	account	Checking 2 - SVB	10020	2022-09-20 08:40:13.42468+00	2022-09-20 08:40:13.424708+00	1	t	{"account_type": "balancesheet"}	f
+822	ACCOUNT	account	Checking 3 - SVB	10030	2022-09-20 08:40:13.424762+00	2022-09-20 08:40:13.42479+00	1	t	{"account_type": "balancesheet"}	f
+823	ACCOUNT	account	Due from Entity 400	12900-400	2022-09-20 08:40:13.424844+00	2022-09-20 08:40:13.424871+00	1	t	{"account_type": "balancesheet"}	f
+824	ACCOUNT	account	Due from Entity 700	12900-700	2022-09-20 08:40:13.424925+00	2022-09-20 08:40:13.424952+00	1	t	{"account_type": "balancesheet"}	f
+825	ACCOUNT	account	Due from Entity 600	12900-600	2022-09-20 08:40:13.425005+00	2022-09-20 08:40:13.425033+00	1	t	{"account_type": "balancesheet"}	f
+826	ACCOUNT	account	Due from Entity 500	12900-500	2022-09-20 08:40:13.425086+00	2022-09-20 08:40:13.425328+00	1	t	{"account_type": "balancesheet"}	f
+827	ACCOUNT	account	Due from Entity 200	12900-200	2022-09-20 08:40:13.425398+00	2022-09-20 08:40:13.425426+00	1	t	{"account_type": "balancesheet"}	f
+828	ACCOUNT	account	Due from Entity 300	12900-300	2022-09-20 08:40:13.425479+00	2022-09-20 08:40:13.425507+00	1	t	{"account_type": "balancesheet"}	f
+829	ACCOUNT	account	Due from Entity 100	12900-100	2022-09-20 08:40:13.425595+00	2022-09-20 08:40:13.425662+00	1	t	{"account_type": "balancesheet"}	f
+830	ACCOUNT	account	Intercompany Receivables	12900	2022-09-20 08:40:13.425753+00	2022-09-20 08:40:13.425774+00	1	t	{"account_type": "balancesheet"}	f
+831	ACCOUNT	account	Unbilled AR - Contract Services	12701-200	2022-09-20 08:40:13.425824+00	2022-09-20 08:40:13.425854+00	1	t	{"account_type": "balancesheet"}	f
+832	ACCOUNT	account	Unbilled AR - Contract Usage	12701-300	2022-09-20 08:40:13.425909+00	2022-09-20 08:40:13.425927+00	1	t	{"account_type": "balancesheet"}	f
+833	ACCOUNT	account	Deferred Expense - Commission	17710-001	2022-09-20 08:40:13.425973+00	2022-09-20 08:40:13.426002+00	1	t	{"account_type": "balancesheet"}	f
+834	ACCOUNT	account	Deferred Expense - Royalty	17710-002	2022-09-20 08:40:13.426059+00	2022-09-20 08:40:13.426178+00	1	t	{"account_type": "balancesheet"}	f
+835	ACCOUNT	account	Tax Receivable	12620	2022-09-20 08:40:13.426227+00	2022-09-20 08:40:13.426248+00	1	t	{"account_type": "balancesheet"}	f
+836	ACCOUNT	account	Deferred Expense	17710	2022-09-20 08:40:13.426305+00	2022-09-20 08:40:13.426335+00	1	t	{"account_type": "balancesheet"}	f
+837	ACCOUNT	account	Unbilled AR - Contract Subscriptions	12701-100	2022-09-20 08:40:13.426688+00	2022-09-20 08:40:13.426707+00	1	t	{"account_type": "balancesheet"}	f
+838	ACCOUNT	account	WIP (Labor Only)	12600	2022-09-20 08:40:13.426754+00	2022-09-20 08:40:13.426778+00	1	t	{"account_type": "balancesheet"}	f
+839	ACCOUNT	account	Unbilled AR	12701	2022-09-20 08:40:13.426822+00	2022-09-20 08:40:13.426837+00	1	t	{"account_type": "balancesheet"}	f
+840	ACCOUNT	account	Buildings Accm. Depr.	15110	2022-09-20 08:40:13.426883+00	2022-09-20 08:40:13.426922+00	1	t	{"account_type": "balancesheet"}	f
+841	ACCOUNT	account	Capitalized Software Costs	16300	2022-09-20 08:40:13.427102+00	2022-09-20 08:40:13.427141+00	1	t	{"account_type": "balancesheet"}	f
+842	ACCOUNT	account	Buildings	15100	2022-09-20 08:40:13.427196+00	2022-09-20 08:40:13.427223+00	1	t	{"account_type": "balancesheet"}	f
+843	ACCOUNT	account	DR - Contract Subscriptions - Unbilled	20701-101	2022-09-20 08:40:13.427278+00	2022-09-20 08:40:13.427305+00	1	t	{"account_type": "balancesheet"}	f
+844	ACCOUNT	account	DR - Contract Usage - Unbilled	20701-301	2022-09-20 08:40:13.427359+00	2022-09-20 08:40:13.427387+00	1	t	{"account_type": "balancesheet"}	f
+845	ACCOUNT	account	DR - Contract Subscriptions - Billed	20701-102	2022-09-20 08:40:13.427441+00	2022-09-20 08:40:13.427468+00	1	t	{"account_type": "balancesheet"}	f
+846	ACCOUNT	account	DR - Contract Services - Billed	20701-202	2022-09-20 08:40:13.427522+00	2022-09-20 08:40:13.42755+00	1	t	{"account_type": "balancesheet"}	f
+847	ACCOUNT	account	DR - Contract Usage - Billed	20701-302	2022-09-20 08:40:13.427637+00	2022-09-20 08:40:13.427727+00	1	t	{"account_type": "balancesheet"}	f
+848	ACCOUNT	account	DR - Contract Usage - Paid	20701-303	2022-09-20 08:40:13.427793+00	2022-09-20 08:40:13.427821+00	1	t	{"account_type": "balancesheet"}	f
+849	ACCOUNT	account	DR - Contract Services - Paid	20701-203	2022-09-20 08:40:13.427875+00	2022-09-20 08:40:13.427903+00	1	t	{"account_type": "balancesheet"}	f
+850	ACCOUNT	account	DR - Contract Subscriptions - Paid	20701-103	2022-09-20 08:40:13.427957+00	2022-09-20 08:40:13.427985+00	1	t	{"account_type": "balancesheet"}	f
+851	ACCOUNT	account	DR - Contract Services - Unbilled	20701-201	2022-09-20 08:40:13.428038+00	2022-09-20 08:40:13.428066+00	1	t	{"account_type": "balancesheet"}	f
+852	ACCOUNT	account	Deferred Revenue Contra	20702	2022-09-20 08:40:13.42812+00	2022-09-20 08:40:13.428147+00	1	t	{"account_type": "balancesheet"}	f
+853	ACCOUNT	account	Deferred Revenue	20701	2022-09-20 08:40:13.428318+00	2022-09-20 08:40:13.428346+00	1	t	{"account_type": "balancesheet"}	f
+854	ACCOUNT	account	Due to Entity 700	20900-700	2022-09-20 08:40:13.428399+00	2022-09-20 08:40:13.428427+00	1	t	{"account_type": "balancesheet"}	f
+855	ACCOUNT	account	Due to Entity 500	20900-500	2022-09-20 08:40:13.434257+00	2022-09-20 08:40:13.4343+00	1	t	{"account_type": "balancesheet"}	f
+856	ACCOUNT	account	Due to Entity 400	20900-400	2022-09-20 08:40:13.434366+00	2022-09-20 08:40:13.434395+00	1	t	{"account_type": "balancesheet"}	f
+857	ACCOUNT	account	Due to Entity 600	20900-600	2022-09-20 08:40:13.434453+00	2022-09-20 08:40:13.434481+00	1	t	{"account_type": "balancesheet"}	f
+858	ACCOUNT	account	Due to Entity 300	20900-300	2022-09-20 08:40:13.434538+00	2022-09-20 08:40:13.434566+00	1	t	{"account_type": "balancesheet"}	f
+859	ACCOUNT	account	Due to Entity 100	20900-100	2022-09-20 08:40:13.434622+00	2022-09-20 08:40:13.43465+00	1	t	{"account_type": "balancesheet"}	f
+860	ACCOUNT	account	Due to Entity 200	20900-200	2022-09-20 08:40:13.434705+00	2022-09-20 08:40:13.434733+00	1	t	{"account_type": "balancesheet"}	f
+861	ACCOUNT	account	Intercompany Payables	20900	2022-09-20 08:40:13.434788+00	2022-09-20 08:40:13.434815+00	1	t	{"account_type": "balancesheet"}	f
+862	ACCOUNT	account	Interest Income	80200	2022-09-20 08:40:13.43487+00	2022-09-20 08:40:13.434898+00	1	t	{"account_type": "incomestatement"}	f
+863	ACCOUNT	account	Journal Entry Rounding	70400	2022-09-20 08:40:13.434953+00	2022-09-20 08:40:13.43498+00	1	t	{"account_type": "incomestatement"}	f
+864	ACCOUNT	account	Intercompany Professional Fees	40400	2022-09-20 08:40:13.435035+00	2022-09-20 08:40:13.435062+00	1	t	{"account_type": "incomestatement"}	f
+865	ACCOUNT	account	Accumulated OCI	30300	2022-09-20 08:40:13.435117+00	2022-09-20 08:40:13.435773+00	1	t	{"account_type": "balancesheet"}	f
+866	ACCOUNT	account	Amortization Expense	60640	2022-09-20 08:40:13.43647+00	2022-09-20 08:40:13.436515+00	1	t	{"account_type": "incomestatement"}	f
+867	ACCOUNT	account	Revenue - Other	40900	2022-09-20 08:40:13.436692+00	2022-09-20 08:40:13.436726+00	1	t	{"account_type": "incomestatement"}	f
+868	ACCOUNT	account	Employee Deductions	60140	2022-09-20 08:40:13.436794+00	2022-09-20 08:40:13.436824+00	1	t	{"account_type": "incomestatement"}	f
+869	ACCOUNT	account	Payroll Taxes	60130	2022-09-20 08:40:13.436889+00	2022-09-20 08:40:13.436919+00	1	t	{"account_type": "incomestatement"}	f
+870	ACCOUNT	account	Other Taxes	60620	2022-09-20 08:40:13.43698+00	2022-09-20 08:40:13.43701+00	1	t	{"account_type": "incomestatement"}	f
+871	ACCOUNT	account	Excise Tax	60610	2022-09-20 08:40:13.437256+00	2022-09-20 08:40:13.437289+00	1	t	{"account_type": "incomestatement"}	f
+872	ACCOUNT	account	Reserved Inventory	13400	2022-09-20 08:40:13.437352+00	2022-09-20 08:40:13.437381+00	1	t	{"account_type": "balancesheet"}	f
+873	ACCOUNT	account	Supplies	13300	2022-09-20 08:40:13.437443+00	2022-09-20 08:40:13.437473+00	1	t	{"account_type": "balancesheet"}	f
+874	ACCOUNT	account	Goods in Transit	13200	2022-09-20 08:40:13.437558+00	2022-09-20 08:40:13.437602+00	1	t	{"account_type": "balancesheet"}	f
+875	ACCOUNT	account	Inventory	13100	2022-09-20 08:40:13.437946+00	2022-09-20 08:40:13.438066+00	1	t	{"account_type": "balancesheet"}	f
+876	ACCOUNT	account	Inventory - Other	13900	2022-09-20 08:40:13.43814+00	2022-09-20 08:40:13.438171+00	1	t	{"account_type": "balancesheet"}	f
+877	ACCOUNT	account	Other Intangible Assets	16900	2022-09-20 08:40:13.438466+00	2022-09-20 08:40:13.438489+00	1	t	{"account_type": "balancesheet"}	f
+878	ACCOUNT	account	Other Assets	17000	2022-09-20 08:40:13.43854+00	2022-09-20 08:40:13.438569+00	1	t	{"account_type": "balancesheet"}	f
+879	ACCOUNT	account	Credit Card Offset	20500	2022-09-20 08:40:13.438632+00	2022-09-20 08:40:13.438655+00	1	t	{"account_type": "balancesheet"}	f
+880	ACCOUNT	account	Sales Tax Payable	20620	2022-09-20 08:40:13.438713+00	2022-09-20 08:40:13.438742+00	1	t	{"account_type": "balancesheet"}	f
+881	ACCOUNT	account	Common Stock	30100	2022-09-20 08:40:13.438801+00	2022-09-20 08:40:13.43884+00	1	t	{"account_type": "balancesheet"}	f
+882	ACCOUNT	account	Preferred Stock	30200	2022-09-20 08:40:13.438895+00	2022-09-20 08:40:13.438922+00	1	t	{"account_type": "balancesheet"}	f
+883	ACCOUNT	account	Retained Earnings	35000	2022-09-20 08:40:13.438987+00	2022-09-20 08:40:13.439129+00	1	t	{"account_type": "balancesheet"}	f
+884	ACCOUNT	account	COGS - Materials	50200	2022-09-20 08:40:13.439188+00	2022-09-20 08:40:13.439227+00	1	t	{"account_type": "incomestatement"}	f
+885	ACCOUNT	account	Paid Time Off	70303	2022-09-20 08:40:13.439282+00	2022-09-20 08:40:13.439309+00	1	t	{"account_type": "incomestatement"}	f
+886	ACCOUNT	account	Indirect Labor	70300	2022-09-20 08:40:13.439364+00	2022-09-20 08:40:13.439391+00	1	t	{"account_type": "incomestatement"}	f
+887	ACCOUNT	account	Holiday	70301	2022-09-20 08:40:13.439446+00	2022-09-20 08:40:13.439473+00	1	t	{"account_type": "incomestatement"}	f
+888	ACCOUNT	account	Company Credit Card Offset	60700	2022-09-20 08:40:13.439527+00	2022-09-20 08:40:13.439555+00	1	t	{"account_type": "incomestatement"}	f
+889	ACCOUNT	account	Other Expense	70100	2022-09-20 08:40:13.439609+00	2022-09-20 08:40:13.439636+00	1	t	{"account_type": "incomestatement"}	f
+890	ACCOUNT	account	Professional Development	70302	2022-09-20 08:40:13.439691+00	2022-09-20 08:40:13.439719+00	1	t	{"account_type": "incomestatement"}	f
+891	ACCOUNT	account	Indirect Labor Offset	70304	2022-09-20 08:40:13.439773+00	2022-09-20 08:40:13.439801+00	1	t	{"account_type": "incomestatement"}	f
+892	ACCOUNT	account	Other Income	80100	2022-09-20 08:40:13.439855+00	2022-09-20 08:40:13.439883+00	1	t	{"account_type": "incomestatement"}	f
+893	ACCOUNT	account	AR - Retainage	12710	2022-09-20 08:40:13.439937+00	2022-09-20 08:40:13.439965+00	1	t	{"account_type": "balancesheet"}	f
+894	ACCOUNT	account	Accounts Receivable	12100	2022-09-20 08:40:13.440019+00	2022-09-20 08:40:13.440046+00	1	t	{"account_type": "balancesheet"}	f
+895	ACCOUNT	account	Accounts Payable - Employees	20300	2022-09-20 08:40:13.4401+00	2022-09-20 08:40:13.440127+00	1	t	{"account_type": "balancesheet"}	f
+896	ACCOUNT	account	Accounts Payable	20100	2022-09-20 08:40:13.440306+00	2022-09-20 08:40:13.440346+00	1	t	{"account_type": "balancesheet"}	f
+897	ACCOUNT	account	Billable Overtime Hours	51708	2022-09-20 08:40:13.440401+00	2022-09-20 08:40:13.440428+00	1	t	{"account_type": "incomestatement"}	f
+898	ACCOUNT	account	Non-Billable Overtime Hours	51709	2022-09-20 08:40:13.440482+00	2022-09-20 08:40:13.44051+00	1	t	{"account_type": "incomestatement"}	f
+899	ACCOUNT	account	Billable Hours	51701	2022-09-20 08:40:13.440564+00	2022-09-20 08:40:13.440591+00	1	t	{"account_type": "incomestatement"}	f
+900	ACCOUNT	account	Labor Cost Variance	51711	2022-09-20 08:40:13.440646+00	2022-09-20 08:40:13.440673+00	1	t	{"account_type": "incomestatement"}	f
+901	ACCOUNT	account	Labor Cost Offset	51710	2022-09-20 08:40:13.440829+00	2022-09-20 08:40:13.440863+00	1	t	{"account_type": "incomestatement"}	f
+902	ACCOUNT	account	Non-Billable Hours	51702	2022-09-20 08:40:13.440923+00	2022-09-20 08:40:13.440951+00	1	t	{"account_type": "incomestatement"}	f
+903	ACCOUNT	account	COGS - Burden on Projects	51703	2022-09-20 08:40:13.441005+00	2022-09-20 08:40:13.441033+00	1	t	{"account_type": "incomestatement"}	f
+904	ACCOUNT	account	COGS - Overhead on Projects	51704	2022-09-20 08:40:13.441087+00	2022-09-20 08:40:13.441257+00	1	t	{"account_type": "incomestatement"}	f
+905	ACCOUNT	account	COGS - G&A on Projects	51705	2022-09-20 08:40:13.44715+00	2022-09-20 08:40:13.447201+00	1	t	{"account_type": "incomestatement"}	f
+906	ACCOUNT	account	COGS - Indirect Projects Costs Offset	51706	2022-09-20 08:40:13.447282+00	2022-09-20 08:40:13.447329+00	1	t	{"account_type": "incomestatement"}	f
+907	ACCOUNT	account	COGS - Reimbursed Expenses	51707	2022-09-20 08:40:13.447396+00	2022-09-20 08:40:13.447423+00	1	t	{"account_type": "incomestatement"}	f
+908	ACCOUNT	account	Software and Licenses	60400	2022-09-20 08:40:13.447468+00	2022-09-20 08:40:13.447489+00	1	t	{"account_type": "incomestatement"}	f
+909	ACCOUNT	account	Utilities	60310	2022-09-20 08:40:13.447542+00	2022-09-20 08:40:13.447553+00	1	t	{"account_type": "incomestatement"}	f
+910	ACCOUNT	account	Downgrade	90006	2022-09-20 08:40:13.447601+00	2022-09-20 08:40:13.447626+00	1	t	{"account_type": "balancesheet"}	f
+911	ACCOUNT	account	Contract Royalty Expense	50400	2022-09-20 08:40:13.447676+00	2022-09-20 08:40:13.447714+00	1	t	{"account_type": "incomestatement"}	f
+912	ACCOUNT	account	Contract Commission	60160	2022-09-20 08:40:13.447769+00	2022-09-20 08:40:13.447796+00	1	t	{"account_type": "incomestatement"}	f
+913	ACCOUNT	account	CMRR Offset	90009	2022-09-20 08:40:13.447851+00	2022-09-20 08:40:13.447878+00	1	t	{"account_type": "balancesheet"}	f
+914	ACCOUNT	account	CMRR New	90002	2022-09-20 08:40:13.447932+00	2022-09-20 08:40:13.447959+00	1	t	{"account_type": "balancesheet"}	f
+915	ACCOUNT	account	CMRR Add-On	90003	2022-09-20 08:40:13.448013+00	2022-09-20 08:40:13.44804+00	1	t	{"account_type": "balancesheet"}	f
+916	ACCOUNT	account	Renewal Upgrade	90004	2022-09-20 08:40:13.448094+00	2022-09-20 08:40:13.448232+00	1	t	{"account_type": "balancesheet"}	f
+917	ACCOUNT	account	Renewal Downgrade	90005	2022-09-20 08:40:13.448341+00	2022-09-20 08:40:13.44837+00	1	t	{"account_type": "balancesheet"}	f
+918	ACCOUNT	account	CMRR Churn	90007	2022-09-20 08:40:13.448425+00	2022-09-20 08:40:13.448452+00	1	t	{"account_type": "balancesheet"}	f
+919	ACCOUNT	account	CMRR Renewal	90008	2022-09-20 08:40:13.448506+00	2022-09-20 08:40:13.448533+00	1	t	{"account_type": "incomestatement"}	f
+920	ACCOUNT	account	nilewh	12221	2022-09-20 08:40:13.448587+00	2022-09-20 08:40:13.448614+00	1	t	{"account_type": "balancesheet"}	f
+921	ACCOUNT	account	Potential Billings	90000	2022-09-20 08:40:13.448668+00	2022-09-20 08:40:13.448695+00	1	t	{"account_type": "incomestatement"}	f
+922	ACCOUNT	account	Potential Billings Offset	90001	2022-09-20 08:40:13.448749+00	2022-09-20 08:40:13.448776+00	1	t	{"account_type": "incomestatement"}	f
+923	ACCOUNT	account	Elimination Adjustment	70600	2022-09-20 08:40:13.44883+00	2022-09-20 08:40:13.448857+00	1	t	{"account_type": "incomestatement"}	f
+924	ACCOUNT	account	Transactor Clearing	12610	2022-09-20 08:40:13.448911+00	2022-09-20 08:40:13.448939+00	1	t	{"account_type": "balancesheet"}	f
 925	EXPENSE_TYPE	Expense Types	Airfare	Airfare	2022-09-20 08:40:17.37637+00	2022-09-20 08:40:17.376416+00	1	t	{"gl_account_no": "60200", "gl_account_title": "Travel"}	f
 926	EXPENSE_TYPE	Expense Types	Cell Phone	Cell Phone	2022-09-20 08:40:17.3765+00	2022-09-20 08:40:17.376531+00	1	t	{"gl_account_no": "60220", "gl_account_title": "Telecommunications"}	f
 927	EXPENSE_TYPE	Expense Types	Ground Transportation-Parking	Ground Transportation/Parking	2022-09-20 08:40:17.376606+00	2022-09-20 08:40:17.376636+00	1	t	{"gl_account_no": "60200", "gl_account_title": "Travel"}	f
@@ -6961,8 +6963,8 @@ COPY public.fyle_credentials (id, refresh_token, created_at, updated_at, workspa
 -- Data for Name: general_mappings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.general_mappings (id, default_location_name, default_location_id, default_department_name, default_department_id, default_project_name, default_project_id, created_at, updated_at, workspace_id, default_charge_card_name, default_charge_card_id, default_ccc_vendor_name, default_ccc_vendor_id, default_item_id, default_item_name, payment_account_id, payment_account_name, default_ccc_expense_payment_type_id, default_ccc_expense_payment_type_name, default_reimbursable_expense_payment_type_id, default_reimbursable_expense_payment_type_name, use_intacct_employee_departments, use_intacct_employee_locations, location_entity_id, location_entity_name, default_class_id, default_class_name, default_tax_code_id, default_tax_code_name) FROM stdin;
-1	Australia	600	Admin	300	Branding Analysis	10061	2022-09-20 08:47:19.634467+00	2022-09-20 08:47:19.634602+00	1			Advisor Printing	20043	1012	Cube	400_CHK	Demo Bank - 400_CHK		\N			f	f			600	Enterprise	Capital Goods Imported	Capital Goods Imported
+COPY public.general_mappings (id, default_location_name, default_location_id, default_department_name, default_department_id, default_project_name, default_project_id, created_at, updated_at, workspace_id, default_charge_card_name, default_charge_card_id, default_ccc_vendor_name, default_ccc_vendor_id, default_item_id, default_item_name, payment_account_id, payment_account_name, default_ccc_expense_payment_type_id, default_ccc_expense_payment_type_name, default_reimbursable_expense_payment_type_id, default_reimbursable_expense_payment_type_name, use_intacct_employee_departments, use_intacct_employee_locations, location_entity_id, location_entity_name, default_class_id, default_class_name, default_tax_code_id, default_tax_code_name, default_credit_card_id, default_credit_card_name) FROM stdin;
+1	Australia	600	Admin	300	Branding Analysis	10061	2022-09-20 08:47:19.634467+00	2022-10-10 08:25:16.32686+00	1		20600		20043	1012	Cube	400_CHK	Demo Bank - 400_CHK		\N			f	f			600	Enterprise	W4 Withholding Tax	W4 Withholding Tax	20610	Accr. Sales Tax Payable
 \.
 
 

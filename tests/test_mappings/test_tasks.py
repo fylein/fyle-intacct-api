@@ -301,14 +301,17 @@ def test_schedule_auto_map_employees(db):
 def test_auto_create_cost_center_mappings(db, mocker, create_mapping_setting):
     workspace_id = 1
     mocker.patch(
-            'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
-            return_value=[]
-        )
+        'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
+        return_value=[]
+    )
     mocker.patch(
-            'fyle_integrations_platform_connector.apis.CostCenters.sync',
-            return_value=[]
-        )
-    
+        'fyle_integrations_platform_connector.apis.CostCenters.sync',
+        return_value=[]
+    )
+    mocker.patch(
+        'apps.sage_intacct.utils.sync_departments',
+        return_value=[]
+    )
     response = auto_create_cost_center_mappings(workspace_id=workspace_id)
     assert response == None
 
@@ -407,6 +410,10 @@ def test_schedule_fyle_attributes_creation(db, mocker):
 def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting):
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
+        return_value=[]
+    )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=[]
     )
     workspace_id = 1

@@ -42,6 +42,8 @@ data = {
         'default_ccc_vendor_name': 'sdfgh',
         'default_charge_card_id': 'asdfghjk',
         'default_charge_card_name': 'sdfghjk',
+        'default_credit_card_id': 'asdfghjk',
+        'default_credit_card_name': 'sdfghjk',
         'default_class_id': '200',
         'default_class_name': 'Service Line 2',
         'default_department_id': '300',

@@ -32,6 +32,12 @@ class MappingUtils:
             assert_valid('default_charge_card_id' in general_mapping and general_mapping['default_charge_card_id'],
                          'default charge card id field is blank')
 
+        elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
+            assert_valid('default_credit_card_name' in general_mapping and general_mapping['default_credit_card_name'],
+                         'default credit card name field is blank')
+            assert_valid('default_credit_card_id' in general_mapping and general_mapping['default_credit_card_id'],
+                         'default credit card id field is blank')
+
         elif configuration.corporate_credit_card_expenses_object == 'BILL':
             assert_valid('default_ccc_vendor_name' in general_mapping and general_mapping['default_ccc_vendor_name'],
                          'default ccc vendor name field is blank')
@@ -81,6 +87,8 @@ class MappingUtils:
                 'default_project_id': general_mapping['default_project_id'],
                 'default_charge_card_name': general_mapping['default_charge_card_name'],
                 'default_charge_card_id': general_mapping['default_charge_card_id'],
+                'default_credit_card_name': general_mapping['default_credit_card_name'],
+                'default_credit_card_id': general_mapping['default_credit_card_id'],
                 'default_ccc_vendor_name': general_mapping['default_ccc_vendor_name'],
                 'default_ccc_vendor_id': general_mapping['default_ccc_vendor_id'],
                 'default_item_name': general_mapping['default_item_name'],
