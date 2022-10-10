@@ -1127,7 +1127,9 @@ CREATE TABLE public.general_mappings (
     default_class_id character varying(255),
     default_class_name character varying(255),
     default_tax_code_id character varying(255),
-    default_tax_code_name character varying(255)
+    default_tax_code_name character varying(255),
+    default_credit_card_id character varying(255),
+    default_credit_card_name character varying(255)
 );
 
 
@@ -6961,8 +6963,8 @@ COPY public.fyle_credentials (id, refresh_token, created_at, updated_at, workspa
 -- Data for Name: general_mappings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.general_mappings (id, default_location_name, default_location_id, default_department_name, default_department_id, default_project_name, default_project_id, created_at, updated_at, workspace_id, default_charge_card_name, default_charge_card_id, default_ccc_vendor_name, default_ccc_vendor_id, default_item_id, default_item_name, payment_account_id, payment_account_name, default_ccc_expense_payment_type_id, default_ccc_expense_payment_type_name, default_reimbursable_expense_payment_type_id, default_reimbursable_expense_payment_type_name, use_intacct_employee_departments, use_intacct_employee_locations, location_entity_id, location_entity_name, default_class_id, default_class_name, default_tax_code_id, default_tax_code_name) FROM stdin;
-1	Australia	600	Admin	300	Branding Analysis	10061	2022-09-20 08:47:19.634467+00	2022-09-20 08:47:19.634602+00	1			Advisor Printing	20043	1012	Cube	400_CHK	Demo Bank - 400_CHK		\N			f	f			600	Enterprise	Capital Goods Imported	Capital Goods Imported
+COPY public.general_mappings (id, default_location_name, default_location_id, default_department_name, default_department_id, default_project_name, default_project_id, created_at, updated_at, workspace_id, default_charge_card_name, default_charge_card_id, default_ccc_vendor_name, default_ccc_vendor_id, default_item_id, default_item_name, payment_account_id, payment_account_name, default_ccc_expense_payment_type_id, default_ccc_expense_payment_type_name, default_reimbursable_expense_payment_type_id, default_reimbursable_expense_payment_type_name, use_intacct_employee_departments, use_intacct_employee_locations, location_entity_id, location_entity_name, default_class_id, default_class_name, default_tax_code_id, default_tax_code_name, default_credit_card_id, default_credit_card_name) FROM stdin;
+1	Australia	600	Admin	300	Branding Analysis	10061	2022-09-20 08:47:19.634467+00	2022-10-10 08:25:16.32686+00	1		20600		20043	1012	Cube	400_CHK	Demo Bank - 400_CHK		\N			f	f			600	Enterprise	W4 Withholding Tax	W4 Withholding Tax	20610	Accr. Sales Tax Payable
 \.
 
 

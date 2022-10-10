@@ -376,7 +376,7 @@ def test_get_tax_solution_id_or_none(mocker, db, create_expense_report):
     expense_report, expense_report_lineitems = create_expense_report
     tax_solution_id = sage_intacct_connection.get_tax_solution_id_or_none(expense_report_lineitems)
     
-    assert tax_solution_id == 'South Africa - VAT'
+    assert tax_solution_id == 'Australia - GST'
 
 
 def test_get_tax_exclusive_amount(db):
