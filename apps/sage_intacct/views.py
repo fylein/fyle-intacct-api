@@ -45,12 +45,12 @@ class DestinationAttributesView(generics.ListAPIView):
         destination_attributes = DestinationAttribute.objects.filter(
             **params).order_by('value')
 
-        if account_type == 'balancesheet':
+        if account_type:
             params = {
                 'attribute_type': 'ACCOUNT',
-                'detail__contains': {'account_type': 'incomestatement'}
+                'detail__account_type': account_type
             }
-            destination_attributes = destination_attributes.exclude(**params)
+            destination_attributes = destination_attributes.exclude(**params) #to filter out data with account_type='incomestatement
 
         return destination_attributes
 
