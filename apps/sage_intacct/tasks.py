@@ -434,6 +434,14 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                     })
 
             elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
+                if general_mapping and not general_mapping.default_credit_card_id:
+                    bulk_errors.append({
+                        'row': None,
+                        'expense_group_id': expense_group.id,
+                        'value': expense_group.description.get('employee_email'),
+                        'type': 'General Mapping',
+                        'message': 'Default Credit Card not found'
+                    })
                 error_message = 'Employee Mapping not found'
                 entity = EmployeeMapping.objects.get(
                     source_employee__value=expense_group.description.get('employee_email'),
