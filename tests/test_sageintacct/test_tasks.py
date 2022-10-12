@@ -968,6 +968,17 @@ def test__validate_expense_group(mocker, db):
     except:
         logger.info('Mappings are missing')
 
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.save()
+
+    general_mapping.default_credit_card_id = None
+    general_mapping.save()
+
+    try:
+        __validate_expense_group(expense_group, configuration)
+    except BulkError as exception:
+        logger.info(exception.response)
+
 
 def test_load_attachments(mocker, db):
 
