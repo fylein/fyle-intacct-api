@@ -350,29 +350,40 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
 
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.info(exception.response)
-    sage_intacct_errors = exception.response['error']
-    error_msg = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
+    
     errors = []
 
-    if isinstance(sage_intacct_errors, list):
-        for error in sage_intacct_errors:
+    if 'error' in exception.response:
+        sage_intacct_errors = exception.response['error']
+        error_msg = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
+
+        if isinstance(sage_intacct_errors, list):
+            for error in sage_intacct_errors:
+                errors.append({
+                    'expense_group_id': expense_group.id,
+                    'short_description': error['description'] \
+                        if ('description' in error and error['description']) else '{0} error'.format(export_type),
+                    'long_description': error['description2'] \
+                        if ('description2' in error and error['description2']) \
+                            else error_msg,
+                    'correction': error['correction']\
+                         if ('correction' in error and error['correction']) else 'Not available'
+                })
+
+        elif isinstance(sage_intacct_errors, dict):
+            error = sage_intacct_errors
             errors.append({
                 'expense_group_id': expense_group.id,
-                'short_description': error['description'] if error['description'] else '{0} error'.format(export_type),
-                'long_description': error['description2'] if error['description2'] \
+                'short_description': error['description'] \
+                    if ('description' in error and error['description']) else '{0} error'.format(export_type),
+                'long_description': error['description2'] if ('description2' in error and error['description2']) \
                     else error_msg,
-                'correction': error['correction'] if error['correction'] else 'Not available'
+                'correction': error['correction']\
+                    if ('correction' in error and error['correction']) else 'Not available'
             })
 
-    elif isinstance(sage_intacct_errors, dict):
-        error = sage_intacct_errors
-        errors.append({
-            'expense_group_id': expense_group.id,
-            'short_description': error['description'] if error['description'] else '{0} error'.format(export_type),
-            'long_description': error['description2'] if error['description2'] \
-                else error_msg,
-            'correction': error['correction'] if error['correction'] else 'Not available'
-        })
+    if not errors:
+        errors.append(exception.response)
 
     task_log.status = 'FAILED'
     task_log.detail = None
