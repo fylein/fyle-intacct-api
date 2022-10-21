@@ -3,6 +3,7 @@ debugger/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
+cache.db-journal
 *.py[cod]
 *$py.class
 .DS_Store/
