@@ -1,21 +1,25 @@
-from apps.mappings.models import GeneralMapping
+import logging
 from datetime import datetime
+from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import Bill,BillLineitem
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
 from apps.workspaces.models import Configuration, Workspace
 from fyle_accounting_mappings.models import MappingSetting
-from apps.sage_intacct.models import get_department_id_or_none,get_tax_code_id_or_none, get_customer_id_or_none, \
-    get_project_id_or_none, get_class_id_or_none, get_expense_purpose, get_transaction_date, get_location_id_or_none, \
-        get_intacct_employee_object, get_memo, \
-    APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, ExpenseReport, ExpenseReportLineitem, \
-        ChargeCardTransaction, ChargeCardTransactionLineitem, SageIntacctReimbursement, SageIntacctReimbursementLineitem
+from apps.sage_intacct.models import *
 
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 def test_create_bill(db):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
+    general_mappings.save()
 
     bill = Bill.create_bill(expense_group)
     bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
@@ -28,12 +32,37 @@ def test_create_bill(db):
     assert bill.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
     assert bill.vendor_id == 'Ashwin'
 
+    expense_group = ExpenseGroup.objects.get(id=2)
+
+    bill = Bill.create_bill(expense_group)
+    bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
+
+    for bill_lineitem in bill_lineitems:
+        assert bill_lineitem.amount == 11.0
+        assert bill_lineitem.billable == True
+
+    assert bill.currency == 'USD'
+    assert bill.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
+    assert bill.vendor_id == '20043'
+
+    try:
+        general_mappings.delete()
+        bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
+    except:
+        logger.info('General mapping not found')
+        
 
 def test_expense_report(db):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
+    general_mappings.save()
+
     expense_report = ExpenseReport.create_expense_report(expense_group)
     expense_report_lineitems  = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
@@ -45,12 +74,24 @@ def test_expense_report(db):
     assert expense_report.currency == 'USD'
     assert expense_report.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
 
+    try:
+        general_mappings.delete()
+        expense_report_lineitems  = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
+    except:
+        logger.info('General mapping not found')
+
 
 def test_create_journal_entry(db):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
+    general_mappings.save()
+
     journal_entry = JournalEntry.create_journal_entry(expense_group)
     journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
 
@@ -60,6 +101,12 @@ def test_create_journal_entry(db):
 
     assert journal_entry.currency == 'USD'
     assert journal_entry.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
+
+    try:
+        general_mappings.delete()
+        journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
+    except:
+        logger.info('General mapping not found')
 
 
 def test_create_ap_payment(db):
@@ -86,6 +133,8 @@ def test_create_charge_card_transaction(db):
 
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
     general_mappings.default_charge_card_id = 'sample'
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
     general_mappings.save()
 
     charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group)
@@ -97,6 +146,12 @@ def test_create_charge_card_transaction(db):
         
     assert charge_card_transaction.currency == 'USD'
     assert charge_card_transaction.transaction_date.split('T')[0] == '2022-09-20'
+
+    try:
+        general_mappings.delete()
+        charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+    except:
+        logger.info('General mapping not found')
 
 
 def test_create_sage_intacct_reimbursement(db):
@@ -179,8 +234,10 @@ def test_get_department_id_or_none(mocker, db):
 
     mapping_setting = MappingSetting.objects.filter( 
         workspace_id=expense_group.workspace_id, 
-        destination_field='DEPARTMENT' 
-    ).first() 
+    ).first()
+
+    mapping_setting.destination_field = 'DEPARTMENT'
+    mapping_setting.save()
 
     mapping_setting.source_field = 'TEAM_2_POSTMAN'
     mapping_setting.save()

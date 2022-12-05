@@ -135,6 +135,10 @@ def test_post_bill_success(mocker, create_task_logs, db):
     assert bill.currency == 'USD'
     assert bill.vendor_id == 'Ashwin'
 
+    with mock.patch('sageintacctsdk.apis.Bills.update_attachment') as mock_call:
+        mock_call.side_effect = Exception()
+        create_bill(expense_group, task_log.id)
+
 
 def test_create_bill_exceptions(db, create_task_logs):
     workspace_id = 1
@@ -309,7 +313,6 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         assert task_log.status == 'FAILED'
 
 
-
 def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
     mocker.patch(
         'sageintacctsdk.apis.ChargeCardTransactions.post',
@@ -352,6 +355,10 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
 
     assert task_log.status=='COMPLETE'
     assert charge_card_transaction.currency == 'USD'
+
+    with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.update_attachment') as mock_call:
+        mock_call.side_effect = Exception()
+        create_charge_card_transaction(expense_group, task_log.id)
 
 
 def test_post_credit_card_exceptions(mocker, create_task_logs, db):
@@ -432,6 +439,10 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
         return_value=data['journal_entry_response']
     )
     mocker.patch(
+        'sageintacctsdk.apis.JournalEntries.update',
+        return_value=data['journal_entry_response']
+    )
+    mocker.patch(
         'sageintacctsdk.apis.JournalEntries.get',
         return_value=data['journal_entry_response']['data']
     )
@@ -474,6 +485,10 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
 
     assert task_log.status=='COMPLETE'
     assert journal_entry.currency == 'GBP'
+
+    with mock.patch('sageintacctsdk.apis.JournalEntries.update') as mock_call:
+        mock_call.side_effect = Exception()
+        create_journal_entry(expense_group, task_log.id)
 
 
 def test_post_create_journal_entry_exceptions(create_task_logs, db):
@@ -550,6 +565,10 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
         return_value=data['expense_report_response']
     )
     mocker.patch(
+        'sageintacctsdk.apis.ExpenseReports.update_attachment',
+        return_value=data['expense_report_response']
+    )
+    mocker.patch(
         'sageintacctsdk.apis.ExpenseReports.get',
         return_value=data['expense_report_response']['data']
     )
@@ -571,6 +590,10 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
 
     assert task_log.status=='COMPLETE'
     assert expense_report.currency == 'USD'
+
+    with mock.patch('sageintacctsdk.apis.ExpenseReports.update_attachment') as mock_call:
+        mock_call.side_effect = Exception()
+        create_expense_report(expense_group, task_log.id)
 
 
 def test_post_create_expense_report_exceptions(create_task_logs, db):
@@ -692,7 +715,6 @@ def test_create_ap_payment(mocker, db):
     task_log.save()
 
     create_ap_payment(workspace_id)
-
     assert task_log.status == 'COMPLETE'
 
 
@@ -860,6 +882,13 @@ def test_process_fyle_reimbursements(db, mocker):
         return_value=[],
     )
     workspace_id = 1
+
+    reimbursements = data['reimbursements']
+
+    expenses = Expense.objects.filter(fund_source='PERSONAL')
+    for expense in expenses:
+        expense.paid_on_sage_intacct=True
+        expense.save()
 
     reimbursement = Reimbursement.objects.filter(workspace_id=workspace_id).first()
     reimbursement.state = 'PENDING'

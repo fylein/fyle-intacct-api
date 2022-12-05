@@ -1,5 +1,6 @@
 import pytest
 import json
+from django_q.models import Schedule
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import Configuration
 from .fixtures import data
@@ -76,6 +77,30 @@ def test_post_general_mappings(api_client, test_connection):
 
     response = json.loads(response.content)
     assert response['default_tax_code_id'] == 'INPUT'
+
+    general_settings.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    general_settings.save()
+
+    response = api_client.post(
+        url,
+        data=payload
+    )
+    assert response.status_code == 200
+
+    response = json.loads(response.content)
+    assert response['default_credit_card_name'] == 'sdfghjk'
+
+    general_settings.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    general_settings.save()
+
+    response = api_client.post(
+        url,
+        data=payload
+    )
+    assert response.status_code == 200
+
+    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement', args=workspace_id).count()
+    assert schedule_count == 1
 
 
 def test_auto_map_employee(api_client, test_connection):

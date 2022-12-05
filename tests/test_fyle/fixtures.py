@@ -1,8 +1,8 @@
 data = {
     "get_merchant": {
         "id": 1234,
-        "created_at": "2020-06-01T13:14:54.804+00:00",
-        "updated_at": "2020-06-11T13:14:55.201598+00:00",
+        "created_at": "2018-06-01T13:14:54.804+00:00",
+        "updated_at": "2018-06-11T13:14:55.201598+00:00",
         "display_name": "Uber"
     },
     "expenses": [
@@ -151,8 +151,8 @@ data = {
         }
     ],
     'expense_group_settings_payload': {
-        'reimbursable_expense_group_fields': ['claim_number'],
-        'corporate_credit_card_expense_group_fields': ['claim_number'],
+        'reimbursable_expense_group_fields': ["claim_number", "spent_at"],
+        'corporate_credit_card_expense_group_fields': ["claim_number", "spent_at"],
         'expense_state': 'PAYMENT_PROCESSING',
         'reimbursable_export_date_type': 'spent_at',
         'ccc_export_date_type': 'spent_at',
