@@ -1,30 +1,127 @@
-import ast
-import json
-import os
 import logging
-import pytest
 import random
 from unittest import mock
 from django_q.models import Schedule
 from apps.tasks.models import TaskLog
-from apps.sage_intacct.models import Bill, BillLineitem, ExpenseReport, SageIntacctReimbursement, SageIntacctReimbursementLineitem, ChargeCardTransaction, JournalEntry, \
-    JournalEntryLineitem, ExpenseReportLineitem, APPayment, APPaymentLineitem
-from apps.sage_intacct.tasks import create_bill, create_sage_intacct_reimbursement, create_charge_card_transaction, create_journal_entry, create_expense_report, \
-    create_ap_payment, check_sage_intacct_object_status, schedule_fyle_reimbursements_sync, process_fyle_reimbursements, \
-        schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, get_or_create_credit_card_vendor, \
-            create_or_update_employee_mapping, schedule_journal_entries_creation, schedule_expense_reports_creation, schedule_bills_creation, \
-                schedule_charge_card_transaction_creation, schedule_sage_intacct_reimbursement_creation, __validate_expense_group, load_attachments
+from apps.sage_intacct.models import *
+from apps.sage_intacct.tasks import __validate_expense_group
+from apps.sage_intacct.tasks import *
 from fyle_intacct_api.exceptions import BulkError
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError
 from fyle_accounting_mappings.models import EmployeeMapping
 from apps.workspaces.models import Configuration, SageIntacctCredential
-from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
-from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
+from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping
+from apps.fyle.models import ExpenseGroup, Reimbursement
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.models import GeneralMapping
 from .fixtures import data
 
 logger = logging.getLogger(__name__)
+
+
+def test_handle_intacct_errors(db):
+    task_log = TaskLog.objects.filter(workspace_id=1).first()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    handle_sage_intacct_errors(
+        exception=InvalidTokenError(
+            msg='Some Parameters are wrong',
+            response={
+                'error': 'invalid_grant'
+            }
+        ),
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Bill'
+    )
+    assert task_log.sage_intacct_errors[0]['error'] == 'invalid_grant'
+
+    handle_sage_intacct_errors(
+        exception=InvalidTokenError(
+            msg='Some Parameters are wrong',
+            response={
+                'error': {
+                    'errorno': 'UJPP0002',
+                    'description': 'Sign-in information is incorrect. Please check your request.'
+                }
+            }
+        ),
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Bill'
+    )
+
+    assert task_log.sage_intacct_errors[0]['short_description'] == 'Sign-in information is incorrect. Please check your request.'
+    assert task_log.status == 'FAILED'
+
+    handle_sage_intacct_errors(
+        exception=WrongParamsError(
+            msg='Some Parameters are wrong',
+            response={
+                'error': {
+                    'errorno': 'invalidRequest', 
+                    'description': 'Invalid Request'
+                }
+            }
+        ),
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Bill'
+    )
+
+    assert task_log.sage_intacct_errors[0]['short_description'] == 'Invalid Request'
+    assert task_log.status == 'FAILED'
+
+
+    handle_sage_intacct_errors(
+        exception=WrongParamsError(
+            msg='Some Parameters are wrong',
+            response={
+                'error': [
+                    {
+                        'errorno': 'BL01001973', 
+                        'description': None, 
+                        'description2': "Invalid Project '1' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]", 
+                        'correction': None
+                    }, 
+                    {
+                        'errorno': 'BL01001973',
+                        'description': None, 
+                        'description2': 'Could not create cctransaction record!', 
+                        'correction': None
+                    }, 
+                    {
+                        'errorno': 'BL01001973',
+                        'description': None, 
+                        'description2': "Currently, we can't create the transaction", 
+                        'correction': 'Check the transaction for errors or inconsistencies, then try again.'
+                    }
+                ]
+            }
+        ),
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Bill'
+    )
+    
+    assert len(task_log.sage_intacct_errors) == 3
+    assert task_log.sage_intacct_errors[0]['short_description'] == 'Bill error'
+    assert task_log.sage_intacct_errors[0]['long_description'] == 'Invalid Project \'1\' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]'
+
+    handle_sage_intacct_errors(
+        exception=WrongParamsError(
+            msg='Some Parameters are wrong',
+            response={
+                'blewblew': 'invalid_grant'
+            }
+        ),
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Bill'
+    )
+
+    assert 'error' not in task_log.sage_intacct_errors
 
 
 def test_get_or_create_credit_card_vendor(mocker, db):
