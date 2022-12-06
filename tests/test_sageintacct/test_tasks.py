@@ -150,7 +150,7 @@ def test_get_or_create_credit_card_vendor(mocker, db):
 def test_create_or_update_employee_mapping(mocker, db):
     mocker.patch(
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
-        return_value=DestinationAttribute.objects.get(value='Srav')
+        return_value=DestinationAttribute.objects.get(value='Joanna')
     )
     mocker.patch(
         'sageintacctsdk.apis.Employees.get',
@@ -232,7 +232,10 @@ def test_post_bill_success(mocker, create_task_logs, db):
     assert bill.currency == 'USD'
     assert bill.vendor_id == 'Ashwin'
 
-    with mock.patch('sageintacctsdk.apis.Bills.update_attachment') as mock_call:
+    task_log.status = 'READY'
+    task_log.save()
+
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.update_bill') as mock_call:
         mock_call.side_effect = Exception()
         create_bill(expense_group, task_log.id)
 
@@ -583,6 +586,9 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
     assert task_log.status=='COMPLETE'
     assert journal_entry.currency == 'GBP'
 
+    task_log.status = 'READY'
+    task_log.save()
+
     with mock.patch('sageintacctsdk.apis.JournalEntries.update') as mock_call:
         mock_call.side_effect = Exception()
         create_journal_entry(expense_group, task_log.id)
@@ -687,6 +693,9 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
 
     assert task_log.status=='COMPLETE'
     assert expense_report.currency == 'USD'
+
+    task_log.status = 'READY'
+    task_log.save()
 
     with mock.patch('sageintacctsdk.apis.ExpenseReports.update_attachment') as mock_call:
         mock_call.side_effect = Exception()
@@ -1071,10 +1080,24 @@ def test__validate_expense_group(mocker, db):
     configuration.save()
 
     general_mapping = GeneralMapping.objects.get(workspace_id=workspace_id)
-    general_mapping.default_charge_card_id = 345678
+    general_mapping.default_charge_card_id = None
+    general_mapping.default_ccc_vendor_id = None
+    general_mapping.default_tax_code_id = None
+    general_mapping.default_tax_code_name = None
     general_mapping.save()
 
-    __validate_expense_group(expense_group, configuration)
+    try:
+        __validate_expense_group(expense_group, configuration)
+    except:
+        logger.info('Mappings are missing')
+
+    configuration.corporate_credit_card_expenses_object = 'BILL'
+    configuration.save()
+
+    try:
+        __validate_expense_group(expense_group, configuration)
+    except:
+        logger.info('Mappings are missing')
 
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
     configuration.save()
@@ -1093,6 +1116,9 @@ def test__validate_expense_group(mocker, db):
         __validate_expense_group(expense_group, configuration)
     except:
         logger.info('Mappings are missing')
+    
+    configuration.employee_field_mapping = 'VENDOR'
+    configuration.save()
 
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
     configuration.save()
@@ -1100,6 +1126,26 @@ def test__validate_expense_group(mocker, db):
     general_mapping.default_credit_card_id = None
     general_mapping.save()
 
+    try:
+        __validate_expense_group(expense_group, configuration)
+    except BulkError as exception:
+        logger.info(exception.response)
+    
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense_group.description.update({'employee_email': 'user48888@fyleforgotham.in'})
+    expense_group.save()
+
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.employee_field_mapping = 'EMPLOYEE'
+    configuration.save()
+
+    try:
+        __validate_expense_group(expense_group, configuration)
+    except BulkError as exception:
+        logger.info(exception.response)
+    
+    general_mapping.delete()
     try:
         __validate_expense_group(expense_group, configuration)
     except BulkError as exception:

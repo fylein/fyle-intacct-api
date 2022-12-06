@@ -4,8 +4,8 @@ import pytest
 import logging
 from unittest import mock
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import DestinationAttribute
-from apps.sage_intacct.utils import SageIntacctConnector, SageIntacctCredential, Configuration
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from apps.sage_intacct.utils import SageIntacctConnector, SageIntacctCredential, Configuration, Workspace
 from apps.mappings.models import GeneralMapping
 from .fixtures import data
 from tests.helper import dict_compare_keys
@@ -279,6 +279,7 @@ def test_construct_bill(create_bill, db):
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
     bill, bill_lineitems = create_bill
+    bill_lineitems[0].user_defined_dimensions = [{'CLASS': 'sample'}]
     bill_object = sage_intacct_connection._SageIntacctConnector__construct_bill(bill=bill,bill_lineitems=bill_lineitems)
 
     assert dict_compare_keys(bill_object, data['bill_payload']) == [], 'construct bill_payload entry api return diffs in keys'
@@ -291,6 +292,7 @@ def test_construct_expense_report(create_expense_report, db):
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
     expense_report,expense_report_lineitems = create_expense_report
+    expense_report_lineitems[0].user_defined_dimensions = [{'CLASS': 'sample'}]
     expense_report_object = sage_intacct_connection._SageIntacctConnector__construct_expense_report(expense_report=expense_report, expense_report_lineitems=expense_report_lineitems)
 
     assert dict_compare_keys(expense_report_object, data['expense_report_payload']) == [], 'construct expense_report_payload entry api return diffs in keys'
@@ -323,7 +325,8 @@ def test_construct_journal_entry(create_journal_entry, db):
     general_mappings.save()
 
     journal_entry,journal_entry_lineitems = create_journal_entry
-    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(journal_entry=journal_entry,journal_entry_lineitems=journal_entry_lineitems)
+    journal_entry_lineitems[0].user_defined_dimensions = [{'CLASS': 'sample'}]
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(journal_entry=journal_entry, journal_entry_lineitems=journal_entry_lineitems)
 
     assert dict_compare_keys(journal_entry_object, data['journal_entry_payload']) == [], 'construct journal entry api return diffs in keys'
 
@@ -375,8 +378,18 @@ def test_get_tax_solution_id_or_none(mocker, db, create_expense_report):
     
     expense_report, expense_report_lineitems = create_expense_report
     tax_solution_id = sage_intacct_connection.get_tax_solution_id_or_none(expense_report_lineitems)
-    
     assert tax_solution_id == 'Australia - GST'
+
+    expense_report_lineitems[0].tax_code = 'No Input VAT'
+    tax_solution_id = sage_intacct_connection.get_tax_solution_id_or_none(expense_report_lineitems)
+    assert tax_solution_id == 'South Africa - VAT'
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.location_entity_id = 20600
+    general_mappings.save()
+
+    tax_solution_id = sage_intacct_connection.get_tax_solution_id_or_none(expense_report_lineitems)
+    assert tax_solution_id == None
 
 
 def test_get_tax_exclusive_amount(db):
@@ -632,3 +645,65 @@ def test_post_attachments(mocker, db):
     supdoc_id = sage_intacct_connection.post_attachments([{'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}], 'asd')
 
     assert supdoc_id == 'asd'
+
+def test_get_expense_link(mocker, db, create_journal_entry):
+    workspace_id = 1
+
+    workspace = Workspace.objects.get(id=workspace_id)
+    workspace.cluster_domain = ''
+    workspace.save()
+
+    journal_entry, journal_entry_lineitems = create_journal_entry
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    expense_link = sage_intacct_connection.get_expense_link(journal_entry_lineitems[0])
+    assert expense_link == 'https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+
+
+def test_get_or_create_vendor(mocker, db):
+    workspace_id = 1
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.get',
+        return_value={'vendor': data['get_vendors'], '@totalcount': 2}
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.post',
+        return_value=data['post_vendors']
+    )
+
+    employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
+    assert employee_count == 68
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    sage_intacct_connection.get_or_create_vendor('Ashwin', 'ashwin.t@fyle.in', False)
+
+    new_employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
+    assert new_employee_count == 68
+
+
+def test_get_or_create_employee(mocker, db):
+    workspace_id = 1
+    mocker.patch(
+        'sageintacctsdk.apis.Employees.get',
+        return_value={'employee': data['get_employees'], '@totalcount': 2}
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Employees.post',
+        return_value={'data': {'employee': data['get_employees'][0]}}
+    )
+
+    employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EMPLOYEE').count()
+    assert employee_count == 55
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    employee = ExpenseAttribute.objects.filter(value='ashwin.t@fyle.in').first()
+    sage_intacct_connection.get_or_create_employee(employee)
+
+    new_employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EMPLOYEE').count()
+    assert new_employee_count == 55
