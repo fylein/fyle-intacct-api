@@ -20,6 +20,7 @@ class Workspace(models.Model):
     fyle_org_id = models.CharField(max_length=255, help_text='org id', unique=True)
     cluster_domain = models.CharField(max_length=255, help_text='Cluster Domain', null=True)
     last_synced_at = models.DateTimeField(help_text='Datetime when expenses were pulled last', null=True)
+    ccc_last_synced_at = models.DateTimeField(help_text='Datetime when ccc expenses were pulled last', null=True)
     source_synced_at = models.DateTimeField(help_text='Datetime when source dimensions were pulled', null=True)
     destination_synced_at = models.DateTimeField(help_text='Datetime when destination dimensions were pulled', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
@@ -90,6 +91,7 @@ class Configuration(models.Model):
         help_text='list of system fields for creating custom memo'
     )
     auto_create_destination_entity = models.BooleanField(default=False, help_text='Auto create vendor / employee')
+    is_simplify_report_closure_enabled = models.BooleanField(default=False, help_text='Simplify report closure is enbaled')
     change_accounting_period = models.BooleanField(default=False, help_text='Change the accounting period')
     import_vendors_as_merchants = models.BooleanField(default=False, help_text='Auto import vendors from sage intacct '
                                                                                'as merchants to Fyle')

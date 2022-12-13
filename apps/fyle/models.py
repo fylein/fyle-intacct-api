@@ -31,6 +31,11 @@ SOURCE_ACCOUNT_MAP = {
     'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT': 'CCC'
 }
 
+CCC_EXPENSE_STATE = (
+    ('APPROVED', 'APPROVED'),
+    ('PAID', 'PAID'),
+    ('PAYMENT_PROCESSING', 'PAYMENT_PROCESSING')
+)
 
 def _format_date(date_string) -> datetime:
     """
@@ -52,6 +57,8 @@ def get_default_expense_group_fields():
 def get_default_expense_state():
     return 'PAYMENT_PROCESSING'
 
+def get_default_ccc_expense_state():
+    return 'PAID'
 
 class Expense(models.Model):
     """
@@ -83,7 +90,7 @@ class Expense(models.Model):
     spent_at = models.DateTimeField(null=True, help_text='Expense spent at')
     approved_at = models.DateTimeField(null=True, help_text='Expense approved at')
     expense_created_at = models.DateTimeField(help_text='Expense created at')
-    expense_updated_at = models.DateTimeField(help_text='Expense created at')
+    expense_updated_at = models.DateTimeField(help_text='Expense updated at')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
     fund_source = models.CharField(max_length=255, help_text='Expense fund source')
@@ -163,6 +170,8 @@ class ExpenseGroupSettings(models.Model):
     expense_state = models.CharField(
         max_length=100, default=get_default_expense_state,
         help_text='state at which the expenses are fetched ( PAYMENT_PROCESSING / PAID)')
+    ccc_expense_state = models.CharField(max_length=100, default=get_default_ccc_expense_state, 
+        choices=CCC_EXPENSE_STATE, help_text='state at which the ccc expenses are fetched (APPROVED/PAID)', null=True)
     reimbursable_export_date_type = models.CharField(max_length=100, default='current_date', help_text='Export Date')
     ccc_export_date_type = models.CharField(max_length=100, default='current_date', help_text='CCC Export Date')
     import_card_credits = models.BooleanField(help_text='Import Card Credits', default=False)
@@ -242,6 +251,7 @@ class ExpenseGroupSettings(models.Model):
                 'reimbursable_expense_group_fields': reimbursable_grouped_by,
                 'corporate_credit_card_expense_group_fields': corporate_credit_card_expenses_grouped_by,
                 'expense_state': expense_group_settings['expense_state'],
+                'ccc_expense_state': expense_group_settings['ccc_expense_state'],
                 'reimbursable_export_date_type': expense_group_settings['reimbursable_export_date_type'],
                 'ccc_export_date_type': expense_group_settings['ccc_export_date_type']
             }
