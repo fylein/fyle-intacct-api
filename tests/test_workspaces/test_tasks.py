@@ -90,6 +90,12 @@ def test_email_notification(db):
     ).first()
     run_email_notification(workspace_id=workspace_id)
 
+    updated_ws_schedule = WorkspaceSchedule.objects.filter( 
+        workspace_id=workspace_id, id=ws_schedule.id
+    ).first()
+
+    assert updated_ws_schedule.error_count == 3
+
     attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value='user5@fyleforgotham.in').first()
     attribute.delete()
 
@@ -98,3 +104,8 @@ def test_email_notification(db):
     ws_schedule.save()
 
     run_email_notification(workspace_id=workspace_id)
+    updated_ws_schedule = WorkspaceSchedule.objects.filter( 
+        workspace_id=workspace_id, id=ws_schedule.id
+    ).first()
+
+    assert updated_ws_schedule.error_count == 3
