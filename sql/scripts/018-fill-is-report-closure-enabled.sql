@@ -2,7 +2,6 @@ rollback;
 begin;
 
 update 
-  'configuration' 
+  configurations
 set 
-  is_simplify_report_closure_enabled = 0;
-  
+  is_simplify_report_closure_enabled = false;

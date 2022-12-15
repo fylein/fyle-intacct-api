@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 14.5 (Debian 14.5-1.pgdg110+1)
--- Dumped by pg_dump version 14.5 (Debian 14.5-1.pgdg100+1)
+-- Dumped from database version 15.0 (Debian 15.0-1.pgdg110+1)
+-- Dumped by pg_dump version 15.1 (Debian 15.1-1.pgdg100+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -376,7 +376,8 @@ CREATE TABLE public.configurations (
     import_tax_codes boolean,
     change_accounting_period boolean NOT NULL,
     import_vendors_as_merchants boolean NOT NULL,
-    employee_field_mapping character varying(50)
+    employee_field_mapping character varying(50),
+    is_simplify_report_closure_enabled boolean NOT NULL
 );
 
 
@@ -707,7 +708,8 @@ CREATE TABLE public.expense_group_settings (
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     ccc_export_date_type character varying(100) NOT NULL,
-    import_card_credits boolean NOT NULL
+    import_card_credits boolean NOT NULL,
+    ccc_expense_state character varying(100)
 );
 
 
@@ -1701,7 +1703,8 @@ CREATE TABLE public.workspaces (
     updated_at timestamp with time zone NOT NULL,
     destination_synced_at timestamp with time zone,
     source_synced_at timestamp with time zone,
-    cluster_domain character varying(255)
+    cluster_domain character varying(255),
+    ccc_last_synced_at timestamp with time zone
 );
 
 
@@ -2395,8 +2398,8 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 -- Data for Name: configurations; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping) FROM stdin;
-1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR
+COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, is_simplify_report_closure_enabled) FROM stdin;
+1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f
 \.
 
 
@@ -3540,6 +3543,12 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 124	workspaces	0021_configuration_import_vendors_as_merchants	2022-09-20 08:34:47.365985+00
 125	workspaces	0022_configuration_employee_field_mapping	2022-09-20 08:34:47.637128+00
 126	fyle	0015_expensegroup_export_type	2022-09-29 12:08:22.995468+00
+127	fyle	0016_auto_20221213_0857	2022-12-15 06:54:10.950799+00
+999	mappings	0011_auto_20221010_0741	2022-09-20 08:34:23.84625+00
+128	sage_intacct	0018_auto_20221213_0819	2022-12-15 07:29:38.157471+00
+129	sage_intacct	0018_auto_20221209_0901	2022-12-15 07:29:38.245266+00
+130	sage_intacct	0019_merge_20221213_0857	2022-12-15 07:29:38.258629+00
+131	workspaces	0023_auto_20221213_0857	2022-12-15 07:29:38.367282+00
 \.
 
 
@@ -6367,6 +6376,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2749	TAX_GROUP	Tax Group	AQB26CI4C2	tga8X5feRpon	2022-09-20 08:39:11.632113+00	2022-09-20 08:39:11.63215+00	1	\N	{"tax_rate": 0.18}	f	f
 2750	TAX_GROUP	Tax Group	1PKB8P46QU	tga95PVTYDvs	2022-09-20 08:39:11.632329+00	2022-09-20 08:39:11.632354+00	1	\N	{"tax_rate": 0.18}	f	f
 2752	TAX_GROUP	Tax Group	FDU2ZPCGV4	tgadQszc73ls	2022-09-20 08:39:11.632508+00	2022-09-20 08:39:11.632593+00	1	\N	{"tax_rate": 0.18}	f	f
+3065	MERCHANT	Merchant	James Taylor	852	2022-09-20 08:40:15.859781+00	2022-09-20 08:40:15.85981+00	1	\N	\N	f	f
 2753	TAX_GROUP	Tax Group	WRVEPSQLUO	tgaDUDX0wKfx	2022-09-20 08:39:11.632681+00	2022-09-20 08:39:11.632704+00	1	\N	{"tax_rate": 0.18}	f	f
 2754	TAX_GROUP	Tax Group	QE0PQSDQPB	tgAfGyr9gLcC	2022-09-20 08:39:11.632777+00	2022-09-20 08:39:11.632807+00	1	\N	{"tax_rate": 0.18}	f	f
 2755	TAX_GROUP	Tax Group	JVFYUUP52V	tgAGJvQftHOa	2022-09-20 08:39:11.632868+00	2022-09-20 08:39:11.63289+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -6657,7 +6667,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3062	MERCHANT	Merchant	Fyle For QBO Paymrnt Sync	852	2022-09-20 08:40:15.859509+00	2022-09-20 08:40:15.859539+00	1	\N	\N	f	f
 3063	MERCHANT	Merchant	Hall Properties	852	2022-09-20 08:40:15.859601+00	2022-09-20 08:40:15.85963+00	1	\N	\N	f	f
 3064	MERCHANT	Merchant	Hicks Hardware	852	2022-09-20 08:40:15.859691+00	2022-09-20 08:40:15.859721+00	1	\N	\N	f	f
-3065	MERCHANT	Merchant	James Taylor	852	2022-09-20 08:40:15.859781+00	2022-09-20 08:40:15.85981+00	1	\N	\N	f	f
 3066	MERCHANT	Merchant	Jessica Lane	852	2022-09-20 08:40:15.859871+00	2022-09-20 08:40:15.8599+00	1	\N	\N	f	f
 3067	MERCHANT	Merchant	Justin Glass	852	2022-09-20 08:40:15.859961+00	2022-09-20 08:40:15.85999+00	1	\N	\N	f	f
 3068	MERCHANT	Merchant	Lee Advertising	852	2022-09-20 08:40:15.860051+00	2022-09-20 08:40:15.86008+00	1	\N	\N	f	f
@@ -6896,8 +6905,8 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 -- Data for Name: expense_group_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corporate_credit_card_expense_group_fields, expense_state, reimbursable_export_date_type, created_at, updated_at, workspace_id, ccc_export_date_type, import_card_credits) FROM stdin;
-1	{employee_email,report_id,claim_number,fund_source}	{employee_email,report_id,expense_id,claim_number,fund_source}	PAYMENT_PROCESSING	current_date	2022-09-20 08:38:03.358472+00	2022-09-20 08:39:32.022875+00	1	spent_at	f
+COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corporate_credit_card_expense_group_fields, expense_state, reimbursable_export_date_type, created_at, updated_at, workspace_id, ccc_export_date_type, import_card_credits, ccc_expense_state) FROM stdin;
+1	{employee_email,report_id,claim_number,fund_source}	{employee_email,report_id,expense_id,claim_number,fund_source}	PAYMENT_PROCESSING	current_date	2022-09-20 08:38:03.358472+00	2022-09-20 08:39:32.022875+00	1	spent_at	f	PAID
 \.
 
 
@@ -7410,8 +7419,8 @@ COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, sc
 -- Data for Name: workspaces; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain) FROM stdin;
-1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech
+COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at) FROM stdin;
+1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N
 \.
 
 
@@ -7484,7 +7493,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 42, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 126, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 131, true);
 
 
 --
