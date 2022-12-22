@@ -1,5 +1,5 @@
 from apps.fyle.models import get_default_expense_state, get_default_expense_group_fields, ExpenseGroupSettings, Expense, Reimbursement, \
-    ExpenseGroup, _group_expenses, _format_date
+    ExpenseGroup, _group_expenses, _format_date, get_default_ccc_expense_state
 from .fixtures import data
 from dateutil import parser
 
@@ -7,9 +7,11 @@ from dateutil import parser
 def test_default_fields():
     expense_group_field = get_default_expense_group_fields()
     expense_state = get_default_expense_state()
+    ccc_expense_state = get_default_ccc_expense_state()
 
     assert expense_group_field == ['employee_email', 'report_id', 'claim_number', 'fund_source']
     assert expense_state == 'PAYMENT_PROCESSING'
+    assert ccc_expense_state == 'PAID'
 
 
 def test_create_expense_objects(db):
@@ -44,6 +46,7 @@ def test_expense_group_settings(create_temp_workspace, db):
 
     assert settings.expense_state == 'PAYMENT_PROCESSING'
     assert settings.ccc_export_date_type == 'spent_at'
+    assert settings.ccc_expense_state == 'PAID'
 
 
 def test_create_reimbursement(db):

@@ -319,7 +319,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
     default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
-                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT']
+                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER']
 
     for setting in mapping_settings:
         if setting.source_field not in default_expense_attributes and \
@@ -1027,7 +1027,7 @@ class APPayment(models.Model):
     vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor ID')
     description = models.TextField(help_text='Payment Description')
     currency = models.CharField(max_length=255, help_text='AP Payment Currency')
-    created_at = models.DateField(auto_now=True, help_text='Created at')
+    created_at = models.DateField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateField(auto_now=True, help_text='Updated at')
 
     class Meta:
@@ -1117,7 +1117,7 @@ class SageIntacctReimbursement(models.Model):
     employee_id = models.CharField(max_length=255, help_text='Sage Intacct Employee ID')
     memo = models.TextField(help_text='Reimbursement Memo')
     payment_description = models.TextField(help_text='Reimbursement Description')
-    created_at = models.DateField(auto_now=True, help_text='Created at')
+    created_at = models.DateField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateField(auto_now=True, help_text='Updated at')
 
     class Meta:
