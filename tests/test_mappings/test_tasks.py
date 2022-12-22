@@ -1,21 +1,15 @@
 import pytest
+from unittest import mock
 from django_q.models import Schedule
 from fyle_accounting_mappings.models import DestinationAttribute, CategoryMapping, \
-    Mapping, MappingSetting, EmployeeMapping
-from apps.mappings.tasks import auto_create_tax_codes_mappings, schedule_tax_groups_creation,auto_create_project_mappings, post_cost_centers_in_batches, \
-    schedule_projects_creation, remove_duplicates, create_fyle_categories_payload, upload_categories_to_fyle, post_merchants, \
-        schedule_categories_creation, auto_create_category_mappings, schedule_cost_centers_creation, auto_create_cost_center_mappings, \
-            async_auto_map_employees, schedule_auto_map_employees, get_all_categories_from_fyle, schedule_auto_map_charge_card_employees, \
-                auto_create_cost_center_mappings, schedule_fyle_attributes_creation, async_auto_map_charge_card_account, \
-                    async_auto_create_custom_field_mappings, auto_create_expense_fields_mappings, sync_sage_intacct_attributes, \
-                        bulk_create_ccc_category_mappings, auto_create_vendors_as_merchants, schedule_vendors_as_merchants_creation
+    Mapping, MappingSetting, EmployeeMapping, ExpenseAttribute
+from apps.mappings.tasks import *
 from fyle_integrations_platform_connector import PlatformConnector
 from ..test_sageintacct.fixtures import data as intacct_data
 from ..test_fyle.fixtures import data as fyle_data
 from .fixtures import data
 from tests.helper import dict_compare_keys
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
-from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.models import FyleCredential, Configuration
 
 
 def test_auto_create_tax_codes_mappings(db, mocker):
@@ -34,6 +28,10 @@ def test_auto_create_tax_codes_mappings(db, mocker):
         return_value=intacct_data['get_dimensions']
     )
 
+    tax_code = ExpenseAttribute.objects.filter(value='UK Purchase Services Zero Rate').first()
+    tax_code.value = 'random'
+    tax_code.save()
+
     tax_groups = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='TAX_CODE').count()
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='TAX_CODE').count()
     
@@ -46,6 +44,10 @@ def test_auto_create_tax_codes_mappings(db, mocker):
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='TAX_CODE').count()
     
     assert mappings == 0
+
+    with mock.patch('fyle_integrations_platform_connector.apis.TaxGroups.sync') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_tax_codes_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()
@@ -94,6 +96,10 @@ def test_auto_create_project_mappings(db, mocker):
         'sageintacctsdk.apis.Projects.get_all',
         return_value=intacct_data['get_projects']
     )
+
+    project = ExpenseAttribute.objects.filter(value='Direct Mail Campaign').first()
+    project.value = 'random'
+    project.save()
     
     response = auto_create_project_mappings(workspace_id=workspace_id)
     assert response == None
@@ -102,6 +108,11 @@ def test_auto_create_project_mappings(db, mocker):
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='PROJECT').count()
 
     assert mappings == projects
+
+
+    with mock.patch('fyle_integrations_platform_connector.apis.Projects.sync') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_project_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()
@@ -212,12 +223,34 @@ def test_auto_create_category_mappings(db, mocker):
         return_value=fyle_data['get_all_categories']
     )
 
+    mocker.patch(
+        'sageintacctsdk.apis.ExpenseTypes.get_all',
+        return_value=intacct_data['get_expense_types']
+    )
+
+    category_mapping = CategoryMapping.objects.first()
+    category_mapping.destination_account = None
+    category_mapping.save()
+
     response = auto_create_category_mappings(workspace_id=workspace_id)
     assert response == []
 
     mappings = CategoryMapping.objects.filter(workspace_id=workspace_id)
-
     assert len(mappings) == 75
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    response = auto_create_category_mappings(workspace_id=workspace_id)
+    assert response == []
+
+    mappings = CategoryMapping.objects.filter(workspace_id=workspace_id)
+    assert len(mappings) == 75
+
+    with mock.patch('fyle_integrations_platform_connector.apis.Categories.post_bulk') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_category_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()
@@ -257,16 +290,25 @@ def test_async_auto_map_employees(mocker, db):
     )
 
     mocker.patch(
+        'sageintacctsdk.apis.Employees.get_all',
+        return_value=intacct_data['get_employees']
+    )
+
+    mocker.patch(
         'fyle.platform.apis.v1beta.admin.Employees.list_all',
         return_value=fyle_data['get_all_employees']
     )
+
+    general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_settings.employee_field_mapping = 'EMPLOYEE'
+    general_settings.save()
 
     async_auto_map_employees(workspace_id)
 
     employee_mappings = EmployeeMapping.objects.filter(workspace_id=workspace_id).count()
     assert employee_mappings == 1
 
-    general_settings = Configuration.objects.get(workspace_id=workspace_id)
     general_settings.employee_field_mapping = 'VENDOR'
     general_settings.save()
 
@@ -309,9 +351,18 @@ def test_auto_create_cost_center_mappings(db, mocker, create_mapping_setting):
         return_value=[]
     )
     mocker.patch(
-        'apps.sage_intacct.utils.sync_departments',
-        return_value=[]
+        'sageintacctsdk.apis.Departments.get_all',
+        return_value=intacct_data['get_departments']
     )
+    mocker.patch(
+        'sageintacctsdk.apis.Dimensions.get_all',
+        return_value=intacct_data['get_user_defined_dimensions']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.DimensionValues.get_all',
+        return_value=intacct_data['get_dimension_value']
+    )
+
     response = auto_create_cost_center_mappings(workspace_id=workspace_id)
     assert response == None
 
@@ -320,6 +371,10 @@ def test_auto_create_cost_center_mappings(db, mocker, create_mapping_setting):
 
     assert cost_center == 1
     assert mappings == 0
+
+    with mock.patch('fyle_integrations_platform_connector.apis.CostCenters.sync') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_cost_center_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()
@@ -506,24 +561,6 @@ def test_schedule_auto_map_charge_card_employees(db):
     assert schedule == None
 
 
-def test_auto_create_cost_center_mappings(mocker, db):
-    workspace_id = 1
-
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.CostCenters.sync',
-        return_value=[]
-    )
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
-        return_value=[]
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Dimensions.get_all',
-        return_value=intacct_data['get_dimensions']
-    )
-
-    auto_create_cost_center_mappings(workspace_id)
-
 def test_bulk_create_ccc_category_mappings(mocker, db):
     workspace_id = 1
 
@@ -546,6 +583,14 @@ def test_auto_create_vendors_as_merchants(db, mocker):
         'sageintacctsdk.apis.Vendors.get_all',
         return_value=intacct_data['get_vendors']
     )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Merchants.get',
+        return_value=fyle_data['get_merchant']
+    )
+
+    merchant = ExpenseAttribute.objects.filter(value='Ashwin from NetSuite').first()
+    merchant.value = 'random'
+    merchant.save()
 
     merchants = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='VENDOR').count()
@@ -559,6 +604,10 @@ def test_auto_create_vendors_as_merchants(db, mocker):
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='VENDOR').count()
     
     assert mappings == 0
+
+    with mock.patch('fyle_integrations_platform_connector.apis.Merchants.sync') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_vendors_as_merchants(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()

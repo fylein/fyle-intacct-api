@@ -1,6 +1,7 @@
 from apps.fyle.models import get_default_expense_state, get_default_expense_group_fields, ExpenseGroupSettings, Expense, Reimbursement, \
-    ExpenseGroup, _group_expenses, get_default_ccc_expense_state
+    ExpenseGroup, _group_expenses, _format_date, get_default_ccc_expense_state
 from .fixtures import data
+from dateutil import parser
 
 
 def test_default_fields():
@@ -86,3 +87,18 @@ def test_create_expense_groups_by_report_id_fund_source(db):
 
     expense_groups = ExpenseGroup.objects.last()
     assert expense_groups.exported_at == None
+
+
+def test_format_date():
+    date_string = _format_date('2022-05-13T09:32:06.643941Z')
+
+    assert date_string == parser.parse('2022-05-13T09:32:06.643941Z')
+
+
+def test_get_last_synced_at(db):
+
+    reimbursement = Reimbursement.get_last_synced_at(1)
+
+    assert reimbursement.workspace_id == 1
+    assert reimbursement.settlement_id == 'setzZCuAPxIsB'
+    assert reimbursement.state == 'PENDING'
