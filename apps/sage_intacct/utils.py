@@ -801,7 +801,8 @@ class SageIntacctConnector:
                 'INCLUSIVETAX': True,
                 'TAXSOLUTIONID': self.get_tax_solution_id_or_none(bill_lineitems)
             })
-
+        
+        print('bill payload', bill_payload)
         return bill_payload
 
     def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
