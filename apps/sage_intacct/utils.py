@@ -1014,7 +1014,6 @@ class SageIntacctConnector:
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
             bill_payload = self.__construct_bill(bill, bill_lineitems)
-            print(bill_payload)
             created_bill = self.connection.bills.post(bill_payload)
             return created_bill
 
