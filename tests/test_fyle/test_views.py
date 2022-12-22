@@ -92,6 +92,7 @@ def test_expense_group_settings_view(api_client, test_connection):
     assert dict_compare_keys(response, data['expense_group_setting_response']) == [], 'expense group api return diffs in keys'
     assert response['expense_state'] == 'PAYMENT_PROCESSING'
     assert response['reimbursable_export_date_type'] == 'spent_at'
+    assert response['ccc_expense_state'] == 'PAID'
 
 
 def test_expense_attributes_view(api_client, test_connection):
