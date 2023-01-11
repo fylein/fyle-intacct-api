@@ -14,7 +14,7 @@ from apps.fyle.tasks import create_expense_groups
 from apps.sage_intacct.tasks import schedule_expense_reports_creation, schedule_bills_creation, \
     schedule_charge_card_transaction_creation
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import User, Workspace, WorkspaceSchedule, Configuration, SageIntacctCredential
+from apps.workspaces.models import User, Workspace, WorkspaceSchedule, Configuration, SageIntacctCredential, FyleCredential
 
 
 def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours: int):
@@ -187,3 +187,9 @@ def run_email_notification(workspace_id):
 
         ws_schedule.error_count = len(task_logs)
         ws_schedule.save()
+
+def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str):
+    fyle_credentials = FyleCredential.objects.get(workspace__fyle_org_id=fyle_org_id)
+    if fyle_credentials:
+        fyle_credentials.refresh_token = refresh_token
+        fyle_credentials.save()
