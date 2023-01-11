@@ -23,8 +23,7 @@ SOURCE_ACCOUNT_MAP = {
 }
 
 
-def sync_reimbursements(workspace_id: int):
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+def sync_reimbursements(fyle_credentials, workspace_id: int):
     platform = PlatformConnector(fyle_credentials)
     platform.reimbursements.sync()
 

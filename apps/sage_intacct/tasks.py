@@ -217,7 +217,10 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
         ).all()
 
         chain = Chain()
-        chain.append('apps.fyle.tasks.sync_reimbursements', workspace_id)
+
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
+        chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
         for expense_group in expense_groups:
             task_log, _ = TaskLog.objects.get_or_create(
@@ -235,7 +238,7 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
             chain.append('apps.sage_intacct.tasks.create_journal_entry', expense_group, task_log.id)
             task_log.save()
 
-        if chain.length() > 1:
+        if chain.length() > 2:
             chain.run()
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
@@ -253,7 +256,10 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
         ).all()
 
         chain = Chain()
-        chain.append('apps.fyle.tasks.sync_reimbursements', workspace_id)
+
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
+        chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
         for expense_group in expense_groups:
             task_log, _ = TaskLog.objects.get_or_create(
@@ -271,7 +277,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
             chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log.id)
             task_log.save()
 
-        if chain.length() > 1:
+        if chain.length() > 2:
             chain.run()
 
 
@@ -289,7 +295,10 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
         ).all()
 
         chain = Chain()
-        chain.append('apps.fyle.tasks.sync_reimbursements', workspace_id)
+
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
+        chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
         for expense_group in expense_groups:
             task_log, _ = TaskLog.objects.get_or_create(
@@ -307,7 +316,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
             chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log.id)
             task_log.save()
 
-        if chain.length() > 1:
+        if chain.length() > 2:
             chain.run()
 
 
@@ -326,7 +335,10 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
         ).all()
 
         chain = Chain()
-        chain.append('apps.fyle.tasks.sync_reimbursements', workspace_id)
+
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
+        chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
         for expense_group in expense_groups:
             task_log, _ = TaskLog.objects.get_or_create(
@@ -344,7 +356,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log.id)
             task_log.save()
 
-        if chain.length() > 1:
+        if chain.length() > 2:
             chain.run()
 
 

@@ -71,13 +71,14 @@ def test_create_expense_groups(mocker, db):
 
 def test_sync_reimbursements(mocker, db):
     workspace_id = 1
+    fyle_credential = FyleCredential.objects.get(workspace_id=workspace_id)
     
     mocker.patch(
         'fyle_integrations_platform_connector.apis.Reimbursements.sync',
         return_value=None
     )
 
-    sync_reimbursements(workspace_id)
+    sync_reimbursements(fyle_credential, workspace_id)
 
     reimbursements = Reimbursement.objects.filter().count()
     assert reimbursements == 258
