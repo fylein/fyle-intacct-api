@@ -880,7 +880,7 @@ def auto_create_tax_codes_mappings(workspace_id: int):
         error = {
             'error': error
         }
-        logger.error(
+        logger.exception(
             'Error while creating tax groups workspace_id - %s error: %s',
             workspace_id, error
         )

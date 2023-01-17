@@ -173,7 +173,7 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                     mapping.source.auto_mapped = True
                     mapping.source.save()
                 else:
-                    logger.error(
+                    logger.info(
                         'Destination Attribute with value %s not found in workspace %s',
                         source_employee.detail['full_name'],
                         expense_group.workspace_id
@@ -195,7 +195,7 @@ def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
         try:
             vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=False)
         except WrongParamsError as bad_request:
-            logger.error(bad_request.response)
+            logger.info(bad_request.response)
 
     if not vendor:
         vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
@@ -607,7 +607,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
                 journal_entry_object.save()
             except Exception:
                 error = traceback.format_exc()
-                logger.error(
+                logger.info(
                     'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
                     expense_group.id, expense_group.workspace_id, {'error': error}
                 )
@@ -716,7 +716,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                 expense_report_object.save()
             except Exception:
                 error = traceback.format_exc()
-                logger.error(
+                logger.info(
                     'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
                     expense_group.id, expense_group.workspace_id, {'error': error}
                 )
@@ -815,7 +815,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
                 bill_object.save()
             except Exception:
                 error = traceback.format_exc()
-                logger.error(
+                logger.info(
                     'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
                     expense_group.id, expense_group.workspace_id, {'error': error}
                 )
@@ -912,7 +912,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
                 charge_card_transaction_object.save()
             except Exception:
                 error = traceback.format_exc()
-                logger.error(
+                logger.info(
                     'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
                     expense_group.id, expense_group.workspace_id, {'error': error}
                 )
@@ -1070,7 +1070,7 @@ def create_ap_payment(workspace_id):
                     }
                     task_log.status = 'FATAL'
                     task_log.save()
-                    logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
+                    logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
                                  task_log.detail)
 
 
@@ -1201,7 +1201,7 @@ def create_sage_intacct_reimbursement(workspace_id):
                 }
                 task_log.status = 'FATAL'
                 task_log.save()
-                logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
+                logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
                                 task_log.detail)
 
 
