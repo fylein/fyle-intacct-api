@@ -15,6 +15,8 @@ from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
     CategoryMapping
 
+from sageintacctsdk.exceptions import InvalidTokenError
+
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
@@ -102,6 +104,9 @@ def auto_create_project_mappings(workspace_id: int):
         sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
         post_projects_in_batches(platform, workspace_id, mapping_setting.destination_field)
+
+    except InvalidTokenError:
+        logger.info('Invalid Token - %s', workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
@@ -371,6 +376,9 @@ def auto_create_cost_center_mappings(workspace_id: int):
 
         post_cost_centers_in_batches(platform, workspace_id, mapping_setting.destination_field)
 
+    except InvalidTokenError:
+        logger.info('Invalid Token - %s', workspace_id)
+
     except WrongParamsError as exception:
         logger.error(
             'Error while creating cost centers workspace_id - %s in Fyle %s %s',
@@ -489,6 +497,9 @@ def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute
         fyle_attributes = upload_attributes_to_fyle(workspace_id=workspace_id, sageintacct_attribute_type=sageintacct_attribute_type, fyle_attribute_type=fyle_attribute_type)
         if fyle_attributes:
             Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
+
+    except InvalidTokenError:
+        logger.info('Invalid Token - %s', workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
@@ -771,6 +782,9 @@ def auto_create_category_mappings(workspace_id):
 
         return []
 
+    except InvalidTokenError:
+        logger.info('Invalid Token - %s', workspace_id)
+
     except WrongParamsError as exception:
         logger.error(
             'Error while creating categories workspace_id - %s in Fyle %s %s',
@@ -869,6 +883,9 @@ def auto_create_tax_codes_mappings(workspace_id: int):
 
         upload_tax_groups_to_fyle(platform, workspace_id)
 
+    except InvalidTokenError:
+        logger.info('Invalid Token - %s', workspace_id)
+
     except WrongParamsError as exception:
         logger.error(
             'Error while creating tax groups workspace_id - %s in Fyle %s %s',
@@ -954,6 +971,9 @@ def auto_create_vendors_as_merchants(workspace_id):
 
         sync_sage_intacct_attributes('VENDOR', workspace_id)
         post_merchants(fyle_connection, workspace_id, first_run)
+
+    except InvalidTokenError:
+        logger.info('Invalid Token - %s', workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
