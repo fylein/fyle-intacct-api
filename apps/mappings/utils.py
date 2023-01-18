@@ -52,12 +52,6 @@ class MappingUtils:
                          general_mapping['default_ccc_expense_payment_type_id'],
                          'default ccc expense payment type id is blank')
 
-        if project_setting:
-            assert_valid('default_item_name' in general_mapping and general_mapping['default_item_name'],
-                         'default item name field is blank')
-            assert_valid('default_item_id' in general_mapping and general_mapping['default_item_id'],
-                         'default item id field is blank')
-
         if configuration.sync_fyle_to_sage_intacct_payments:
             assert_valid('payment_account_name' in general_mapping and general_mapping['payment_account_name'],
                          'payment account name field is blank')
