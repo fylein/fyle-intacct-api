@@ -693,7 +693,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL2',
+                        'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -766,12 +766,15 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL2',
+                        'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
                     },
                    ]
                 }
             }
+
+            if configuration.workspace_id == 153:
+                expense.pop('customfields', None)
 
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
@@ -837,7 +840,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL2',
+                        'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -905,7 +908,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL2',
+                        'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -938,7 +941,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL2',
+                        'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -1014,6 +1017,7 @@ class SageIntacctConnector:
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
             bill_payload = self.__construct_bill(bill, bill_lineitems)
+            print('bill_payload\n',bill_payload)
             created_bill = self.connection.bills.post(bill_payload)
             return created_bill
 
