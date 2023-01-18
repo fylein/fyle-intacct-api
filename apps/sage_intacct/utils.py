@@ -572,7 +572,7 @@ class SageIntacctConnector:
             self.connection.contacts.post(contact)
 
         except Exception as e:
-            logger.exception(e.response)
+            logger.info(e.response)
 
         location_id = location.destination_id if location else None
         department_id = department.destination_id if department else None

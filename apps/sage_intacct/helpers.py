@@ -64,4 +64,4 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
             sync = getattr(sage_intacct_connection, 'sync_{}'.format(dimension))
             sync()
         except Exception as exception:
-            logger.exception(exception)
+            logger.info(exception)
