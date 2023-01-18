@@ -693,7 +693,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldname': 'FYLE_EXPENSE_URL2',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -766,7 +766,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldname': 'FYLE_EXPENSE_URL2',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -837,7 +837,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldname': 'FYLE_EXPENSE_URL2',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -905,7 +905,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldname': 'FYLE_EXPENSE_URL2',
                         'customfieldvalue': expense_link
                     },
                    ]
@@ -938,7 +938,7 @@ class SageIntacctConnector:
                 'customfields': {
                    'customfield': [
                     {
-                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldname': 'FYLE_EXPENSE_URL2',
                         'customfieldvalue': expense_link
                     },
                    ]
