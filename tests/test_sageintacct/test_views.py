@@ -149,7 +149,7 @@ def test_sync_dimensions(api_client, test_connection):
     assert response.status_code == 400
 
     response = json.loads(response.content)
-    assert response['message'] == 'Sage Intacct Credentials not found in workspace'
+    assert response['message'] == 'Sage Intacct credentials not found / invalid in workspace'
 
 
 def test_refresh_dimensions(api_client, test_connection):
@@ -170,4 +170,4 @@ def test_refresh_dimensions(api_client, test_connection):
     assert response.status_code == 400
 
     response = json.loads(response.content)
-    assert response['message'] == 'Sage Intacct credentials not found in workspace'
+    assert response['message'] == 'Sage Intacct credentials not found / invalid in workspace'
