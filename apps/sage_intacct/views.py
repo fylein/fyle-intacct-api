@@ -149,10 +149,10 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_200_OK
             )
 
-        except SageIntacctCredential.DoesNotExist:
+        except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
             return Response(
                 data={
-                    'message': 'Sage Intacct Credentials not found in workspace'
+                    'message': 'Sage Intacct credentials not found / invalid in workspace'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -183,10 +183,10 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_200_OK
             )
 
-        except SageIntacctCredential.DoesNotExist:
+        except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
             return Response(
                 data={
-                    'message': 'Sage Intacct credentials not found in workspace'
+                    'message': 'Sage Intacct credentials not found / invalid in workspace'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )

@@ -156,17 +156,20 @@ def async_auto_map_employees(workspace_id: int):
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(
-        credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+    try:
+        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+        sage_intacct_connection = SageIntacctConnector(
+            credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
 
-    platform.employees.sync()
-    if destination_type == 'EMPLOYEE':
-        sage_intacct_connection.sync_employees()
-    else:
-        sage_intacct_connection.sync_vendors()
+        platform.employees.sync()
+        if destination_type == 'EMPLOYEE':
+            sage_intacct_connection.sync_employees()
+        else:
+            sage_intacct_connection.sync_vendors()
 
-    EmployeesAutoMappingHelper(workspace_id, destination_type, employee_mapping_preference).reimburse_mapping()
+        EmployeesAutoMappingHelper(workspace_id, destination_type, employee_mapping_preference).reimburse_mapping()
+    except InvalidTokenError:
+        logger.info('Invalid Token - %s', workspace_id)
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
@@ -522,11 +525,14 @@ def async_auto_create_custom_field_mappings(workspace_id: str):
     ).all()
 
     for mapping_setting in mapping_settings:
-        if mapping_setting.import_to_fyle:
-            sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
-            auto_create_expense_fields_mappings(
-                workspace_id, mapping_setting.destination_field, mapping_setting.source_field
-            )
+        try:
+            if mapping_setting.import_to_fyle:
+                sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
+                auto_create_expense_fields_mappings(
+                    workspace_id, mapping_setting.destination_field, mapping_setting.source_field
+                )
+        except InvalidTokenError:
+            logger.info('Invalid Token - %s', workspace_id)
 
 
 def schedule_fyle_attributes_creation(workspace_id: int):
