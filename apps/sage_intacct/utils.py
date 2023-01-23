@@ -91,23 +91,46 @@ class SageIntacctConnector:
         """
         Get accounts
         """
-        accounts = self.connection.accounts.get_all(field='STATUS', value='active')
+        accounts = self.connection.accounts.get_all()
 
         account_attributes = {
             'account': [],
             'ccc_account': []
         }
+        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,\
+                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail')
+        disabled_fields_map = {}
+
+        for destination_attribute in destination_attributes:
+            disabled_fields_map[destination_attribute['destination_id']] = {
+                'value': destination_attribute['value'],
+                'detail': destination_attribute['detail']
+            }
 
         for account in accounts:
+            if account['STATUS'] == 'active':
+                account_attributes['account'].append({
+                    'attribute_type': 'ACCOUNT',
+                    'display_name': 'account',
+                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
+                    'destination_id': account['ACCOUNTNO'],
+                    'active': True,
+                    'detail': {
+                        'account_type': account['ACCOUNTTYPE']
+                    }
+                })
+                if account['ACCOUNTNO'] in disabled_fields_map:
+                    disabled_fields_map.pop(account['ACCOUNTNO'])
+
+        #For setting active to False
+        for destination_id in disabled_fields_map:
             account_attributes['account'].append({
                 'attribute_type': 'ACCOUNT',
-                'active': True if account['STATUS'] == 'active' else None,
                 'display_name': 'account',
-                'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
-                'destination_id': account['ACCOUNTNO'],
-                'detail': {
-                    'account_type': account['ACCOUNTTYPE']
-                }
+                'value': disabled_fields_map[destination_id]['value'],
+                'destination_id': destination_id,
+                'active': False,
+                'detail': disabled_fields_map[destination_id]['detail']
             })
 
         for attribute_type, account_attribute in account_attributes.items():
@@ -141,21 +164,46 @@ class SageIntacctConnector:
         """
         Get expense types
         """
-        expense_types = self.connection.expense_types.get_all(field='STATUS', value='active')
+        expense_types = self.connection.expense_types.get_all()
 
         expense_types_attributes = []
+        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,\
+                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail')
+        disabled_fields_map = {}
+
+        for destination_attribute in destination_attributes:
+            disabled_fields_map[destination_attribute['destination_id']] = {
+                'value': destination_attribute['value'],
+                'detail': destination_attribute['detail']
+            }
+
+        print(disabled_fields_map)
 
         for expense_type in expense_types:
+            if expense_type['STATUS'] == 'active':
+                expense_types_attributes.append({
+                    'attribute_type': 'EXPENSE_TYPE',
+                    'display_name': 'Expense Types',
+                    'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
+                    'destination_id': expense_type['ACCOUNTLABEL'],
+                    'active': True,
+                    'detail': {
+                        'gl_account_no': expense_type['GLACCOUNTNO'],
+                        'gl_account_title': expense_type['GLACCOUNTTITLE']
+                    }
+                })
+                if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
+                    disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
+        
+        #For setting active to False
+        for destination_id in disabled_fields_map:
             expense_types_attributes.append({
                 'attribute_type': 'EXPENSE_TYPE',
                 'display_name': 'Expense Types',
-                'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
-                'destination_id': expense_type['ACCOUNTLABEL'],
-                'active': True if expense_type['STATUS'] == 'active' else None,
-                'detail': {
-                    'gl_account_no': expense_type['GLACCOUNTNO'],
-                    'gl_account_title': expense_type['GLACCOUNTTITLE']
-                }
+                'value': disabled_fields_map[destination_id]['value'],
+                'destination_id': destination_id,
+                'active': False,
+                'detail': disabled_fields_map[destination_id]['detail']
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -210,9 +258,18 @@ class SageIntacctConnector:
         """
         projects_count = self.connection.projects.count()
         if projects_count < SYNC_UPPER_LIMIT['projects']:
-            projects = self.connection.projects.get_all(field='STATUS', value='active')
+            projects = self.connection.projects.get_all()
 
             project_attributes = []
+            destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,\
+                attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail')
+            disabled_fields_map = {}
+
+            for destination_attribute in destination_attributes:
+                disabled_fields_map[destination_attribute['destination_id']] = {
+                    'value': destination_attribute['value'],
+                    'detail': destination_attribute['detail']
+                }
 
             for project in projects:
                 if project['STATUS'] == 'active':
@@ -229,6 +286,19 @@ class SageIntacctConnector:
                         'active': True,
                         'detail': detail
                     })
+                    if project['PROJECTID'] in disabled_fields_map:
+                        disabled_fields_map.pop(project['PROJECTID'])
+
+            #For setting active to False
+            for destination_id in disabled_fields_map:
+                project_attributes.append({
+                    'attribute_type': 'PROJECT',
+                    'display_name': 'project',
+                    'value': disabled_fields_map[destination_id]['value'],
+                    'destination_id': destination_id,
+                    'active': False,
+                    'detail': disabled_fields_map[destination_id]['detail']
+                })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes, 'PROJECT', self.workspace_id, True)
