@@ -57,7 +57,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
         return sage_intacct_connection.post_attachments(attachments, supdoc_id)
     except Exception:
         error = traceback.format_exc()
-        logger.error(
+        logger.info(
             'Attachment failed for expense group id %s / workspace id %s Error: %s',
             expense_group.id, expense_group.workspace_id, {'error': error}
         )
