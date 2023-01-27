@@ -97,7 +97,7 @@ class SageIntacctConnector:
             'account': [],
             'ccc_account': []
         }
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,\
+        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, 
                 attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail')
         disabled_fields_map = {}
 
@@ -122,7 +122,11 @@ class SageIntacctConnector:
                 if account['ACCOUNTNO'] in disabled_fields_map:
                     disabled_fields_map.pop(account['ACCOUNTNO'])
 
-        #For setting active to False
+        # For setting active to False
+        # During the initial run we only pull in the active ones.
+        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
+            # If yes then we pop the item from the disable_field_map else we set the active = True.
+        # This should take care of delete as well as inactive case since we are checking the status=Active case.
         for destination_id in disabled_fields_map:
             account_attributes['account'].append({
                 'attribute_type': 'ACCOUNT',
@@ -167,7 +171,7 @@ class SageIntacctConnector:
         expense_types = self.connection.expense_types.get_all()
 
         expense_types_attributes = []
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,\
+        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
                 attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail')
         disabled_fields_map = {}
 
@@ -176,8 +180,6 @@ class SageIntacctConnector:
                 'value': destination_attribute['value'],
                 'detail': destination_attribute['detail']
             }
-
-        print(disabled_fields_map)
 
         for expense_type in expense_types:
             if expense_type['STATUS'] == 'active':
@@ -195,7 +197,11 @@ class SageIntacctConnector:
                 if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
                     disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
         
-        #For setting active to False
+        # For setting active to False
+        # During the initial run we only pull in the active ones.
+        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
+            # If yes then we pop the item from the disable_field_map else we set the active = True.
+        # This should take care of delete as well as inactive case since we are checking the status=Active case.
         for destination_id in disabled_fields_map:
             expense_types_attributes.append({
                 'attribute_type': 'EXPENSE_TYPE',
@@ -261,7 +267,7 @@ class SageIntacctConnector:
             projects = self.connection.projects.get_all()
 
             project_attributes = []
-            destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,\
+            destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
                 attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail')
             disabled_fields_map = {}
 
@@ -289,7 +295,11 @@ class SageIntacctConnector:
                     if project['PROJECTID'] in disabled_fields_map:
                         disabled_fields_map.pop(project['PROJECTID'])
 
-            #For setting active to False
+            # For setting active to False
+            # During the initial run we only pull in the active ones.
+            # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
+                # If yes then we pop the item from the disable_field_map else we set the active = True.
+            # This should take care of delete as well as inactive case since we are checking the status=Active case.
             for destination_id in disabled_fields_map:
                 project_attributes.append({
                     'attribute_type': 'PROJECT',
