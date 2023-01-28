@@ -201,7 +201,7 @@ def test_create_fyle_category_payload(mocker, db):
     platform = PlatformConnector(fyle_credentials)
 
     category_map = get_all_categories_from_fyle(platform=platform)
-    fyle_category_payload = create_fyle_categories_payload(intacct_attributes, 2, category_map)
+    fyle_category_payload = create_fyle_categories_payload(intacct_attributes, category_map)
     
     assert dict_compare_keys(fyle_category_payload[0], data['fyle_category_payload'][0]) == [], 'category upload api return diffs in keys'
 
