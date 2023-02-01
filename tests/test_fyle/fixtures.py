@@ -238,7 +238,7 @@ data = {
             'source_id': '246849',
             'auto_mapped': False,
             'auto_created': False,
-            'active': None,
+            'active': True,
             'detail': None,
             'created_at': '2022-09-20T08:39:06.893902Z',
             'updated_at': '2022-09-20T08:39:06.893930Z',

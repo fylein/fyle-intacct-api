@@ -109,6 +109,15 @@ def test_auto_create_project_mappings(db, mocker):
 
     assert mappings == projects
 
+    DestinationAttribute.objects.filter(id='602').update(active=False)
+    response = auto_create_project_mappings(workspace_id=workspace_id)
+    response == None
+
+    expense_attribute_id = Mapping.objects.filter(destination_id='602').first().source_id
+    expense_attribute = ExpenseAttribute.objects.filter(id=expense_attribute_id).first()
+
+    assert expense_attribute.active == False
+
 
     with mock.patch('fyle_integrations_platform_connector.apis.Projects.sync') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
@@ -247,6 +256,15 @@ def test_auto_create_category_mappings(db, mocker):
 
     mappings = CategoryMapping.objects.filter(workspace_id=workspace_id)
     assert len(mappings) == 75
+
+    DestinationAttribute.objects.filter(id='930').update(active=False)
+    response = auto_create_category_mappings(workspace_id=workspace_id)
+    assert response == []
+
+    expense_attribute_id = CategoryMapping.objects.filter(destination_expense_head_id='930').first().source_category_id
+    expense_attribute = ExpenseAttribute.objects.filter(id=expense_attribute_id).first()
+
+    assert expense_attribute.active == False
 
     with mock.patch('fyle_integrations_platform_connector.apis.Categories.post_bulk') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
