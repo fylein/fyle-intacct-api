@@ -184,8 +184,8 @@ def test_upload_categories_to_fyle(mocker, db):
         'sageintacctsdk.apis.Accounts.get_all',
         return_value=intacct_data['get_accounts']
     )
-
-    intacct_attributes = upload_categories_to_fyle(workspace_id=workspace_id, reimbursable_expenses_object='EXPENSE_REPORT', corporate_credit_card_expenses_object='BILL')
+    fyle_credentials = FyleCredential.objects.filter(workspace_id=1).first()
+    intacct_attributes = upload_categories_to_fyle(workspace_id=workspace_id, reimbursable_expenses_object='EXPENSE_REPORT', corporate_credit_card_expenses_object='BILL', fyle_credentials=fyle_credentials)
     assert len(intacct_attributes) == 8
 
     count_of_accounts = DestinationAttribute.objects.filter(
