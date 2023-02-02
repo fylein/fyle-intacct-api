@@ -653,11 +653,10 @@ def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate
 
 
 def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
-    corporate_credit_card_expenses_object: str):
+    corporate_credit_card_expenses_object: str, fyle_credentials: FyleCredential):
     """
     Upload categories to Fyle
     """
-    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials)
@@ -863,7 +862,7 @@ def auto_create_category_mappings(workspace_id):
 
         fyle_categories = upload_categories_to_fyle(
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object,
-            corporate_credit_card_expenses_object=corporate_credit_card_expenses_object)
+            corporate_credit_card_expenses_object=corporate_credit_card_expenses_object, fyle_credentials=fyle_credentials)
 
         create_category_mappings(fyle_categories, reimbursable_destination_type, workspace_id)
 
