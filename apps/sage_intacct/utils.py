@@ -912,7 +912,7 @@ class SageIntacctConnector:
                 }
             }
 
-            tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
+            tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
             debit_line = {
                 'accountno': lineitem.gl_account_number,
@@ -944,6 +944,15 @@ class SageIntacctConnector:
                    ]
                 }
             }
+
+            refund = lineitem.amount < 0
+            if refund:
+                amount = abs(lineitem.amount)
+                debit_line['amount'] = amount
+                credit_line['amount']  = round((amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount
+                debit_line['accountno'], credit_line['accountno'] = credit_line['accountno'], debit_line['accountno']
+                credit_line['taxentries'] = debit_line['taxentries'].copy()
+                debit_line.pop('taxentries')
 
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
