@@ -280,6 +280,13 @@ def test_construct_bill(create_bill, db):
 
     bill, bill_lineitems = create_bill
     bill_lineitems[0].user_defined_dimensions = [{'CLASS': 'sample'}]
+
+    bill_lineitems[0].amount = -abs(bill_lineitems[0].amount)
+    bill_object = sage_intacct_connection._SageIntacctConnector__construct_bill(bill=bill,bill_lineitems=bill_lineitems)
+
+    assert dict_compare_keys(bill_object, data['bill_payload']) == [], 'construct bill_payload entry api return diffs in keys'
+
+    bill_lineitems[0].amount = abs(bill_lineitems[0].amount)
     bill_object = sage_intacct_connection._SageIntacctConnector__construct_bill(bill=bill,bill_lineitems=bill_lineitems)
 
     assert dict_compare_keys(bill_object, data['bill_payload']) == [], 'construct bill_payload entry api return diffs in keys'
@@ -326,6 +333,13 @@ def test_construct_journal_entry(create_journal_entry, db):
 
     journal_entry,journal_entry_lineitems = create_journal_entry
     journal_entry_lineitems[0].user_defined_dimensions = [{'CLASS': 'sample'}]
+
+    journal_entry_lineitems[0].amount = -abs(journal_entry_lineitems[0].amount)
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(journal_entry=journal_entry, journal_entry_lineitems=journal_entry_lineitems)
+
+    assert dict_compare_keys(journal_entry_object, data['journal_entry_payload_refund']) == [], 'construct journal entry api return diffs in keys'
+
+    journal_entry_lineitems[0].amount = abs(journal_entry_lineitems[0].amount)
     journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(journal_entry=journal_entry, journal_entry_lineitems=journal_entry_lineitems)
 
     assert dict_compare_keys(journal_entry_object, data['journal_entry_payload']) == [], 'construct journal entry api return diffs in keys'

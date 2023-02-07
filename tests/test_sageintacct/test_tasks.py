@@ -215,8 +215,6 @@ def test_post_bill_success(mocker, create_task_logs, db):
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
-    expenses[0].amount *= -1
-
     expense_group.id = random.randint(100, 1500000)
     expense_group.save()
 
@@ -252,8 +250,6 @@ def test_create_bill_exceptions(db, create_task_logs):
 
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
-
-    expenses[0].amount *= -1
 
     expense_group.id = random.randint(100, 1500000)
     expense_group.save()
@@ -564,8 +560,6 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
     expense_group = ExpenseGroup.objects.get(id=3)
     expenses = expense_group.expenses.all()
 
-    expenses[0].amount *= -1
-
     expense_group.id = random.randint(100, 1500000)
     expense_group.save()
 
@@ -609,8 +603,6 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
 
     expense_group = ExpenseGroup.objects.get(id=3)
     expenses = expense_group.expenses.all()
-
-    expenses[0].amount *= -1
 
     expense_group.id = random.randint(100, 1500000)
     expense_group.save()
