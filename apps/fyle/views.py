@@ -220,9 +220,18 @@ class ExpenseAttributesView(generics.ListAPIView):
 
     def get_queryset(self):
         attribute_type = self.request.query_params.get('attribute_type')
+        active = self.request.query_params.get('active')
 
-        return ExpenseAttribute.objects.filter(
-            attribute_type=attribute_type, workspace_id=self.kwargs['workspace_id']).order_by('value')
+        params = {
+            'workspace_id': self.kwargs['workspace_id'],
+            'attribute_type': self.request.query_params.get('attribute_type')
+        }
+
+        if active and active.lower() == 'true':
+            params['active'] = True
+
+
+        return ExpenseAttribute.objects.filter(**params).order_by('value')
 
 
 class FyleFieldsView(generics.ListAPIView):

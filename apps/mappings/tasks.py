@@ -38,33 +38,100 @@ def remove_duplicates(si_attributes: List[DestinationAttribute]):
 
     return unique_attributes
 
+def disable_expense_attributes(source_field, destination_field, workspace_id):
 
-def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_project_names: list):
+    # Get All the inactive destination attribute ids
+    filter = {
+        'mapping__isnull': False,
+        'mapping__destination_type': destination_field
+    }
+
+    if source_field == 'CATEGORY':
+        if destination_field == 'EXPENSE_TYPE':
+            filter = {
+                'destination_expense_head__isnull': False
+            }
+        elif destination_field == 'ACCOUNT':
+            filter = {
+                'destination_account__isnull': False
+            }
+
+    destination_attribute_ids = DestinationAttribute.objects.filter(
+        attribute_type=destination_field,
+        active=False,
+        workspace_id=workspace_id,
+        **filter
+    ).values_list('id', flat=True)
+
+    # Get all the expense attributes that are mapped to these destination_attribute_ids
+    filter = {
+        'mapping__destination_id__in': destination_attribute_ids
+    }
+
+    if source_field == 'CATEGORY':
+        if destination_field == 'EXPENSE_TYPE':
+            filter = {
+                'categorymapping__destination_expense_head_id__in': destination_attribute_ids
+            }
+        elif destination_field == 'ACCOUNT':
+            filter = {
+                'categorymapping__destination_account_id__in': destination_attribute_ids
+            }
+
+    expense_attributes_to_disable = ExpenseAttribute.objects.filter(
+        attribute_type=source_field,
+        active=True,
+        **filter
+    )
+
+    # Update active column to false for expense attributes to be disabled
+    expense_attributes_ids = []
+    if expense_attributes_to_disable :
+        expense_attributes_ids = [expense_attribute.id for expense_attribute in expense_attributes_to_disable]
+        expense_attributes_to_disable.update(active=False)
+
+    return expense_attributes_ids
+
+def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_project_names: list,
+                                 updated_projects: List[ExpenseAttribute] = None):
     """
     Create Fyle Projects Payload from Sage Intacct Projects and Customers
     :param projects: Sage Intacct Projects
     :return: Fyle Projects Payload
     """
     payload = []
-    existing_project_names = [project_name.lower() for project_name in existing_project_names]
 
-    for project in projects:
-        if project.value.lower() not in existing_project_names:
+    if updated_projects:
+        for project in updated_projects:
+            destination_id_of_project = project.mapping.first().destination.destination_id
             payload.append({
+                'id': project.source_id,
                 'name': project.value,
-                'code': project.destination_id,
-                'description': 'Sage Intacct Project - {0}, Id - {1}'.format(
+                'code': destination_id_of_project,
+                'description': 'Project - {0}, Id - {1}'.format(
                     project.value,
-                    project.destination_id
+                    destination_id_of_project
                 ),
-                'is_enabled': True if project.active is None else project.active
+                'is_enabled': project.active
             })
+    else:
+        existing_project_names = [project_name.lower() for project_name in existing_project_names]
+        for project in projects:
+            if project.value.lower() not in existing_project_names:
+                payload.append({
+                    'name': project.value,
+                    'code': project.destination_id,
+                    'description': 'Sage Intacct Project - {0}, Id - {1}'.format(
+                        project.value,
+                        project.destination_id
+                    ),
+                    'is_enabled': True if project.active is None else project.active
+                })
 
     return payload
 
 
-def post_projects_in_batches(platform: PlatformConnector,
-                             workspace_id: int, destination_field: str):
+def post_projects_in_batches(platform: PlatformConnector, workspace_id: int, destination_field: str):
     existing_project_names = ExpenseAttribute.objects.filter(
         attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
     si_attributes_count = DestinationAttribute.objects.filter(
@@ -85,6 +152,14 @@ def post_projects_in_batches(platform: PlatformConnector,
             platform.projects.sync()
 
         Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', destination_field, workspace_id)
+    
+    if destination_field == 'PROJECT':
+        project_ids_to_be_changed = disable_expense_attributes('PROJECT', 'PROJECT', workspace_id)
+        if project_ids_to_be_changed:
+            expense_attributes = ExpenseAttribute.objects.filter(id__in=project_ids_to_be_changed)
+            fyle_payload: List[Dict] = create_fyle_projects_payload(projects=[], existing_project_names=[], updated_projects=expense_attributes)
+            platform.projects.post_bulk(fyle_payload)
+            platform.projects.sync()
 
 
 def auto_create_project_mappings(workspace_id: int):
@@ -258,7 +333,7 @@ def get_all_categories_from_fyle(platform: PlatformConnector):
     return category_name_map
 
 
-def create_fyle_categories_payload(categories: List[DestinationAttribute], workspace_id: int, category_map: Dict):
+def create_fyle_categories_payload(categories: List[DestinationAttribute], category_map: Dict, updated_categories: List[ExpenseAttribute] = [], destination_type: str = None):
     """
     Create Fyle Categories Payload from Sage Intacct Expense Types / Accounts
     :param workspace_id: Workspace integer id
@@ -267,22 +342,28 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], works
     """
     payload = []
 
-    for category in categories:
-        if category.value.lower() not in category_map:
+    if updated_categories:
+        for category in updated_categories:
+            if destination_type == 'EXPENSE_TYPE':
+                destination_id_of_category = category.categorymapping.destination_expense_head.destination_id
+            elif destination_type == 'ACCOUNT':
+                destination_id_of_category = category.categorymapping.destination_account.destination_id
             payload.append({
+                'id': category.source_id,
                 'name': category.value,
-                'code': category.destination_id,
-                'is_enabled': True if category.active is None else category.active,
+                'code': destination_id_of_category,
+                'is_enabled': category.active,
                 'restricted_project_ids': None
             })
-        else:
-            payload.append({
-                'id': category_map[category.value.lower()]['id'],
-                'name': category.value,
-                'code': category.destination_id,
-                'is_enabled': category_map[category.value.lower()]['is_enabled'],
-                'restricted_project_ids': None
-            })
+    else:
+        for category in categories:
+            if category.value.lower() not in category_map:
+                payload.append({
+                    'name': category.value,
+                    'code': category.destination_id,
+                    'is_enabled': category.active,
+                    'restricted_project_ids': None
+                })
 
     return payload
 
@@ -572,11 +653,10 @@ def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate
 
 
 def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
-    corporate_credit_card_expenses_object: str):
+    corporate_credit_card_expenses_object: str, fyle_credentials: FyleCredential):
     """
     Upload categories to Fyle
     """
-    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials)
@@ -602,7 +682,7 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
 
     si_attributes = remove_duplicates(si_attributes)
 
-    fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, workspace_id, category_map)
+    fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, category_map)
     if fyle_payload:
         platform.categories.post_bulk(fyle_payload)
         platform.categories.sync()
@@ -777,11 +857,23 @@ def auto_create_category_mappings(workspace_id):
         reimbursable_destination_type = 'ACCOUNT'
 
     try:
+        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
         fyle_categories = upload_categories_to_fyle(
             workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object,
-            corporate_credit_card_expenses_object=corporate_credit_card_expenses_object)
+            corporate_credit_card_expenses_object=corporate_credit_card_expenses_object, fyle_credentials=fyle_credentials)
 
         create_category_mappings(fyle_categories, reimbursable_destination_type, workspace_id)
+
+        # auto-sync categories and expense accounts
+        category_ids_to_be_changed = disable_expense_attributes('CATEGORY', reimbursable_destination_type, workspace_id)
+        if category_ids_to_be_changed:
+            expense_attributes = ExpenseAttribute.objects.filter(id__in=category_ids_to_be_changed)
+            fyle_payload: List[Dict] = create_fyle_categories_payload(categories=[], category_map={}, updated_categories=expense_attributes, destination_type=reimbursable_destination_type)
+
+            platform.categories.post_bulk(fyle_payload)
+            platform.categories.sync()
 
         if reimbursable_expenses_object == 'EXPENSE_REPORT' and \
                 corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):

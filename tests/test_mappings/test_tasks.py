@@ -109,6 +109,15 @@ def test_auto_create_project_mappings(db, mocker):
 
     assert mappings == projects
 
+    DestinationAttribute.objects.filter(id='602').update(active=False)
+    response = auto_create_project_mappings(workspace_id=workspace_id)
+    response == None
+
+    expense_attribute_id = Mapping.objects.filter(destination_id='602').first().source_id
+    expense_attribute = ExpenseAttribute.objects.filter(id=expense_attribute_id).first()
+
+    assert expense_attribute.active == False
+
 
     with mock.patch('fyle_integrations_platform_connector.apis.Projects.sync') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
@@ -175,8 +184,8 @@ def test_upload_categories_to_fyle(mocker, db):
         'sageintacctsdk.apis.Accounts.get_all',
         return_value=intacct_data['get_accounts']
     )
-
-    intacct_attributes = upload_categories_to_fyle(workspace_id=workspace_id, reimbursable_expenses_object='EXPENSE_REPORT', corporate_credit_card_expenses_object='BILL')
+    fyle_credentials = FyleCredential.objects.filter(workspace_id=1).first()
+    intacct_attributes = upload_categories_to_fyle(workspace_id=workspace_id, reimbursable_expenses_object='EXPENSE_REPORT', corporate_credit_card_expenses_object='BILL', fyle_credentials=fyle_credentials)
     assert len(intacct_attributes) == 8
 
     count_of_accounts = DestinationAttribute.objects.filter(
@@ -201,7 +210,7 @@ def test_create_fyle_category_payload(mocker, db):
     platform = PlatformConnector(fyle_credentials)
 
     category_map = get_all_categories_from_fyle(platform=platform)
-    fyle_category_payload = create_fyle_categories_payload(intacct_attributes, 2, category_map)
+    fyle_category_payload = create_fyle_categories_payload(intacct_attributes, category_map)
     
     assert dict_compare_keys(fyle_category_payload[0], data['fyle_category_payload'][0]) == [], 'category upload api return diffs in keys'
 
@@ -247,6 +256,15 @@ def test_auto_create_category_mappings(db, mocker):
 
     mappings = CategoryMapping.objects.filter(workspace_id=workspace_id)
     assert len(mappings) == 75
+
+    DestinationAttribute.objects.filter(id='930').update(active=False)
+    response = auto_create_category_mappings(workspace_id=workspace_id)
+    assert response == []
+
+    expense_attribute_id = CategoryMapping.objects.filter(destination_expense_head_id='930').first().source_category_id
+    expense_attribute = ExpenseAttribute.objects.filter(id=expense_attribute_id).first()
+
+    assert expense_attribute.active == False
 
     with mock.patch('fyle_integrations_platform_connector.apis.Categories.post_bulk') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
