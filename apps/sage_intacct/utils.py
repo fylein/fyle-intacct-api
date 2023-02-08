@@ -824,7 +824,7 @@ class SageIntacctConnector:
         bill_lineitems_payload = []
         for lineitem in bill_lineitems:
             expense_link = self.get_expense_link(lineitem)
-            tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
+            tax_exclusive_amount, _ = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
             expense = {
                 'ACCOUNTNO': lineitem.gl_account_number,
@@ -852,6 +852,10 @@ class SageIntacctConnector:
                    ]
                 }
             }
+
+            # case of a refund
+            if lineitem.amount < 0:
+                expense['TRX_AMOUNT'] = -(abs(lineitem.amount) - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount)
 
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
