@@ -1025,8 +1025,8 @@ class SageIntacctConnector:
                 }
             }
 
-            refund = lineitem.amount < 0
-            if refund:
+            # case of a refund
+            if lineitem.amount < 0:
                 amount = abs(lineitem.amount)
                 debit_line['amount'] = amount
                 credit_line['amount']  = round((amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount
