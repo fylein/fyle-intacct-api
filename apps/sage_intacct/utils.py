@@ -855,7 +855,7 @@ class SageIntacctConnector:
 
             # case of a refund
             if lineitem.amount < 0:
-                expense['TRX_AMOUNT'] = -(abs(lineitem.amount) - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount)
+                expense['TRX_AMOUNT'] = round(-(abs(lineitem.amount) - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount), 2)
 
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
@@ -1033,8 +1033,9 @@ class SageIntacctConnector:
             if lineitem.amount < 0:
                 amount = abs(lineitem.amount)
                 debit_line['amount'] = amount
-                credit_line['amount']  = round((amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount
+                credit_line['amount']  = round(-(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount), 2)
                 debit_line['accountno'], credit_line['accountno'] = credit_line['accountno'], debit_line['accountno']
+                debit_line['tr_type'], credit_line['tr_type'] = credit_line['tr_type'], debit_line['tr_type']
                 credit_line['taxentries'] = debit_line['taxentries'].copy()
                 debit_line.pop('taxentries')
 
