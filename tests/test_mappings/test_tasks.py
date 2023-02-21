@@ -613,3 +613,16 @@ def test_post_merchants(mocker, db):
     fyle_connection = PlatformConnector(fyle_credentials)
 
     post_merchants(fyle_connection, workspace_id, False)
+
+
+def test_auto_import_and_map_fyle_fields(db):
+    workspace_id = 1
+
+    auto_import_and_map_fyle_fields(workspace_id=workspace_id)
+
+    schedule = Schedule.objects.filter(
+        func='apps.mappings.tasks.auto_import_and_map_fyle_fields',
+        args='{}'.format(workspace_id),
+    ).first()
+
+    assert schedule == None
