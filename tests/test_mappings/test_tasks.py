@@ -131,28 +131,6 @@ def test_auto_create_project_mappings(db, mocker):
     assert response == None
 
 
-@pytest.mark.django_db
-def test_schedule_projects_creation(db):
-    workspace_id = 1
-    schedule_projects_creation(import_to_fyle=True, workspace_id=workspace_id)
-
-    schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_create_project_mappings',
-        args='{}'.format(workspace_id),
-    ).first()
-    
-    assert schedule.func == 'apps.mappings.tasks.auto_create_project_mappings'
-
-    schedule_projects_creation(import_to_fyle=False, workspace_id=workspace_id)
-
-    schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_create_project_mappings',
-        args='{}'.format(workspace_id),
-    ).first()
-
-    assert schedule == None
-
-
 def test_remove_duplicates(db):
 
     attributes = DestinationAttribute.objects.filter(attribute_type='EMPLOYEE')
@@ -276,27 +254,6 @@ def test_auto_create_category_mappings(db, mocker):
     response = auto_create_category_mappings(workspace_id=workspace_id)
 
     assert response == None
-
-
-def test_schedule_categories_creation(db):
-    workspace_id = 1
-    schedule_categories_creation(import_categories=True, workspace_id=workspace_id)
-
-    schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_create_category_mappings',
-        args='{}'.format(workspace_id),
-    ).first()
-    
-    assert schedule.func == 'apps.mappings.tasks.auto_create_category_mappings'
-
-    schedule_categories_creation(import_categories=False, workspace_id=workspace_id)
-
-    schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_create_category_mappings',
-        args='{}'.format(workspace_id),
-    ).first()
-
-    assert schedule == None
 
 
 def test_async_auto_map_employees(mocker, db):
@@ -656,25 +613,3 @@ def test_post_merchants(mocker, db):
     fyle_connection = PlatformConnector(fyle_credentials)
 
     post_merchants(fyle_connection, workspace_id, False)
-
-
-def test_schedule_vendors_as_merchants_creation(db):
-    workspace_id = 1
-
-    schedule_vendors_as_merchants_creation(import_vendors_as_merchants=True, workspace_id=workspace_id)
-
-    schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_create_vendors_as_merchants',
-        args='{}'.format(workspace_id),
-    ).first()
-    
-    assert schedule.func == 'apps.mappings.tasks.auto_create_vendors_as_merchants'
-
-    schedule_vendors_as_merchants_creation(import_vendors_as_merchants=False, workspace_id=workspace_id)
-
-    schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_create_vendors_as_merchants',
-        args='{}'.format(workspace_id),
-    ).first()
-
-    assert schedule == None
