@@ -54,8 +54,8 @@ class SageIntacctConnector:
         )
 
         self.workspace_id = workspace_id
-    
-    
+
+
     def get_tax_solution_id_or_none(self, lineitems):
 
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
@@ -255,6 +255,56 @@ class SageIntacctConnector:
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             payment_accounts_attributes, 'PAYMENT_ACCOUNT', self.workspace_id, True)
+
+        return []
+
+    def sync_tasks(self):
+        """
+        Get of Tasks
+        """
+
+        intacct_tasks = self.connection.tasks.get_all()
+        task_attributes = []
+
+        for task in intacct_tasks:
+            task_attributes.append({
+                'attribute_type': 'TASK',
+                'display_name': 'tasks',
+                'value': task['NAME'],
+                'destination_id': task['TASKID'],
+                'detail': {
+                    'project_id': task['PROJECTID'],
+                    'project_name': task['PROJECTNAME']
+                }
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            task_attributes, 'TASK', self.workspace_id, False)
+
+        return []
+
+    def sync_cost_types(self):
+        """
+        Sync of Sage Intacct Cost Types
+        """
+
+        cost_types = self.connection.cost_types.get_all(field='STATUS', value='active')
+        cost_types_attributes = []
+
+        for cost_type in cost_types:
+            cost_types_attributes.append({
+                'attribute_type': 'COST_TYPE',
+                'display_name': 'cost type',
+                'value': cost_type['NAME'],
+                'destination_id': cost_type['COSTTYPEID'],
+                'detail': {
+                    'project_id': cost_type['PROJECTID'],
+                    'project_name': cost_type['PROJECTNAME']
+                }
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            cost_types_attributes, 'COST_TYPE', self.workspace_id, True)
 
         return []
 
