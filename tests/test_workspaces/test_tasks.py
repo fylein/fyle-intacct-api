@@ -1,6 +1,7 @@
 from apps.tasks.models import TaskLog
-from apps.workspaces.tasks import run_sync_schedule, schedule_sync, run_email_notification
-from apps.workspaces.models import WorkspaceSchedule, Configuration
+from apps.workspaces.tasks import run_sync_schedule, schedule_sync, run_email_notification, \
+    async_update_fyle_credentials
+from apps.workspaces.models import WorkspaceSchedule, Configuration, FyleCredential
 from fyle_accounting_mappings.models import ExpenseAttribute
 from .fixtures import data
 
@@ -109,3 +110,13 @@ def test_email_notification(db):
     ).first()
 
     assert updated_ws_schedule.error_count == 3
+
+def test_async_update_fyle_credentials(db):
+    workspace_id = 1
+    refresh_token = 'hehehuhu'
+
+    async_update_fyle_credentials('or79Cob97KSh', refresh_token)
+
+    fyle_credentials = FyleCredential.objects.filter(workspace_id=workspace_id).first()
+
+    assert fyle_credentials.refresh_token == refresh_token

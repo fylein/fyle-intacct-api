@@ -6,7 +6,7 @@ from dateutil import parser
 from typing import List, Dict
 
 from django_q.models import Schedule
-from django.db.models import Q, Count
+from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle.platform.exceptions import WrongParamsError
@@ -199,27 +199,6 @@ def auto_create_project_mappings(workspace_id: int):
             'Error while creating projects workspace_id - %s error: %s',
             workspace_id, error
         )
-
-
-def schedule_projects_creation(import_to_fyle, workspace_id):
-    if import_to_fyle:
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.auto_create_project_mappings',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': datetime.now()
-            }
-        )
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.auto_create_project_mappings',
-            args='{}'.format(workspace_id)
-        ).first()
-
-        if schedule:
-            schedule.delete()
 
 
 def async_auto_map_employees(workspace_id: int):
@@ -962,28 +941,6 @@ def auto_create_category_mappings(workspace_id):
         )
 
 
-def schedule_categories_creation(import_categories, workspace_id):
-    if import_categories:
-        start_datetime = datetime.now()
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.auto_create_category_mappings',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': start_datetime
-            }
-        )
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.auto_create_category_mappings',
-            args='{}'.format(workspace_id)
-        ).first()
-
-        if schedule:
-            schedule.delete()
-
-
 def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_id: int):
     existing_tax_codes_name = ExpenseAttribute.objects.filter(
         attribute_type='TAX_GROUP', workspace_id=workspace_id).values_list('value', flat=True)
@@ -1151,22 +1108,24 @@ def auto_create_vendors_as_merchants(workspace_id):
             workspace_id, error)
 
 
-def schedule_vendors_as_merchants_creation(import_vendors_as_merchants, workspace_id):
-    if import_vendors_as_merchants:
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.auto_create_vendors_as_merchants',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': datetime.now()
-            }
-        )
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.auto_create_vendors_as_merchants',
-            args='{}'.format(workspace_id),
-        ).first()
+def auto_import_and_map_fyle_fields(workspace_id):
+    """
+    Auto import and map fyle fields
+    """
+    configuration: Configuration = Configuration.objects.get(workspace_id=workspace_id)
+    project_mapping = MappingSetting.objects.filter(source_field='PROJECT', workspace_id=configuration.workspace_id).first()
 
-        if schedule:
-            schedule.delete()
+    chain = Chain()
+
+    if configuration.import_vendors_as_merchants:
+        chain.append('apps.mappings.tasks.auto_create_vendors_as_merchants', workspace_id)
+
+    if configuration.import_categories:
+        chain.append('apps.mappings.tasks.auto_create_category_mappings', workspace_id)
+
+    if project_mapping and project_mapping.import_to_fyle:
+        chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
+
+    if chain.length() > 0:
+        chain.run()
+
