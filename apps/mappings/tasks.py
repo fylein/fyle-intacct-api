@@ -529,7 +529,9 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
         if parent_field:
             expense_custom_field_payload = {
                 'field_name': fyle_attribute,
+                'column_name': fyle_attribute,
                 'type': 'DEPENDENT_SELECT',
+                'is_custom': True,
                 'is_enabled': True,
                 'is_mandatory': False,
                 'placeholder': 'Select {0}'.format(fyle_attribute),
@@ -576,9 +578,7 @@ def upload_dependent_field_to_fyle(workspace_id: int, sageintacct_attribute_type
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
 
-    dependent_field_values = {
-        'data': []
-    }
+    dependent_field_values = []
 
     for attribute in sage_intacct_attributes:
         payload = {
@@ -589,9 +589,9 @@ def upload_dependent_field_to_fyle(workspace_id: int, sageintacct_attribute_type
             "is_enabled": True
         }
 
-        dependent_field_values['data'].append(payload)
+        dependent_field_values.append(payload)
 
-    platform.expense_fields.bulk_post_dependent_field_values(dependent_field_values)
+    platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
     platform.expense_fields.sync()
 
     return dependent_fields
@@ -619,6 +619,7 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
         platform=platform,
         parent_field=parent_field
     )
+
 
     if fyle_custom_field_payload:
         platform.expense_custom_fields.post(fyle_custom_field_payload)

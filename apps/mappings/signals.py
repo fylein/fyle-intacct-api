@@ -13,7 +13,7 @@ from django_q.tasks import async_task
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
 from fyle.platform.exceptions import WrongParamsError
 from apps.mappings.tasks import schedule_projects_creation, schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
-    upload_attributes_to_fyle
+    upload_attributes_to_fyle, upload_dependent_field_to_fyle
 
 
 logger = logging.getLogger(__name__)
@@ -50,12 +50,22 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
 
     if instance.source_field not in default_attributes:
         try:
-            upload_attributes_to_fyle(
-                workspace_id=int(instance.workspace_id),
-                sageintacct_attribute_type=instance.destination_field,
-                fyle_attribute_type=instance.source_field,
-                parent_field=parent_field
-            )
+            if instance.expense_field:
+                upload_dependent_field_to_fyle(
+                    workspace_id=int(instance.workspace_id),
+                    sageintacct_attribute_type=instance.destination_field,
+                    fyle_attribute_type=instance.source_field,
+                    parent_field_id=parent_field
+                )
+            else:
+                upload_attributes_to_fyle(
+                    workspace_id=int(instance.workspace_id),
+                    sageintacct_attribute_type=instance.destination_field,
+                    fyle_attribute_type=instance.source_field,
+                    parent_field_id=parent_field
+                )
+
+
         except WrongParamsError as error:
             logger.error(
                 'Error while creating %s workspace_id - %s in Fyle %s %s',
