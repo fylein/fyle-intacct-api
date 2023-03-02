@@ -503,7 +503,7 @@ def schedule_cost_centers_creation(import_to_fyle, workspace_id):
 
 
 def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[DestinationAttribute], workspace_id: int,
-                                             fyle_attribute: str, platform: PlatformConnector):
+                                             fyle_attribute: str, platform: PlatformConnector, parent_field: str = None):
     """
     Create Fyle Expense Custom Field Payload from SageIntacct Objects
     :param workspace_id: Workspace ID
@@ -526,15 +526,28 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
 
         fyle_attribute = fyle_attribute.replace('_', ' ').title()
 
-        expense_custom_field_payload = {
-            'field_name': fyle_attribute,
-            'type': 'SELECT',
-            'is_enabled': True,
-            'is_mandatory': False,
-            'placeholder': 'Select {0}'.format(fyle_attribute),
-            'options': fyle_expense_custom_field_options,
-            'code': None
-        }
+        if parent_field:
+            expense_custom_field_payload = {
+                'field_name': fyle_attribute,
+                'type': 'DEPENDENT_SELECT',
+                'is_enabled': True,
+                'is_mandatory': False,
+                'placeholder': 'Select {0}'.format(fyle_attribute),
+                'options': fyle_expense_custom_field_options,
+                'parent_field_id': parent_field,
+                'code': None
+            }
+        else:
+            expense_custom_field_payload = {
+                'field_name': fyle_attribute,
+                'type': 'SELECT',
+                'is_enabled': True,
+                'is_mandatory': False,
+                'placeholder': 'Select {0}'.format(fyle_attribute),
+                'options': fyle_expense_custom_field_options,
+                'code': None
+            }
+
 
         if custom_field_id:
             expense_field = platform.expense_custom_fields.get_by_id(custom_field_id)
@@ -544,7 +557,47 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
         return expense_custom_field_payload
 
 
-def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str):
+
+def upload_dependent_field_to_fyle(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, parent_field_id: str):
+    """
+    Upload Dependent Fields To Fyle
+    """
+
+    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    dependent_fields = upload_attributes_to_fyle(workspace_id, sageintacct_attribute_type, fyle_attribute_type, parent_field_id)
+
+    sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
+    )
+    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes)
+
+    expense_field_id = ExpenseAttribute.objects.filter(
+        workspace_id=workspace_id, attribute_type=fyle_attribute_type
+    ).first().detail['custom_field_id']
+
+    dependent_field_values = {
+        'data': []
+    }
+
+    for attribute in sage_intacct_attributes:
+        payload = {
+            "parent_expense_field_id": parent_field_id,
+            "parent_expense_field_value": attribute.detail['project_name'],
+            "expense_field_id": expense_field_id,
+            "expense_field_value": attribute.value,
+            "is_enabled": True
+        }
+
+        dependent_field_values['data'].append(payload)
+
+    platform.expense_fields.bulk_post_dependent_field_values(dependent_field_values)
+    platform.expense_fields.sync()
+
+    return dependent_fields
+
+
+def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, parent_field: str = None):
     """
     Upload attributes to Fyle
     """
@@ -563,7 +616,8 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
         fyle_attribute=fyle_attribute_type,
         sageintacct_attributes=sageintacct_attributes,
         workspace_id=workspace_id,
-        platform=platform
+        platform=platform,
+        parent_field=parent_field
     )
 
     if fyle_custom_field_payload:
@@ -573,13 +627,19 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
     return sageintacct_attributes
 
 
-def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str):
+def auto_create_expense_fields_mappings(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, parent_field_id: str = None):
     """
     Create Fyle Attributes Mappings
     :return: mappings
     """
     try:
-        fyle_attributes = upload_attributes_to_fyle(workspace_id=workspace_id, sageintacct_attribute_type=sageintacct_attribute_type, fyle_attribute_type=fyle_attribute_type)
+        if parent_field_id:
+            fyle_attributes = upload_dependent_field_to_fyle(workspace_id=workspace_id,
+                sageintacct_attribute_type=sageintacct_attribute_type, fyle_attribute_type=fyle_attribute_type, parent_field_id=parent_field_id
+            )
+        else:
+            fyle_attributes = upload_attributes_to_fyle(workspace_id=workspace_id, sageintacct_attribute_type=sageintacct_attribute_type, fyle_attribute_type=fyle_attribute_type)
+
         if fyle_attributes:
             Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
 
