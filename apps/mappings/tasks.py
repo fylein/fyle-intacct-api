@@ -13,7 +13,7 @@ from fyle.platform.exceptions import WrongParamsError
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
-    CategoryMapping
+    CategoryMapping, ExpenseField
 
 from sageintacctsdk.exceptions import InvalidTokenError
 
@@ -556,20 +556,22 @@ def upload_dependent_field_to_fyle(workspace_id: int, sageintacct_attribute_type
     expense_field_id = ExpenseAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
-
+    
     dependent_field_values = []
+
 
     for attribute in sage_intacct_attributes:
         payload = {
             "parent_expense_field_id": parent_field_id,
-            "parent_expense_field_value": attribute.detail['project_name'],
+            "parent_expense_field_value": attribute.detail['project_name'] if attribute.attribute_type == 'TASK' else attribute.detail['task_name'],
             "expense_field_id": expense_field_id,
             "expense_field_value": attribute.value,
             "is_enabled": True
         }
 
         dependent_field_values.append(payload)
-
+    
+    
     platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
     platform.expense_fields.sync()
 
@@ -599,7 +601,8 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
         parent_field=parent_field
     )
 
-
+    
+    print('gyu', fyle_custom_field_payload)
     if fyle_custom_field_payload:
         platform.expense_custom_fields.post(fyle_custom_field_payload)
         platform.expense_custom_fields.sync()

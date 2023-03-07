@@ -288,7 +288,7 @@ class SageIntacctConnector:
         Sync of Sage Intacct Cost Types
         """
 
-        cost_types = self.connection.cost_types.get_all(field='STATUS', value='active')
+        cost_types = self.connection.cost_types.get_all()
         cost_types_attributes = []
 
         for cost_type in cost_types:
@@ -299,12 +299,15 @@ class SageIntacctConnector:
                 'destination_id': cost_type['COSTTYPEID'],
                 'detail': {
                     'project_id': cost_type['PROJECTID'],
-                    'project_name': cost_type['PROJECTNAME']
+                    'project_name': cost_type['PROJECTNAME'],
+                    'task_id': cost_type['TASKID'],
+                    'task_name': cost_type['TASKNAME']
                 }
             })
-
+    
+        print('cost', cost_types_attributes)
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            cost_types_attributes, 'COST_TYPE', self.workspace_id, True)
+            cost_types_attributes, 'COST_TYPE', self.workspace_id, False)
 
         return []
 
@@ -813,6 +816,7 @@ class SageIntacctConnector:
                 'customerid': lineitem.customer_id,
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
+                'taskid': lineitem.task_id,
                 'billable': lineitem.billable,
                 'exppmttype': lineitem.expense_payment_type,
                 'taxentries': {
@@ -858,7 +862,8 @@ class SageIntacctConnector:
                 'inclusivetax': True,
                 'taxsolutionid': self.get_tax_solution_id_or_none(expense_report_lineitems),
             })
-
+        
+        print('expense', expense_report_payload)
         return expense_report_payload
 
     def __construct_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]) -> Dict:
@@ -886,6 +891,8 @@ class SageIntacctConnector:
                 'PROJECTID': lineitem.project_id,
                 'CUSTOMERID': lineitem.customer_id,
                 'ITEMID': lineitem.item_id,
+                'TASKID': lineitem.task_id,
+                'COSTTYPEID': lineitem.cost_type_id,
                 'CLASSID': lineitem.class_id,
                 'BILLABLE': lineitem.billable,
                 'TAXENTRIES': {
@@ -935,7 +942,8 @@ class SageIntacctConnector:
                 'INCLUSIVETAX': True,
                 'TAXSOLUTIONID': self.get_tax_solution_id_or_none(bill_lineitems)
             })
-
+        
+        print('bill', bill_payload)
         return bill_payload
 
     def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
