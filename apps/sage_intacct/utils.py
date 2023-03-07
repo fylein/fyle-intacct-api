@@ -1041,6 +1041,9 @@ class SageIntacctConnector:
                 'employeeid': lineitem.employee_id,
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
+                'itemid': lineitem.item_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
                 'billable': lineitem.billable,
                 'customfields': {
                    'customfield': [
