@@ -1033,8 +1033,7 @@ class SageIntacctConnector:
             if lineitem.amount < 0:
                 amount = abs(lineitem.amount)
                 debit_line['amount'] = amount
-                credit_line['amount']  = round(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount, 2)
-                debit_line['accountno'], credit_line['accountno'] = credit_line['accountno'], debit_line['accountno']
+                credit_line['amount'] = round(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount, 2)
                 debit_line['tr_type'], credit_line['tr_type'] = credit_line['tr_type'], debit_line['tr_type']
                 credit_line['taxentries'] = debit_line['taxentries'].copy()
                 debit_line.pop('taxentries')
