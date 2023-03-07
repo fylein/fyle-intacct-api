@@ -601,8 +601,6 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
         parent_field=parent_field
     )
 
-    
-    print('gyu', fyle_custom_field_payload)
     if fyle_custom_field_payload:
         platform.expense_custom_fields.post(fyle_custom_field_payload)
         platform.expense_custom_fields.sync()

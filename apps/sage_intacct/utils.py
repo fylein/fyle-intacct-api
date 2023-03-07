@@ -279,7 +279,7 @@ class SageIntacctConnector:
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            task_attributes, 'TASK', self.workspace_id, False)
+            task_attributes, 'TASK', self.workspace_id, True)
 
         return []
 
@@ -304,10 +304,9 @@ class SageIntacctConnector:
                     'task_name': cost_type['TASKNAME']
                 }
             })
-    
-        print('cost', cost_types_attributes)
+
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            cost_types_attributes, 'COST_TYPE', self.workspace_id, False)
+            cost_types_attributes, 'COST_TYPE', self.workspace_id, True)
 
         return []
 
@@ -817,6 +816,7 @@ class SageIntacctConnector:
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
                 'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
                 'billable': lineitem.billable,
                 'exppmttype': lineitem.expense_payment_type,
                 'taxentries': {
@@ -863,7 +863,6 @@ class SageIntacctConnector:
                 'taxsolutionid': self.get_tax_solution_id_or_none(expense_report_lineitems),
             })
         
-        print('expense', expense_report_payload)
         return expense_report_payload
 
     def __construct_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]) -> Dict:
@@ -943,7 +942,6 @@ class SageIntacctConnector:
                 'TAXSOLUTIONID': self.get_tax_solution_id_or_none(bill_lineitems)
             })
         
-        print('bill', bill_payload)
         return bill_payload
 
     def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
@@ -1069,6 +1067,8 @@ class SageIntacctConnector:
                 'vendorid': lineitem.vendor_id,
                 'employeeid': lineitem.employee_id,
                 'itemid': lineitem.item_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
                 'classid': lineitem.class_id,
                 'billable': lineitem.billable,
                 'taxentries': {

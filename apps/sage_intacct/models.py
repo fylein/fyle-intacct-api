@@ -647,6 +647,7 @@ class ExpenseReportLineitem(models.Model):
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
     task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
+    cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Expense amount')
@@ -706,6 +707,7 @@ class ExpenseReportLineitem(models.Model):
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             task_id = get_task_id_or_none(expense_group, lineitem, project_id)
+            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             if expense_group.fund_source == 'PERSONAL':
@@ -729,6 +731,7 @@ class ExpenseReportLineitem(models.Model):
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'task_id': task_id,
+                    'cost_type_id': cost_type_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'transaction_date': lineitem.spent_at,
                     'amount': lineitem.amount,
@@ -803,7 +806,9 @@ class JournalEntryLineitem(models.Model):
     class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
-    item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    item_id = models.CharField(max_length=255, help_text='Sage Intacct item id', null=True)
+    task_id = models.CharField(max_length=255, help_text='Sage Intacct Task', null=True)
+    cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Bill amount')
@@ -869,6 +874,8 @@ class JournalEntryLineitem(models.Model):
             employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
             vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
+            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
+            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
@@ -888,6 +895,8 @@ class JournalEntryLineitem(models.Model):
                     'item_id': item_id,
                     'employee_id': employee_id,
                     'vendor_id': vendor_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
@@ -997,6 +1006,8 @@ class ChargeCardTransactionLineitem(models.Model):
     class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
+    cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type Id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Charge Card Transaction amount')
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
@@ -1051,6 +1062,8 @@ class ChargeCardTransactionLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
+            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,
@@ -1065,6 +1078,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
