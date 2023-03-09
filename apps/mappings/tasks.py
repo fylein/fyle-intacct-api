@@ -331,8 +331,7 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], categ
                 'id': category.source_id,
                 'name': category.value,
                 'code': destination_id_of_category,
-                'is_enabled': category.active,
-                'restricted_project_ids': None
+                'is_enabled': category.active
             })
     else:
         for category in categories:
@@ -340,8 +339,7 @@ def create_fyle_categories_payload(categories: List[DestinationAttribute], categ
                 payload.append({
                     'name': category.value,
                     'code': category.destination_id,
-                    'is_enabled': category.active,
-                    'restricted_project_ids': None
+                    'is_enabled': category.active
                 })
 
     return payload
