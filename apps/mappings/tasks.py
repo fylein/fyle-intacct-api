@@ -26,15 +26,21 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def remove_duplicates(si_attributes: List[DestinationAttribute]):
+def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: bool = False):
     unique_attributes = []
-
     attribute_values = []
 
-    for attribute in si_attributes:
-        if attribute.value.lower() not in attribute_values:
-            unique_attributes.append(attribute)
-            attribute_values.append(attribute.value.lower())
+    if is_dependent:
+        for attribute in si_attributes:
+            if {attribute.detail['project_name']: attribute.value.lower()} not in attribute_values:
+                unique_attributes.append(attribute)
+                attribute_values.append({attribute.detail['project_name']: attribute.value.lower()})
+
+    else:
+        for attribute in si_attributes:
+            if attribute.value.lower() not in attribute_values:
+                unique_attributes.append(attribute)
+                attribute_values.append(attribute.value.lower())
 
     return unique_attributes
 
@@ -505,6 +511,7 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
 
         fyle_attribute = fyle_attribute.replace('_', ' ').title()
 
+        # if parent field is there that means it is a dependent field
         if parent_field:
             expense_custom_field_payload = {
                 'field_name': fyle_attribute,
@@ -516,7 +523,7 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
                 'placeholder': 'Select {0}'.format(fyle_attribute),
                 'options': fyle_expense_custom_field_options,
                 'parent_field_id': parent_field,
-                'code': None
+                'code': None,
             }
         else:
             expense_custom_field_payload = {
@@ -548,29 +555,40 @@ def upload_dependent_field_to_fyle(workspace_id: int, sageintacct_attribute_type
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     dependent_fields = upload_attributes_to_fyle(workspace_id, sageintacct_attribute_type, fyle_attribute_type, parent_field_id)
 
-    sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
-    )
-    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes)
-
     expense_field_id = ExpenseAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
-    
+
+    sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
+    )
+    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, parent_field_id)
+
+    if sageintacct_attribute_type != 'TASK':
+        parent_field = DestinationAttribute.objects.filter(
+                workspace_id=workspace_id,
+                attribute_type='TASK',
+            )
+
     dependent_field_values = []
-
-
     for attribute in sage_intacct_attributes:
+        # If anyone can think of a better way to handle this please mention i will be happy to fix
+        if attribute.attribute_type != 'TASK':
+            # parent value is combination of these two so filterig it out
+            parent_expense_field_value = parent_field.filter(
+                detail__project_name=attribute.detail['project_name'],
+                detail__external_id=attribute.detail['task_id']
+            ).first().value
+
         payload = {
             "parent_expense_field_id": parent_field_id,
-            "parent_expense_field_value": attribute.detail['project_name'] if attribute.attribute_type == 'TASK' else attribute.detail['task_name'],
+            "parent_expense_field_value": attribute.detail['project_name'] if attribute.attribute_type == 'TASK' else parent_expense_field_value,
             "expense_field_id": expense_field_id,
             "expense_field_value": attribute.value,
             "is_enabled": True
         }
 
         dependent_field_values.append(payload)
-    
     
     platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
     platform.expense_fields.sync()

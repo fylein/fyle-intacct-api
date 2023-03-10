@@ -182,33 +182,30 @@ def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, tas
             ).first()
 
             if mapping:
-                cost_type_id = mapping.destination.destination_id
+                cost_type_id = mapping.destination.detail['external_id']
 
     return cost_type_id
 
 
 def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, customer_id: str):
     task_id = None
-    
-    if customer_id:
-        task_setting: MappingSetting = MappingSetting.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            destination_field='TASK'
+    task_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='TASK'
+    ).first()
+
+    if customer_id and task_setting: 
+        attribute = ExpenseAttribute.objects.filter(attribute_type=task_setting.source_field).first()
+        source_value = lineitem.custom_properties.get(attribute.display_name, None)
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=task_setting.source_field,
+            destination_type='TASK',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
         ).first()
-        
 
-        if task_setting:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=task_setting.source_field).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
-            mapping: Mapping = Mapping.objects.filter(
-                source_type=task_setting.source_field,
-                destination_type='TASK',
-                source__value=source_value,
-                workspace_id=expense_group.workspace_id
-            ).first()
-
-            if mapping:
-                task_id = mapping.destination.destination_id
+        if mapping:
+            task_id = mapping.destination.detail['external_id']
 
     return task_id
 

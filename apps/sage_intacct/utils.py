@@ -266,15 +266,17 @@ class SageIntacctConnector:
         intacct_tasks = self.connection.tasks.get_all()
         task_attributes = []
 
+        # saving values as combination of taskid, name and recordno to avoid duplicates 
         for task in intacct_tasks:
             task_attributes.append({
                 'attribute_type': 'TASK',
                 'display_name': 'tasks',
-                'value': task['NAME'],
-                'destination_id': task['TASKID'],
+                'value': task['TASKID'] + '--' + task['NAME'] + '--' + task['RECORDNO'],
+                'destination_id': task['RECORDNO'], # storing record number instead of internal id to avoid duplicates
                 'detail': {
                     'project_id': task['PROJECTID'],
-                    'project_name': task['PROJECTNAME']
+                    'project_name': task['PROJECTNAME'],
+                    'external_id': task['TASKID']
                 }
             })
 
@@ -295,13 +297,14 @@ class SageIntacctConnector:
             cost_types_attributes.append({
                 'attribute_type': 'COST_TYPE',
                 'display_name': 'cost type',
-                'value': cost_type['NAME'],
-                'destination_id': cost_type['COSTTYPEID'],
+                'value': cost_type['COSTTYPEID'] + '--' + cost_type['NAME'] + '--' + cost_type['RECORDNO'],
+                'destination_id': cost_type['RECORDNO'],
                 'detail': {
                     'project_id': cost_type['PROJECTID'],
                     'project_name': cost_type['PROJECTNAME'],
                     'task_id': cost_type['TASKID'],
-                    'task_name': cost_type['TASKNAME']
+                    'task_name': cost_type['TASKNAME'],
+                    'external_id': cost_type['COSTTYPEID']
                 }
             })
 

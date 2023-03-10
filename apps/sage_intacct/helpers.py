@@ -9,6 +9,7 @@ from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_
     schedule_sage_intacct_reimbursement_creation
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 def schedule_payment_sync(configuration: Configuration):
     """
