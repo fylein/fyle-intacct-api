@@ -66,7 +66,7 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
                     workspace_id=int(instance.workspace_id),
                     sageintacct_attribute_type=instance.destination_field,
                     fyle_attribute_type=instance.source_field,
-                    parent_field_id=parent_field
+                    parent_field=parent_field
                 )
 
 
