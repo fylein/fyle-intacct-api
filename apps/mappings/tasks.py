@@ -588,6 +588,7 @@ def upload_dependent_field_to_fyle(
     sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
     )
+    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
 
     if sageintacct_attribute_type != 'TASK':
         parent_field = DestinationAttribute.objects.filter(
