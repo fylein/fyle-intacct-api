@@ -162,6 +162,54 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     return item_id
 
 
+def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, task_id: str):
+    cost_type_id = None
+
+    if task_id:
+        cost_type_setting: MappingSetting = MappingSetting.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            destination_field='COST_TYPE'
+        ).first()
+
+        if cost_type_setting:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=cost_type_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            mapping: Mapping = Mapping.objects.filter(
+                source_type=cost_type_setting.source_field,
+                destination_type='COST_TYPE',
+                source__value=source_value,
+                workspace_id=expense_group.workspace_id
+            ).first()
+
+            if mapping:
+                cost_type_id = mapping.destination.detail['external_id']
+
+    return cost_type_id
+
+
+def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, customer_id: str):
+    task_id = None
+    task_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='TASK'
+    ).first()
+
+    if customer_id and task_setting: 
+        attribute = ExpenseAttribute.objects.filter(attribute_type=task_setting.source_field).first()
+        source_value = lineitem.custom_properties.get(attribute.display_name, None)
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=task_setting.source_field,
+            destination_type='TASK',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+
+        if mapping:
+            task_id = mapping.destination.detail['external_id']
+
+    return task_id
+
+
 def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     class_id = None
     if general_mappings and general_mappings.default_class_id:
@@ -319,7 +367,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
     default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
-                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER']
+                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE']
 
     for setting in mapping_settings:
         if setting.source_field not in default_expense_attributes and \
@@ -439,6 +487,8 @@ class BillLineitem(models.Model):
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    task_id = models.CharField(max_length=255, help_text='Sage intacct Task Id', null=True)
+    cost_type_id = models.CharField(max_length=255, help_text='Sage intacct Task Id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Bill amount')
@@ -495,6 +545,8 @@ class BillLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
+            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
@@ -512,6 +564,8 @@ class BillLineitem(models.Model):
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
@@ -589,6 +643,8 @@ class ExpenseReportLineitem(models.Model):
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
+    cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Expense amount')
@@ -647,6 +703,8 @@ class ExpenseReportLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
+            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             if expense_group.fund_source == 'PERSONAL':
@@ -669,6 +727,8 @@ class ExpenseReportLineitem(models.Model):
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'transaction_date': lineitem.spent_at,
                     'amount': lineitem.amount,
@@ -743,7 +803,9 @@ class JournalEntryLineitem(models.Model):
     class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
-    item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    item_id = models.CharField(max_length=255, help_text='Sage Intacct item id', null=True)
+    task_id = models.CharField(max_length=255, help_text='Sage Intacct Task', null=True)
+    cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Bill amount')
@@ -809,6 +871,8 @@ class JournalEntryLineitem(models.Model):
             employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
             vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
+            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
+            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
@@ -828,6 +892,8 @@ class JournalEntryLineitem(models.Model):
                     'item_id': item_id,
                     'employee_id': employee_id,
                     'vendor_id': vendor_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
@@ -937,6 +1003,8 @@ class ChargeCardTransactionLineitem(models.Model):
     class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
+    cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type Id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
     amount = models.FloatField(help_text='Charge Card Transaction amount')
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
@@ -991,6 +1059,8 @@ class ChargeCardTransactionLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
+            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,
@@ -1005,6 +1075,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'location_id': default_employee_location_id if default_employee_location_id else location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,

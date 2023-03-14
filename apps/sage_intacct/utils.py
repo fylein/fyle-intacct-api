@@ -54,8 +54,8 @@ class SageIntacctConnector:
         )
 
         self.workspace_id = workspace_id
-    
-    
+
+
     def get_tax_solution_id_or_none(self, lineitems):
 
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
@@ -255,6 +255,61 @@ class SageIntacctConnector:
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             payment_accounts_attributes, 'PAYMENT_ACCOUNT', self.workspace_id, True)
+
+        return []
+
+    def sync_tasks(self):
+        """
+        Get of Tasks
+        """
+
+        intacct_tasks = self.connection.tasks.get_all()
+        task_attributes = []
+
+        # saving values as combination of taskid, name and recordno to avoid duplicates 
+        for task in intacct_tasks:
+            task_attributes.append({
+                'attribute_type': 'TASK',
+                'display_name': 'task',
+                'value': '{}--{}--{}'.format(task['TASKID'], task['NAME'],  task['RECORDNO']),
+                'destination_id': task['RECORDNO'], # storing record number instead of TASKID to avoid duplicates
+                'detail': {
+                    'project_id': task['PROJECTID'],
+                    'project_name': task['PROJECTNAME'],
+                    'external_id': task['TASKID']
+                }
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            task_attributes, 'TASK', self.workspace_id, True)
+
+        return []
+
+    def sync_cost_types(self):
+        """
+        Sync of Sage Intacct Cost Types
+        """
+
+        cost_types = self.connection.cost_types.get_all()
+        cost_types_attributes = []
+
+        for cost_type in cost_types:
+            cost_types_attributes.append({
+                'attribute_type': 'COST_TYPE',
+                'display_name': 'cost type',
+                'value': '{}--{}--{}'.format(cost_type['COSTTYPEID'], cost_type['NAME'], cost_type['RECORDNO']),
+                'destination_id': cost_type['RECORDNO'],
+                'detail': {
+                    'project_id': cost_type['PROJECTID'],
+                    'project_name': cost_type['PROJECTNAME'],
+                    'task_id': cost_type['TASKID'],
+                    'task_name': cost_type['TASKNAME'],
+                    'external_id': cost_type['COSTTYPEID']
+                }
+            })
+
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            cost_types_attributes, 'COST_TYPE', self.workspace_id, True)
 
         return []
 
@@ -763,6 +818,8 @@ class SageIntacctConnector:
                 'customerid': lineitem.customer_id,
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
                 'billable': lineitem.billable,
                 'exppmttype': lineitem.expense_payment_type,
                 'taxentries': {
@@ -836,6 +893,8 @@ class SageIntacctConnector:
                 'PROJECTID': lineitem.project_id,
                 'CUSTOMERID': lineitem.customer_id,
                 'ITEMID': lineitem.item_id,
+                'TASKID': lineitem.task_id,
+                'COSTTYPEID': lineitem.cost_type_id,
                 'CLASSID': lineitem.class_id,
                 'BILLABLE': lineitem.billable,
                 'TAXENTRIES': {
@@ -985,6 +1044,9 @@ class SageIntacctConnector:
                 'employeeid': lineitem.employee_id,
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
+                'itemid': lineitem.item_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
                 'billable': lineitem.billable,
                 'customfields': {
                    'customfield': [
@@ -1011,6 +1073,8 @@ class SageIntacctConnector:
                 'vendorid': lineitem.vendor_id,
                 'employeeid': lineitem.employee_id,
                 'itemid': lineitem.item_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
                 'classid': lineitem.class_id,
                 'billable': lineitem.billable,
                 'taxentries': {
