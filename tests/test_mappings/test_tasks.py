@@ -448,7 +448,7 @@ def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting)
     )
     workspace_id = 1
 
-    auto_create_expense_fields_mappings(workspace_id, 'COST_CENTER', 'COST_CENTER')
+    auto_create_expense_fields_mappings(workspace_id, 'COST_CENTER', 'COST_CENTER', None, 'Select Cost Center')
 
     cost_center = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CENTER').count()
     mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='COST_CENTER').count()

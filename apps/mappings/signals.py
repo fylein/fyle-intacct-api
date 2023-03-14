@@ -50,23 +50,26 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
     default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'TAX_GROUP']
 
     instance.source_field = instance.source_field.upper().replace(' ', '_')
-    parent_field = instance.expense_field.source_field_id if instance.expense_field else None
+    parent_field_id = instance.expense_field.source_field_id if instance.expense_field else None
 
     if instance.source_field not in default_attributes:
+        #TODO: sync intacct fields before we upload custom field
         try:
             if instance.expense_field:
                 upload_dependent_field_to_fyle(
                     workspace_id=int(instance.workspace_id),
                     sageintacct_attribute_type=instance.destination_field,
                     fyle_attribute_type=instance.source_field,
-                    parent_field_id=parent_field
+                    parent_field_id=parent_field_id,
+                    source_placeholder=instance.source_placeholder
                 )
             else:
                 upload_attributes_to_fyle(
                     workspace_id=int(instance.workspace_id),
                     sageintacct_attribute_type=instance.destination_field,
                     fyle_attribute_type=instance.source_field,
-                    parent_field=parent_field
+                    parent_field_id=parent_field_id,
+                    source_placeholder=instance.source_placeholder
                 )
 
 
@@ -90,5 +93,5 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
             int(instance.workspace_id),
             instance.destination_field,
             instance.source_field,
-            parent_field
+            parent_field_id
         )

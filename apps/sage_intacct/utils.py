@@ -270,9 +270,9 @@ class SageIntacctConnector:
         for task in intacct_tasks:
             task_attributes.append({
                 'attribute_type': 'TASK',
-                'display_name': 'tasks',
-                'value': task['TASKID'] + '--' + task['NAME'] + '--' + task['RECORDNO'],
-                'destination_id': task['RECORDNO'], # storing record number instead of internal id to avoid duplicates
+                'display_name': 'task',
+                'value': '{}--{}--{}'.format(task['TASKID'], task['NAME'],  task['RECORDNO']),
+                'destination_id': task['RECORDNO'], # storing record number instead of TASKID to avoid duplicates
                 'detail': {
                     'project_id': task['PROJECTID'],
                     'project_name': task['PROJECTNAME'],
@@ -297,7 +297,7 @@ class SageIntacctConnector:
             cost_types_attributes.append({
                 'attribute_type': 'COST_TYPE',
                 'display_name': 'cost type',
-                'value': cost_type['COSTTYPEID'] + '--' + cost_type['NAME'] + '--' + cost_type['RECORDNO'],
+                'value': '{}--{}--{}'.format(cost_type['COSTTYPEID'], cost_type['NAME'], cost_type['RECORDNO']),
                 'destination_id': cost_type['RECORDNO'],
                 'detail': {
                     'project_id': cost_type['PROJECTID'],
@@ -865,7 +865,7 @@ class SageIntacctConnector:
                 'inclusivetax': True,
                 'taxsolutionid': self.get_tax_solution_id_or_none(expense_report_lineitems),
             })
-        
+
         return expense_report_payload
 
     def __construct_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]) -> Dict:
@@ -944,7 +944,7 @@ class SageIntacctConnector:
                 'INCLUSIVETAX': True,
                 'TAXSOLUTIONID': self.get_tax_solution_id_or_none(bill_lineitems)
             })
-        
+
         return bill_payload
 
     def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
