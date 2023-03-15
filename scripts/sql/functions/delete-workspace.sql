@@ -11,6 +11,11 @@ BEGIN
     WHERE lem.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
     RAISE NOTICE 'Deleted % location_entity_mappings', rcount;
+    
+    DELETE expense_fields ef
+    WHERE ef.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_fields', rcount;
 
     DELETE
     FROM task_logs tl
