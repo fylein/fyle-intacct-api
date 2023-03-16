@@ -31,7 +31,7 @@ services:
       FYLE_SERVER_URL: 'https://sample.fyle.tech'
       FYLE_JOBS_URL: 'https://sample.fyle.tech'
   db:
-    image: "postgres:latest"
+    image: "postgres:15"
     environment: 
       POSTGRES_DB: dummy
       POSTGRES_USER: postgres
