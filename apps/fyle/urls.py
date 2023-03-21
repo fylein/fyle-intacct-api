@@ -41,7 +41,7 @@ fyle_dimension_paths = [
 
 other_paths = [
     path('expense_attributes/', ExpenseAttributesView.as_view()),
-    path('fyle_fields/', FyleFieldsView.as_view())
+    path('fyle_fields/', FyleFieldsView.as_view()),
 ]
 
 urlpatterns = list(itertools.chain(expense_groups_paths, fyle_dimension_paths, other_paths))

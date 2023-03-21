@@ -9,6 +9,7 @@ from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_
     schedule_sage_intacct_reimbursement_creation
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 def schedule_payment_sync(configuration: Configuration):
     """
@@ -56,7 +57,8 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
         dimensions = [
             'locations', 'customers', 'departments', 'tax_details', 'projects', 
             'expense_payment_types', 'classes', 'charge_card_accounts','payment_accounts', 
-            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions'
+            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions',
+            'tasks', 'cost_types'
         ]
 
     for dimension in dimensions:
