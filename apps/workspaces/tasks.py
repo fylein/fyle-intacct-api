@@ -1,4 +1,5 @@
 import time
+import logging
 from datetime import datetime, timedelta, date
 from typing import List
 
@@ -16,6 +17,9 @@ from apps.sage_intacct.tasks import schedule_expense_reports_creation, schedule_
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import User, Workspace, WorkspaceSchedule, Configuration, SageIntacctCredential, FyleCredential
 
+
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours: int):
     if schedule_enabled:
@@ -149,7 +153,11 @@ def run_email_notification(workspace_id):
 
     workspace = Workspace.objects.get(id=workspace_id)
     admin_data = WorkspaceSchedule.objects.get(workspace_id=workspace_id)
-    intacct = SageIntacctCredential.objects.get(workspace=workspace)
+    try:
+        intacct = SageIntacctCredential.objects.get(workspace=workspace)
+    except SageIntacctCredential.DoesNotExist:
+        logger.info('SageIntacct Credentials does not exist - %s', workspace_id)
+        return
 
     if ws_schedule.enabled:
         for admin_email in admin_data.emails_selected:
@@ -162,6 +170,7 @@ def run_email_notification(workspace_id):
                     if data['email'] == admin_email:
                         admin_name = data['name']
 
+            admin_name = 'Admin'
             if task_logs and (ws_schedule.error_count is None or len(task_logs) > ws_schedule.error_count):
                 context = {
                     'name': admin_name,
@@ -169,7 +178,8 @@ def run_email_notification(workspace_id):
                     'fyle_company': workspace.name,
                     'intacct_company': intacct.si_company_name,
                     'workspace_id': workspace_id,
-                    'export_time': workspace.last_synced_at.date(),
+                    'export_time':  max(workspace.last_synced_at.date(), workspace.ccc_last_synced_at.date()) if workspace.last_synced_at.date() and workspace.ccc_last_synced_at.date() \
+                        else workspace.last_synced_at.date() or workspace.last_synced_at.date(),
                     'year': date.today().year,
                     'app_url': "{0}/workspaces/{1}/expense_groups".format(settings.FYLE_APP_URL, workspace_id)
                     }
