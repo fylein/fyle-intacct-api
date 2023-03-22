@@ -703,10 +703,11 @@ def async_auto_create_custom_field_mappings(workspace_id: str):
     for mapping_setting in mapping_settings:
         try:
             if mapping_setting.import_to_fyle:
+                parent_field = mapping_setting.expense_field.source_field_id if mapping_setting.expense_field else None
                 sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
                 auto_create_expense_fields_mappings(
                     workspace_id, mapping_setting.destination_field, mapping_setting.source_field,
-                    mapping_setting.parent_field, mapping_setting.source_placeholder
+                    parent_field, mapping_setting.source_placeholder
                 )
         except InvalidTokenError:
             logger.info('Invalid Token - %s', workspace_id)
