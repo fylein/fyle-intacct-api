@@ -162,7 +162,8 @@ def run_email_notification(workspace_id):
     if ws_schedule.enabled:
         for admin_email in admin_data.emails_selected:
             attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value=admin_email).first()
-
+            
+            admin_name = 'Admin'
             if attribute:
                 admin_name = attribute.detail['full_name']
             else:
@@ -170,7 +171,11 @@ def run_email_notification(workspace_id):
                     if data['email'] == admin_email:
                         admin_name = data['name']
 
-            admin_name = 'Admin'
+            if workspace.last_synced_at and workspace.ccc_last_synced_at:
+                export_time = max(workspace.last_synced_at, workspace.ccc_last_synced_at)
+            else:
+                export_time =  workspace.last_synced_at or workspace.ccc_last_synced_at
+
             if task_logs and (ws_schedule.error_count is None or len(task_logs) > ws_schedule.error_count):
                 context = {
                     'name': admin_name,
@@ -178,8 +183,7 @@ def run_email_notification(workspace_id):
                     'fyle_company': workspace.name,
                     'intacct_company': intacct.si_company_name,
                     'workspace_id': workspace_id,
-                    'export_time':  max(workspace.last_synced_at.date(), workspace.ccc_last_synced_at.date()) if workspace.last_synced_at.date() and workspace.ccc_last_synced_at.date() \
-                        else workspace.last_synced_at.date() or workspace.last_synced_at.date(),
+                    'export_time': export_time.date(),
                     'year': date.today().year,
                     'app_url': "{0}/workspaces/{1}/expense_groups".format(settings.FYLE_APP_URL, workspace_id)
                     }
