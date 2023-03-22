@@ -975,10 +975,10 @@ class SageIntacctConnector:
                 'customerid': lineitem.customer_id,
                 'vendorid': charge_card_transaction.vendor_id,
                 'projectid': lineitem.project_id,
-                'itemid': lineitem.item_id,
-                'classid': lineitem.class_id,
                 'taskid': lineitem.task_id,
                 'costtypeid': lineitem.cost_type_id,
+                'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
                 'customfields': {
                    'customfield': [
                     {
@@ -1017,7 +1017,7 @@ class SageIntacctConnector:
         }
 
         return charge_card_transaction_payload
-    
+
     def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
         """
         Create a jorunal_entry
