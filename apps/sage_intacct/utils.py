@@ -977,6 +977,8 @@ class SageIntacctConnector:
                 'projectid': lineitem.project_id,
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
                 'customfields': {
                    'customfield': [
                     {
