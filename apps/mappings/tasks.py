@@ -753,21 +753,18 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
     """
     Upload categories to Fyle
     """
-    try:
-        si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
-        platform = PlatformConnector(fyle_credentials)
+    platform = PlatformConnector(fyle_credentials)
 
-        category_map = get_all_categories_from_fyle(platform=platform)
+    category_map = get_all_categories_from_fyle(platform=platform)
 
-    
-        si_connection = SageIntacctConnector(
-            credentials_object=si_credentials,
-            workspace_id=workspace_id
-        )
-        platform.categories.sync()
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+
+    si_connection = SageIntacctConnector(
+        credentials_object=si_credentials,
+        workspace_id=workspace_id
+    )
+    platform.categories.sync()
     
 
     sync_expense_types_and_accounts(reimbursable_expenses_object, corporate_credit_card_expenses_object, si_connection)
