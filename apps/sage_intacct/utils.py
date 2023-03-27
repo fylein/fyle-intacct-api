@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 SYNC_UPPER_LIMIT = {
-    'projects': 6000,
-    'customers': 6000
+    'projects': 15000,
+    'customers': 15000
 }
 
 
