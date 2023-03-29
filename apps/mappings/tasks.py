@@ -9,7 +9,7 @@ from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
-from fyle.platform.exceptions import WrongParamsError
+from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
@@ -188,8 +188,11 @@ def auto_create_project_mappings(workspace_id: int):
 
         post_projects_in_batches(platform, workspace_id, mapping_setting.destination_field)
 
-    except (SageIntacctCredential.DoesNotExist, FyleCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage/Fyle Intacct credentials does not exist - %s', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except (FyleInvalidTokenError):
+        logger.info('Invalid Token for fyle')
     
 
     except WrongParamsError as exception:
@@ -231,8 +234,11 @@ def async_auto_map_employees(workspace_id: int):
             sage_intacct_connection.sync_vendors()
 
         EmployeesAutoMappingHelper(workspace_id, destination_type, employee_mapping_preference).reimburse_mapping()
-    except (SageIntacctCredential.DoesNotExist, FyleCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage/Fyle Intacct Credentials does not exist - %s', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        logger.info('Invalid Token or Sage Intacct Credentials does not exist - %s', workspace_id)
+    
+    except (FyleInvalidTokenError):
+        logger.info('Invalid Token for fyle')
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
@@ -452,8 +458,11 @@ def auto_create_cost_center_mappings(workspace_id: int):
 
         post_cost_centers_in_batches(platform, workspace_id, mapping_setting.destination_field)
 
-    except (SageIntacctCredential.DoesNotExist, FyleCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage/Fyle Intacct credentials does not exist - %s', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except (FyleInvalidTokenError):
+        logger.info('Invalid Token for fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -678,8 +687,11 @@ def auto_create_expense_fields_mappings(
         if fyle_attributes:
             Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
 
-    except (FyleCredential.DoesNotExist, InvalidTokenError):
+    except (InvalidTokenError):
         logger.info('Invalid Token or Invalid fyle credentials - %s', workspace_id)
+
+    except (FyleInvalidTokenError):
+        logger.info('Invalid Token for fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -980,8 +992,11 @@ def auto_create_category_mappings(workspace_id):
 
         return []
 
-    except (FyleCredential.DoesNotExist, InvalidTokenError):
+    except (InvalidTokenError):
         logger.info('Invalid Token or Invalid fyle credentials - %s', workspace_id)
+    
+    except (FyleInvalidTokenError):
+        logger.info('Invalid Token for fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1059,8 +1074,11 @@ def auto_create_tax_codes_mappings(workspace_id: int):
 
         upload_tax_groups_to_fyle(platform, workspace_id)
 
-    except (SageIntacctCredential.DoesNotExist, FyleCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage/Fyle Intacct credentials does not exist - %s', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except (FyleInvalidTokenError):
+        logger.info('Invalid Token for Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1148,8 +1166,11 @@ def auto_create_vendors_as_merchants(workspace_id):
         sync_sage_intacct_attributes('VENDOR', workspace_id)
         post_merchants(fyle_connection, workspace_id, first_run)
 
-    except (SageIntacctCredential.DoesNotExist, FyleCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage/Fyle Intacct credentials does not exist - %s', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except (FyleInvalidTokenError):
+        logger.info('Invalid Token for fyle - %s', workspace_id)
 
     except WrongParamsError as exception:
         logger.error(
