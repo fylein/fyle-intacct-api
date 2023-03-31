@@ -3,6 +3,7 @@ import base64
 from typing import List, Dict
 from datetime import datetime
 import unidecode
+from django.conf import settings
 
 from cryptography.fernet import Fernet
 
@@ -670,7 +671,7 @@ class SageIntacctConnector:
             workspace.save()
 
         expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
-            cluster_domain, lineitem.expense.expense_id, org_id
+            settings.FYLE_EXPENSE_URL, lineitem.expense.expense_id, org_id
         )
 
         return expense_link

@@ -269,6 +269,8 @@ FYLE_CLIENT_SECRET = os.environ.get('FYLE_CLIENT_SECRET')
 FYLE_BASE_URL = os.environ.get('FYLE_BASE_URL')
 FYLE_JOBS_URL = os.environ.get('FYLE_JOBS_URL')
 FYLE_APP_URL = os.environ.get('APP_URL')
+FYLE_EXPENSE_URL = os.environ.get('FYLE_APP_URL')
+
 
 # Sage Intacct Settings
 SI_SENDER_ID = os.environ.get('SI_SENDER_ID')
