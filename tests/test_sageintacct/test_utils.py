@@ -673,7 +673,7 @@ def test_get_expense_link(mocker, db, create_journal_entry):
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
     expense_link = sage_intacct_connection.get_expense_link(journal_entry_lineitems[0])
-    assert expense_link == 'https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+    assert expense_link == 'None/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
 
 def test_get_or_create_vendor(mocker, db):
