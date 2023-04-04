@@ -55,6 +55,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
 
         supdoc_id = key
         return sage_intacct_connection.post_attachments(attachments, supdoc_id)
+
     except Exception:
         error = traceback.format_exc()
         logger.info(

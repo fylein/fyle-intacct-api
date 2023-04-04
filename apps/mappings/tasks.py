@@ -9,7 +9,7 @@ from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
-from fyle.platform.exceptions import WrongParamsError
+from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
@@ -190,6 +190,10 @@ def auto_create_project_mappings(workspace_id: int):
 
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle')
+    
 
     except WrongParamsError as exception:
         logger.error(
@@ -216,9 +220,9 @@ def async_auto_map_employees(workspace_id: int):
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     try:
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
         sage_intacct_connection = SageIntacctConnector(
             credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
@@ -232,6 +236,9 @@ def async_auto_map_employees(workspace_id: int):
         EmployeesAutoMappingHelper(workspace_id, destination_type, employee_mapping_preference).reimburse_mapping()
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct Credentials does not exist - %s', workspace_id)
+    
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle')
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
@@ -453,6 +460,9 @@ def auto_create_cost_center_mappings(workspace_id: int):
 
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -678,7 +688,10 @@ def auto_create_expense_fields_mappings(
             Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
 
     except InvalidTokenError:
-        logger.info('Invalid Token - %s', workspace_id)
+        logger.info('Invalid Token or Invalid fyle credentials - %s', workspace_id)
+
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -980,7 +993,10 @@ def auto_create_category_mappings(workspace_id):
         return []
 
     except InvalidTokenError:
-        logger.info('Invalid Token - %s', workspace_id)
+        logger.info('Invalid Token or Invalid fyle credentials - %s', workspace_id)
+    
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1060,6 +1076,9 @@ def auto_create_tax_codes_mappings(workspace_id: int):
 
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1149,6 +1168,9 @@ def auto_create_vendors_as_merchants(workspace_id):
 
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle - %s', workspace_id)
 
     except WrongParamsError as exception:
         logger.error(

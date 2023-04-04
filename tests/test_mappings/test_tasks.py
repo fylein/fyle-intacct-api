@@ -10,6 +10,7 @@ from ..test_fyle.fixtures import data as fyle_data
 from .fixtures import data
 from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential, Configuration
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
 
 def test_auto_create_tax_codes_mappings(db, mocker):
@@ -121,6 +122,9 @@ def test_auto_create_project_mappings(db, mocker):
 
     with mock.patch('fyle_integrations_platform_connector.apis.Projects.sync') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_project_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
         auto_create_project_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -248,6 +252,9 @@ def test_auto_create_category_mappings(db, mocker):
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
         auto_create_category_mappings(workspace_id=workspace_id)
 
+        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
+        auto_create_category_mappings(workspace_id=workspace_id)
+
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()
 
@@ -349,6 +356,9 @@ def test_auto_create_cost_center_mappings(db, mocker, create_mapping_setting):
 
     with mock.patch('fyle_integrations_platform_connector.apis.CostCenters.sync') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_cost_center_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
         auto_create_cost_center_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -582,6 +592,9 @@ def test_auto_create_vendors_as_merchants(db, mocker):
 
     with mock.patch('fyle_integrations_platform_connector.apis.Merchants.sync') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_vendors_as_merchants(workspace_id=workspace_id)
+
+        mock_call.side_effect = FyleInvalidTokenError(msg='invalid params', response='invalid params')
         auto_create_vendors_as_merchants(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
