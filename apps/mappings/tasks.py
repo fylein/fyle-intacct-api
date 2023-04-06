@@ -15,7 +15,7 @@ from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
     CategoryMapping, ExpenseField
 
-from sageintacctsdk.exceptions import InvalidTokenError
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
@@ -239,6 +239,9 @@ def async_auto_map_employees(workspace_id: int):
     
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
+
+    except NoPrivilegeError:
+        logger.info('Insufficient permissions')
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):

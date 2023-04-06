@@ -7,7 +7,7 @@ from apps.sage_intacct.models import *
 from apps.sage_intacct.tasks import __validate_expense_group
 from apps.sage_intacct.tasks import *
 from fyle_intacct_api.exceptions import BulkError
-from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError
+from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 from fyle_accounting_mappings.models import EmployeeMapping
 from apps.workspaces.models import Configuration, SageIntacctCredential
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping
@@ -143,6 +143,9 @@ def test_get_or_create_credit_card_vendor(mocker, db):
         with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor') as mock_call:
             mock_call.side_effect = WrongParamsError(msg='wrong parameters', response='wrong parameters')
             contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id)
+
+            mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+            contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id)
     except:
         logger.info('wrong parameters')
 
@@ -239,6 +242,9 @@ def test_post_bill_success(mocker, create_task_logs, db):
         mock_call.side_effect = Exception()
         create_bill(expense_group, task_log.id)
 
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        create_bill(expense_group, task_log.id)
+
 
 def test_create_bill_exceptions(db, create_task_logs):
     workspace_id = 1
@@ -302,6 +308,9 @@ def test_create_bill_exceptions(db, create_task_logs):
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        create_bill(expense_group, task_log.id)
 
 
 def test_post_sage_intacct_reimbursements_success(mocker, create_task_logs, db, create_expense_report):
@@ -412,6 +421,9 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        create_sage_intacct_reimbursement(workspace_id)
+
 
 def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
     mocker.patch(
@@ -458,6 +470,9 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
 
     with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.update_attachment') as mock_call:
         mock_call.side_effect = Exception()
+        create_charge_card_transaction(expense_group, task_log.id)
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
         create_charge_card_transaction(expense_group, task_log.id)
 
 
@@ -532,6 +547,8 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        create_charge_card_transaction(expense_group, task_log.id)
 
 def test_post_journal_entry_success(mocker, create_task_logs, db):
     mocker.patch(
@@ -591,6 +608,9 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
 
     with mock.patch('sageintacctsdk.apis.JournalEntries.update') as mock_call:
         mock_call.side_effect = Exception()
+        create_journal_entry(expense_group, task_log.id)
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
         create_journal_entry(expense_group, task_log.id)
 
 
@@ -661,6 +681,9 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
+        mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
+        create_journal_entry(expense_group, task_log.id)
+
 
 def test_post_expense_report_success(mocker, create_task_logs, db):
     mocker.patch(
@@ -699,6 +722,9 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
 
     with mock.patch('sageintacctsdk.apis.ExpenseReports.update_attachment') as mock_call:
         mock_call.side_effect = Exception()
+        create_expense_report(expense_group, task_log.id)
+
+        mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
         create_expense_report(expense_group, task_log.id)
 
 
@@ -769,6 +795,8 @@ def test_post_create_expense_report_exceptions(create_task_logs, db):
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
+        mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
+        create_expense_report(expense_group, task_log.id)
 
 def test_create_ap_payment(mocker, db):
     mocker.patch(
@@ -888,6 +916,9 @@ def test_post_ap_payment_exceptions(mocker, db):
                 'error': {'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''},
                 'type': 'Invalid_params'
         })
+        create_ap_payment(workspace_id)
+
+        mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         create_ap_payment(workspace_id)
 
         try:

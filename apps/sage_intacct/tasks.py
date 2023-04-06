@@ -8,7 +8,7 @@ from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
 
-from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError
+from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
 from fyle_accounting_mappings.models import Mapping, ExpenseAttribute, MappingSetting, DestinationAttribute, \
     CategoryMapping, EmployeeMapping
@@ -643,6 +643,9 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
     except InvalidTokenError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
 
+    except NoPrivilegeError:
+        logger.info('Insufficient Permission')
+
     except Exception:
         error = traceback.format_exc()
         task_log.detail = {
@@ -749,7 +752,10 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
     except InvalidTokenError as exception:
-        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')    
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports') 
+
+    except NoPrivilegeError:
+        logger.info('Insufficient Permission')   
 
     except Exception:
         error = traceback.format_exc()
@@ -851,6 +857,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
     except InvalidTokenError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
+    except NoPrivilegeError:
+        logger.info('Insufficient Permission')
+
     except Exception:
         error = traceback.format_exc()
         task_log.detail = {
@@ -946,6 +955,9 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
     
     except InvalidTokenError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+
+    except NoPrivilegeError:
+        logger.info('Insufficient Permission')
 
     except Exception:
         error = traceback.format_exc()
@@ -1058,6 +1070,13 @@ def create_ap_payment(workspace_id):
                     task_log.save()
 
                 except InvalidTokenError as exception:
+                    logger.info(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = exception.response
+
+                    task_log.save()
+
+                except NoPrivilegeError as exception:
                     logger.info(exception.response)
                     task_log.status = 'FAILED'
                     task_log.detail = exception.response
@@ -1194,6 +1213,13 @@ def create_sage_intacct_reimbursement(workspace_id):
                 task_log.detail = exception.response
 
                 task_log.save()
+            
+            except NoPrivilegeError as exception:
+                logger.info(exception.response)
+                task_log.status = 'FAILED'
+                task_log.detail = exception.response
+
+                task_log.save()
 
             except Exception:
                 error = traceback.format_exc()
@@ -1270,6 +1296,10 @@ def check_sage_intacct_object_status(workspace_id):
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or SageIntacct credentials does not exist - %s', workspace_id)
         return 
+
+    except NoPrivilegeError:
+        logger.info('Insufficient Permission')
+        return
 
     bills = Bill.objects.filter(
         expense_group__workspace_id=workspace_id, paid_on_sage_intacct=False, expense_group__fund_source='PERSONAL'
