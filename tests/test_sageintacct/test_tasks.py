@@ -989,7 +989,10 @@ def test_check_sage_intacct_object_status(mocker, db):
     for expense_report in expense_reports: 
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
-    
+
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_report') as mock_call:
+        mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
+        check_sage_intacct_object_status(workspace_id)
 
 def test_schedule_fyle_reimbursements_sync(db):
     workspace_id = 1

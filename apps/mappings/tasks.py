@@ -9,7 +9,7 @@ from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
-from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError
+from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError, InternalServerError
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
@@ -194,6 +194,8 @@ def auto_create_project_mappings(workspace_id: int):
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
     
+    except InternalServerError:
+        logger.error('Internal server error fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -467,6 +469,9 @@ def auto_create_cost_center_mappings(workspace_id: int):
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
 
+    except InternalServerError:
+        logger.error('Internal server error')
+
     except WrongParamsError as exception:
         logger.error(
             'Error while creating cost centers workspace_id - %s in Fyle %s %s',
@@ -695,6 +700,9 @@ def auto_create_expense_fields_mappings(
 
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
+    
+    except InternalServerError:
+        logger.error('Internal server error')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1001,6 +1009,9 @@ def auto_create_category_mappings(workspace_id):
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
 
+    except InternalServerError:
+        logger.error('Internal sever error')
+
     except WrongParamsError as exception:
         logger.error(
             'Error while creating categories workspace_id - %s in Fyle %s %s',
@@ -1082,6 +1093,9 @@ def auto_create_tax_codes_mappings(workspace_id: int):
     
     except FyleInvalidTokenError:
         logger.info('Invalid Token for Fyle')
+
+    except InternalServerError:
+        logger.error('Internal server error')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1174,6 +1188,9 @@ def auto_create_vendors_as_merchants(workspace_id):
     
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle - %s', workspace_id)
+    
+    except InternalServerError:
+        logger.error('Internal server error')
 
     except WrongParamsError as exception:
         logger.error(

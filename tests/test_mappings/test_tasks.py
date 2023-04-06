@@ -10,7 +10,7 @@ from ..test_fyle.fixtures import data as fyle_data
 from .fixtures import data
 from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential, Configuration
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError, InternalServerError
 
 
 def test_auto_create_tax_codes_mappings(db, mocker):
@@ -48,6 +48,9 @@ def test_auto_create_tax_codes_mappings(db, mocker):
 
     with mock.patch('fyle_integrations_platform_connector.apis.TaxGroups.sync') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_tax_codes_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
         auto_create_tax_codes_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -125,6 +128,9 @@ def test_auto_create_project_mappings(db, mocker):
         auto_create_project_mappings(workspace_id=workspace_id)
 
         mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
+        auto_create_project_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
         auto_create_project_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -255,6 +261,9 @@ def test_auto_create_category_mappings(db, mocker):
         mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
         auto_create_category_mappings(workspace_id=workspace_id)
 
+        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
+        auto_create_category_mappings(workspace_id=workspace_id)
+
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()
 
@@ -359,6 +368,9 @@ def test_auto_create_cost_center_mappings(db, mocker, create_mapping_setting):
         auto_create_cost_center_mappings(workspace_id=workspace_id)
 
         mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
+        auto_create_cost_center_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
         auto_create_cost_center_mappings(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -595,6 +607,9 @@ def test_auto_create_vendors_as_merchants(db, mocker):
         auto_create_vendors_as_merchants(workspace_id=workspace_id)
 
         mock_call.side_effect = FyleInvalidTokenError(msg='invalid params', response='invalid params')
+        auto_create_vendors_as_merchants(workspace_id=workspace_id)
+
+        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
         auto_create_vendors_as_merchants(workspace_id=workspace_id)
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
