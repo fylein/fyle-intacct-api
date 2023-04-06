@@ -195,7 +195,7 @@ def auto_create_project_mappings(workspace_id: int):
         logger.info('Invalid Token for fyle')
     
     except InternalServerError:
-        logger.error('Internal server error fyle')
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -243,7 +243,7 @@ def async_auto_map_employees(workspace_id: int):
         logger.info('Invalid Token for fyle')
 
     except NoPrivilegeError:
-        logger.info('Insufficient permissions')
+        logger.info('Insufficient permission to access the requested module')
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
@@ -470,7 +470,7 @@ def auto_create_cost_center_mappings(workspace_id: int):
         logger.info('Invalid Token for fyle')
 
     except InternalServerError:
-        logger.error('Internal server error')
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -702,7 +702,7 @@ def auto_create_expense_fields_mappings(
         logger.info('Invalid Token for fyle')
     
     except InternalServerError:
-        logger.error('Internal server error')
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1010,7 +1010,7 @@ def auto_create_category_mappings(workspace_id):
         logger.info('Invalid Token for fyle')
 
     except InternalServerError:
-        logger.error('Internal sever error')
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1095,7 +1095,7 @@ def auto_create_tax_codes_mappings(workspace_id: int):
         logger.info('Invalid Token for Fyle')
 
     except InternalServerError:
-        logger.error('Internal server error')
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1190,7 +1190,7 @@ def auto_create_vendors_as_merchants(workspace_id):
         logger.info('Invalid Token for fyle - %s', workspace_id)
     
     except InternalServerError:
-        logger.error('Internal server error')
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(

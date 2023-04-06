@@ -1293,13 +1293,9 @@ def check_sage_intacct_object_status(workspace_id):
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or SageIntacct credentials does not exist - %s', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError, NoPrivilegeError):
+        logger.info('Invalid Token or SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
         return 
-
-    except NoPrivilegeError:
-        logger.info('Insufficient Permission')
-        return
 
     bills = Bill.objects.filter(
         expense_group__workspace_id=workspace_id, paid_on_sage_intacct=False, expense_group__fund_source='PERSONAL'
