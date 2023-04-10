@@ -599,15 +599,23 @@ def upload_dependent_field_to_fyle(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
 
+    filter = {
+        'detail__project_name__in': sage_intacct_attributes.values_list('detail__project_name', flat=True)
+    }
+
     sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
+        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type, **filter
     )
     sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
 
     if sageintacct_attribute_type == 'COST_TYPE':
+        filter = {
+            'detail__task_name__in': sage_intacct_attributes.values_list('detail__task_name', flat=True)
+        }
         parent_field = DestinationAttribute.objects.filter(
                 workspace_id=workspace_id,
                 attribute_type='TASK',
+                **filter
             )
 
     dependent_field_values = []
