@@ -599,6 +599,7 @@ def upload_dependent_field_to_fyle(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
 
+    # adding a filter to only select those attributes (cost codes) with active projects (parent field) posted in fyle i.e, active ones
     filter = {
         'detail__project_name__in': sage_intacct_attributes.values_list('detail__project_name', flat=True)
     }
@@ -609,6 +610,7 @@ def upload_dependent_field_to_fyle(
     sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
 
     if sageintacct_attribute_type == 'COST_TYPE':
+        # adding a filter to only select those attributes (code types) with active tasks (parent field) posted in fyle
         filter = {
             'detail__task_name__in': sage_intacct_attributes.values_list('detail__task_name', flat=True)
         }
