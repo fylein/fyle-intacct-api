@@ -300,6 +300,7 @@ class SageIntacctConnector:
                 'display_name': 'cost type',
                 'value': '{}--{}--{}'.format(cost_type['COSTTYPEID'], cost_type['NAME'], cost_type['RECORDNO']),
                 'destination_id': cost_type['RECORDNO'],
+                'active': True if cost_type['STATUS'] == 'active' else False,
                 'detail': {
                     'project_id': cost_type['PROJECTID'],
                     'project_name': cost_type['PROJECTNAME'],
