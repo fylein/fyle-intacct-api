@@ -269,7 +269,7 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
-def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
+def get_memo(expense_group: ExpenseGroup, payment_type: str=None, count_table: str=None) -> str:
     """
     Get the memo from the description of the expense group.
     :param expense_group: The expense group to get the memo from.
@@ -304,20 +304,22 @@ def get_memo(expense_group: ExpenseGroup, payment_type: str=None) -> str:
             workspace_id=expense_group.workspace_id
         )
         if expense_group.fund_source == 'CCC':
-            count = ChargeCardTransaction.objects.filter(memo__contains = memo).count()
+            if count_table:
+                count = count_table.objects.filter(memo__contains = memo).count()
             if expense_group_settings.ccc_export_date_type != 'current_date':
                 date = get_transaction_date(expense_group)
                 date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
                 memo = '{} - {}'.format(memo, date)
-            if count > 1:
+            if count > 0:
                 memo = '{} - {}'.format(memo, count)
         else:
-            count = ExpenseReport.objects.filter(memo__contains = memo).count()
+            if count_table:
+                count = count_table.objects.filter(memo__contains = memo).count()
             if expense_group_settings.reimbursable_export_date_type != 'current_date':
                 date = get_transaction_date(expense_group)
                 date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
                 memo = '{} - {}'.format(memo, date)
-            if count > 1:
+            if count > 0:
                 memo = '{} - {}'.format(memo, count)        
 
         return memo.replace('\'', '')
@@ -419,7 +421,7 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             workspace_id=expense_group.workspace_id
         ).order_by('-updated_at').first()
 
-        if employee.detail[object_type]:
+        if employee and employee.detail[object_type]:
             default_employee_object = employee.detail[object_type]
             return default_employee_object
     
@@ -454,7 +456,7 @@ class Bill(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        memo = get_memo(expense_group)
+        memo = get_memo(expense_group, count_table='Bill')
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = EmployeeMapping.objects.get(
@@ -615,7 +617,7 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group)
+        memo = get_memo(expense_group, count_table='ExpenseReport')
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -778,7 +780,7 @@ class JournalEntry(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group)
+        memo = get_memo(expense_group, count_table='JournalEntry')
 
         if expense_group.fund_source == 'CCC':
             journal_entry_object, _ = JournalEntry.objects.update_or_create(
@@ -944,7 +946,7 @@ class ChargeCardTransaction(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group)
+        memo = get_memo(expense_group, count_table='ChargeCardTransaction')
 
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
