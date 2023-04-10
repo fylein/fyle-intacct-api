@@ -3634,7 +3634,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 133	fyle_accounting_mappings	0020_auto_20230302_0519	2023-03-13 06:15:36.138972+00
 134	sage_intacct	0019_auto_20230307_1746	2023-03-13 06:15:36.189955+00
 135	workspaces	0024_auto_20230321_0740	2023-03-22 11:16:13.216068+00
-136	fyle_accounting_mappings	0021_auto_20230323_0557	2023-04-06 05:28:05.378318+00
+136	fyle_accounting_mappings	0021_auto_20230323_0557	2023-04-10 09:54:41.984483+00
 \.
 
 
