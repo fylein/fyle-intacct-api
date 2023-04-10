@@ -603,35 +603,48 @@ def upload_dependent_field_to_fyle(
         workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
     )
     sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
-
-    if sageintacct_attribute_type == 'COST_TYPE':
-        parent_field = DestinationAttribute.objects.filter(
-                workspace_id=workspace_id,
-                attribute_type='TASK',
-            )
+    expense_attribite_type = ExpenseField.objects.get(workspace_id=workspace_id, source_field_id=parent_field_id).attribute_type
 
     dependent_field_values = []
     for attribute in sage_intacct_attributes:
         # If anyone can think of a better way to handle this please mention i will be happy to fix
+        parent_expense_field_value = None
         if attribute.attribute_type == 'COST_TYPE':
-            # parent value is combination of these two so filterig it out
-            parent_expense_field_value = parent_field.filter(
+            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
+            parent_value = DestinationAttribute.objects.filter(
+                workspace_id=workspace_id,
+                attribute_type='TASK',
                 detail__project_name=attribute.detail['project_name'],
                 detail__external_id=attribute.detail['task_id']
             ).first().value
 
-        payload = {
-            "parent_expense_field_id": parent_field_id,
-            "parent_expense_field_value": attribute.detail['project_name'] if attribute.attribute_type == 'TASK' else parent_expense_field_value,
-            "expense_field_id": expense_field_id,
-            "expense_field_value": attribute.value,
-            "is_enabled": True
-        }
+            # parent value is combination of these two so filterig it out
+            parent_expense_field_value = parent_value if parent_value in expense_attributes else None
 
-        dependent_field_values.append(payload)
+        else:
+            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').values_list('value', flat=True)
+            parent_value = DestinationAttribute.objects.filter(
+                workspace_id=workspace_id,
+                attribute_type='PROJECT',
+                value=attribute.detail['project_name'],
+            ).first().value
 
-    platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
-    platform.expense_fields.sync()
+            parent_expense_field_value = parent_value if parent_value in expense_attributes else None
+
+        if parent_expense_field_value:
+            payload = {
+                "parent_expense_field_id": parent_field_id,
+                "parent_expense_field_value": parent_expense_field_value,
+                "expense_field_id": expense_field_id,
+                "expense_field_value": attribute.value,
+                "is_enabled": True
+            }
+
+            dependent_field_values.append(payload)
+
+    if dependent_field_values:
+        platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
+        platform.expense_fields.sync()
 
     return dependent_fields
 
