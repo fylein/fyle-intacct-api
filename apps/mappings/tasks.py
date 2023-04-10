@@ -619,7 +619,7 @@ def upload_dependent_field_to_fyle(
             ).first()
 
             # parent value is combination of these two so filterig it out
-            if parent_expense_field:
+            if parent_expense_field and parent_expense_field.value in expense_attributes:
                 parent_expense_field_value = parent_expense_field.value
 
         else:
