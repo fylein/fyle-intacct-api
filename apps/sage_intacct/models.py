@@ -1210,7 +1210,7 @@ class SageIntacctReimbursement(models.Model):
         """
 
         description = expense_group.description
-        memo = get_memo(expense_group, ExportTable=SageIntacctReimbursement payment_type='Expense Report')
+        memo = get_memo(expense_group, ExportTable=SageIntacctReimbursement, payment_type='Expense Report')
 
         employee_id = EmployeeMapping.objects.get(
             source_employee__value=description.get('employee_email'),
