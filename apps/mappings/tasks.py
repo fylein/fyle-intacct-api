@@ -594,23 +594,23 @@ def upload_dependent_field_to_fyle(
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     dependent_fields = upload_attributes_to_fyle(workspace_id, sageintacct_attribute_type, fyle_attribute_type, parent_field_id, source_placeholder)
-
+    
     expense_field_id = ExpenseAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
-
 
     sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
     )
     sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
+    expense_attribite_type = ExpenseField.objects.get(workspace_id=workspace_id, source_field_id=parent_field_id).attribute_type
 
     dependent_field_values = []
     for attribute in sage_intacct_attributes:
         # If anyone can think of a better way to handle this please mention i will be happy to fix
         parent_expense_field_value = None
         if attribute.attribute_type == 'COST_TYPE':
-            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='TASK').values_list('value', flat=True)
+            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
             parent_value = DestinationAttribute.objects.filter(
                 workspace_id=workspace_id,
                 attribute_type='TASK',
@@ -623,11 +623,10 @@ def upload_dependent_field_to_fyle(
 
         else:
             expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').values_list('value', flat=True)
-            parent_value = parent_field.filter(
+            parent_value = DestinationAttribute.objects.filter(
                 workspace_id=workspace_id,
                 attribute_type='PROJECT',
-                detail__project_name=attribute.detail['project_name'],
-                detail__external_id=attribute.detail['task_id']
+                value=attribute.detail['project_name'],
             ).first().value
 
             parent_expense_field_value = parent_value if parent_value in expense_attributes else None
@@ -641,7 +640,7 @@ def upload_dependent_field_to_fyle(
                 "is_enabled": True
             }
 
-        dependent_field_values.append(payload)
+            dependent_field_values.append(payload)
 
     platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
     platform.expense_fields.sync()
