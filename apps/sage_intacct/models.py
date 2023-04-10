@@ -13,6 +13,7 @@ from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursem
 from apps.mappings.models import GeneralMapping
 
 from apps.workspaces.models import Configuration, Workspace, FyleCredential
+from typing import Union
 
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
@@ -269,7 +270,7 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
-def get_memo(expense_group: ExpenseGroup, payment_type: str=None, export_table: any=None) -> str:
+def get_memo(expense_group: ExpenseGroup, payment_type: str=None, export_table: Union['Bill', 'ExpenseReport', 'JournalEntry', 'ChargeCardTransaction', 'APPayment', 'SageIntacctReimbursement']=None) -> str:
     """
     Get the memo from the description of the expense group.
     :param expense_group: The expense group to get the memo from.
