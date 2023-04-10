@@ -594,7 +594,7 @@ def upload_dependent_field_to_fyle(
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     dependent_fields = upload_attributes_to_fyle(workspace_id, sageintacct_attribute_type, fyle_attribute_type, parent_field_id, source_placeholder)
-    
+
     expense_field_id = ExpenseAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
