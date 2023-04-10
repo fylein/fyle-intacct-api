@@ -605,12 +605,6 @@ def upload_dependent_field_to_fyle(
     )
     sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
 
-    if sageintacct_attribute_type == 'COST_TYPE':
-        parent_field = DestinationAttribute.objects.filter(
-            workspace_id=workspace_id,
-            attribute_type='TASK',
-        )
-
     dependent_field_values = []
     for attribute in sage_intacct_attributes:
         # If anyone can think of a better way to handle this please mention i will be happy to fix
