@@ -599,44 +599,53 @@ def upload_dependent_field_to_fyle(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
 
-    # adding a filter to only select those attributes (cost codes) with active projects (parent field) posted in fyle i.e, active ones
-    filter = {
-        'detail__project_name__in': sage_intacct_attributes.values_list('detail__project_name', flat=True)
-    }
 
     sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type, **filter
+        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
     )
     sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
 
     if sageintacct_attribute_type == 'COST_TYPE':
-        # adding a filter to only select those attributes (code types) with active tasks (parent field) posted in fyle
-        filter = {
-            'detail__task_name__in': sage_intacct_attributes.values_list('detail__task_name', flat=True)
-        }
         parent_field = DestinationAttribute.objects.filter(
-                workspace_id=workspace_id,
-                attribute_type='TASK',
-                **filter
-            )
+            workspace_id=workspace_id,
+            attribute_type='TASK',
+        )
 
     dependent_field_values = []
     for attribute in sage_intacct_attributes:
         # If anyone can think of a better way to handle this please mention i will be happy to fix
+        parent_expense_field_value = None
         if attribute.attribute_type == 'COST_TYPE':
-            # parent value is combination of these two so filterig it out
-            parent_expense_field_value = parent_field.filter(
+            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='TASK').values_list('value', flat=True)
+            parent_value = DestinationAttribute.objects.filter(
+                workspace_id=workspace_id,
+                attribute_type='TASK',
                 detail__project_name=attribute.detail['project_name'],
                 detail__external_id=attribute.detail['task_id']
             ).first().value
 
-        payload = {
-            "parent_expense_field_id": parent_field_id,
-            "parent_expense_field_value": attribute.detail['project_name'] if attribute.attribute_type == 'TASK' else parent_expense_field_value,
-            "expense_field_id": expense_field_id,
-            "expense_field_value": attribute.value,
-            "is_enabled": True
-        }
+            # parent value is combination of these two so filterig it out
+            parent_expense_field_value = parent_value if parent_value in expense_attributes else None
+
+        else:
+            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').values_list('value', flat=True)
+            parent_value = parent_field.filter(
+                workspace_id=workspace_id,
+                attribute_type='PROJECT',
+                detail__project_name=attribute.detail['project_name'],
+                detail__external_id=attribute.detail['task_id']
+            ).first().value
+
+            parent_expense_field_value = parent_value if parent_value in expense_attributes else None
+
+        if parent_expense_field_value:
+            payload = {
+                "parent_expense_field_id": parent_field_id,
+                "parent_expense_field_value": parent_expense_field_value,
+                "expense_field_id": expense_field_id,
+                "expense_field_value": attribute.value,
+                "is_enabled": True
+            }
 
         dependent_field_values.append(payload)
 
