@@ -305,8 +305,8 @@ def get_memo(expense_group: ExpenseGroup, ExportTable: Union['Bill', 'ExpenseRep
         expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get(
             workspace_id=expense_group.workspace_id
         )
-        if ExportTable:
-                count = ExportTable.objects.filter(memo__contains = memo).count()
+        if not payment_type:
+                count = ExportTable.objects.filter(memo__contains=memo).count()
         if expense_group.fund_source == 'CCC':
             if expense_group_settings.ccc_export_date_type != 'current_date':
                 date = get_transaction_date(expense_group)
