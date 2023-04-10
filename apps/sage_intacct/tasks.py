@@ -640,11 +640,8 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
     
-    except InvalidTokenError as exception:
+    except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
-
-    except NoPrivilegeError:
-        logger.info('Insufficient Permission')
 
     except Exception:
         error = traceback.format_exc()
@@ -751,11 +748,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
-    except InvalidTokenError as exception:
-        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports') 
-
-    except NoPrivilegeError:
-        logger.info('Insufficient Permission')   
+    except (InvalidTokenError, NoPrivilegeError) as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')   
 
     except Exception:
         error = traceback.format_exc()
@@ -854,11 +848,8 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
     
-    except InvalidTokenError as exception:
+    except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
-
-    except NoPrivilegeError:
-        logger.info('Insufficient Permission')
 
     except Exception:
         error = traceback.format_exc()
@@ -953,11 +944,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
     
-    except InvalidTokenError as exception:
+    except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
-
-    except NoPrivilegeError:
-        logger.info('Insufficient Permission')
 
     except Exception:
         error = traceback.format_exc()
