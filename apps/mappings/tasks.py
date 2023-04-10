@@ -611,7 +611,7 @@ def upload_dependent_field_to_fyle(
         parent_expense_field_value = None
         if attribute.attribute_type == 'COST_TYPE':
             expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
-            parent_value = DestinationAttribute.objects.filter(
+            parent_expense_field = DestinationAttribute.objects.filter(
                 workspace_id=workspace_id,
                 attribute_type='TASK',
                 detail__project_name=attribute.detail['project_name'],
@@ -619,17 +619,19 @@ def upload_dependent_field_to_fyle(
             ).first()
 
             # parent value is combination of these two so filterig it out
-            parent_expense_field_value = parent_value.value if parent_value in expense_attributes else None
+            if parent_expense_field:
+                parent_expense_field_value = parent_expense_field.value
 
         else:
-            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').values_list('value', flat=True)
-            parent_value = DestinationAttribute.objects.filter(
-                workspace_id=workspace_id,
+            expense_attribute = ExpenseAttribute.objects.filter(
+                workspace_id=workspace_id, 
                 attribute_type='PROJECT',
-                value=attribute.detail['project_name'],
+                value=attribute.detail['project_name']
             ).first()
-
-            parent_expense_field_value = parent_value.value if parent_value in expense_attributes else None
+            
+            if expense_attribute:
+                parent_expense_field_value = expense_attribute.value
+            
 
         if parent_expense_field_value:
             payload = {
