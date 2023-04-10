@@ -642,8 +642,9 @@ def upload_dependent_field_to_fyle(
 
             dependent_field_values.append(payload)
 
-    platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
-    platform.expense_fields.sync()
+    if dependent_field_values:
+        platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
+        platform.expense_fields.sync()
 
     return dependent_fields
 
