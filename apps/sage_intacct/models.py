@@ -279,6 +279,7 @@ def get_memo(expense_group: ExpenseGroup, payment_type: str=None, count_table: s
     expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' \
         else 'Corporate Credit Card expense'
     unique_number = None
+    count = 0
 
     if 'settlement_id' in expense_group.description and expense_group.description['settlement_id']:
         # Grouped by payment
@@ -456,7 +457,7 @@ class Bill(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        memo = get_memo(expense_group, count_table='Bill')
+        memo = get_memo(expense_group, count_table=Bill)
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = EmployeeMapping.objects.get(
@@ -617,7 +618,7 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, count_table='ExpenseReport')
+        memo = get_memo(expense_group, count_table=ExpenseReport)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -780,7 +781,7 @@ class JournalEntry(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, count_table='JournalEntry')
+        memo = get_memo(expense_group, count_table=JournalEntry)
 
         if expense_group.fund_source == 'CCC':
             journal_entry_object, _ = JournalEntry.objects.update_or_create(
@@ -946,7 +947,7 @@ class ChargeCardTransaction(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, count_table='ChargeCardTransaction')
+        memo = get_memo(expense_group, count_table=ChargeCardTransaction)
 
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
@@ -1122,7 +1123,7 @@ class APPayment(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, 'Bill')
+        memo = get_memo(expense_group, 'Bill', count_table=APPayment)
 
         vendor_id = EmployeeMapping.objects.get(
             source_employee__value=description.get('employee_email'),
@@ -1212,7 +1213,7 @@ class SageIntacctReimbursement(models.Model):
         """
 
         description = expense_group.description
-        memo = get_memo(expense_group, 'Expense Report')
+        memo = get_memo(expense_group, 'Expense Report', count_table=SageIntacctReimbursement)
 
         employee_id = EmployeeMapping.objects.get(
             source_employee__value=description.get('employee_email'),
