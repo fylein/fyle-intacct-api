@@ -278,7 +278,8 @@ class SageIntacctConnector:
                     'project_id': task['PROJECTID'],
                     'project_name': task['PROJECTNAME'],
                     'external_id': task['TASKID']
-                }
+                },
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -300,6 +301,7 @@ class SageIntacctConnector:
                 'display_name': 'cost type',
                 'value': '{}--{}--{}'.format(cost_type['COSTTYPEID'], cost_type['NAME'], cost_type['RECORDNO']),
                 'destination_id': cost_type['RECORDNO'],
+                'active': True if cost_type['STATUS'] == 'active' else False,
                 'detail': {
                     'project_id': cost_type['PROJECTID'],
                     'project_name': cost_type['PROJECTNAME'],

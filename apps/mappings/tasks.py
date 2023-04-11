@@ -599,54 +599,61 @@ def upload_dependent_field_to_fyle(
         workspace_id=workspace_id, attribute_type=fyle_attribute_type
     ).first().detail['custom_field_id']
 
-    sage_intacct_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
+    si_attributes_count = DestinationAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
-    )
-    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes, True)
-    expense_attribite_type = ExpenseField.objects.get(workspace_id=workspace_id, source_field_id=parent_field_id).attribute_type
+    ).count()
+    page_size = 200
+    
+    for offset in range(0, si_attributes_count, page_size):
+        limit = offset + page_size
+        paginated_si_attributes = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
+        ).order_by('value', 'id')[offset:limit]
+        paginated_si_attributes = remove_duplicates(paginated_si_attributes, True)
+        expense_attribite_type = ExpenseField.objects.get(workspace_id=workspace_id, source_field_id=parent_field_id).attribute_type
 
-    dependent_field_values = []
-    for attribute in sage_intacct_attributes:
-        # If anyone can think of a better way to handle this please mention i will be happy to fix
-        parent_expense_field_value = None
-        if attribute.attribute_type == 'COST_TYPE':
-            expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
-            parent_expense_field = DestinationAttribute.objects.filter(
-                workspace_id=workspace_id,
-                attribute_type='TASK',
-                detail__project_name=attribute.detail['project_name'],
-                detail__external_id=attribute.detail['task_id']
-            ).first()
+        dependent_field_values = []
+        for attribute in paginated_si_attributes:
+            # If anyone can think of a better way to handle this please mention i will be happy to fix
+            parent_expense_field_value = None
+            if attribute.attribute_type == 'COST_TYPE':
+                expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
+                parent_expense_field = DestinationAttribute.objects.filter(
+                    workspace_id=workspace_id,
+                    attribute_type='TASK',
+                    detail__project_name=attribute.detail['project_name'],
+                    detail__external_id=attribute.detail['task_id']
+                ).first()
 
-            # parent value is combination of these two so filterig it out
-            if parent_expense_field and parent_expense_field.value in expense_attributes:
-                parent_expense_field_value = parent_expense_field.value
+                # parent value is combination of these two so filterig it out
+                if parent_expense_field and parent_expense_field.value in expense_attributes:
+                    parent_expense_field_value = parent_expense_field.value
 
-        else:
-            expense_attribute = ExpenseAttribute.objects.filter(
-                workspace_id=workspace_id, 
-                attribute_type='PROJECT',
-                value=attribute.detail['project_name']
-            ).first()
-            
-            if expense_attribute:
-                parent_expense_field_value = expense_attribute.value
-            
+            else:
+                expense_attribute = ExpenseAttribute.objects.filter(
+                    workspace_id=workspace_id, 
+                    attribute_type='PROJECT',
+                    value=attribute.detail['project_name']
+                ).first()
+                
+                if expense_attribute:
+                    parent_expense_field_value = expense_attribute.value
+                
 
-        if parent_expense_field_value:
-            payload = {
-                "parent_expense_field_id": parent_field_id,
-                "parent_expense_field_value": parent_expense_field_value,
-                "expense_field_id": expense_field_id,
-                "expense_field_value": attribute.value,
-                "is_enabled": True
-            }
+            if parent_expense_field_value:
+                payload = {
+                    "parent_expense_field_id": parent_field_id,
+                    "parent_expense_field_value": parent_expense_field_value,
+                    "expense_field_id": expense_field_id,
+                    "expense_field_value": attribute.value,
+                    "is_enabled": True
+                }
 
-            dependent_field_values.append(payload)
+                dependent_field_values.append(payload)
 
-    if dependent_field_values:
-        platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
-        platform.expense_fields.sync()
+        if dependent_field_values:
+            platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
+            platform.expense_fields.sync()
 
     return dependent_fields
 
