@@ -610,7 +610,7 @@ def upload_dependent_field_to_fyle(
     si_attributes_count = DestinationAttribute.objects.filter(
         workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
     ).count()
-    page_size = 200
+    page_size = 50
     
     for offset in range(0, si_attributes_count, page_size):
         limit = offset + page_size
