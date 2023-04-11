@@ -95,6 +95,8 @@ class Configuration(models.Model):
     change_accounting_period = models.BooleanField(default=False, help_text='Change the accounting period')
     import_vendors_as_merchants = models.BooleanField(default=False, help_text='Auto import vendors from sage intacct '
                                                                                'as merchants to Fyle')
+    skip_cards_mapping = models.BooleanField(default=False, help_text='Skip cards mapping')
+    map_fyle_cards_intacct_account = models.BooleanField(default=True, help_text='Map Fyle Cards to Intacct Account')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 

@@ -110,7 +110,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
 
             workspace.save()
             
-            expense_objects = Expense.create_expense_objects(expenses, workspace_id)
+            expense_objects = Expense.create_expense_objects(expenses)
 
             ExpenseGroup.create_expense_groups_by_report_id_fund_source(
                 expense_objects, workspace_id

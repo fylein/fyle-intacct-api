@@ -18,7 +18,7 @@ def test_create_expense_objects(db):
     workspace_id = 1
     payload = data['expenses']
 
-    Expense.create_expense_objects(payload, workspace_id)
+    Expense.create_expense_objects(payload)
     expense = Expense.objects.last()
 
     assert expense.expense_id == 'tx4ziVSAyIsv'
@@ -28,7 +28,7 @@ def test_create_eliminated_expense_objects(db):
     workspace_id = 1
     payload = data['eliminated_expenses']
 
-    Expense.create_expense_objects(payload, workspace_id)
+    Expense.create_expense_objects(payload)
     expense = Expense.objects.filter(expense_id='tx6wOnBVaumk')
 
     assert len(expense) == 1
@@ -72,7 +72,7 @@ def test_create_expense_groups_by_report_id_fund_source(db):
     workspace_id = 1
     payload = data['expenses']
 
-    Expense.create_expense_objects(payload, workspace_id)
+    Expense.create_expense_objects(payload)
     expense_objects = Expense.objects.last()
 
     expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)

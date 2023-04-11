@@ -366,6 +366,29 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configur
 
     return purpose
 
+def get_ccc_account_id(configuration: Configuration, general_mappings: GeneralMapping, expense: Expense, description: str):
+    if configuration.map_fyle_cards_netsuite_account:
+        ccc_account = Mapping.objects.filter(
+            source_type='CORPORATE_CARD',
+            destination_type='CREDIT_CARD_ACCOUNT',
+            source__source_id=expense.corporate_card_id,
+            workspace_id=configuration.workspace_id
+        ).first()
+
+        if ccc_account:
+            ccc_account_id = ccc_account.destination.destination_id
+        else:
+            ccc_account_id = general_mappings.default_ccc_account_id
+    else:
+        ccc_account_mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+            source_employee__value=description.get('employee_email'),
+            workspace_id=configuration.workspace_id
+        ).first()
+        ccc_account_id = ccc_account_mapping.destination_card_account.destination_id \
+            if ccc_account_mapping and ccc_account_mapping.destination_card_account \
+            else general_mappings.default_ccc_account_id
+
+    return ccc_account_id
 
 def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Expense):
     mapping_settings = MappingSetting.objects.filter(workspace_id=expense_group.workspace_id).all()
@@ -845,6 +868,8 @@ class JournalEntryLineitem(models.Model):
 
         journal_entry_lineitem_objects = []
 
+        debit_account_id = None
+
         for lineitem in expenses:
             category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
                 lineitem.category, lineitem.sub_category)
@@ -853,6 +878,14 @@ class JournalEntryLineitem(models.Model):
                 source_category__value=category,
                 workspace_id=expense_group.workspace_id
             ).first()
+
+            if expense_group.fund_source == 'PERSONAL':
+                if employee_field_mapping == 'VENDOR':
+                    debit_account_id = general_mappings.accounts_payable_id
+                elif employee_field_mapping == 'EMPLOYEE':
+                    debit_account_id = general_mappings.reimbursable_account_id
+            elif expense_group.fund_source == 'CCC':
+                debit_account_id = get_ccc_account_id(configuration, general_mappings, lineitem, description)
 
             if general_mappings.use_intacct_employee_locations:
                 default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
@@ -948,6 +981,10 @@ class ChargeCardTransaction(models.Model):
 
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
+
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+
+        ccc_account_id = get_ccc_account_id(configuration, general_mappings, expense, description)
 
         vendor = None
         merchant = expense.vendor if expense.vendor else None
