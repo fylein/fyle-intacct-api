@@ -270,7 +270,9 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
-def get_memo(expense_group: ExpenseGroup, ExportTable: Union['Bill', 'ExpenseReport', 'JournalEntry', 'ChargeCardTransaction', 'APPayment', 'SageIntacctReimbursement'], payment_type: str=None) -> str:
+def get_memo(expense_group: ExpenseGroup,
+            ExportTable: Union['Bill', 'ExpenseReport', 'JournalEntry', 'ChargeCardTransaction', 'APPayment', 'SageIntacctReimbursement'],
+            workspace_id: int, payment_type: str=None) -> str:
     """
     Get the memo from the description of the expense group.
     :param expense_group: The expense group to get the memo from.
@@ -306,7 +308,7 @@ def get_memo(expense_group: ExpenseGroup, ExportTable: Union['Bill', 'ExpenseRep
             workspace_id=expense_group.workspace_id
         )
         if not payment_type:
-                count = ExportTable.objects.filter(memo__contains=memo).count()
+                count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
         if expense_group.fund_source == 'CCC':
             if expense_group_settings.ccc_export_date_type != 'current_date':
                 date = get_transaction_date(expense_group)
@@ -454,7 +456,7 @@ class Bill(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        memo = get_memo(expense_group, ExportTable=Bill)
+        memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = EmployeeMapping.objects.get(
@@ -615,7 +617,7 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=ExpenseReport)
+        memo = get_memo(expense_group, ExportTable=ExpenseReport, workspace_id=expense_group.workspace_id)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -778,7 +780,7 @@ class JournalEntry(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=JournalEntry)
+        memo = get_memo(expense_group, ExportTable=JournalEntry, workspace_id=expense_group.workspace_id)
 
         if expense_group.fund_source == 'CCC':
             journal_entry_object, _ = JournalEntry.objects.update_or_create(
@@ -944,7 +946,7 @@ class ChargeCardTransaction(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=ChargeCardTransaction)
+        memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
 
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
@@ -1120,7 +1122,9 @@ class APPayment(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=APPayment, payment_type='Bill')
+        memo = get_memo(
+            expense_group, ExportTable=APPayment,
+            workspace_id=expense_group.workspace_id, payment_type='Bill')
 
         vendor_id = EmployeeMapping.objects.get(
             source_employee__value=description.get('employee_email'),
@@ -1210,7 +1214,9 @@ class SageIntacctReimbursement(models.Model):
         """
 
         description = expense_group.description
-        memo = get_memo(expense_group, ExportTable=SageIntacctReimbursement, payment_type='Expense Report')
+        memo = get_memo(
+            expense_group, ExportTable=SageIntacctReimbursement,
+            workspace_id=expense_group.workspace_id, payment_type='Expense Report')
 
         employee_id = EmployeeMapping.objects.get(
             source_employee__value=description.get('employee_email'),

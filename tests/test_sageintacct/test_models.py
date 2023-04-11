@@ -606,4 +606,4 @@ def test_get_memo(db):
     expense_group_settings.reimbursable_export_date_type = 'spent_at'
     expense_group_settings.save()
 
-    get_memo(expense_group, Bill, '')
+    get_memo(expense_group, Bill, workspace_id)
