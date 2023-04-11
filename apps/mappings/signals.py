@@ -17,8 +17,7 @@ from apps.mappings.tasks import schedule_cost_centers_creation, schedule_fyle_at
     upload_attributes_to_fyle, upload_dependent_field_to_fyle
 from apps.workspaces.models import Configuration
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
-from apps.workspaces.utils import delete_cards_mapping_settings
-from apps.workspaces.models import WorkspaceGeneralSettings
+from apps.workspaces.models import Configuration
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +30,6 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
     :param instance: Row instance of Sender Class
     :return: None
     """
-    workspace_general_settings = WorkspaceGeneralSettings.objects.filter(workspace_id=instance.workspace_id).first()
 
     configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
     if instance.source_field == 'PROJECT':
@@ -42,10 +40,6 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
     
     if instance.is_custom:
         schedule_fyle_attributes_creation(int(instance.workspace_id))
-
-    if workspace_general_settings:
-        delete_cards_mapping_settings(workspace_general_settings)
-
 
 @receiver(pre_save, sender=MappingSetting)
 def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
