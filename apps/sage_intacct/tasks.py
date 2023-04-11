@@ -8,7 +8,7 @@ from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
 
-from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError
+from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
 from fyle_accounting_mappings.models import Mapping, ExpenseAttribute, MappingSetting, DestinationAttribute, \
     CategoryMapping, EmployeeMapping
@@ -640,7 +640,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
     
-    except InvalidTokenError as exception:
+    except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
 
     except Exception:
@@ -748,8 +748,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
-    except InvalidTokenError as exception:
-        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')    
+    except (InvalidTokenError, NoPrivilegeError) as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')   
 
     except Exception:
         error = traceback.format_exc()
@@ -848,7 +848,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
     
-    except InvalidTokenError as exception:
+    except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
     except Exception:
@@ -944,7 +944,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
     
-    except InvalidTokenError as exception:
+    except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
     except Exception:
@@ -1058,6 +1058,13 @@ def create_ap_payment(workspace_id):
                     task_log.save()
 
                 except InvalidTokenError as exception:
+                    logger.info(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = exception.response
+
+                    task_log.save()
+
+                except NoPrivilegeError as exception:
                     logger.info(exception.response)
                     task_log.status = 'FAILED'
                     task_log.detail = exception.response
@@ -1194,6 +1201,13 @@ def create_sage_intacct_reimbursement(workspace_id):
                 task_log.detail = exception.response
 
                 task_log.save()
+            
+            except NoPrivilegeError as exception:
+                logger.info(exception.response)
+                task_log.status = 'FAILED'
+                task_log.detail = exception.response
+
+                task_log.save()
 
             except Exception:
                 error = traceback.format_exc()
@@ -1267,8 +1281,8 @@ def check_sage_intacct_object_status(workspace_id):
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or SageIntacct credentials does not exist - %s', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError, NoPrivilegeError):
+        logger.info('Invalid Token or SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
         return 
 
     bills = Bill.objects.filter(

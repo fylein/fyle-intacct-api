@@ -9,13 +9,13 @@ from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
-from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError
+from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError, InternalServerError
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
     CategoryMapping, ExpenseField
 
-from sageintacctsdk.exceptions import InvalidTokenError
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
@@ -194,6 +194,8 @@ def auto_create_project_mappings(workspace_id: int):
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
     
+    except InternalServerError:
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -239,6 +241,9 @@ def async_auto_map_employees(workspace_id: int):
     
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
+
+    except NoPrivilegeError:
+        logger.info('Insufficient permission to access the requested module')
 
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
@@ -463,6 +468,9 @@ def auto_create_cost_center_mappings(workspace_id: int):
     
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
+
+    except InternalServerError:
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -714,6 +722,9 @@ def auto_create_expense_fields_mappings(
 
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
+    
+    except InternalServerError:
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1020,6 +1031,9 @@ def auto_create_category_mappings(workspace_id):
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
 
+    except InternalServerError:
+        logger.error('Internal server error while importing to Fyle')
+
     except WrongParamsError as exception:
         logger.error(
             'Error while creating categories workspace_id - %s in Fyle %s %s',
@@ -1101,6 +1115,9 @@ def auto_create_tax_codes_mappings(workspace_id: int):
     
     except FyleInvalidTokenError:
         logger.info('Invalid Token for Fyle')
+
+    except InternalServerError:
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
@@ -1193,6 +1210,9 @@ def auto_create_vendors_as_merchants(workspace_id):
     
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle - %s', workspace_id)
+    
+    except InternalServerError:
+        logger.error('Internal server error while importing to Fyle')
 
     except WrongParamsError as exception:
         logger.error(
