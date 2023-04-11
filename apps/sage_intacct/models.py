@@ -307,8 +307,6 @@ def get_memo(expense_group: ExpenseGroup,
         expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get(
             workspace_id=expense_group.workspace_id
         )
-        if not payment_type:
-                count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
         if expense_group.fund_source == 'CCC':
             if expense_group_settings.ccc_export_date_type != 'current_date':
                 date = get_transaction_date(expense_group)
@@ -319,6 +317,8 @@ def get_memo(expense_group: ExpenseGroup,
                 date = get_transaction_date(expense_group)
                 date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
                 memo = '{} - {}'.format(memo, date)
+        if not payment_type:
+            count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
         if count > 0:
             memo = '{} - {}'.format(memo, count)        
 
