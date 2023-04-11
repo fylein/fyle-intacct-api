@@ -279,7 +279,7 @@ class SageIntacctConnector:
                     'project_name': task['PROJECTNAME'],
                     'external_id': task['TASKID']
                 },
-                'active': True if task['TASKSTATUS'] == 'In Progress' else False
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
