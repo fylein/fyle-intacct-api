@@ -56,12 +56,13 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
         #TODO: sync intacct fields before we upload custom field
         try:
             if instance.expense_field:
-                upload_dependent_field_to_fyle(
-                    workspace_id=int(instance.workspace_id),
-                    sageintacct_attribute_type=instance.destination_field,
-                    fyle_attribute_type=instance.source_field,
-                    parent_field_id=parent_field_id,
-                    source_placeholder=instance.source_placeholder
+                async_task(
+                    'apps.mappings.tasks.upload_dependent_field_to_fyle',
+                    int(instance.workspace_id),
+                    instance.destination_field,
+                    instance.source_field,
+                    parent_field_id,
+                    instance.source_placeholder
                 )
             else:
                 upload_attributes_to_fyle(

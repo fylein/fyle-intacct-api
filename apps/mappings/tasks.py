@@ -591,14 +591,12 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
         return expense_custom_field_payload
 
 
-
 def upload_dependent_field_to_fyle(
     workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, parent_field_id: str, source_placeholder: str = None
 ):
     """
     Upload Dependent Fields To Fyle
     """
-
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     dependent_fields = upload_attributes_to_fyle(workspace_id, sageintacct_attribute_type, fyle_attribute_type, parent_field_id, source_placeholder)
