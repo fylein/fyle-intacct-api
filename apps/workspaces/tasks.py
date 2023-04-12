@@ -183,7 +183,7 @@ def run_email_notification(workspace_id):
                     'fyle_company': workspace.name,
                     'intacct_company': intacct.si_company_name,
                     'workspace_id': workspace_id,
-                    'export_time': export_time.date(),
+                    'export_time': export_time.date() if export_time else datetime.now(),
                     'year': date.today().year,
                     'app_url': "{0}/workspaces/{1}/expense_groups".format(settings.FYLE_APP_URL, workspace_id)
                     }
