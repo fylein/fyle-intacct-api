@@ -38,6 +38,7 @@ jobs:
           KUBERNETES_MANIFEST_FILE_PATH: deployment/staging/controller.yml
       - name: Create new Sentry release
         env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: fyle-technologies-private-limi
           SENTRY_PROJECT: intacct-api
           SENTRY_DEPLOY_ENVIRONMENT: staging
