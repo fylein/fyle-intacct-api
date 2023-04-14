@@ -3,3 +3,6 @@ coverage:
     project:
       default:
         target: 96%
+comment:
+  layout: "reach, diff, flags, files"
+  require_changes: false
