@@ -252,7 +252,7 @@ class FyleFieldsView(generics.ListAPIView):
         ]
 
         for attribute in attributes:
-            if attribute.attribute_type != 'CORPORATE_CARD':
+            if attribute['attribute_type'] != 'CORPORATE_CARD':
                 expense_fields.append(attribute)
 
         return Response(

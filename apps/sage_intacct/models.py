@@ -973,6 +973,7 @@ class ChargeCardTransaction(models.Model):
         memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
 
         configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         charge_card_id = None
         charge_card_id = get_ccc_account_id(configuration, general_mappings, expense, description)
 
@@ -992,19 +993,6 @@ class ChargeCardTransaction(models.Model):
         else:
             vendor = DestinationAttribute.objects.filter(
                 value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
-
-        # mapping: EmployeeMapping = EmployeeMapping.objects.filter(
-        #     source_employee__value=description.get('employee_email'),
-        #     workspace_id=expense_group.workspace_id
-        # ).first()
-
-        # if mapping and mapping.destination_card_account:
-        #     charge_card_id = mapping.destination_card_account.destination_id
-
-        # else:
-        #     general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        #     if general_mappings.default_charge_card_id:
-        #         charge_card_id = general_mappings.default_charge_card_id
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
