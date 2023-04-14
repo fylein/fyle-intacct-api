@@ -37,7 +37,6 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           KUBERNETES_MANIFEST_FILE_PATH: deployment/staging/controller.yml
       - name: Create new Sentry release
-        uses: actions/checkout@v1.0.0
         env:
           SENTRY_ORG: fyle-technologies-private-limi
           SENTRY_PROJECT: intacct-api
