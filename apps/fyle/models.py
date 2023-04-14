@@ -99,6 +99,7 @@ class Expense(models.Model):
     paid_on_sage_intacct = models.BooleanField(help_text='Expense Payment status on Sage Intacct', default=False)
     file_ids = ArrayField(base_field=models.CharField(max_length=255), null=True, help_text='File IDs')
     payment_number = models.CharField(max_length=55, help_text='Expense payment number', null=True)
+    corporate_card_id = models.CharField(max_length=255, null=True, blank=True, help_text='Corporate Card ID')
 
     class Meta:
         db_table = 'expenses'
@@ -143,7 +144,8 @@ class Expense(models.Model):
                     'verified_at': expense['verified_at'],
                     'custom_properties': expense['custom_properties'],
                     'payment_number': expense['payment_number'],
-                    'file_ids': expense['file_ids']
+                    'file_ids': expense['file_ids'],
+                    'corporate_card_id': expense['corporate_card_id'],
                 }
             )
 

@@ -425,6 +425,30 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             default_employee_object = employee.detail[object_type]
             return default_employee_object
     
+def get_ccc_account_id(configuration: Configuration, general_mappings: GeneralMapping, expense: Expense, description: str):
+    if configuration.corporate_credit_card_expenses_object === 'CHARGE_CARD_TRANSACTION':
+        ccc_account = Mapping.objects.filter(
+            source_type='CORPORATE_CARD',
+            destination_type='CHARGE_CARD_NUMBER',
+            source__source_id=expense.corporate_card_id,
+            workspace_id=configuration.workspace_id
+        ).first()
+
+        if ccc_account:
+            ccc_account_id = ccc_account.destination.destination_id
+        else:
+            ccc_account_id = general_mappings.default_charge_card_id
+    else:
+        ccc_account_mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+            source_employee__value=description.get('employee_email'),
+            workspace_id=configuration.workspace_id
+        ).first()
+
+        ccc_account_id = ccc_account_mapping.destination_card_account.destination_id \
+            if ccc_account_mapping and ccc_account_mapping.destination_card_account \
+            else general_mappings.default_charge_card_id
+
+    return ccc_account_id
 
 class Bill(models.Model):
     """
@@ -948,6 +972,10 @@ class ChargeCardTransaction(models.Model):
         expense = expense_group.expenses.first()
         memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
 
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        charge_card_id = None
+        charge_card_id = get_ccc_account_id(configuration, general_mappings, expense, description)
+
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
 
@@ -965,19 +993,18 @@ class ChargeCardTransaction(models.Model):
             vendor = DestinationAttribute.objects.filter(
                 value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
 
-        charge_card_id = None
-        mapping: EmployeeMapping = EmployeeMapping.objects.filter(
-            source_employee__value=description.get('employee_email'),
-            workspace_id=expense_group.workspace_id
-        ).first()
+        # mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+        #     source_employee__value=description.get('employee_email'),
+        #     workspace_id=expense_group.workspace_id
+        # ).first()
 
-        if mapping and mapping.destination_card_account:
-            charge_card_id = mapping.destination_card_account.destination_id
+        # if mapping and mapping.destination_card_account:
+        #     charge_card_id = mapping.destination_card_account.destination_id
 
-        else:
-            general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-            if general_mappings.default_charge_card_id:
-                charge_card_id = general_mappings.default_charge_card_id
+        # else:
+        #     general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+        #     if general_mappings.default_charge_card_id:
+        #         charge_card_id = general_mappings.default_charge_card_id
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
