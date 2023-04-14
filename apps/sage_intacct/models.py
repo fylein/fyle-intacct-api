@@ -426,7 +426,7 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             return default_employee_object
     
 def get_ccc_account_id(configuration: Configuration, general_mappings: GeneralMapping, expense: Expense, description: str):
-    if configuration.corporate_credit_card_expenses_object === 'CHARGE_CARD_TRANSACTION':
+    if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         ccc_account = Mapping.objects.filter(
             source_type='CORPORATE_CARD',
             destination_type='CHARGE_CARD_NUMBER',
