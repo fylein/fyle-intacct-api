@@ -1,8 +1,12 @@
+comment:                  
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: no       
+  require_head: no
+
 coverage:
   status:
     project:
       default:
         target: 96%
-comment:
-  layout: "reach, diff, flags, files"
-  require_changes: false
