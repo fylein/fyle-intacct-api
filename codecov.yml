@@ -1,12 +1,18 @@
-comment:                  
-  layout: "reach, diff, flags, files"
+codecov:
+  token: ${{ secrets.CODECOV_TOKEN }}
+  require_ci_to_pass: false
+comment:
   behavior: default
+  layout: reach, diff, flags, files
+  require_base: false
   require_changes: false
-  require_base: no       
-  require_head: no
-
+  require_head: false
+  show_carryforward_flags: false
 coverage:
-  status:
-    project:
-      default:
-        target: 96%
+  precision: 2
+  range:
+  - 96.0
+  - 97.0
+  round: down
+github_checks:
+  annotations: false
