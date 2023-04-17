@@ -40,6 +40,8 @@ class GeneralMapping(models.Model):
     default_charge_card_id = models.CharField(max_length=255, help_text='Default charge card ID', null=True)
     default_credit_card_name = models.CharField(max_length=255, help_text='Default credit card name', null=True)
     default_credit_card_id = models.CharField(max_length=255, help_text='Default credit card ID', null=True)
+    default_gl_account_name = models.CharField(max_length=255, help_text='Default credit card name', null=True)
+    default_gl_account_id = models.CharField(max_length=255, help_text='Default credit card ID', null=True)
     default_ccc_vendor_name = models.CharField(max_length=255, help_text='Default ccc vendor name', null=True)
     default_ccc_vendor_id = models.CharField(max_length=255, help_text='Default ccc vendor ID', null=True)
     default_item_name = models.CharField(max_length=255, help_text='Default item name', null=True)
