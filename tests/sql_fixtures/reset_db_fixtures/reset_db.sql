@@ -1190,7 +1190,9 @@ CREATE TABLE public.general_mappings (
     default_tax_code_id character varying(255),
     default_tax_code_name character varying(255),
     default_credit_card_id character varying(255),
-    default_credit_card_name character varying(255)
+    default_credit_card_name character varying(255),
+    default_gl_account_id character varying(255),
+    default_gl_account_name character varying(255)
 );
 
 
@@ -3635,6 +3637,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 134	sage_intacct	0019_auto_20230307_1746	2023-03-13 06:15:36.189955+00
 135	workspaces	0024_auto_20230321_0740	2023-03-22 11:16:13.216068+00
 136	fyle_accounting_mappings	0021_auto_20230323_0557	2023-04-10 09:54:41.984483+00
+137	mappings	0012_auto_20230417_1124	2023-04-17 11:42:04.876255+00
+138	workspaces	0025_auto_20230417_1124	2023-04-17 11:42:04.893467+00
 \.
 
 
@@ -7066,8 +7070,8 @@ COPY public.fyle_credentials (id, refresh_token, created_at, updated_at, workspa
 -- Data for Name: general_mappings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.general_mappings (id, default_location_name, default_location_id, default_department_name, default_department_id, default_project_name, default_project_id, created_at, updated_at, workspace_id, default_charge_card_name, default_charge_card_id, default_ccc_vendor_name, default_ccc_vendor_id, default_item_id, default_item_name, payment_account_id, payment_account_name, default_ccc_expense_payment_type_id, default_ccc_expense_payment_type_name, default_reimbursable_expense_payment_type_id, default_reimbursable_expense_payment_type_name, use_intacct_employee_departments, use_intacct_employee_locations, location_entity_id, location_entity_name, default_class_id, default_class_name, default_tax_code_id, default_tax_code_name, default_credit_card_id, default_credit_card_name) FROM stdin;
-1	Australia	600	Admin	300	Branding Analysis	10061	2022-09-20 08:47:19.634467+00	2022-10-10 08:25:16.32686+00	1		20600		20043	1012	Cube	400_CHK	Demo Bank - 400_CHK		\N			f	f			600	Enterprise	W4 Withholding Tax	W4 Withholding Tax	20610	Accr. Sales Tax Payable
+COPY public.general_mappings (id, default_location_name, default_location_id, default_department_name, default_department_id, default_project_name, default_project_id, created_at, updated_at, workspace_id, default_charge_card_name, default_charge_card_id, default_ccc_vendor_name, default_ccc_vendor_id, default_item_id, default_item_name, payment_account_id, payment_account_name, default_ccc_expense_payment_type_id, default_ccc_expense_payment_type_name, default_reimbursable_expense_payment_type_id, default_reimbursable_expense_payment_type_name, use_intacct_employee_departments, use_intacct_employee_locations, location_entity_id, location_entity_name, default_class_id, default_class_name, default_tax_code_id, default_tax_code_name, default_credit_card_id, default_credit_card_name, default_gl_account_id, default_gl_account_name) FROM stdin;
+1	Australia	600	Admin	300	Branding Analysis	10061	2022-09-20 08:47:19.634467+00	2022-10-10 08:25:16.32686+00	1		20600		20043	1012	Cube	400_CHK	Demo Bank - 400_CHK		\N			f	f			600	Enterprise	W4 Withholding Tax	W4 Withholding Tax	20610	Accr. Sales Tax Payable	\N	\N
 \.
 
 
@@ -7586,7 +7590,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 43, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 136, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 138, true);
 
 
 --
