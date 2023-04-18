@@ -607,3 +607,24 @@ def test_get_memo(db):
     expense_group_settings.save()
 
     get_memo(expense_group, Bill, workspace_id)
+
+def test_get_ccc_account_id(db, mocker):
+    workspace_id = 1
+    
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.map_fyle_cards_netsuite_account = True
+    configuration.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense = expense_group.expenses.first()
+    expense.corporate_card_id = None
+    expense.save()
+
+    get_ccc_account_id(configuration, general_mappings, expense, expense_group.description)
+
+    configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+    configuration.save()
+
+    get_ccc_account_id(configuration, general_mappings, expense, expense_group.description)

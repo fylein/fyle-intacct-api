@@ -426,6 +426,7 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             return default_employee_object
     
 def get_ccc_account_id(configuration: Configuration, general_mappings: GeneralMapping, expense: Expense, description: str):
+    ccc_account_id = None
     if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         ccc_account = Mapping.objects.filter(
             source_type='CORPORATE_CARD',
@@ -974,7 +975,6 @@ class ChargeCardTransaction(models.Model):
 
         configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        charge_card_id = None
         charge_card_id = get_ccc_account_id(configuration, general_mappings, expense, description)
 
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
