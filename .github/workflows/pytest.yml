@@ -23,9 +23,7 @@ jobs:
         env:
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
       - name: Get count of failed test cases
-        run: |
-          export FAILED_TESTS=$(pytest --strict -qq | grep 'FAIL' | wc -l)
-          echo "::set-env name=FAILED_TESTS::$FAILED_TESTS"
+        run: echo $env.FAILED
       - name: Upload coverage reports to Codecov with GitHub Action
         uses: codecov/codecov-action@v3
       - name: Pytest coverage comment
