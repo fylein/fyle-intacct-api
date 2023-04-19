@@ -607,3 +607,21 @@ def test_get_memo(db):
     expense_group_settings.save()
 
     get_memo(expense_group, Bill, workspace_id)
+
+def test_get_ccc_account_id(db, mocker):
+    workspace_id = 1
+    
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+    configuration.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense = expense_group.expenses.first()
+    expense.corporate_card_id = None
+    expense.save()
+
+    cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
+    
+    assert cct_id == general_mappings.default_charge_card_id
