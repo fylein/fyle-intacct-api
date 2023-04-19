@@ -239,7 +239,7 @@ class FyleFieldsView(generics.ListAPIView):
     serializer_class = ExpenseFieldSerializer
 
     def get(self, request, *args, **kwargs):
-        default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'LOCATION_ENTITY', 'TAX_GROUP']
+        default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'LOCATION_ENTITY', 'TAX_GROUP', 'CORPORATE_CARD']
 
         attributes = ExpenseAttribute.objects.filter(
             ~Q(attribute_type__in=default_attributes),
@@ -252,8 +252,7 @@ class FyleFieldsView(generics.ListAPIView):
         ]
 
         for attribute in attributes:
-            if attribute['attribute_type'] != 'CORPORATE_CARD':
-                expense_fields.append(attribute)
+            expense_fields.append(attribute)
 
         return Response(
             expense_fields,

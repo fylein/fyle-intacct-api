@@ -427,27 +427,17 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
     
 def get_ccc_account_id(configuration: Configuration, general_mappings: GeneralMapping, expense: Expense, description: str):
     ccc_account_id = None
-    if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
-        ccc_account = Mapping.objects.filter(
-            source_type='CORPORATE_CARD',
-            destination_type='CHARGE_CARD_NUMBER',
-            source__source_id=expense.corporate_card_id,
-            workspace_id=configuration.workspace_id
-        ).first()
+    ccc_account = Mapping.objects.filter(
+        source_type='CORPORATE_CARD',
+        destination_type='CHARGE_CARD_NUMBER',
+        source__source_id=expense.corporate_card_id,
+        workspace_id=configuration.workspace_id
+    ).first()
 
-        if ccc_account:
-            ccc_account_id = ccc_account.destination.destination_id
-        else:
-            ccc_account_id = general_mappings.default_charge_card_id
+    if ccc_account:
+        ccc_account_id = ccc_account.destination.destination_id
     else:
-        ccc_account_mapping: EmployeeMapping = EmployeeMapping.objects.filter(
-            source_employee__value=description.get('employee_email'),
-            workspace_id=configuration.workspace_id
-        ).first()
-
-        ccc_account_id = ccc_account_mapping.destination_card_account.destination_id \
-            if ccc_account_mapping and ccc_account_mapping.destination_card_account \
-            else general_mappings.default_charge_card_id
+        ccc_account_id = general_mappings.default_charge_card_id
 
     return ccc_account_id
 

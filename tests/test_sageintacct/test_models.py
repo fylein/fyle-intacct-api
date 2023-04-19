@@ -622,9 +622,6 @@ def test_get_ccc_account_id(db, mocker):
     expense.corporate_card_id = None
     expense.save()
 
-    get_ccc_account_id(configuration, general_mappings, expense, expense_group.description)
-
-    configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
-    configuration.save()
-
-    get_ccc_account_id(configuration, general_mappings, expense, expense_group.description)
+    cct_id = get_ccc_account_id(configuration, general_mappings, expense, expense_group.description)
+    
+    assert cct_id == '20600'
