@@ -612,7 +612,7 @@ def test_get_ccc_account_id(db, mocker):
     workspace_id = 1
     
     configuration = Configuration.objects.get(workspace_id=workspace_id)
-    configuration.map_fyle_cards_netsuite_account = True
+    configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
     configuration.save()
 
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
@@ -622,6 +622,6 @@ def test_get_ccc_account_id(db, mocker):
     expense.corporate_card_id = None
     expense.save()
 
-    cct_id = get_ccc_account_id(configuration, general_mappings, expense, expense_group.description)
+    cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
     
-    assert cct_id == '20600'
+    assert cct_id == general_mappings.default_charge_card_id
