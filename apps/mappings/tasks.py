@@ -196,6 +196,9 @@ def auto_create_project_mappings(workspace_id: int):
     
     except InternalServerError:
         logger.error('Internal server error while importing to Fyle')
+    
+    except NoPrivilegeError:
+        logger.info('Insufficient permission to access the requested module')
 
     except WrongParamsError as exception:
         logger.error(
@@ -471,6 +474,9 @@ def auto_create_cost_center_mappings(workspace_id: int):
 
     except InternalServerError:
         logger.error('Internal server error while importing to Fyle')
+
+    except NoPrivilegeError:
+        logger.info('Insufficient permission to access the requested module')
 
     except WrongParamsError as exception:
         logger.error(
@@ -755,6 +761,8 @@ def async_auto_create_custom_field_mappings(workspace_id: str):
                 )
         except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
             logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+        except NoPrivilegeError:
+            logger.info('Insufficient permission to access the requested module')
 
 
 def schedule_fyle_attributes_creation(workspace_id: int):
@@ -1123,6 +1131,9 @@ def auto_create_tax_codes_mappings(workspace_id: int):
             workspace_id, exception.message, {'error': exception.response}
         )
 
+    except NoPrivilegeError:
+        logger.info('Insufficient permission to access the requested module')
+
     except Exception:
         error = traceback.format_exc()
         error = {
@@ -1211,6 +1222,9 @@ def auto_create_vendors_as_merchants(workspace_id):
     
     except InternalServerError:
         logger.error('Internal server error while importing to Fyle')
+
+    except NoPrivilegeError:
+        logger.info('Insufficient permission to access the requested module')
 
     except WrongParamsError as exception:
         logger.error(
