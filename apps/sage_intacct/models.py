@@ -434,8 +434,15 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
         workspace_id=general_mappings.workspace
     ).first()
 
+    mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+        source_employee__value=description.get('employee_email'),
+        workspace_id=general_mappings.workspace
+    ).first()
+
     if ccc_account:
         ccc_account_id = ccc_account.destination.destination_id
+    elif mapping and mapping.destination_card_account:
+        ccc_account_id = mapping.destination_card_account.destination_id
     else:
         ccc_account_id = general_mappings.default_charge_card_id
 
