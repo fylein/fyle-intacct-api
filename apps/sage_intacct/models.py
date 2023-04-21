@@ -427,26 +427,24 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
     
 def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, description: str):
     ccc_account_id = None
-    ccc_account = Mapping.objects.filter(
+    card_mapping = Mapping.objects.filter(
         source_type='CORPORATE_CARD',
         destination_type='CHARGE_CARD_NUMBER',
         source__source_id=expense.corporate_card_id,
         workspace_id=general_mappings.workspace
     ).first()
 
-    mapping: EmployeeMapping = EmployeeMapping.objects.filter(
-        source_employee__value=description.get('employee_email'),
-        workspace_id=general_mappings.workspace
-    ).first()
-
-    if ccc_account:
-        ccc_account_id = ccc_account.destination.destination_id
-    elif mapping and mapping.destination_card_account:
-        ccc_account_id = mapping.destination_card_account.destination_id
+    if card_mapping:
+        return card_mapping.destination.destination_id
     else:
-        ccc_account_id = general_mappings.default_charge_card_id
+        employee_mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+            source_employee__value=description.get('employee_email'),
+            workspace_id=general_mappings.workspace
+        ).first()
+        if employee_mapping and employee_mapping.destination_card_account:
+            return employee_mapping.destination_card_account.destination_id 
 
-    return ccc_account_id
+    return cgeneral_mappings.default_charge_card_id
 
 class Bill(models.Model):
     """
