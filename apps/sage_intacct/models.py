@@ -426,7 +426,6 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             return default_employee_object
     
 def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, description: str):
-    ccc_account_id = None
     card_mapping = Mapping.objects.filter(
         source_type='CORPORATE_CARD',
         destination_type='CHARGE_CARD_NUMBER',
@@ -444,7 +443,7 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
         if employee_mapping and employee_mapping.destination_card_account:
             return employee_mapping.destination_card_account.destination_id 
 
-    return cgeneral_mappings.default_charge_card_id
+    return general_mappings.default_charge_card_id
 
 class Bill(models.Model):
     """
