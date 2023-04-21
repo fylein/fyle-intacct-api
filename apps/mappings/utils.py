@@ -114,18 +114,6 @@ class MappingUtils:
                 workspace_id=self.__workspace_id
             )
 
-        if configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
-            schedule_ap_payment_creation(
-                sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
-                workspace_id=self.__workspace_id
-            )
-
-        if configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'EMPLOYEE':
-            schedule_sage_intacct_reimbursement_creation(
-                sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
-                workspace_id=self.__workspace_id
-            )
-
         if general_mapping_object.default_charge_card_name:
             schedule_auto_map_charge_card_employees(self.__workspace_id)
 
