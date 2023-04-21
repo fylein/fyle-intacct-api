@@ -13,7 +13,7 @@ from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
 from apps.fyle.models import ExpenseGroup
 from apps.fyle.tasks import create_expense_groups
 from apps.sage_intacct.tasks import schedule_expense_reports_creation, schedule_bills_creation, \
-    schedule_charge_card_transaction_creation
+    schedule_charge_card_transaction_creation, schedule_journal_entries_creation
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import User, Workspace, WorkspaceSchedule, Configuration, SageIntacctCredential, FyleCredential
 
@@ -117,6 +117,11 @@ def run_sync_schedule(workspace_id):
 
             elif configuration.reimbursable_expenses_object == 'BILL':
                 schedule_bills_creation(
+                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                )
+
+            elif configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
+                schedule_journal_entries_creation(
                     workspace_id=workspace_id, expense_group_ids=expense_group_ids
                 )
 
