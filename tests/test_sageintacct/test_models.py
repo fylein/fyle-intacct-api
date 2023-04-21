@@ -616,12 +616,63 @@ def test_get_ccc_account_id(db, mocker):
     configuration.save()
 
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
-    expense_group = ExpenseGroup.objects.get(id=1)
 
+    expense_group = ExpenseGroup.objects.get(id=1)
+    
     expense = expense_group.expenses.first()
+    expense.corporate_card_id = 900
+    expense.save()
+
+    expense_attribute = ExpenseAttribute.objects.first()
+    expense_attribute.source_id = expense.corporate_card_id
+    expense_attribute.save()
+
+    mapping = Mapping.objects.first()
+    mapping.source_type = 'CORPORATE_CARD'
+    mapping.destination_type='CHARGE_CARD_NUMBER'
+    mapping.source=expense_attribute
+    mapping.workspace_id=general_mappings.workspace
+    mapping.save()
+
+    cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
+    
+    assert cct_id == mapping.destination.destination_id
+
+    mapping.source_type = 'COST_CENTER'
+    mapping.destination_type='COST_CENTER'
+    mapping.save()
+
+    expense_attribute.value = expense_group.description.get('employee_email')
+
+    destination_mapping = DestinationAttribute.objects.first()
+    destination_mapping.destination_id = 12345
+    destination_mapping.save()
+
+    employee_mapping = EmployeeMapping.objects.first()
+    employee_mapping.workspace_id=general_mappings.workspace
+    employee_mapping.source_employee = expense_attribute
+    employee_mapping.destination_card_account = destination_mapping
+    employee_mapping.save()
+    employee_mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+        source_employee__value=expense_group.description.get('employee_email'),
+        workspace_id=general_mappings.workspace
+    ).first()
+
+    if employee_mapping and employee_mapping.destination_card_account:
+        logger.info('oppo')
+
+    cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
+
+    assert cct_id == employee_mapping.destination_card_account.destination_id
+
     expense.corporate_card_id = None
     expense.save()
+
+    employee_mapping.destination_card_account = None
+    employee_mapping.save()
 
     cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
     
     assert cct_id == general_mappings.default_charge_card_id
+    
+    
