@@ -797,16 +797,15 @@ class JournalEntry(models.Model):
         expense = expense_group.expenses.first()
         memo = get_memo(expense_group, ExportTable=JournalEntry, workspace_id=expense_group.workspace_id)
 
-        if expense_group.fund_source == 'CCC':
-            journal_entry_object, _ = JournalEntry.objects.update_or_create(
-                expense_group=expense_group,
-                defaults={
-                    'description': description,
-                    'memo': memo,
-                    'currency': expense.currency,
-                    'transaction_date': get_transaction_date(expense_group)
-                }
-            )
+        journal_entry_object, _ = JournalEntry.objects.update_or_create(
+            expense_group=expense_group,
+            defaults={
+                'description': description,
+                'memo': memo,
+                'currency': expense.currency,
+                'transaction_date': get_transaction_date(expense_group)
+            }
+        )
 
         return journal_entry_object
 
