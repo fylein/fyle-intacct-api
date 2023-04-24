@@ -72,6 +72,34 @@ def test_run_sync_schedule(mocker,db):
     
     assert task_log.status == 'ENQUEUED'
 
+def test_run_sync_schedule_je(mocker,db):
+    workspace_id = 1
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses']
+    )
+
+    run_sync_schedule(workspace_id)
+    
+    configuration.reimbursable_expenses_object = 'JOURNAL_ENTRY'
+    configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    configuration.save()
+
+    run_sync_schedule(workspace_id)
+    
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.save()
+
+    run_sync_schedule(workspace_id)
+
+    task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id
+    ).first()
+    
+    assert task_log.status == 'ENQUEUED'
+
 
 def test_email_notification(db):
     workspace_id = 1
