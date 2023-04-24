@@ -344,6 +344,11 @@ def test_construct_journal_entry(create_journal_entry, db):
 
     assert dict_compare_keys(journal_entry_object, data['journal_entry_payload']) == [], 'construct journal entry api return diffs in keys'
 
+    journal_entry_lineitems[0].amount = abs(journal_entry_lineitems[0].amount)
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(journal_entry=journal_entry, journal_entry_lineitems=journal_entry_lineitems)
+
+    assert dict_compare_keys(journal_entry_object, data['journal_entry_re_payload']) == [], 'construct journal entry api return diffs in keys'
+
 
 def test_construct_sage_intacct_reimbursement(create_sage_intacct_reimbursement, db):
     workspace_id = 1
