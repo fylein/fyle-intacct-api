@@ -349,6 +349,46 @@ def test_construct_journal_entry(create_journal_entry, db):
 
     assert dict_compare_keys(journal_entry_object, data['journal_entry_re_payload']) == [], 'construct journal entry api return diffs in keys'
 
+def test_construct_journal_entry_reimbursable_expenses_journal_entry(create_journal_entry, db):
+    workspace_id = 1
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    general_settings = Configuration.objects.filter(workspace_id=workspace_id).first()
+    general_settings.import_tax_codes = True
+    general_settings.save()
+
+    general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    general_mappings.default_tax_code_id = 4
+    general_mappings.save()
+
+    journal_entry, journal_entry_lineitems = create_journal_entry
+    journal_entry_lineitems[0].user_defined_dimensions = [{'CLASS': 'sample'}]
+
+    # Set reimbursable_expenses_object to 'JOURNAL_ENTRY'
+    general_settings.reimbursable_expenses_object = 'JOURNAL_ENTRY'
+    general_settings.save()
+
+    # Update the lineitem with necessary values for credit_line_re
+    lineitem = journal_entry_lineitems[0]
+    lineitem.memo = 'Test Memo'
+    lineitem.department_id = 'Test Department'
+    lineitem.location_id = 'Test Location'
+    lineitem.project_id = 'Test Project'
+    lineitem.customer_id = 'Test Customer'
+    lineitem.vendor_id = 'Test Vendor'
+    lineitem.employee_id = 'Test Employee'
+    lineitem.item_id = 'Test Item'
+    lineitem.class_id = 'Test Class'
+    lineitem.task_id = 'Test Task'
+    lineitem.cost_type_id = 'Test Cost Type'
+    lineitem.billable = True
+
+    journal_entry_lineitems[0].amount = abs(journal_entry_lineitems[0].amount)
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry, journal_entry_lineitems=journal_entry_lineitems
+    )
 
 def test_construct_sage_intacct_reimbursement(create_sage_intacct_reimbursement, db):
     workspace_id = 1
