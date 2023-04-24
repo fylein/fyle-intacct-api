@@ -468,6 +468,10 @@ def test_schedule_fyle_attributes_creation(db, mocker):
 
     assert schedule.func == 'apps.mappings.tasks.async_auto_create_custom_field_mappings'
 
+    with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        async_auto_create_custom_field_mappings(workspace_id=workspace_id)
+
 
 def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting):
     mocker.patch(
