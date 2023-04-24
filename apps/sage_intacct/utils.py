@@ -1036,7 +1036,7 @@ class SageIntacctConnector:
         for lineitem in journal_entry_lineitems:
             expense_link = self.get_expense_link(lineitem)
             credit_line = {
-                'accountno': general_mappings.default_credit_card_id,
+                'accountno': general_mappings.default_credit_card_id if general_mappings.default_credit_card_id else general_mappings.default_gl_account_id,
                 'currency': journal_entry.currency,
                 'amount': lineitem.amount,
                 'tr_type': -1,
