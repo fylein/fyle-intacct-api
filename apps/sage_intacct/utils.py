@@ -1036,36 +1036,7 @@ class SageIntacctConnector:
         for lineitem in journal_entry_lineitems:
             expense_link = self.get_expense_link(lineitem)
             credit_line = {
-                'accountno': general_mappings.default_credit_card_id,
-                'currency': journal_entry.currency,
-                'amount': lineitem.amount,
-                'tr_type': -1,
-                'description': lineitem.memo,
-                'department': lineitem.department_id,
-                'location': lineitem.location_id,
-                'projectid': lineitem.project_id,
-                'customerid': lineitem.customer_id,
-                'vendorid': lineitem.vendor_id,
-                'employeeid': lineitem.employee_id,
-                'itemid': lineitem.item_id,
-                'classid': lineitem.class_id,
-                'itemid': lineitem.item_id,
-                'taskid': lineitem.task_id,
-                'costtypeid': lineitem.cost_type_id,
-                'billable': lineitem.billable,
-                'customfields': {
-                   'customfield': [
-                    {
-                        'customfieldname': 'FYLE_EXPENSE_URL',
-                        'customfieldvalue': expense_link
-                    },
-                   ]
-                }
-            }
-
-        if configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
-            credit_line_re = {
-                'accountno': general_mappings.default_gl_account_id,
+                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
                 'currency': journal_entry.currency,
                 'amount': lineitem.amount,
                 'tr_type': -1,
@@ -1139,11 +1110,9 @@ class SageIntacctConnector:
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
                     credit_line[name] = value
-                    credit_line_re[name] = value
                     debit_line[name] = value
 
             journal_entry_payload.append(credit_line)
-            journal_entry_payload.append(credit_line_re)
             journal_entry_payload.append(debit_line)
 
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
