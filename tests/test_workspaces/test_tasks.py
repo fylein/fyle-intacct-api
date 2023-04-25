@@ -1,8 +1,8 @@
 from apps.tasks.models import TaskLog
 from apps.workspaces.tasks import run_sync_schedule, schedule_sync, run_email_notification, \
-    async_update_fyle_credentials
+    async_update_fyle_credentials,delete_cards_mapping_settings
 from apps.workspaces.models import WorkspaceSchedule, Configuration, FyleCredential
-from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from .fixtures import data
 
 
@@ -120,3 +120,28 @@ def test_async_update_fyle_credentials(db):
     fyle_credentials = FyleCredential.objects.filter(workspace_id=workspace_id).first()
 
     assert fyle_credentials.refresh_token == refresh_token
+
+def test_delete_cards_mapping_settings(db):
+    workspace_id = 1
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.corporate_credit_card_expenses_object == 'BILL'
+    configuration.save()
+
+    mapping_setting = MappingSetting.objects.filter(
+            workspace_id=configuration.workspace_id,
+        ).first()
+
+    mapping_setting.source_field = 'CORPORATE_CARD'
+    mapping_setting.destination_field = 'CHARGE_CARD_NUMBER'
+    mapping_setting.save()
+
+    assert mapping_setting.source_field == 'CORPORATE_CARD'
+
+    delete_cards_mapping_settings(configuration)
+
+    result_mapping_setting = MappingSetting.objects.filter(
+            workspace_id=configuration.workspace_id,
+            source_field='CORPORATE_CARD',
+            destination_field='CHARGE_CARD_NUMBER'
+        ).first()
+    assert result_mapping_setting == None
