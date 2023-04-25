@@ -658,9 +658,6 @@ def test_get_ccc_account_id(db, mocker):
         workspace_id=general_mappings.workspace
     ).first()
 
-    if employee_mapping and employee_mapping.destination_card_account:
-        logger.info('oppo')
-
     cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
 
     assert cct_id == employee_mapping.destination_card_account.destination_id
