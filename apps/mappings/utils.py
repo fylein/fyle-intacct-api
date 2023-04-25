@@ -83,6 +83,8 @@ class MappingUtils:
                 'default_charge_card_id': general_mapping['default_charge_card_id'],
                 'default_credit_card_name': general_mapping['default_credit_card_name'],
                 'default_credit_card_id': general_mapping['default_credit_card_id'],
+                'default_gl_account_name': general_mapping['default_gl_account_name'],
+                'default_gl_account_id': general_mapping['default_gl_account_id'],
                 'default_ccc_vendor_name': general_mapping['default_ccc_vendor_name'],
                 'default_ccc_vendor_id': general_mapping['default_ccc_vendor_id'],
                 'default_item_name': general_mapping['default_item_name'],

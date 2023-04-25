@@ -1023,10 +1023,10 @@ class SageIntacctConnector:
 
     def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
         """
-        Create a jorunal_entry
-        :param jorunal_entry: JorunalEntry object extracted from database
-        :param jorunal_entry_lineitems: JorunalEntryLineItem objects extracted from database
-        :return: constructed jorunal_entry
+        Create a journal_entry
+        :param journal_entry: JournalEntry object extracted from database
+        :param journal_entry_lineitems: JournalEntryLineItem objects extracted from database
+        :return: constructed journal_entry
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
@@ -1036,7 +1036,7 @@ class SageIntacctConnector:
         for lineitem in journal_entry_lineitems:
             expense_link = self.get_expense_link(lineitem)
             credit_line = {
-                'accountno': general_mappings.default_credit_card_id,
+                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
                 'currency': journal_entry.currency,
                 'amount': lineitem.amount,
                 'tr_type': -1,
