@@ -207,3 +207,14 @@ def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str):
     if fyle_credentials:
         fyle_credentials.refresh_token = refresh_token
         fyle_credentials.save()
+
+def delete_cards_mapping_settings(configuration: Configuration):
+    if configuration.corporate_credit_card_expenses_object != 'CHARGE_CARD_TRANSACTION' :
+        mapping_setting = MappingSetting.objects.filter(
+            workspace_id=configuration.workspace_id,
+            source_field='CORPORATE_CARD',
+            destination_field='CHARGE_CARD_NUMBER'
+        ).first()
+
+        if mapping_setting:
+            mapping_setting.delete()
