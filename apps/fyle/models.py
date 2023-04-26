@@ -100,6 +100,7 @@ class Expense(models.Model):
     file_ids = ArrayField(base_field=models.CharField(max_length=255), null=True, help_text='File IDs')
     payment_number = models.CharField(max_length=55, help_text='Expense payment number', null=True)
     corporate_card_id = models.CharField(max_length=255, null=True, blank=True, help_text='Corporate Card ID')
+    is_skipped = models.BooleanField(null=True, default=False, help_text='Expense is skipped or not')
 
     class Meta:
         db_table = 'expenses'
