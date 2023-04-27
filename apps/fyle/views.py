@@ -17,7 +17,7 @@ from apps.tasks.models import TaskLog
 from .tasks import create_expense_groups, schedule_expense_group_creation
 from .helpers import check_interval_and_sync_dimension, sync_dimensions
 from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
-from .serializers import ExpenseFilterSerializer, ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer, \
+from .serializers import ExpenseFilterSerializer, ExpenseGroupExpenseSerializer, ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer, \
     ExpenseGroupSettingsSerializer
 
 
@@ -111,7 +111,7 @@ class ExpenseGroupByIdView(generics.RetrieveAPIView):
     queryset = ExpenseGroup.objects.all()
 
 
-class ExpenseView(generics.RetrieveAPIView):
+class ExpenseGroupExpenseView(generics.RetrieveAPIView):
     """
     Expense view
     """
@@ -127,7 +127,7 @@ class ExpenseView(generics.RetrieveAPIView):
             expenses = Expense.objects.filter(
                 id__in=expense_group.expenses.values_list('id', flat=True)).order_by('-updated_at')
             return Response(
-                data=ExpenseSerializer(expenses, many=True).data,
+                data=ExpenseGroupExpenseSerializer(expenses, many=True).data,
                 status=status.HTTP_200_OK
             )
 

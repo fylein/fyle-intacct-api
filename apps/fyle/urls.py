@@ -16,7 +16,7 @@ Including another URLconf
 from django.urls import path
 import itertools
 
-from .views import CustomFieldView, ExpenseFilterView, ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView, \
+from .views import CustomFieldView, ExpenseFilterView, ExpenseGroupExpenseView, ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView, \
     ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView, FyleFieldsView, \
         ExpenseAttributesView, ExpenseGroupSettingsView, RefreshFyleDimensionView, SyncFyleDimensionView, \
         ExpenseGroupCountView
@@ -26,7 +26,7 @@ expense_groups_paths = [
     path('expense_groups/count/', ExpenseGroupCountView.as_view()),
     path('expense_groups/trigger/', ExpenseGroupScheduleView.as_view()),
     path('expense_groups/<int:pk>/', ExpenseGroupByIdView.as_view()),
-    path('expense_groups/<int:expense_group_id>/expenses/', ExpenseView.as_view()),
+    path('expense_groups/<int:expense_group_id>/expenses/', ExpenseGroupExpenseView.as_view()),
     path('employees/', EmployeeView.as_view()),
     path('categories/', CategoryView.as_view()),
     path('projects/', ProjectView.as_view()),
