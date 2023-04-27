@@ -751,6 +751,49 @@ ALTER SEQUENCE public.expense_fields_id_seq OWNED BY public.expense_fields.id;
 
 
 --
+-- Name: expense_filters; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.expense_filters (
+    id integer NOT NULL,
+    condition character varying(255) NOT NULL,
+    operator character varying(255) NOT NULL,
+    "values" character varying(255)[],
+    rank integer NOT NULL,
+    join_by character varying(3),
+    is_custom boolean NOT NULL,
+    custom_field_type character varying(255),
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.expense_filters OWNER TO postgres;
+
+--
+-- Name: expense_filters_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.expense_filters_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.expense_filters_id_seq OWNER TO postgres;
+
+--
+-- Name: expense_filters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.expense_filters_id_seq OWNED BY public.expense_filters.id;
+
+
+--
 -- Name: expense_group_settings; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -919,7 +962,8 @@ CREATE TABLE public.expenses (
     tax_group_id character varying(255),
     file_ids character varying(255)[],
     payment_number character varying(55),
-    corporate_card_id character varying(255)
+    corporate_card_id character varying(255),
+    is_skipped boolean
 );
 
 
@@ -2045,6 +2089,13 @@ ALTER TABLE ONLY public.expense_fields ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: expense_filters id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.expense_filters ALTER COLUMN id SET DEFAULT nextval('public.expense_filters_id_seq'::regclass);
+
+
+--
 -- Name: expense_group_settings id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2415,6 +2466,10 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 170	Can change expense field	43	change_expensefield
 171	Can delete expense field	43	delete_expensefield
 172	Can view expense field	43	view_expensefield
+173	Can add expense filter	44	add_expensefilter
+174	Can change expense filter	44	change_expensefilter
+175	Can delete expense filter	44	delete_expensefilter
+176	Can view expense filter	44	view_expensefilter
 \.
 
 
@@ -3493,6 +3548,7 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 41	mappings	generalmapping
 42	mappings	locationentitymapping
 43	fyle_accounting_mappings	expensefield
+44	fyle	expensefilter
 \.
 
 
@@ -3641,6 +3697,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 137	fyle	0017_expense_corporate_card_id	2023-04-14 10:35:13.275291+00
 138	workspaces	0025_auto_20230417_1124	2023-04-17 11:42:04.893467+00
 139	mappings	0012_auto_20230417_1124	2023-04-17 11:42:04.876255+00
+140	fyle	0018_auto_20230427_0355	2023-04-27 03:56:21.411364+00
 \.
 
 
@@ -7002,6 +7059,14 @@ COPY public.expense_fields (id, attribute_type, source_field_id, is_enabled, cre
 
 
 --
+-- Data for Name: expense_filters; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.expense_filters (id, condition, operator, "values", rank, join_by, is_custom, custom_field_type, created_at, updated_at, workspace_id) FROM stdin;
+\.
+
+
+--
 -- Data for Name: expense_group_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -7052,10 +7117,10 @@ COPY public.expense_reports (id, employee_id, description, supdoc_id, created_at
 -- Data for Name: expenses; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id) FROM stdin;
-1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N
-2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N
-3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N
+COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped) FROM stdin;
+1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f
+2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f
+3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f
 \.
 
 
@@ -7564,7 +7629,7 @@ SELECT pg_catalog.setval('public.auth_group_permissions_id_seq', 1, false);
 -- Name: auth_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.auth_permission_id_seq', 172, true);
+SELECT pg_catalog.setval('public.auth_permission_id_seq', 176, true);
 
 
 --
@@ -7585,14 +7650,14 @@ SELECT pg_catalog.setval('public.django_admin_log_id_seq', 1, false);
 -- Name: django_content_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_content_type_id_seq', 43, true);
+SELECT pg_catalog.setval('public.django_content_type_id_seq', 44, true);
 
 
 --
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 139, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 140, true);
 
 
 --
@@ -7621,6 +7686,13 @@ SELECT pg_catalog.setval('public.employee_mappings_id_seq', 5, true);
 --
 
 SELECT pg_catalog.setval('public.expense_fields_id_seq', 1, false);
+
+
+--
+-- Name: expense_filters_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.expense_filters_id_seq', 1, false);
 
 
 --
@@ -8031,6 +8103,14 @@ ALTER TABLE ONLY public.expense_fields
 
 ALTER TABLE ONLY public.expense_fields
     ADD CONSTRAINT expense_fields_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: expense_filters expense_filters_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.expense_filters
+    ADD CONSTRAINT expense_filters_pkey PRIMARY KEY (id);
 
 
 --
@@ -8628,6 +8708,13 @@ CREATE INDEX expense_fields_workspace_id_b60af18c ON public.expense_fields USING
 
 
 --
+-- Name: expense_filters_workspace_id_0ecd4914; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expense_filters_workspace_id_0ecd4914 ON public.expense_filters USING btree (workspace_id);
+
+
+--
 -- Name: expense_groups_expenses_expense_id_af963907; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9005,6 +9092,14 @@ ALTER TABLE ONLY public.employee_mappings
 
 ALTER TABLE ONLY public.expense_fields
     ADD CONSTRAINT expense_fields_workspace_id_b60af18c_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: expense_filters expense_filters_workspace_id_0ecd4914_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.expense_filters
+    ADD CONSTRAINT expense_filters_workspace_id_0ecd4914_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

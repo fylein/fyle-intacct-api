@@ -16,7 +16,7 @@ Including another URLconf
 from django.urls import path
 import itertools
 
-from .views import ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView, \
+from .views import CustomFieldView, ExpenseFilterView, ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView, \
     ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView, FyleFieldsView, \
         ExpenseAttributesView, ExpenseGroupSettingsView, RefreshFyleDimensionView, SyncFyleDimensionView, \
         ExpenseGroupCountView
@@ -31,7 +31,7 @@ expense_groups_paths = [
     path('categories/', CategoryView.as_view()),
     path('projects/', ProjectView.as_view()),
     path('cost_centers/', CostCenterView.as_view()),
-    path('expense_group_settings/', ExpenseGroupSettingsView.as_view()),
+    path('expense_group_settings/', ExpenseGroupSettingsView.as_view())
 ]
 
 fyle_dimension_paths = [
@@ -42,6 +42,9 @@ fyle_dimension_paths = [
 other_paths = [
     path('expense_attributes/', ExpenseAttributesView.as_view()),
     path('fyle_fields/', FyleFieldsView.as_view()),
+    path('expense_filters/', ExpenseFilterView.as_view(), name='expense-filters'),
+    path('expenses/', ExpenseView.as_view(), name='expenses'),
+    path('custom_fields/', CustomFieldView.as_view(), name='custom-field')
 ]
 
 urlpatterns = list(itertools.chain(expense_groups_paths, fyle_dimension_paths, other_paths))

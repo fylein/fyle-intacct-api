@@ -7,14 +7,17 @@ from rest_framework.response import Response
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
+from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
+
+from fyle_integrations_platform_connector import PlatformConnector
 
 from apps.workspaces.models import FyleCredential, Configuration, Workspace
 from apps.tasks.models import TaskLog
 
 from .tasks import create_expense_groups, schedule_expense_group_creation
 from .helpers import check_interval_and_sync_dimension, sync_dimensions
-from .models import Expense, ExpenseGroup, ExpenseGroupSettings
-from .serializers import ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer, \
+from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+from .serializers import ExpenseFilterSerializer, ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer, \
     ExpenseGroupSettingsSerializer
 
 
@@ -315,3 +318,80 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class ExpenseFilterView(generics.ListCreateAPIView, generics.DestroyAPIView):
+    """
+    Expense Filter view
+    """
+    serializer_class = ExpenseFilterSerializer
+
+    def get_queryset(self):
+        queryset = ExpenseFilter.objects.filter(workspace_id=self.kwargs['workspace_id']).order_by('rank')
+        return queryset
+
+    def delete(self, request, *args, **kwargs):
+        workspace_id = self.kwargs['workspace_id']
+        rank = self.request.query_params.getlist('rank')
+        ExpenseFilter.objects.filter(workspace_id=workspace_id, rank__in=rank).delete()
+
+        return Response(data={
+            'workspace_id': workspace_id,
+            'rank' : rank,
+            'message': 'Expense filter deleted'
+        })
+
+
+class ExpenseView(generics.ListAPIView):
+    """
+    Expense view
+    """
+
+    serializer_class = ExpenseSerializer
+
+    def get_queryset(self):
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+        filters = {
+            'org_id': Workspace.objects.get(id=self.kwargs['workspace_id']).fyle_org_id
+        }
+        is_skipped = self.request.query_params.get('is_skipped')
+        if is_skipped == 'true':
+            filters['is_skipped'] = True
+        if start_date and end_date:
+            filters['updated_at__range'] = [start_date, end_date]
+        queryset = Expense.objects.filter(**filters).order_by('-updated_at')
+        return queryset
+
+
+class CustomFieldView(generics.RetrieveAPIView):
+    """
+    Custom Field view
+    """
+    def get(self, request, *args, **kwargs):
+        """
+        Get Custom Fields
+        """
+        workspace_id = self.kwargs['workspace_id']
+
+        fyle_credentails = FyleCredential.objects.get(workspace_id=workspace_id)
+
+        platform = PlatformConnector(fyle_credentails)
+
+        custom_fields = platform.expense_custom_fields.list_all()
+
+        response = []
+        response.extend(DEFAULT_FYLE_CONDITIONS)
+        for custom_field in custom_fields:
+            if custom_field['type'] in ('SELECT', 'NUMBER', 'TEXT'):
+                response.append({
+                    'field_name': custom_field['field_name'],
+                    'type': custom_field['type'],
+                    'is_custom': custom_field['is_custom']
+                })
+            
+        return Response(
+            data=response,
+            status=status.HTTP_200_OK
+        )
+
