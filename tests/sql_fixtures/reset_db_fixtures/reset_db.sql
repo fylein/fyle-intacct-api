@@ -963,7 +963,8 @@ CREATE TABLE public.expenses (
     file_ids character varying(255)[],
     payment_number character varying(55),
     corporate_card_id character varying(255),
-    is_skipped boolean
+    is_skipped boolean,
+    report_title text
 );
 
 
@@ -3698,6 +3699,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 138	workspaces	0025_auto_20230417_1124	2023-04-17 11:42:04.893467+00
 139	mappings	0012_auto_20230417_1124	2023-04-17 11:42:04.876255+00
 140	fyle	0018_auto_20230427_0355	2023-04-27 03:56:21.411364+00
+141	fyle	0019_expense_report_title	2023-04-27 16:57:27.877735+00
 \.
 
 
@@ -7117,10 +7119,10 @@ COPY public.expense_reports (id, employee_id, description, supdoc_id, created_at
 -- Data for Name: expenses; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped) FROM stdin;
-1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f
-2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f
-3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f
+COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped, report_title) FROM stdin;
+1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f	\N
+2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f	\N
+3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f	\N
 \.
 
 
@@ -7657,7 +7659,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 44, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 140, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 141, true);
 
 
 --

@@ -16,6 +16,7 @@ data = {
             'expense_number': 'E/2021/12/T/3',
             'org_id': 'orsO0VW86WLQ',
             'claim_number': 'C/2021/12/R/2',
+            'report_title': 'Anish Halo MCU',
             'payment_number': 'C/2021/12/R/2',
             'amount': 150,
             'tax_amount': 0,
@@ -57,6 +58,7 @@ data = {
             'expense_number': 'E/2021/12/T/3',
             'org_id': 'orsO0VW86WLQ',
             'claim_number': 'C/2021/12/R/2',
+            'report_title': 'Anish Halo MCU',
             'payment_number': 'C/2021/12/R/2',
             'amount': 150,
             'tax_amount': 0,
@@ -544,5 +546,287 @@ data = {
         'updated_at': '2022-05-06T06:32:51.665316',
         'user_id': 'usqywo0f3nBY',
         }
-    ]}]
+    ]}],
+    "skipped_expenses":{
+        'count': 2,
+        'next': None,
+        'previous': None,
+        'results': [
+            {
+                'updated_at': '2021-12-03T11:26:58.702209Z',
+                'claim_number': '    C/2021/12/R/198',
+                'employee_email': 'jhonsnow@fyle.in',
+                'employee_name': None,
+                'fund_source': 'CCC'
+            },
+            {
+                'updated_at': '2021-12-03T11:26:58.702209Z',
+                'claim_number': '    C/2021/12/R/199',
+                'employee_email': 'jhonsnow@fyle.in',
+                'employee_name': None,
+                'fund_source': 'CCC'
+            }
+        ]
+    },
+    "custom_fields_response":[
+        {
+            "field_name": "employee_email",
+            "type": None,
+            "is_custom": False
+        },
+        {
+            "field_name": "report_id",
+            "type": None,
+            "is_custom": False
+        },
+        {
+            "field_name": "report_title",
+            "type": None,
+            "is_custom": False
+        },
+        {
+            "field_name": "spent_at",
+            "type": None,
+            "is_custom": False
+        },
+        {
+            "field_name": "Nilesh Favourite Singer",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Unit",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Custom Segment",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Custom Segment From Netsuite",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Naruto",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Lolsob",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Kissan",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Labhvam",
+            "type": "SELECT",
+            "is_custom": True
+        },
+        {
+            "field_name": "Location",
+            "type": "SELECT",
+            "is_custom": True
+        }
+    ],
+    "expense_filters_response":{
+        "count": 2,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "id": 1,
+                "condition" : "employee_email",
+                "operator" : "in",
+                "values" : [
+                    "ashwinnnnn.t@fyle.in",
+                    "admin1@fyleforleaf.in"
+                ],
+                "rank" : "1",
+                "workspace" : 1,
+                "join_by" : "AND",
+                "is_custom" : False,
+                "custom_field_type": "SELECT",
+                "created_at": "2023-01-04T17:48:16.064064Z",
+                "updated_at": "2023-01-05T08:05:23.660746Z",
+                "workspace": 1
+            },
+            {
+                "id": 2,
+                "condition" : "spent_at",
+                "operator" : "lt",
+                "values" : ['2020-04-20 23:59:59+00'],
+                "rank" : "2",
+                "workspace" : 1,
+                "join_by" : None,
+                "is_custom" : False,
+                "custom_field_type": "SELECT",
+                "created_at": "2023-01-04T17:48:16.064064Z",
+                "updated_at": "2023-01-05T08:05:23.660746Z",
+                "workspace": 1
+            },
+        ]
+    },
+    "expense_filter_0": {
+        "condition" : "employee_email",
+        "operator" : "in",
+        "values" : [
+            "jhonsnow@fyle.in"
+        ],
+        "rank" : "1",
+        "is_custom" : False,
+    },
+    "expense_filter_0_response":{
+        "id": 1,
+        "condition": "employee_email",
+        "operator": "in",
+        "values": [
+            "jhonsnow@fyle.in"
+        ],
+        "rank": 1,
+        "join_by": None,
+        "is_custom": False,
+        "custom_field_type": None,
+        "created_at": "2023-01-04T17:48:16.064064Z",
+        "updated_at": "2023-01-06T17:06:21.592546Z",
+        "workspace": 1
+    },
+    "expense_filter_1": {
+        "condition" : "employee_email",
+        "operator" : "in",
+        "values" : [
+            "ashwinnnnn.t@fyle.in",
+            "admin1@fyleforleaf.in"
+        ],
+        "rank" : "1",
+        "join_by" : "AND",
+        "is_custom" : False,
+    },
+    "expense_filter_1_response": {
+        "id": 1,
+        "condition": "employee_email",
+        "operator": "in",
+        "values": [
+            "ashwinnnnn.t@fyle.in",
+            "admin1@fyleforleaf.in"
+        ],
+        "rank": 1,
+        "join_by": "AND",
+        "is_custom": False,
+        "custom_field_type": "TEXT",
+        "created_at": "2023-01-04T17:48:16.064064Z",
+        "updated_at": "2023-01-05T07:58:13.806447Z",
+        "workspace": 1
+    },
+    "expense_filter_2":{
+        "condition" : "spent_at",
+        "operator" : "lt",
+        "values" : ['2020-04-20 23:59:59+00'],
+        "rank" : 2,
+        "join_by" : "",
+        "is_custom" : False,
+    },
+    "expense_filter_2_response": {
+        "id": 2,
+        "condition": "spent_at",
+        "operator": "lt",
+        "values": ['2020-04-20 23:59:59+00'],
+        "rank": 2,
+        "join_by": None,
+        "is_custom": False,
+        "custom_field_type": "DATE",
+        "created_at": "2023-01-04T17:48:16.064064Z",
+        "updated_at": "2023-01-05T07:58:13.806447Z",
+        "workspace": 1
+    },
+    "ccc_expenses": [
+        {
+            'id': 'tx4ziVSAyIsvlol',
+            'employee_email': 'naruto@fyle.in',
+            'category': 'Accounts Payable',
+            'sub_category': 'Accounts Payable',
+            'project': 'Aaron Abbott',
+            'project_id': 263589,
+            'expense_number': 'E/2021/12/T/31',
+            'payment_number': 'P/2023/12/T/12',
+            'org_id': 'or79Cob97KSh',
+            'claim_number': 'C/2021/12/R/21',
+            'employee_name': 'Naruto',
+            'amount': 150,
+            'tax_amount': 0,
+            'tax_group_id': 'tgWdIdEwcKlK',
+            'settled_at': '2021-12-23T07:16:17.034079+00:00',
+            'currency': 'USD',
+            'foreign_amount': None,
+            'foreign_currency': None,
+            'report_title': 'report title 11',
+            'settlement_id': 'seteYqkAfuWOSs',
+            'reimbursable': True,
+            'billable': False,
+            'state': 'PAID',
+            'vendor': None,
+            'cost_center': None,
+            'corporate_card_id': None,
+            'purpose': None,
+            'report_id': 'rpqaDywYdbbw12',
+            'file_ids': [],
+            'spent_at': '2021-12-22T07:30:26.289842+00:00',
+            'approved_at': '2021-12-22T07:30:26.289842+00:00',
+            'expense_created_at': '2021-12-23T07:14:13.990650+00:00',
+            'expense_updated_at': '2021-12-27T05:26:43.954470+00:00',
+            'source_account_type': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT',
+            'verified_at': None,
+            'custom_properties': {
+                'Vehicle Type': '',
+                'Fyle Categories': '',
+            },
+        },
+        {
+            'id': 'tx6wOnBVaumklol',
+            'employee_email': 'naruto@fyle.in',
+            'payment_number': 'P/2023/12/T/12',
+            'category': 'Accounts Payable',
+            'sub_category': 'Accounts Payable',
+            'project': 'Aaron Abbott',
+            'project_id': 263589,
+            'expense_number': 'E/2021/12/T/21',
+            'org_id': 'or79Cob97KSh',
+            'claim_number': 'C/2021/12/R/11',
+            'amount': 99,
+            'tax_amount': 16.5,
+            'tax_group_id': 'tg3fCYQxjBeC',
+            'settled_at': '2021-12-22T07:31:12.857977+00:00',
+            'currency': 'USD',
+            'foreign_amount': None,
+            'foreign_currency': None,
+            'report_title': 'report 21',
+            'settlement_id': 'set5PSfKaloaCs',
+            'employee_name': 'Naruto',
+            'reimbursable': True,
+            'billable': False,
+            'state': 'PAID',
+            'vendor': None,
+            'cost_center': None,
+            'corporate_card_id': None,
+            'purpose': None,
+            'report_id': 'rpvpLIPrP1EO12',
+            'file_ids': [],
+            'spent_at': '2021-12-22T07:30:26.289842+00:00',
+            'approved_at': '2021-12-22T07:30:26.289842+00:00',
+            'expense_created_at': '2021-12-22T07:30:26.289842+00:00',
+            'expense_updated_at': '2021-12-23T07:11:39.770191+00:00',
+            'source_account_type': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT',
+            'verified_at': None,
+            'custom_properties': {
+                'Vehicle Type': '',
+                'Fyle Categories': '',
+            },
+        },
+    ],
 }

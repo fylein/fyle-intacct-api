@@ -22,7 +22,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expense
-        fields = '__all__'
+        fields = ['updated_at', 'claim_number', 'employee_email', 'fund_source']
 
 
 class ExpenseGroupSettingsSerializer(serializers.ModelSerializer):
@@ -43,6 +43,15 @@ class ExpenseFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExpenseAttribute
         fields = ['attribute_type', 'display_name']
+
+
+class ExpenseGroupExpenseSerializer(serializers.ModelSerializer):
+    """
+    Expense Group Expense serializer
+    """
+    class Meta:
+        model = Expense
+        fields = '__all__'
 
 
 class ExpenseFilterSerializer(serializers.ModelSerializer):

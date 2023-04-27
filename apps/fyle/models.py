@@ -127,6 +127,7 @@ class Expense(models.Model):
     payment_number = models.CharField(max_length=55, help_text='Expense payment number', null=True)
     corporate_card_id = models.CharField(max_length=255, null=True, blank=True, help_text='Corporate Card ID')
     is_skipped = models.BooleanField(null=True, default=False, help_text='Expense is skipped or not')
+    report_title = models.TextField(null=True, blank=True, help_text='Report title')
 
     class Meta:
         db_table = 'expenses'
@@ -139,6 +140,9 @@ class Expense(models.Model):
         expense_objects = []
 
         for expense in expenses:
+            for custom_property_field in expense['custom_properties']:
+                if expense['custom_properties'][custom_property_field] == '':
+                    expense['custom_properties'][custom_property_field] = None
             expense_object, _ = Expense.objects.update_or_create(
                 expense_id=expense['id'],
                 defaults={
@@ -163,6 +167,7 @@ class Expense(models.Model):
                     'cost_center': expense['cost_center'],
                     'purpose': expense['purpose'],
                     'report_id': expense['report_id'],
+                    'report_title': expense['report_title'],
                     'spent_at': expense['spent_at'],
                     'approved_at': expense['approved_at'],
                     'expense_created_at': expense['expense_created_at'],
