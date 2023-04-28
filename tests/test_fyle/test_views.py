@@ -5,6 +5,7 @@ import json
 from .fixtures import data
 from tests.helper import dict_compare_keys
 from apps.tasks.models import TaskLog
+from django.urls import reverse
 
 
 def test_expense_group_view(api_client, test_connection):
@@ -387,3 +388,76 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
 
     assert response.status_code == 400
     assert response.data['message'] == 'Fyle credentials not found in workspace'
+
+
+def test_expense_filters(api_client, test_connection):
+   access_token=test_connection.access_token
+
+   url = reverse('expense-filters', 
+      kwargs={
+         'workspace_id': 1,
+      }
+   )
+
+   api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+   response = api_client.post(url,data=data['expense_filter_1'])
+   assert response.status_code == 201
+   response = json.loads(response.content)
+
+   assert dict_compare_keys(response, data['expense_filter_1_response']) == [], 'expense group api return diffs in keys'
+
+   response = api_client.post(url,data=data['expense_filter_2'])
+   assert response.status_code == 201
+   response = json.loads(response.content)
+
+   assert dict_compare_keys(response, data['expense_filter_2_response']) == [], 'expense group api return diffs in keys'
+
+   response = api_client.get(url)
+   assert response.status_code == 200
+   response = json.loads(response.content)
+
+   assert dict_compare_keys(response, data['expense_filters_response']) == [], 'expense group api return diffs in keys'
+
+
+@pytest.mark.django_db(databases=['default'])
+def test_custom_fields(mocker, api_client, test_connection):
+   access_token=test_connection.access_token
+
+   url = reverse('custom-field', 
+      kwargs={
+         'workspace_id': 1,
+      }
+   )
+
+   mocker.patch(
+      'fyle.platform.apis.v1beta.admin.expense_fields.list_all',
+      return_value=data['get_all_custom_fields']
+   )
+
+   api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+   response = api_client.get(url)
+   assert response.status_code == 200
+   response = json.loads(response.content)
+
+   assert dict_compare_keys(response, data['custom_fields_response']) == [], 'expense group api return diffs in keys'
+
+
+@pytest.mark.django_db(databases=['default'])
+def test_expenses(mocker, api_client, test_connection):
+   access_token=test_connection.access_token
+
+   url = reverse('expenses', 
+      kwargs={
+         'workspace_id': 1,
+      }
+   )
+
+   api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+   response = api_client.get(url)
+   assert response.status_code == 200
+   response = json.loads(response.content)
+
+   assert dict_compare_keys(response, data['skipped_expenses']) == [], 'expense group api return diffs in keys'
