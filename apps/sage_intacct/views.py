@@ -1,5 +1,6 @@
 from django.db.models import Q
 from datetime import datetime
+import logging
 
 from rest_framework.response import Response
 from rest_framework.views import status
@@ -25,6 +26,8 @@ from .models import ExpenseReport, Bill, ChargeCardTransaction
 from .serializers import ExpenseReportSerializer, BillSerializer, ChargeCardTransactionSerializer, \
     SageIntacctFieldSerializer
 
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 class DestinationAttributesView(generics.ListAPIView):
     """
@@ -154,7 +157,8 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_200_OK
             )
 
-        except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        except (SageIntacctCredential.DoesNotExist, InvalidTokenError) as exception:
+            logger.info('Sage Intacct credentials not found / invalid in workspace', exception.__dict__)
             return Response(
                 data={
                     'message': 'Sage Intacct credentials not found / invalid in workspace'
@@ -188,7 +192,8 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_200_OK
             )
 
-        except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        except (SageIntacctCredential.DoesNotExist, InvalidTokenError) as exception:
+            logger.info('Sage Intacct credentials not found / invalid in workspace', exception.__dict__)
             return Response(
                 data={
                     'message': 'Sage Intacct credentials not found / invalid in workspace'
