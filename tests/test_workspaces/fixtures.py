@@ -13,6 +13,7 @@ data = {
             'expense_id':'txxTi9ZfdepC',
             'expense_number':'E/2022/05/T/16',
             'claim_number':'C/2022/05/R/4',
+            'report_title':'R/2022/05/R/4',
             'amount':50.0,
             'currency':'USD',
             'foreign_amount':None,
