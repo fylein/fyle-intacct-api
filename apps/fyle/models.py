@@ -266,7 +266,7 @@ class ExpenseGroupSettings(models.Model):
             if 'expense_number' in current_ccc_settings:
                 current_ccc_settings.remove('expense_number')
         else:
-            current_ccc_settings.append('claim_number')
+            current_ccc_settings.append('expense_number')
 
         if 'settelement_id' not in current_ccc_settings:
             if 'payment_number' in current_ccc_settings:
