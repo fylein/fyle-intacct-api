@@ -620,6 +620,8 @@ def test_get_item_id_or_none(db, mocker):
     general_mappings.default_item_id = None
     general_mappings.save()
 
+    item_id = get_item_id_or_none(expense_group, expense, general_mappings)
+
     assert item_id == None
 
     general_mappings.default_item_id = '1234'
