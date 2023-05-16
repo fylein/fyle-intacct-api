@@ -315,6 +315,13 @@ def test_async_auto_map_employees(mocker, db):
     employee_mappings = EmployeeMapping.objects.filter(workspace_id=workspace_id).count()
     assert employee_mappings == 1
 
+    with mock.patch('apps.mappings.tasks.async_auto_map_employees') as mock_call:
+        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
+        async_auto_map_employees(workspace_id)
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        async_auto_map_employees(workspace_id)
+
 
 def test_schedule_auto_map_employees(db):
     workspace_id = 1
