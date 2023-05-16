@@ -18,11 +18,11 @@ from apps.workspaces.models import Workspace
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
     'fund_source', 'vendor', 'category', 'project', 'cost_center',
-    'verified_at', 'approved_at', 'spent_at', 'expense_id'
+    'verified_at', 'approved_at', 'spent_at', 'expense_id', 'expense_number', 'payment_number'
 ]
 
 ALLOWED_FORM_INPUT = {
-    'group_expenses_by': ['settlement_id', 'claim_number', 'report_id', 'category', 'vendor', 'expense_id'],
+    'group_expenses_by': ['settlement_id', 'claim_number', 'report_id', 'category', 'vendor', 'expense_id', 'expense_number', 'payment_number'],
     'export_date_type': ['current_date', 'approved_at', 'spent_at', 'verified_at', 'last_spent_at']
 }
 
@@ -243,12 +243,36 @@ class ExpenseGroupSettings(models.Model):
                 current_reimbursable_settings.remove('claim_number')
         else:
             current_reimbursable_settings.append('claim_number')
+        
+        if 'expense_id' not in current_reimbursable_settings:
+            if 'expense_number' in current_reimbursable_settings:
+                current_reimbursable_settings.remove('expense_number')
+        else:
+            current_reimbursable_settings.append('expense_number')
+
+        if 'settlement_id' not in current_reimbursable_settings:
+            if 'payment_number' in current_reimbursable_settings:
+                current_reimbursable_settings.remove('payment_number')
+        else:
+            current_reimbursable_settings.append('payment_number')
 
         if 'report_id' not in current_ccc_settings:
             if 'claim_number' in current_ccc_settings:
                 current_ccc_settings.remove('claim_number')
         else:
             current_ccc_settings.append('claim_number')
+
+        if 'expense_id' not in current_ccc_settings:
+            if 'expense_number' in current_ccc_settings:
+                current_ccc_settings.remove('expense_number')
+        else:
+            current_ccc_settings.append('expense_number')
+
+        if 'settlement_id' not in current_ccc_settings:
+            if 'payment_number' in current_ccc_settings:
+                current_ccc_settings.remove('payment_number')
+        else:
+            current_ccc_settings.append('payment_number')
 
         reimbursable_grouped_by.extend(current_reimbursable_settings)
         corporate_credit_card_expenses_grouped_by.extend(current_ccc_settings)
@@ -274,10 +298,6 @@ class ExpenseGroupSettings(models.Model):
 
         if expense_group_settings['ccc_export_date_type'] != 'current_date':
             corporate_credit_card_expenses_grouped_by.append(expense_group_settings['ccc_export_date_type'])
-
-        if 'claim_number' in reimbursable_grouped_by and corporate_credit_card_expenses_grouped_by:
-            reimbursable_grouped_by.append('report_id')
-            corporate_credit_card_expenses_grouped_by.append('report_id')
 
         return ExpenseGroupSettings.objects.update_or_create(
             workspace_id=workspace_id,
