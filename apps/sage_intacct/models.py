@@ -152,14 +152,35 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
 def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     item_id = None
 
-    if lineitem.billable:
+    item_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='ITEM'
+    ).first()
+
+    if item_setting:
+        attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field).first()
+        source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=item_setting.source_field,
+            destination_type='ITEM',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+        if mapping:
+            item_id = mapping.destination.destination_id
+        else:
+            project_setting: MappingSetting = MappingSetting.objects.filter(
+                workspace_id=expense_group.workspace_id,
+                destination_field='PROJECT'
+            ).first()
+            item_id = general_mappings.default_item_id if general_mappings.default_item_id and project_setting else None
+    else:
         project_setting: MappingSetting = MappingSetting.objects.filter(
             workspace_id=expense_group.workspace_id,
             destination_field='PROJECT'
         ).first()
-        if project_setting:
-            item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
-
+        item_id = general_mappings.default_item_id if general_mappings.default_item_id and project_setting else None
     return item_id
 
 

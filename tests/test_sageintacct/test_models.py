@@ -26,7 +26,7 @@ def test_create_bill(db):
 
     for bill_lineitem in bill_lineitems:
         assert bill_lineitem.amount == 21.0
-        assert bill_lineitem.billable == False
+        assert bill_lineitem.billable == None
 
     assert bill.currency == 'USD'
     assert bill.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
