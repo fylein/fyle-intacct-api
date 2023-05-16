@@ -481,6 +481,9 @@ def test_schedule_fyle_attributes_creation(db, mocker):
 
 
 def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting):
+    with mock.patch('apps.mappings.tasks.auto_create_expense_fields_mappings') as mock_call:
+        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
+        auto_create_expense_fields_mappings(workspace_id=workspace_id)
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
         return_value=[]
