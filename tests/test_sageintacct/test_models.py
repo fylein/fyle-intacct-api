@@ -617,6 +617,14 @@ def test_get_item_id_or_none(db, mocker):
 
     expense = expense_group.expenses.first()
 
+    general_mappings.default_item_id = None
+    general_mappings.save()
+
+    assert item_id == None
+
+    general_mappings.default_item_id = '1234'
+    general_mappings.save()
+
     item_id = get_item_id_or_none(expense_group, expense, general_mappings)
 
     assert item_id == general_mappings.default_item_id
@@ -655,14 +663,6 @@ def test_get_item_id_or_none(db, mocker):
     item_id = get_item_id_or_none(expense_group, expense, general_mappings)
 
     assert item_id == mapping.destination.destination_id
-
-    expense.custom_properties['Employee'] = ''
-    expense.save()
-
-    general_mappings.default_item_id = None
-    general_mappings.save()
-
-    assert item_id == None
 
 def test_get_ccc_account_id(db, mocker):
     workspace_id = 1
