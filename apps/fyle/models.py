@@ -243,12 +243,36 @@ class ExpenseGroupSettings(models.Model):
                 current_reimbursable_settings.remove('claim_number')
         else:
             current_reimbursable_settings.append('claim_number')
+        
+        if 'expense_id' not in current_reimbursable_settings:
+            if 'expense_number' in current_reimbursable_settings:
+                current_reimbursable_settings.remove('expense_number')
+        else:
+            current_reimbursable_settings.append('expense_number')
+
+        if 'settelement_id' not in current_reimbursable_settings:
+            if 'payment_number' in current_reimbursable_settings:
+                current_reimbursable_settings.remove('payment_number')
+        else:
+            current_reimbursable_settings.append('payment_number')
 
         if 'report_id' not in current_ccc_settings:
             if 'claim_number' in current_ccc_settings:
                 current_ccc_settings.remove('claim_number')
         else:
             current_ccc_settings.append('claim_number')
+
+        if 'expense_id' not in current_ccc_settings:
+            if 'expense_number' in current_ccc_settings:
+                current_ccc_settings.remove('expense_number')
+        else:
+            current_ccc_settings.append('expense_number')
+
+        if 'settelement_id' not in current_ccc_settings:
+            if 'payment_number' in current_ccc_settings:
+                current_ccc_settings.remove('payment_number')
+        else:
+            current_ccc_settings.append('payment_number')
 
         reimbursable_grouped_by.extend(current_reimbursable_settings)
         corporate_credit_card_expenses_grouped_by.extend(current_ccc_settings)

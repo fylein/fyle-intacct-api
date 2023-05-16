@@ -298,6 +298,8 @@ def get_memo(expense_group: ExpenseGroup,
     elif 'claim_number' in expense_group.description and expense_group.description['claim_number']:
         # Grouped by expense report
         unique_number = expense_group.description['claim_number']
+    elif 'expense_number' in expense_group.description and expense_group.description['expense_number']:
+        unique_number = expense_group.description['expense_number']
 
     if payment_type:
         # Payments sync
