@@ -656,6 +656,9 @@ def test_get_item_id_or_none(db, mocker):
 
     assert item_id == mapping.destination.destination_id
 
+    expense.custom_properties['Employee'] = ''
+    expense.save()
+
     general_mappings.default_item_id = None
     general_mappings.save()
 
