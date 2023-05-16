@@ -608,6 +608,59 @@ def test_get_memo(db):
 
     get_memo(expense_group, Bill, workspace_id)
 
+def test_get_item_id_or_none(db, mocker):
+    workspace_id = 1
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense = expense_group.expenses.first()
+
+    item_id = get_item_id_or_none(expense_group, expense, general_mappings)
+
+    assert item_id == general_mappings.default_item_id
+
+    item_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
+    item_setting.destination_field='ITEM'
+    item_setting.save()
+    print(item_setting.source_field)
+
+    expense_attribute = ExpenseAttribute.objects.first()
+    expense_attribute.attribute_type = 'EMPLOYEE'
+    expense_attribute.display_name = 'Employee'
+    expense_attribute.save()
+    
+    item_id = get_item_id_or_none(expense_group, expense, general_mappings)
+
+    assert item_id == general_mappings.default_item_id
+
+    mapping = Mapping.objects.first()
+    mapping.destination_type = 'ITEM'
+    mapping.source_type = 'EMPLOYEE'
+    mapping.source=expense_attribute
+    mapping.workspace_id=general_mappings.workspace
+    mapping.save()
+
+    expense.custom_properties['Employee'] = expense_attribute.value
+    expense.save()
+
+    mapping: Mapping = Mapping.objects.filter(
+            source_type=item_setting.source_field,
+            destination_type='ITEM',
+            source__value=expense_attribute.value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+
+    item_id = get_item_id_or_none(expense_group, expense, general_mappings)
+
+    assert item_id == mapping.destination.destination_id
+
+    general_mappings.default_item_id = None
+    general_mappings.save()
+
+    assert item_id == None
+
 def test_get_ccc_account_id(db, mocker):
     workspace_id = 1
     
