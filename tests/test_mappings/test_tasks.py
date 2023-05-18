@@ -483,6 +483,10 @@ def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting)
         return_value=[]
     )
     workspace_id = 1
+    
+    auto_create_expense_fields_mappings(workspace_id, 'TASK', 'COST_CODES', 12312, None)
+    mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='TASK').count()
+    assert mappings == 0
 
     auto_create_expense_fields_mappings(workspace_id, 'COST_CENTER', 'COST_CENTER', None, 'Select Cost Center')
 
@@ -490,7 +494,7 @@ def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting)
     mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='COST_CENTER').count()
 
     assert cost_center == 1
-    assert mappings == 0
+    assert mappings == 0    
 
 
 def test_sync_sage_intacct_attributes(mocker, db):
