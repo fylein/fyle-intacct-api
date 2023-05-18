@@ -632,14 +632,14 @@ def test_get_item_id_or_none(db, mocker):
     assert item_id == general_mappings.default_item_id
 
     item_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
+    item_setting.source_field='PROJECT'
     item_setting.destination_field='ITEM'
     item_setting.save()
-    print(item_setting.source_field)
 
-    expense_attribute = ExpenseAttribute.objects.first()
-    expense_attribute.attribute_type = 'EMPLOYEE'
-    expense_attribute.display_name = 'Employee'
-    expense_attribute.save()
+    expense_attribute = ExpenseAttribute.objects.filter(
+        attribute_type = 'PROJECT',
+        value = 'Aaron Abbott'
+    ).first()
     
     item_id = get_item_id_or_none(expense_group, expense, general_mappings)
 
@@ -647,18 +647,23 @@ def test_get_item_id_or_none(db, mocker):
 
     mapping = Mapping.objects.first()
     mapping.destination_type = 'ITEM'
-    mapping.source_type = 'EMPLOYEE'
+    mapping.source_type = 'PROJECT'
     mapping.source=expense_attribute
     mapping.workspace_id=general_mappings.workspace
     mapping.save()
 
-    expense.custom_properties['Employee'] = expense_attribute.value
-    expense.save()
+    source_value = expense.custom_properties.get(expense_attribute.display_name, None)
+    if source_value is None:
+        lineitem = expense.__dict__
+        if item_setting.source_field == 'MERCHANT' or item_setting.source_field == 'VENDOR':
+            source_value = lineitem.vendor
+        elif lineitem[expense_attribute.display_name.lower()] is not None:
+            source_value = lineitem[expense_attribute.display_name.lower()]
 
     mapping: Mapping = Mapping.objects.filter(
             source_type=item_setting.source_field,
             destination_type='ITEM',
-            source__value=expense_attribute.value,
+            source__value=source_value,
             workspace_id=expense_group.workspace_id
         ).first()
 

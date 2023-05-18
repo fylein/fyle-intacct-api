@@ -160,6 +160,12 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     if item_setting:
         attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field).first()
         source_value = lineitem.custom_properties.get(attribute.display_name, None)
+        if source_value is None:
+            lineitem = lineitem.__dict__
+            if item_setting.source_field == 'MERCHANT' or item_setting.source_field == 'VENDOR':
+                source_value = lineitem.vendor
+            elif lineitem[attribute.display_name.replace(" ","_").lower()] is not None:
+                source_value = lineitem[attribute.display_name.replace(" ","_").lower()]
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=item_setting.source_field,
@@ -170,17 +176,9 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         if mapping:
             item_id = mapping.destination.destination_id
         else:
-            project_setting: MappingSetting = MappingSetting.objects.filter(
-                workspace_id=expense_group.workspace_id,
-                destination_field='PROJECT'
-            ).first()
-            item_id = general_mappings.default_item_id if general_mappings.default_item_id and project_setting else None
+            item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
     else:
-        project_setting: MappingSetting = MappingSetting.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            destination_field='PROJECT'
-        ).first()
-        item_id = general_mappings.default_item_id if general_mappings.default_item_id and project_setting else None
+        item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
     return item_id
 
 
