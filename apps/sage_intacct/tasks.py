@@ -1082,8 +1082,9 @@ def create_ap_payment(workspace_id):
                                  task_log.detail)
 
 
-def schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments, workspace_id):
+def schedule_ap_payment_creation(configuration, workspace_id):
     general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    sync_fyle_to_sage_intacct_payments = configuration.sync_fyle_to_sage_intacct_payments
     if general_mappings:
         if sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id:
             start_datetime = datetime.now()
@@ -1097,7 +1098,7 @@ def schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments, workspace_i
                 }
             )
 
-        if not sync_fyle_to_sage_intacct_payments:
+        if not sync_fyle_to_sage_intacct_payments or configuration.reimbursable_expenses_object != 'BILL':
             schedule: Schedule = Schedule.objects.filter(
                 func='apps.sage_intacct.tasks.create_ap_payment',
                 args='{}'.format(workspace_id)
@@ -1220,8 +1221,9 @@ def create_sage_intacct_reimbursement(workspace_id):
                                 task_log.detail)
 
 
-def schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payments, workspace_id):
+def schedule_sage_intacct_reimbursement_creation(configuration, workspace_id):
     general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    sync_fyle_to_sage_intacct_payments = configuration.sync_fyle_to_sage_intacct_payments,
     if general_mappings:
         if sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id:
             start_datetime = datetime.now()
@@ -1235,7 +1237,7 @@ def schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payme
                 }
             )
 
-        if not sync_fyle_to_sage_intacct_payments:
+        if not sync_fyle_to_sage_intacct_payments or configuration.reimbursable_expenses_object != 'EXPENSE_REPORT':
             schedule: Schedule = Schedule.objects.filter(
                 func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
                 args='{}'.format(workspace_id)

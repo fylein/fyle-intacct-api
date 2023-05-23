@@ -21,17 +21,15 @@ def schedule_payment_sync(configuration: Configuration):
         workspace_id=configuration.workspace_id
     )
 
-    if configuration.reimbursable_expenses_object == 'BILL':
-        schedule_ap_payment_creation(
-            sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
-            workspace_id=configuration.workspace_id
-        )
+    schedule_ap_payment_creation(
+        configuration=configuration,
+        workspace_id=configuration.workspace_id
+    )
 
-    if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
-        schedule_sage_intacct_reimbursement_creation(
-            sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
-            workspace_id=configuration.workspace_id
-        )
+    schedule_sage_intacct_reimbursement_creation(
+        configuration=configuration,
+        workspace_id=configuration.workspace_id
+    )
 
 def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: SageIntacctCredential) -> bool:
     """
