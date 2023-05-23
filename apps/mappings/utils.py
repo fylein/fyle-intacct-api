@@ -104,13 +104,13 @@ class MappingUtils:
 
         if configuration.reimbursable_expenses_object == 'BILL':
             schedule_ap_payment_creation(
-                sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
+                configuration=configuration,
                 workspace_id=self.__workspace_id
             )
 
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
             schedule_sage_intacct_reimbursement_creation(
-                sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
+                configuration=configuration,
                 workspace_id=self.__workspace_id
             )
 
