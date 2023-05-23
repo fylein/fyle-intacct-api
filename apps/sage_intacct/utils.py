@@ -641,6 +641,8 @@ class SageIntacctConnector:
 
         if 'vendor' in vendor:
             vendor = vendor['vendor'][0] if int(vendor['@totalcount']) > 1 else vendor['vendor']
+            
+            vendor = vendor if vendor['STATUS'] == 'active' else None
         else:
             vendor = None
 
