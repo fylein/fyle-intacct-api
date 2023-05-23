@@ -930,13 +930,14 @@ def test_post_ap_payment_exceptions(mocker, db):
 
 def test_schedule_ap_payment_creation(db):
     workspace_id = 1
+    workspace_configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-    schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments=True, workspace_id=workspace_id)
+    schedule_ap_payment_creation(configuration=workspace_configuration, workspace_id=workspace_id)
     schedule = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_ap_payment').count()
 
     assert schedule == 1
-
-    schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments=False, workspace_id=workspace_id)
+    workspace_configuration.sync_fyle_to_sage_intacct_payments = False
+    schedule_ap_payment_creation(configuration=workspace_configuration, workspace_id=workspace_id)
     schedule = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_ap_payment').count()
 
     assert schedule == 0
@@ -1089,13 +1090,15 @@ def test_schedule_charge_card_transaction_creation(mocker, db):
 
 def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
     workspace_id = 1
-
-    schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payments=True, workspace_id=workspace_id)
+    workspace_configuration = Configuration.objects.get(workspace_id=workspace_id)
+    workspace_configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    schedule_sage_intacct_reimbursement_creation(configuration=workspace_configuration, workspace_id=workspace_id)
 
     schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement', args=workspace_id).count()
     assert schedule_count == 1
 
-    schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payments=False, workspace_id=workspace_id)
+    workspace_configuration.sync_fyle_to_sage_intacct_payments = False
+    schedule_sage_intacct_reimbursement_creation(configuration=workspace_configuration, workspace_id=workspace_id)
 
     schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement', args=workspace_id).count()
     assert schedule_count == 0

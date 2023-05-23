@@ -16,18 +16,18 @@ def schedule_payment_sync(configuration: Configuration):
     :param configuration: Workspace Configuration Instance
     :return: None
     """
-    schedule_ap_payment_creation(
-        sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
-        workspace_id=configuration.workspace_id
-    )
-
     schedule_sage_intacct_objects_status_sync(
         sync_sage_intacct_to_fyle_payments=configuration.sync_sage_intacct_to_fyle_payments,
         workspace_id=configuration.workspace_id
     )
 
+    schedule_ap_payment_creation(
+        configuration=configuration,
+        workspace_id=configuration.workspace_id
+    )
+
     schedule_sage_intacct_reimbursement_creation(
-        sync_fyle_to_sage_intacct_payments=configuration.sync_fyle_to_sage_intacct_payments,
+        configuration=configuration,
         workspace_id=configuration.workspace_id
     )
 
