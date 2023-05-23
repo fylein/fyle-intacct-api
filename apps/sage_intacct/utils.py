@@ -746,19 +746,23 @@ class SageIntacctConnector:
         vendor_attributes = []
 
         for vendor in vendors:
-            detail = {
-                'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
-            }
-            vendor_attributes.append({
-                'attribute_type': 'VENDOR',
-                'display_name': 'vendor',
-                'value': vendor['NAME'],
-                'destination_id': vendor['VENDORID'],
-                'detail': detail
-            })
+            if vendor['STATUS'] == 'active':
+                detail = {
+                    'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
+                }
+                vendor_attributes.append({
+                    'attribute_type': 'VENDOR',
+                    'display_name': 'vendor',
+                    'value': vendor['NAME'],
+                    'destination_id': vendor['VENDORID'],
+                    'detail': detail,
+                    'active': True
+                })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            vendor_attributes, 'VENDOR', self.workspace_id, True)
+        if vendor_attributes:
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                vendor_attributes, 'VENDOR', self.workspace_id, True
+            )
 
         return []
 
