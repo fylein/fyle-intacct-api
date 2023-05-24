@@ -152,14 +152,30 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
 def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     item_id = None
 
-    if lineitem.billable:
-        project_setting: MappingSetting = MappingSetting.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            destination_field='PROJECT'
-        ).first()
-        if project_setting:
-            item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
+    item_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='ITEM'
+    ).first()
 
+    if item_setting:
+        if item_setting.source_field == 'PROJECT':
+            source_value = lineitem.project
+        elif item_setting.source_field == 'COST_CENTER':
+            source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=item_setting.source_field,
+            destination_type='ITEM',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+        if mapping:
+            item_id = mapping.destination.destination_id
+    if item_id is None:
+        item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
     return item_id
 
 
