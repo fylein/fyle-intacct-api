@@ -1082,10 +1082,11 @@ def create_ap_payment(workspace_id):
                                  task_log.detail)
 
 
-def schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments, workspace_id):
+def schedule_ap_payment_creation(configuration, workspace_id):
     general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+
     if general_mappings:
-        if sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id:
+        if configuration.sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id and configuration.reimbursable_expenses_object == 'BILL':
             start_datetime = datetime.now()
             schedule, _ = Schedule.objects.update_or_create(
                 func='apps.sage_intacct.tasks.create_ap_payment',
@@ -1096,15 +1097,15 @@ def schedule_ap_payment_creation(sync_fyle_to_sage_intacct_payments, workspace_i
                     'next_run': start_datetime
                 }
             )
+            return
 
-        if not sync_fyle_to_sage_intacct_payments:
-            schedule: Schedule = Schedule.objects.filter(
-                func='apps.sage_intacct.tasks.create_ap_payment',
-                args='{}'.format(workspace_id)
-            ).first()
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.sage_intacct.tasks.create_ap_payment',
+            args='{}'.format(workspace_id)
+        ).first()
 
-            if schedule:
-                schedule.delete()
+        if schedule:
+            schedule.delete()
 
 
 def create_sage_intacct_reimbursement(workspace_id):
@@ -1220,10 +1221,11 @@ def create_sage_intacct_reimbursement(workspace_id):
                                 task_log.detail)
 
 
-def schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payments, workspace_id):
+def schedule_sage_intacct_reimbursement_creation(configuration, workspace_id):
     general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+
     if general_mappings:
-        if sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id:
+        if configuration.sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id and configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
             start_datetime = datetime.now()
             schedule, _ = Schedule.objects.update_or_create(
                 func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
@@ -1234,15 +1236,15 @@ def schedule_sage_intacct_reimbursement_creation(sync_fyle_to_sage_intacct_payme
                     'next_run': start_datetime
                 }
             )
+            return 
 
-        if not sync_fyle_to_sage_intacct_payments:
-            schedule: Schedule = Schedule.objects.filter(
-                func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
-                args='{}'.format(workspace_id)
-            ).first()
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
+            args='{}'.format(workspace_id)
+        ).first()
 
-            if schedule:
-                schedule.delete()
+        if schedule:
+            schedule.delete()
 
 
 def get_all_sage_intacct_bill_ids(sage_objects: Bill):
