@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 
 SYNC_UPPER_LIMIT = {
     'projects': 15000,
-    'customers': 15000
+    'customers': 15000,
+    'items':15000,
+    'classes': 15000
 }
 
 
@@ -377,22 +379,24 @@ class SageIntacctConnector:
         """
         Get items
         """
-        items = self.connection.items.get_all(field='STATUS', value='active')
+        count = self.connection.items.count()
+        if count <= SYNC_UPPER_LIMIT['items']:
+            items = self.connection.items.get_all(field='STATUS', value='active')
 
-        item_attributes = []
+            item_attributes = []
 
-        for item in items:
-            # remove this check when we are mapping Fyle Categories with Sage Intacct Items
-            if item['ITEMTYPE'] == 'Non-Inventory':
-                item_attributes.append({
-                    'attribute_type': 'ITEM',
-                    'display_name': 'item',
-                    'value': item['NAME'],
-                    'destination_id': item['ITEMID']
-                })
+            for item in items:
+                # remove this check when we are mapping Fyle Categories with Sage Intacct Items
+                if item['ITEMTYPE'] == 'Non-Inventory':
+                    item_attributes.append({
+                        'attribute_type': 'ITEM',
+                        'display_name': 'item',
+                        'value': item['NAME'],
+                        'destination_id': item['ITEMID']
+                    })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            item_attributes, 'ITEM', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                item_attributes, 'ITEM', self.workspace_id, True)
 
         return []
 
@@ -526,20 +530,22 @@ class SageIntacctConnector:
         """
         Get classes
         """
-        classes = self.connection.classes.get_all(field='STATUS', value='active', fields=['NAME', 'CLASSID'])
+        count = self.connection.classes.count()
+        if count <= SYNC_UPPER_LIMIT['classes']:
+            classes = self.connection.classes.get_all(field='STATUS', value='active', fields=['NAME', 'CLASSID'])
 
-        class_attributes = []
+            class_attributes = []
 
-        for _class in classes:
-            class_attributes.append({
-                'attribute_type': 'CLASS',
-                'display_name': 'class',
-                'value': _class['NAME'],
-                'destination_id': _class['CLASSID']
-            })
+            for _class in classes:
+                class_attributes.append({
+                    'attribute_type': 'CLASS',
+                    'display_name': 'class',
+                    'value': _class['NAME'],
+                    'destination_id': _class['CLASSID']
+                })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            class_attributes, 'CLASS', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                class_attributes, 'CLASS', self.workspace_id, True)
 
         return []
 

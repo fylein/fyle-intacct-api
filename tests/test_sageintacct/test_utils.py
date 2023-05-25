@@ -180,6 +180,12 @@ def test_sync_items(mocker, db):
         'sageintacctsdk.apis.Items.get_all',
         return_value=data['get_items']
     )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Items.count',
+        return_value=5
+    )
+
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
@@ -466,6 +472,12 @@ def test_sync_classes(mocker, db):
         'sageintacctsdk.apis.Classes.get_all',
         return_value=data['get_classes']
     )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Classes.count',
+        return_value=5
+    )
+
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
