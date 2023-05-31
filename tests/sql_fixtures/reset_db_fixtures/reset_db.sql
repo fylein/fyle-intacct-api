@@ -1813,7 +1813,8 @@ CREATE TABLE public.workspaces (
     destination_synced_at timestamp with time zone,
     source_synced_at timestamp with time zone,
     cluster_domain character varying(255),
-    ccc_last_synced_at timestamp with time zone
+    ccc_last_synced_at timestamp with time zone,
+    onboarding_state character varying(50)
 );
 
 
@@ -3700,6 +3701,11 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 139	mappings	0012_auto_20230417_1124	2023-04-17 11:42:04.876255+00
 140	fyle	0018_auto_20230427_0355	2023-04-27 03:56:21.411364+00
 141	fyle	0019_expense_report_title	2023-04-27 16:57:27.877735+00
+142	workspaces	0026_auto_20230531_0926	2023-05-31 12:51:55.690703+00
+143	fyle	0020_auto_20230531_0926	2023-05-31 12:51:55.71629+00
+144	fyle_accounting_mappings	0022_auto_20230411_1118	2023-05-31 12:51:55.73621+00
+145	mappings	0013_auto_20230531_1040	2023-05-31 12:51:55.760705+00
+146	mappings	0014_auto_20230531_1248	2023-05-31 12:51:55.785861+00
 \.
 
 
@@ -7585,8 +7591,8 @@ COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, sc
 -- Data for Name: workspaces; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at) FROM stdin;
-1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N
+COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at, onboarding_state) FROM stdin;
+1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	CONNECTION
 \.
 
 
@@ -7659,7 +7665,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 44, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 141, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 146, true);
 
 
 --
@@ -8004,11 +8010,11 @@ ALTER TABLE ONLY public.category_mappings
 
 
 --
--- Name: destination_attributes destination_attributes_destination_id_attribute_dfb58751_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: destination_attributes destination_attributes_destination_id_attribute_d22ab1fe_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.destination_attributes
-    ADD CONSTRAINT destination_attributes_destination_id_attribute_dfb58751_uniq UNIQUE (destination_id, attribute_type, workspace_id);
+    ADD CONSTRAINT destination_attributes_destination_id_attribute_d22ab1fe_uniq UNIQUE (destination_id, attribute_type, workspace_id, display_name);
 
 
 --
@@ -8225,6 +8231,14 @@ ALTER TABLE ONLY public.auth_tokens
 
 ALTER TABLE ONLY public.auth_tokens
     ADD CONSTRAINT fyle_rest_auth_authtokens_user_id_3b4bd82e_uniq UNIQUE (user_id);
+
+
+--
+-- Name: general_mappings general_mappings_workspace_id_19666c5c_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.general_mappings
+    ADD CONSTRAINT general_mappings_workspace_id_19666c5c_uniq UNIQUE (workspace_id);
 
 
 --
@@ -8794,13 +8808,6 @@ CREATE INDEX fyle_accounting_mappings_mappingsetting_workspace_id_c123c088 ON pu
 
 
 --
--- Name: general_mappings_workspace_id_19666c5c; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX general_mappings_workspace_id_19666c5c ON public.general_mappings USING btree (workspace_id);
-
-
---
 -- Name: journal_entry_lineitems_journal_entry_id_382a8abe; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9033,6 +9040,14 @@ ALTER TABLE ONLY public.charge_card_transaction_lineitems
 
 
 --
+-- Name: configurations configurations_workspace_id_560f6e1c_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.configurations
+    ADD CONSTRAINT configurations_workspace_id_560f6e1c_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
 -- Name: django_admin_log django_admin_log_content_type_id_c4bce8eb_fk_django_co; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9214,14 +9229,6 @@ ALTER TABLE ONLY public.auth_tokens
 
 ALTER TABLE ONLY public.general_mappings
     ADD CONSTRAINT general_mappings_workspace_id_19666c5c_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
-
-
---
--- Name: configurations general_settings_workspace_id_091a11f5_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.configurations
-    ADD CONSTRAINT general_settings_workspace_id_091a11f5_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
