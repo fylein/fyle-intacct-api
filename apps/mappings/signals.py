@@ -13,11 +13,13 @@ from django_q.tasks import async_task
 from fyle_accounting_mappings.models import MappingSetting
 from fyle.platform.exceptions import WrongParamsError
 
-from apps.mappings.tasks import schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
-    upload_attributes_to_fyle, upload_dependent_field_to_fyle
+from apps.mappings.tasks import (
+    schedule_cost_centers_creation,
+    schedule_fyle_attributes_creation,
+    upload_attributes_to_fyle
+)
 from apps.workspaces.models import Configuration
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
-from apps.workspaces.tasks import delete_cards_mapping_settings
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,7 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
     :return: None
     """
     configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
+
     if instance.source_field == 'PROJECT':
         schedule_or_delete_fyle_import_tasks(configuration)
     
@@ -39,9 +42,6 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
 
     if instance.is_custom:
         schedule_fyle_attributes_creation(int(instance.workspace_id))
-    
-    if configuration:
-        delete_cards_mapping_settings(configuration)
 
 
 @receiver(pre_save, sender=MappingSetting)
