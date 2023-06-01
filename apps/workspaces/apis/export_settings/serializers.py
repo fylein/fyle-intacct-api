@@ -191,6 +191,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         return instance
     
     def validate(self, data):
+        print(data.get('configurations'))
         if not data.get('configurations'):
             raise serializers.ValidationError('Configurations are required')
 
