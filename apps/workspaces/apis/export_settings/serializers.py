@@ -191,13 +191,9 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         return instance
     
     def validate(self, data):
-        if not data.get('configurations'):
-            raise serializers.ValidationError('Configurations are required')
+        # We dont need to validate confiugurations and general mappings as they validations for individual fields
 
         if not data.get('expense_group_settings'):
             raise serializers.ValidationError('Expense group settings are required')
-
-        if not data.get('general_mappings'):
-            raise serializers.ValidationError('General mappings are required')
 
         return data
