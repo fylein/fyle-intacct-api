@@ -58,7 +58,6 @@ def test_export_settings(api_client, test_connection):
     assert response.status_code == 400
 
     invalid_expense_group_settings = data['export_settings_missing_values_expense_group_settings']
-    print(invalid_expense_group_settings)
     response = api_client.put(
         url,
         data=invalid_expense_group_settings,
@@ -68,7 +67,6 @@ def test_export_settings(api_client, test_connection):
     assert response.status_code == 400
 
     invalid_general_mappings = data['export_settings_missing_values_general_mappings']
-    print(invalid_general_mappings)
     response = api_client.put(
         url,
         data=invalid_general_mappings,
