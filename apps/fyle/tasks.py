@@ -30,25 +30,32 @@ def sync_reimbursements(fyle_credentials, workspace_id: int):
     platform.reimbursements.sync()
 
 
+def get_task_log_and_fund_source(workspace_id: int):
+    task_log, _ = TaskLog.objects.update_or_create(
+        workspace_id=workspace_id,
+        type='FETCHING_EXPENSES',
+        defaults={
+           'status': 'IN_PROGRESS'
+        }
+    )
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    fund_source = []
+    if configuration.reimbursable_expenses_object:
+        fund_source.append('PERSONAL')
+    if configuration.corporate_credit_card_expenses_object:
+        fund_source.append('CCC')
+
+    return task_log, fund_source
+
+
 def schedule_expense_group_creation(workspace_id: int):
     """
     Schedule Expense group creation
     :param workspace_id: Workspace id
     :return: None
     """
-    task_log, _ = TaskLog.objects.update_or_create(
-        workspace_id=workspace_id,
-        type='FETCHING_EXPENSES',
-        defaults={
-            'status': 'IN_PROGRESS'
-        }
-    )
-
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
-
-    fund_source = ['PERSONAL']
-    if configuration.corporate_credit_card_expenses_object:
-        fund_source.append('CCC')
+    task_log, fund_source = get_task_log_and_fund_source(workspace_id)
 
     async_task('apps.fyle.tasks.create_expense_groups', workspace_id, fund_source, task_log)
 
