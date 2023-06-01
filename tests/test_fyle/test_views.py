@@ -1,5 +1,6 @@
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import FyleCredential, Workspace
+from fyle_accounting_mappings.models import MappingSetting
 import pytest
 import json
 from .fixtures import data
@@ -372,6 +373,43 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
         return_value=[]
     )
 
+    mocker.patch(
+        'apps.mappings.signals.upload_attributes_to_fyle',
+        return_value = []
+    )
+
+    workspace_id = 1
+
+    MappingSetting.objects.update_or_create(
+            workspace_id=workspace_id,
+            source_field = 'PROJECT',
+            defaults={
+                'destination_field': 'CUSTOMER',
+                'import_to_fyle': True
+
+            }
+    )
+
+    MappingSetting.objects.update_or_create(
+            workspace_id=workspace_id,
+            source_field = 'COST_CENTER',
+            defaults={
+                'destination_field': 'ACCOUNT',
+                'import_to_fyle': True
+
+            }
+    )
+
+    MappingSetting.objects.update_or_create(
+            workspace_id = workspace_id,
+            source_field = 'Ashutosh Field',
+            defaults={
+                'destination_field': 'CLASS',
+                'import_to_fyle': True,
+                'is_custom': True
+            }
+    )
+
     access_token = test_connection.access_token
 
     url = '/api/workspaces/1/fyle/refresh_dimensions/'
@@ -381,7 +419,7 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
     response = api_client.post(url)
     assert response.status_code == 200
 
-    fyle_credentials = FyleCredential.objects.get(workspace_id=1)
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.delete()
 
     response = api_client.post(url)
