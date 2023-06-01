@@ -1,6 +1,6 @@
 import json
 from tests.helper import dict_compare_keys
-from apps.workspaces.models import Workspace, Configuration
+from apps.workspaces.models import Workspace
 from .fixtures import data
 
 
