@@ -1,6 +1,5 @@
 from apps.workspaces.models import Workspace, Configuration
 from rest_framework import serializers
-from fyle_accounting_mappings.models import MappingSetting
 
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
