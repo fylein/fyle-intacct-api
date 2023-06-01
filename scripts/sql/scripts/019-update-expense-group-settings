@@ -14,6 +14,6 @@ SET reimbursable_expense_group_fields = reimbursable_expense_group_fields || '{p
 WHERE reimbursable_expense_group_fields::text ilike '%settlement_id%' and reimbursable_expense_group_fields::text not ilike '%payment_number%';
 
 
-UPDATE expense_groups_settings 
+UPDATE expense_group_settings 
 SET corporate_credit_card_expense_group_fields = corporate_credit_card_expense_group_fields || '{payment_number}' 
 WHERE corporate_credit_card_expense_group_fields::text ilike '%settlement_id%' and corporate_credit_card_expense_group_fields::text not ilike '%payment_number%';
