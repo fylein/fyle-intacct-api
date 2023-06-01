@@ -43,8 +43,10 @@ def test_destination_attributes(api_client, test_connection):
     response = api_client.get(
         url,
         data={
-            'attribute_types': 'ACCOUNT'
-        })
+            'attribute_types': 'ACCOUNT',
+            'active': True
+        }
+    )
     assert response.status_code == 200
 
     response = json.loads(response.content)
