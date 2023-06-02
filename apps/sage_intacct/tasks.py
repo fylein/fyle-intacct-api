@@ -430,7 +430,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
 
             if configuration.employee_field_mapping == 'EMPLOYEE':
                 entity = entity.destination_employee
-            else:
+            elif configuration.employee_field_mapping == 'VENDOR':
                 entity = entity.destination_vendor
 
             if not entity:
@@ -473,7 +473,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                 )
                 if configuration.employee_field_mapping == 'EMPLOYEE':
                     entity = entity.destination_employee
-                else:
+                elif configuration.employee_field_mapping == 'VENDOR':
                     entity = entity.destination_vendor
 
                 if not entity:

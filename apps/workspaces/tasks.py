@@ -102,9 +102,10 @@ def run_sync_schedule(workspace_id):
         fund_source.append('CCC')
     if configuration.reimbursable_expenses_object:
         fund_source.append('PERSONAL')
-        create_expense_groups(
-            workspace_id=workspace_id, fund_source=fund_source, task_log=task_log
-        )
+
+    create_expense_groups(
+        workspace_id=workspace_id, fund_source=fund_source, task_log=task_log
+    )
 
     if task_log.status == 'COMPLETE':
         if configuration.reimbursable_expenses_object:
