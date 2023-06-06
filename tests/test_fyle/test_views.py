@@ -1,12 +1,15 @@
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import FyleCredential, Workspace
 from fyle_accounting_mappings.models import MappingSetting
+from fyle.platform.exceptions import PlatformError
 import pytest
 import json
 from .fixtures import data
 from tests.helper import dict_compare_keys
 from apps.tasks.models import TaskLog
 from django.urls import reverse
+from unittest import mock
+from apps.fyle.helpers import sync_dimensions
 
 
 def test_expense_group_view(api_client, test_connection):
@@ -330,6 +333,9 @@ def test_fyle_sync_dimension_fail(api_client, test_connection):
     workspace.save()
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=1)
+    with mock.patch('fyle_integrations_platform_connector.fyle_integrations_platform_connector.PlatformConnector.import_fyle_dimensions') as mock_call:
+        mock_call.side_effect = PlatformError(msg='Something wrong with PlatformConnector', response='Something wrong with PlatformConnector')
+        response = api_client.post(url)
     fyle_credentials.delete()
 
     new_response = api_client.post(url)
@@ -420,6 +426,10 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
     assert response.status_code == 200
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    with mock.patch('fyle_integrations_platform_connector.fyle_integrations_platform_connector.PlatformConnector.import_fyle_dimensions') as mock_call:
+        mock_call.side_effect = PlatformError(msg='Something wrong with PlatformConnector', response='Something wrong with PlatformConnector')
+        response = api_client.post(url)
+
     fyle_credentials.delete()
 
     response = api_client.post(url)
