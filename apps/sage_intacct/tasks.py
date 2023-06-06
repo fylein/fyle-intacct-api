@@ -513,7 +513,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             if expense_group.fund_source == 'PERSONAL':
                 if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
                     category_mapping = category_mapping.destination_expense_head
-                elif configuration.reimbursable_expenses_object == 'BILL' | configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
+                elif (configuration.reimbursable_expenses_object == 'BILL' or configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY'):
                     category_mapping = category_mapping.destination_account
             else:
                 if configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
