@@ -9,6 +9,7 @@ from django_q.tasks import Chain
 
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
+from fyle.platform.exceptions import PlatformError
 from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
 
 from fyle_integrations_platform_connector import PlatformConnector
@@ -294,6 +295,13 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+        except PlatformError:
+            return Response(
+                data={
+                    'message': 'Something wrong with PlatformConnector'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class RefreshFyleDimensionView(generics.ListCreateAPIView):
@@ -336,6 +344,13 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
             return Response(
                 data={
                     'message': 'Fyle credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except PlatformError:
+            return Response(
+                data={
+                    'message': 'Something wrong with PlatformConnector'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
