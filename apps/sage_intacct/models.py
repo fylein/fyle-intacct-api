@@ -13,7 +13,7 @@ from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursem
 from apps.mappings.models import GeneralMapping
 
 from apps.workspaces.models import Configuration, Workspace, FyleCredential
-from typing import Union
+from typing import Dict, List, Union
 
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
@@ -1305,3 +1305,98 @@ class SageIntacctReimbursementLineitem(models.Model):
         sage_intacct_reimbursement_lineitem_objects.append(sage_intacct_reimbursement_lineitem_object)
 
         return sage_intacct_reimbursement_lineitem_objects
+
+
+class CostTypes(models.Model):
+    """
+    Sage Intacct Cost Types
+    DB Table: cost_types:
+    """
+    record_number = models.CharField(max_length=255, help_text='Sage Intacct Record No')
+    project_key = models.CharField(max_length=255, help_text='Sage Intacct Project Key')
+    project_id = models.CharField(max_length=255, help_text='Sage Intacct Project ID')
+    project_name = models.CharField(max_length=255, help_text='Sage Intacct Project Name')
+    task_key = models.CharField(max_length=255, help_text='Sage Intacct Task Key')
+    task_id = models.CharField(max_length=255, help_text='Sage Intacct Task ID')
+    status = models.CharField(max_length=255, help_text='Sage Intacct Status', null=True)
+    task_name = models.CharField(max_length=255, help_text='Sage Intacct Task Name')
+    cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type ID')
+    name = models.CharField(max_length=255, help_text='Sage Intacct Cost Type Name')
+    when_created = models.CharField(max_length=255, help_text='Sage Intacct When Created', null=True)
+    when_modified = models.CharField(max_length=255, help_text='Sage Intacct When Modified', null=True)
+    workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        unique_together = ('record_number', 'workspace_id')
+        db_table = 'cost_types'
+
+    @staticmethod
+    def bulk_create_or_update(cost_types: List[Dict], workspace_id: int):
+        """
+        Bulk create or update cost types
+        """
+        record_number_list = [cost_type['RECORDNO'] for cost_type in cost_types]
+
+        filters = {
+            'record_number__in': record_number_list,
+            'workspace_id': workspace_id
+        }
+
+        existing_cost_types = CostTypes.objects.filter(**filters).values(
+            'id',
+            'record_number',
+            'name'
+        )
+
+        existing_cost_type_record_numbers = []
+
+        primary_key_map = {}
+
+        for existing_cost_type in existing_cost_types:
+            existing_cost_type_record_numbers.append(existing_cost_type['record_number'])
+
+            primary_key_map[existing_cost_type['record_number']] = {
+                'id': existing_cost_type['id'],
+                'name': existing_cost_type['name']
+            }
+        
+        cost_types_to_be_created = []
+        cost_types_to_be_updated = []
+
+        for cost_type in cost_types:
+            cost_type_object = CostTypes(
+                record_number=cost_type['RECORDNO'],
+                project_key=cost_type['PROJECTKEY'],
+                project_id=cost_type['PROJECTID'],
+                project_name=cost_type['PROJECTNAME'],
+                task_key=cost_type['TASKKEY'],
+                task_id=cost_type['TASKID'],
+                task_name=cost_type['TASKNAME'],
+                cost_type_id=cost_type['COSTTYPEID'],
+                name=cost_type['NAME'],
+                status=cost_type['STATUS'],
+                when_created=cost_type['WHENCREATED'] if 'WHENCREATED' in cost_type else None,
+                when_modified=cost_type['WHENMODIFIED'] if 'WHENMODIFIED' in cost_type else None,
+                workspace_id=workspace_id
+            )
+
+            if cost_type['RECORDNO'] not in existing_cost_type_record_numbers:
+                cost_types_to_be_created.append(cost_type_object)
+
+            elif cost_type['RECORDNO'] in primary_key_map.keys() and cost_type['NAME'] != primary_key_map[cost_type['RECORDNO']]['name']:
+                cost_type_object.id = primary_key_map[cost_type['RECORDNO']]['id']
+                cost_types_to_be_updated.append(cost_type_object)
+
+        if cost_types_to_be_created:
+            CostTypes.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+
+        if cost_types_to_be_updated:
+            CostTypes.objects.bulk_update(
+                cost_types_to_be_updated, fields=[
+                    'project_key', 'project_id', 'project_name', 'task_key', 'task_id', 'task_name',
+                    'cost_type_id', 'name', 'status', 'when_modified'
+                ],
+                batch_size=2000
+            )
