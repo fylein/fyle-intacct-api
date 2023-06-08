@@ -218,11 +218,7 @@ def update_import_log_post_import(is_last_batch: bool, import_log: ImportLog):
     import_log.save()
 
 
-def post_to_fyle_and_sync(fyle_payload, resource_class, is_last_batch, workspace_id, source_field):
-    import_log = ImportLog.objects.get(workspace_id=workspace_id, attribute_type=source_field)
-    import_log.status = 'IN_PROGRESS'
-    import_log.save()
-
+def post_to_fyle_and_sync(fyle_payload, resource_class, is_last_batch, workspace_id, source_field, import_log: ImportLog):
     # Post Payload to Fyle
     resource_updated_at = datetime.now()
     resource_class.post_bulk(fyle_payload)
@@ -244,8 +240,6 @@ def construct_payload_and_import_to_fyle(
 
     expense_attributes_generator, is_last_batch = get_expense_attributes_generator(si_attributes_count, workspace_id, destination_field, import_log)
 
-    chain = Chain()
-
     # Do all operations in batches with generator
     for paginated_si_attributes in expense_attributes_generator:
         # Create Payload
@@ -255,10 +249,8 @@ def construct_payload_and_import_to_fyle(
         if fyle_payload:
             import_log.queued_batches_count += 1
             import_log.save()
-            chain.append('<post_to_fyle_and_sync>(DUMMY_PATH)', fyle_payload, resource_class, is_last_batch, workspace_id, source_field)
 
-    if chain.length() > 0:
-        chain.run()
+            post_to_fyle_and_sync(fyle_payload, resource_class, is_last_batch, workspace_id, source_field, import_log)
 
 
 def sync_fyle_attributes(workspace_id: int, source_field: str):
@@ -309,14 +301,14 @@ def check_status_and_trigger_import(workspace_id: int, source_field: str):
         workspace_id=workspace_id,
         attribute_type=source_field,
         defaults={
-            'status': 'ENQUEUED'
+            'status': 'IN_PROGRESS'
         }
     )
 
     # Trigger Import only if the past import not in progress / enqueued
     if import_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
         # Update the required values since we're beginning the import process
-        import_log.status = 'ENQUEUED'
+        import_log.status = 'IN_PROGRESS'
         import_log.processed_batches_count = 0
         import_log.queued_batches_count = 0
         import_log.save()

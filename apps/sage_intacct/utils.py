@@ -269,6 +269,7 @@ class SageIntacctConnector:
         intacct_tasks = self.connection.tasks.get_all()
         task_attributes = []
 
+        # timestamp, prepare load test script, test on new org, check memory
         # saving values as combination of taskid, name and recordno to avoid duplicates 
         for task in intacct_tasks:
             task_attributes.append({

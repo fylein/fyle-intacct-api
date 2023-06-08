@@ -14,9 +14,9 @@ from fyle_accounting_mappings.models import MappingSetting
 from fyle.platform.exceptions import WrongParamsError
 
 from apps.mappings.tasks import schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
-    upload_attributes_to_fyle, upload_dependent_field_to_fyle
+    upload_attributes_to_fyle
 from apps.workspaces.models import Configuration
-from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
+from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks
 from apps.workspaces.tasks import delete_cards_mapping_settings
 
 

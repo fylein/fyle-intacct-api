@@ -629,6 +629,7 @@ def upload_dependent_field_to_fyle(
             # If anyone can think of a better way to handle this please mention i will be happy to fix
             parent_expense_field_value = None
             if attribute.attribute_type == 'COST_TYPE':
+                # Same as 
                 expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
                 parent_expense_field = DestinationAttribute.objects.filter(
                     workspace_id=workspace_id,
@@ -642,6 +643,7 @@ def upload_dependent_field_to_fyle(
                     parent_expense_field_value = parent_expense_field.value
 
             else:
+                # Move this 1 block above to avoid multiple db calls with 1 project name
                 expense_attribute = ExpenseAttribute.objects.filter(
                     workspace_id=workspace_id, 
                     attribute_type='PROJECT',
