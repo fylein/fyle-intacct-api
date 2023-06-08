@@ -3,6 +3,8 @@ import logging
 
 from django.utils.module_loading import import_string
 
+from fyle_accounting_mappings.models import MappingSetting
+
 from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
@@ -49,17 +51,32 @@ def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: Sage
 
     return False
 
+
+def is_dependent_field_import_enabled(workspace_id: int) -> bool:
+    return True
+    # remove hack later
+    return MappingSetting.objects.filter(workspace_id=workspace_id, destination_field='COST_TYPE').exists()
+
+
 def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, dimensions: list = []) -> None:
     sage_intacct_connection = import_string(
         'apps.sage_intacct.utils.SageIntacctConnector'
     )(si_credentials, workspace_id)
     if not dimensions:
+        # Get green from Shwetabh if we can remove cost types for orgs who don't use dependent fields import
         dimensions = [
             'locations', 'customers', 'departments', 'tax_details', 'projects', 
             'expense_payment_types', 'classes', 'charge_card_accounts','payment_accounts', 
             'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions',
-            'tasks', 'cost_types'
+            'tasks'
         ]
+        is_dependent_field_enabled = is_dependent_field_import_enabled(workspace_id)
+
+        if is_dependent_field_enabled:
+            # TODO: Add project and tasks sync support to sync_cost_types
+            dimensions.remove('projects')
+            dimensions.remove('tasks')
+            dimensions.append('cost_types')
 
     for dimension in dimensions:
         try:

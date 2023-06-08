@@ -3,6 +3,7 @@ import base64
 from typing import List, Dict
 from datetime import datetime
 import unidecode
+import time
 from django.conf import settings
 
 from cryptography.fernet import Fernet
@@ -17,9 +18,11 @@ from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribu
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
 
-from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
-    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
-    SageIntacctReimbursementLineitem
+from .models import (
+    ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, 
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement,
+    SageIntacctReimbursementLineitem, CostType
+)
 
 logger = logging.getLogger(__name__)
 
@@ -293,30 +296,11 @@ class SageIntacctConnector:
         """
         Sync of Sage Intacct Cost Types
         """
+        cost_types_generator = self.connection.cost_types.get_all_generator(field='STATUS', value='active')
 
-        cost_types = self.connection.cost_types.get_all()
-        cost_types_attributes = []
+        for cost_types in cost_types_generator:
+            CostType.bulk_create_or_update(cost_types, self.workspace_id)
 
-        for cost_type in cost_types:
-            cost_types_attributes.append({
-                'attribute_type': 'COST_TYPE',
-                'display_name': 'cost type',
-                'value': '{}--{}--{}'.format(cost_type['COSTTYPEID'], cost_type['NAME'], cost_type['RECORDNO']),
-                'destination_id': cost_type['RECORDNO'],
-                'active': True if cost_type['STATUS'] == 'active' else False,
-                'detail': {
-                    'project_id': cost_type['PROJECTID'],
-                    'project_name': cost_type['PROJECTNAME'],
-                    'task_id': cost_type['TASKID'],
-                    'task_name': cost_type['TASKNAME'],
-                    'external_id': cost_type['COSTTYPEID']
-                }
-            })
-
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            cost_types_attributes, 'COST_TYPE', self.workspace_id, True)
-
-        return []
 
     def sync_projects(self):
         """
