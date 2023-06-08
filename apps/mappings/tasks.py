@@ -6,6 +6,7 @@ from dateutil import parser
 from typing import List, Dict
 
 from django_q.models import Schedule
+from django.contrib.postgres.aggregates import ArrayAgg
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
@@ -19,6 +20,8 @@ from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
+from apps.sage_intacct.helpers import is_dependent_field_import_enabled
+from apps.sage_intacct.models import CostType
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
 from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
 
@@ -516,8 +519,36 @@ def schedule_cost_centers_creation(import_to_fyle, workspace_id):
             schedule.delete()
 
 
+def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: str, existing_attribute: Dict):
+    new_placeholder = None
+    placeholder = None
+
+    if existing_attribute:
+        placeholder = existing_attribute['placeholder'] if 'placeholder' in existing_attribute else None
+
+    # Here is the explanation of what's happening in the if-else ladder below
+    # source_field is the field that's save in mapping settings, this field user may or may not fill in the custom field form
+    # placeholder is the field that's saved in the detail column of destination attributes
+    # fyle_attribute is what we're constructing when both of these fields would not be available
+
+    if not (source_placeholder or placeholder):
+        # If source_placeholder and placeholder are both None, then we're creating adding a self constructed placeholder
+        new_placeholder = 'Select {0}'.format(fyle_attribute)
+    elif not source_placeholder and placeholder:
+        # If source_placeholder is None but placeholder is not, then we're choosing same place holder as 1 in detail section
+        new_placeholder = placeholder
+    elif source_placeholder and not placeholder:
+        # If source_placeholder is not None but placeholder is None, then we're choosing the placeholder as filled by user in form
+        new_placeholder = source_placeholder
+    else:
+        # Else, we're choosing the placeholder as filled by user in form or None
+        new_placeholder = source_placeholder
+
+    return new_placeholder
+
+
 def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[DestinationAttribute], workspace_id: int,
-                                            fyle_attribute: str, platform: PlatformConnector, parent_field_id: int = None, source_placeholder: str = None):
+                                            fyle_attribute: str, platform: PlatformConnector, source_placeholder: str = None):
     """
     Create Fyle Expense Custom Field Payload from SageIntacct Objects
     :param workspace_id: Workspace ID
@@ -535,58 +566,22 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
             attribute_type=fyle_attribute, workspace_id=workspace_id).values_list('detail', flat=True).first()
 
         custom_field_id = None
-        placeholder = None
 
         if existing_attribute is not None:
-            placeholder = existing_attribute['placeholder'] if 'placeholder' in existing_attribute else None
             custom_field_id = existing_attribute['custom_field_id']
 
         fyle_attribute = fyle_attribute.replace('_', ' ').title()
-        new_placeholder = None
+        placeholder = construct_custom_field_placeholder(source_placeholder, fyle_attribute, existing_attribute)
 
-        # Here is the explanation of what's happening in the if-else ladder below
-        # source_field is the field that's save in mapping settings, this field user may or may not fill in the custom field form
-        # placeholder is the field that's saved in the detail column of destination attributes
-        # fyle_attribute is what we're constructing when both of these fields would not be available
-
-        if not (source_placeholder or placeholder):
-            # If source_placeholder and placeholder are both None, then we're creating adding a self constructed placeholder
-            new_placeholder = 'Select {0}'.format(fyle_attribute)
-        elif not source_placeholder and placeholder:
-            # If source_placeholder is None but placeholder is not, then we're choosing same place holder as 1 in detail section
-            new_placeholder = placeholder
-        elif source_placeholder and not placeholder:
-            # If source_placeholder is not None but placeholder is None, then we're choosing the placeholder as filled by user in form
-            new_placeholder = source_placeholder
-        else:
-            # Else, we're choosing the placeholder as filled by user in form or None
-            new_placeholder = source_placeholder
-
-
-        # if parent field is there that means it is a dependent field
-        if parent_field_id:
-            expense_custom_field_payload = {
-                'field_name': fyle_attribute,
-                'column_name': fyle_attribute,
-                'type': 'DEPENDENT_SELECT',
-                'is_custom': True,
-                'is_enabled': True,
-                'is_mandatory': False,
-                'placeholder': new_placeholder,
-                'options': fyle_expense_custom_field_options,
-                'parent_field_id': parent_field_id,
-                'code': None,
-            }
-        else:
-            expense_custom_field_payload = {
-                'field_name': fyle_attribute,
-                'type': 'SELECT',
-                'is_enabled': True,
-                'is_mandatory': False,
-                'placeholder': new_placeholder,
-                'options': fyle_expense_custom_field_options,
-                'code': None
-            }
+        expense_custom_field_payload = {
+            'field_name': fyle_attribute,
+            'type': 'SELECT',
+            'is_enabled': True,
+            'is_mandatory': False,
+            'placeholder': placeholder,
+            'options': fyle_expense_custom_field_options,
+            'code': None
+        }
 
 
         if custom_field_id:
@@ -597,81 +592,130 @@ def create_fyle_expense_custom_field_payload(sageintacct_attributes: List[Destin
         return expense_custom_field_payload
 
 
-def upload_dependent_field_to_fyle(
-    workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, parent_field_id: str, source_placeholder: str = None
-):
-    """
-    Upload Dependent Fields To Fyle
-    """
-    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
-    dependent_fields = upload_attributes_to_fyle(workspace_id, sageintacct_attribute_type, fyle_attribute_type, parent_field_id, source_placeholder)
+def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type: str, platform: PlatformConnector, parent_field_id: str, source_placeholder: str = None):
+    existing_attribute = ExpenseAttribute.objects.filter(
+        attribute_type=fyle_attribute_type,
+        workspace_id=workspace_id
+    ).values_list('detail', flat=True).first()
 
-    expense_field_id = ExpenseAttribute.objects.filter(
-        workspace_id=workspace_id, attribute_type=fyle_attribute_type
-    ).first().detail['custom_field_id']
+    placeholder = construct_custom_field_placeholder(source_placeholder, fyle_attribute_type, existing_attribute)
 
-    si_attributes_count = DestinationAttribute.objects.filter(
-        workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
-    ).count()
-    page_size = 300
+    expense_custom_field_payload = {
+        'field_name': fyle_attribute_type,
+        'column_name': fyle_attribute_type,
+        'type': 'DEPENDENT_SELECT',
+        'is_custom': True,
+        'is_enabled': True,
+        'is_mandatory': False,
+        'placeholder': placeholder,
+        'options': [],
+        'parent_field_id': parent_field_id,
+        'code': None
+    }
 
-    for offset in range(0, si_attributes_count, page_size):
-        limit = offset + page_size
-        paginated_si_attributes = DestinationAttribute.objects.filter(
-            workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
-        ).order_by('value', 'id')[offset:limit]
-        paginated_si_attributes = remove_duplicates(paginated_si_attributes, True)
-        expense_attribite_type = ExpenseField.objects.get(workspace_id=workspace_id, source_field_id=parent_field_id).attribute_type
+    platform.expense_custom_fields.post(expense_custom_field_payload)
+    platform.expense_custom_fields.sync()
 
-        dependent_field_values = []
-        for attribute in paginated_si_attributes:
-            # If anyone can think of a better way to handle this please mention i will be happy to fix
-            parent_expense_field_value = None
-            if attribute.attribute_type == 'COST_TYPE':
-                expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
-                parent_expense_field = DestinationAttribute.objects.filter(
-                    workspace_id=workspace_id,
-                    attribute_type='TASK',
-                    detail__project_name=attribute.detail['project_name'],
-                    detail__external_id=attribute.detail['task_id']
-                ).first()
 
-                # parent value is combination of these two so filterig it out
-                if parent_expense_field and parent_expense_field.value in expense_attributes:
-                    parent_expense_field_value = parent_expense_field.value
+def post_dependent_expense_field_values(workspace_id: int, platform: PlatformConnector):
+    projects = CostType.objects.filter(workspace_id=workspace_id).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
+    tasks = CostType.objects.filter(workspace_id=workspace_id).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
 
-            else:
-                expense_attribute = ExpenseAttribute.objects.filter(
-                    workspace_id=workspace_id, 
-                    attribute_type='PROJECT',
-                    value=attribute.detail['project_name']
-                ).first()
+    project_field_id = ExpenseField.objects.get(attribute_type='PROJECT', workspace_id=workspace_id).source_field_id
+
+    task_mapping = MappingSetting.objects.get(workspace_id=workspace_id, destination_field='TASK')
+    task_field_id = ExpenseField.objects.get(attribute_type=task_mapping.source_field, workspace_id=workspace_id).source_field_id
+
+    cost_type_mapping = MappingSetting.objects.get(workspace_id=workspace_id, destination_field='COST_TYPE')
+    cost_type_field_id = ExpenseField.objects.get(attribute_type=cost_type_mapping.source_field, workspace_id=workspace_id).source_field_id
+
+    for project in projects:
+        payload = [
+            {
+                'parent_expense_field_id': project_field_id,
+                'parent_expense_field_value': project['project_name'],
+                'expense_field_id': task_field_id,
+                'expense_field_value': task,
+                'is_enabled': True
+            } for task in project['tasks']
+        ]
+        platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+
+    for task in tasks:
+        payload = [
+            {
+                'parent_expense_field_id': task_field_id,
+                'parent_expense_field_value': task['task_name'],
+                'expense_field_id': cost_type_field_id,
+                'expense_field_value': cost_type,
+                'is_enabled': True
+            } for cost_type in task['cost_types']
+        ]
+        platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+
+
+    # expense_field_id = ExpenseAttribute.objects.filter(
+    #     workspace_id=workspace_id, attribute_type=fyle_attribute_type
+    # ).first().detail['custom_field_id']
+
+    # si_attributes_count = DestinationAttribute.objects.filter(
+    #     workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
+    # ).count()
+    # page_size = 300
+
+    # for offset in range(0, si_attributes_count, page_size):
+    #     limit = offset + page_size
+    #     paginated_si_attributes = DestinationAttribute.objects.filter(
+    #         workspace_id=workspace_id, attribute_type=sageintacct_attribute_type
+    #     ).order_by('value', 'id')[offset:limit]
+    #     paginated_si_attributes = remove_duplicates(paginated_si_attributes, True)
+    #     expense_attribite_type = ExpenseField.objects.get(workspace_id=workspace_id, source_field_id=parent_field_id).attribute_type
+
+    #     dependent_field_values = []
+    #     for attribute in paginated_si_attributes:
+    #         # If anyone can think of a better way to handle this please mention i will be happy to fix
+    #         parent_expense_field_value = None
+    #         if attribute.attribute_type == 'COST_TYPE':
+    #             expense_attributes = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type=expense_attribite_type).values_list('value', flat=True)
+    #             parent_expense_field = DestinationAttribute.objects.filter(
+    #                 workspace_id=workspace_id,
+    #                 attribute_type='TASK',
+    #                 detail__project_name=attribute.detail['project_name'],
+    #                 detail__external_id=attribute.detail['task_id']
+    #             ).first()
+
+    #             # parent value is combination of these two so filterig it out
+    #             if parent_expense_field and parent_expense_field.value in expense_attributes:
+    #                 parent_expense_field_value = parent_expense_field.value
+
+    #         else:
+    #             expense_attribute = ExpenseAttribute.objects.filter(
+    #                 workspace_id=workspace_id, 
+    #                 attribute_type='PROJECT',
+    #                 value=attribute.detail['project_name']
+    #             ).first()
                 
-                if expense_attribute:
-                    parent_expense_field_value = expense_attribute.value
+    #             if expense_attribute:
+    #                 parent_expense_field_value = expense_attribute.value
                 
 
-            if parent_expense_field_value:
-                payload = {
-                    "parent_expense_field_id": parent_field_id,
-                    "parent_expense_field_value": parent_expense_field_value,
-                    "expense_field_id": expense_field_id,
-                    "expense_field_value": attribute.value,
-                    "is_enabled": True
-                }
+    #         if parent_expense_field_value:
+    #             payload = {
+    #                 "parent_expense_field_id": parent_field_id,
+    #                 "parent_expense_field_value": parent_expense_field_value,
+    #                 "expense_field_id": expense_field_id,
+    #                 "expense_field_value": attribute.value,
+    #                 "is_enabled": True
+    #             }
 
-                dependent_field_values.append(payload)
+    #             dependent_field_values.append(payload)
 
-        if dependent_field_values:
-            platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
-            platform.expense_fields.sync()
-
-    return dependent_fields
+    #     if dependent_field_values:
+    #         platform.expense_fields.bulk_post_dependent_expense_field_values(dependent_field_values)
+    #         platform.expense_fields.sync()
 
 
-def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str,
-                              parent_field_id: int = None, source_placeholder: str = None):
+def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, source_placeholder: str = None):
     """
     Upload attributes to Fyle
     """
@@ -691,7 +735,6 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
         sageintacct_attributes=sageintacct_attributes,
         workspace_id=workspace_id,
         platform=platform,
-        parent_field_id=parent_field_id,
         source_placeholder=source_placeholder
     )
 
@@ -702,21 +745,55 @@ def upload_attributes_to_fyle(workspace_id: int, sageintacct_attribute_type: str
     return sageintacct_attributes
 
 
+def import_dependent_fields_to_fyle(workspace_id: str):
+    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
+    # Get only dependent fields, order by destination field so that we create Task first and then Cost Type
+    mapping_settings = MappingSetting.objects.filter(
+        is_custom=True, import_to_fyle=True, workspace_id=workspace_id, expense_field__isnull=False
+    ).order_by('-destination_field')
+
+    # TODO: call just sync_cost_types which should sync projects, tasks and cost codes
+    # sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
+
+    try:
+        for mapping_setting in mapping_settings:
+            parent_field = mapping_setting.expense_field
+            create_dependent_custom_field_in_fyle(
+                workspace_id=workspace_id,
+                fyle_attribute_type=mapping_setting.expense_field.attribute_type,
+                platform=platform,
+                parent_field_id=parent_field.source_field_id,
+                source_placeholder=mapping_setting.source_placeholder
+            )
+
+        post_dependent_expense_field_values(
+            workspace_id=workspace_id,
+            platform=platform
+        )
+
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    except NoPrivilegeError:
+        logger.info('Insufficient permission to access the requested module')
+
+
 def auto_create_expense_fields_mappings(
-    workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, parent_field_id: int = None, source_placeholder: str = None
+    workspace_id: int, sageintacct_attribute_type: str, fyle_attribute_type: str, source_placeholder: str = None
 ):
     """
     Create Fyle Attributes Mappings
     :return: mappings
     """
     try:
-        if parent_field_id:
-            fyle_attributes = upload_dependent_field_to_fyle(workspace_id=workspace_id,sageintacct_attribute_type=sageintacct_attribute_type, 
-                fyle_attribute_type=fyle_attribute_type, parent_field_id=parent_field_id, source_placeholder=source_placeholder
-            )
-        else:
-            fyle_attributes = upload_attributes_to_fyle(workspace_id=workspace_id, 
-                sageintacct_attribute_type=sageintacct_attribute_type, fyle_attribute_type=fyle_attribute_type, source_placeholder=source_placeholder)
+        fyle_attributes = None
+        fyle_attributes = upload_attributes_to_fyle(
+            workspace_id=workspace_id,
+            sageintacct_attribute_type=sageintacct_attribute_type,
+            fyle_attribute_type=fyle_attribute_type,
+            source_placeholder=source_placeholder
+        )
 
         if fyle_attributes:
             Mapping.bulk_create_mappings(fyle_attributes, fyle_attribute_type, sageintacct_attribute_type, workspace_id)
@@ -745,24 +822,35 @@ def auto_create_expense_fields_mappings(
         )
 
 
-def async_auto_create_custom_field_mappings(workspace_id: str):
+def auto_create_custom_field_mappings(workspace_id: str):
+    # Get only non dependent fields
     mapping_settings = MappingSetting.objects.filter(
-        is_custom=True, import_to_fyle=True, workspace_id=workspace_id
+        is_custom=True, import_to_fyle=True, workspace_id=workspace_id, expense_field__isnull=True
     ).all()
 
     for mapping_setting in mapping_settings:
         try:
             if mapping_setting.import_to_fyle:
-                parent_field = mapping_setting.expense_field.source_field_id if mapping_setting.expense_field else None
                 sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
                 auto_create_expense_fields_mappings(
                     workspace_id, mapping_setting.destination_field, mapping_setting.source_field,
-                    parent_field, mapping_setting.source_placeholder
+                    mapping_setting.source_placeholder
                 )
         except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
             logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
         except NoPrivilegeError:
             logger.info('Insufficient permission to access the requested module')
+
+
+def async_auto_create_custom_field_mappings(workspace_id: str):
+    chain = Chain()
+    chain.append('apps.mappings.tasks.auto_create_custom_field_mappings', workspace_id)
+
+    is_dependent_field_enabled = is_dependent_field_import_enabled(workspace_id)
+    if is_dependent_field_enabled:
+        chain.append('apps.mappings.tasks.import_dependent_fields_to_fyle', workspace_id)
+
+    chain.run()
 
 
 def schedule_fyle_attributes_creation(workspace_id: int):
@@ -1258,7 +1346,10 @@ def auto_import_and_map_fyle_fields(workspace_id):
         chain.append('apps.mappings.tasks.auto_create_category_mappings', workspace_id)
 
     if project_mapping and project_mapping.import_to_fyle:
-        chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
+        # Follow regular project upload only when dependent field is not enabled
+        is_dependent_field_enabled = is_dependent_field_import_enabled(workspace_id)
+        if not is_dependent_field_enabled:
+            chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
 
     if chain.length() > 0:
         chain.run()

@@ -14,7 +14,7 @@ from fyle_accounting_mappings.models import MappingSetting
 from fyle.platform.exceptions import WrongParamsError
 
 from apps.mappings.tasks import schedule_cost_centers_creation, schedule_fyle_attributes_creation,\
-    upload_attributes_to_fyle, upload_dependent_field_to_fyle
+    upload_attributes_to_fyle
 from apps.workspaces.models import Configuration
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
 from apps.workspaces.tasks import delete_cards_mapping_settings
@@ -38,8 +38,10 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
         schedule_cost_centers_creation(instance.import_to_fyle, int(instance.workspace_id))
 
     if instance.is_custom:
-        schedule_fyle_attributes_creation(int(instance.workspace_id))
-    
+        # schedule_fyle_attributes_creation(int(instance.workspace_id))
+        # TODO
+        pass
+
     if configuration:
         delete_cards_mapping_settings(configuration)
 
@@ -60,13 +62,14 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
         #TODO: sync intacct fields before we upload custom field
         try:
             if not instance.expense_field:
-                upload_attributes_to_fyle(
-                    workspace_id=int(instance.workspace_id),
-                    sageintacct_attribute_type=instance.destination_field,
-                    fyle_attribute_type=instance.source_field,
-                    parent_field_id=parent_field_id,
-                    source_placeholder=instance.source_placeholder
-                )
+                pass
+                # TODO
+                # upload_attributes_to_fyle(
+                #     workspace_id=int(instance.workspace_id),
+                #     sageintacct_attribute_type=instance.destination_field,
+                #     fyle_attribute_type=instance.source_field,
+                #     source_placeholder=instance.source_placeholder
+                # )
 
         except WrongParamsError as error:
             logger.error(
@@ -83,10 +86,13 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
                         'field_name': instance.source_field
                     })
 
-        async_task(
-            'apps.mappings.tasks.auto_create_expense_fields_mappings',
-            int(instance.workspace_id),
-            instance.destination_field,
-            instance.source_field,
-            parent_field_id
-        )
+        if not instance.source_field:
+            # async_task(
+            #     'apps.mappings.tasks.auto_create_expense_fields_mappings',
+            #     int(instance.workspace_id),
+            #     instance.destination_field,
+            #     instance.source_field,
+            #     parent_field_id
+            # )
+            # TODO
+            pass
