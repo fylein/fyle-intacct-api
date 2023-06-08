@@ -1307,7 +1307,7 @@ class SageIntacctReimbursementLineitem(models.Model):
         return sage_intacct_reimbursement_lineitem_objects
 
 
-class CostTypes(models.Model):
+class CostType(models.Model):
     """
     Sage Intacct Cost Types
     DB Table: cost_types:
@@ -1344,7 +1344,7 @@ class CostTypes(models.Model):
             'workspace_id': workspace_id
         }
 
-        existing_cost_types = CostTypes.objects.filter(**filters).values(
+        existing_cost_types = CostType.objects.filter(**filters).values(
             'id',
             'record_number',
             'name'
@@ -1366,7 +1366,7 @@ class CostTypes(models.Model):
         cost_types_to_be_updated = []
 
         for cost_type in cost_types:
-            cost_type_object = CostTypes(
+            cost_type_object = CostType(
                 record_number=cost_type['RECORDNO'],
                 project_key=cost_type['PROJECTKEY'],
                 project_id=cost_type['PROJECTID'],
@@ -1390,10 +1390,10 @@ class CostTypes(models.Model):
                 cost_types_to_be_updated.append(cost_type_object)
 
         if cost_types_to_be_created:
-            CostTypes.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+            CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
 
         if cost_types_to_be_updated:
-            CostTypes.objects.bulk_update(
+            CostType.objects.bulk_update(
                 cost_types_to_be_updated, fields=[
                     'project_key', 'project_id', 'project_name', 'task_key', 'task_id', 'task_name',
                     'cost_type_id', 'name', 'status', 'when_modified'
