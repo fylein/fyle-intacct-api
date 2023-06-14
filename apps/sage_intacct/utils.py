@@ -296,6 +296,12 @@ class SageIntacctConnector:
         """
         Sync of Sage Intacct Cost Types
         """
+        args = {}
+        # if no count in DB:
+        #     add status 
+        # else
+        #     don't add
+
         cost_types_generator = self.connection.cost_types.get_all_generator(field='STATUS', value='active')
 
         for cost_types in cost_types_generator:

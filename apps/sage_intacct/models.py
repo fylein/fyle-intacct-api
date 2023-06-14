@@ -1347,7 +1347,8 @@ class CostType(models.Model):
         existing_cost_types = CostType.objects.filter(**filters).values(
             'id',
             'record_number',
-            'name'
+            'name',
+            'status'
         )
 
         existing_cost_type_record_numbers = []
@@ -1359,7 +1360,8 @@ class CostType(models.Model):
 
             primary_key_map[existing_cost_type['record_number']] = {
                 'id': existing_cost_type['id'],
-                'name': existing_cost_type['name']
+                'name': existing_cost_type['name'],
+                'status': existing_cost_type['status'],
             }
         
         cost_types_to_be_created = []
@@ -1385,7 +1387,9 @@ class CostType(models.Model):
             if cost_type['RECORDNO'] not in existing_cost_type_record_numbers:
                 cost_types_to_be_created.append(cost_type_object)
 
-            elif cost_type['RECORDNO'] in primary_key_map.keys() and cost_type['NAME'] != primary_key_map[cost_type['RECORDNO']]['name']:
+            elif cost_type['RECORDNO'] in primary_key_map.keys() and (
+                cost_type['NAME'] != primary_key_map[cost_type['RECORDNO']]['name'] or cost_type['STATUS'] != primary_key_map[cost_type['RECORDNO']]['status']
+            ):
                 cost_type_object.id = primary_key_map[cost_type['RECORDNO']]['id']
                 cost_types_to_be_updated.append(cost_type_object)
 

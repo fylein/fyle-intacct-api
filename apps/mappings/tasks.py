@@ -613,13 +613,20 @@ def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type
         'code': None
     }
 
-    platform.expense_custom_fields.post(expense_custom_field_payload)
+    created_field = platform.expense_custom_fields.post(expense_custom_field_payload)
     platform.expense_custom_fields.sync()
+
+    return created_field
 
 
 def post_dependent_expense_field_values(workspace_id: int, platform: PlatformConnector):
+    # JSONBAgg get both status
+    # projects = CostType.objects.filter(workspace_id=workspace_id).values('project_name').annotate(tasks=JSONBAgg('task_name', distinct=True))
+    # tasks = CostType.objects.filter(workspace_id=workspace_id).values('task_name').annotate(cost_types=JSONBAgg('name', distinct=True))
     projects = CostType.objects.filter(workspace_id=workspace_id).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
     tasks = CostType.objects.filter(workspace_id=workspace_id).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
+
+    # TODO: check auto-sync possibility, via sdk
 
     project_field_id = ExpenseField.objects.get(attribute_type='PROJECT', workspace_id=workspace_id).source_field_id
 
@@ -628,6 +635,12 @@ def post_dependent_expense_field_values(workspace_id: int, platform: PlatformCon
 
     cost_type_mapping = MappingSetting.objects.get(workspace_id=workspace_id, destination_field='COST_TYPE')
     cost_type_field_id = ExpenseField.objects.get(attribute_type=cost_type_mapping.source_field, workspace_id=workspace_id).source_field_id
+
+    # check if we can cancel the 2nd task in same chain
+    # chain.append('task post')
+    # chain.append('cost type post')
+
+    # TODO: remove sync of dependent fields for fyle refresh
 
     for project in projects:
         payload = [
@@ -1346,10 +1359,7 @@ def auto_import_and_map_fyle_fields(workspace_id):
         chain.append('apps.mappings.tasks.auto_create_category_mappings', workspace_id)
 
     if project_mapping and project_mapping.import_to_fyle:
-        # Follow regular project upload only when dependent field is not enabled
-        is_dependent_field_enabled = is_dependent_field_import_enabled(workspace_id)
-        if not is_dependent_field_enabled:
-            chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
+        chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
 
     if chain.length() > 0:
         chain.run()
