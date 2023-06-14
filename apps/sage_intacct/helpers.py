@@ -5,6 +5,7 @@ from django.utils.module_loading import import_string
 
 from fyle_accounting_mappings.models import MappingSetting
 
+from apps.fyle.models import DependentField
 from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
@@ -53,11 +54,7 @@ def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: Sage
 
 
 def is_dependent_field_import_enabled(workspace_id: int) -> bool:
-    return True
-    # remove hack later
-    # use boolean in config table, move away from mapping setting for deps
-    # separate table to store destination fields for dependent fields - also think of moving source_field_id to this table instead of expense_filter
-    return MappingSetting.objects.filter(workspace_id=workspace_id, destination_field='COST_TYPE').exists()
+    return DependentField.objects.filter(workspace_id=workspace_id).exists()
 
 
 def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, dimensions: list = []) -> None:
@@ -74,10 +71,7 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
         is_dependent_field_enabled = is_dependent_field_import_enabled(workspace_id)
 
         if is_dependent_field_enabled:
-            # TODO: Add project sync support to sync_cost_types
-            # dimensions.remove('projects')
-            # dimensions.append('cost_types')
-            pass
+            dimensions.append('cost_types')
 
     for dimension in dimensions:
         try:

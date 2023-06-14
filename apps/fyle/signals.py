@@ -6,11 +6,11 @@ import logging
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from fyle_integrations_platform_connector import PlatformConnector
-
 from apps.mappings.tasks import create_dependent_custom_field_in_fyle
+from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 from apps.workspaces.models import FyleCredential
 
+from .helpers import connect_to_platform
 from .models import DependentField
 
 
@@ -25,9 +25,11 @@ def run_pre_save_dependent_fields_triggers(sender, instance: DependentField, **k
     :param instance: Row instance of Sender Class
     :return: None
     """
-    print('instance',instance.id, instance)
-    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=instance.workspace_id)
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    # Patch alert - Skip creating dependent fields if they're already created
+    if instance.cost_code_field_id:
+        return
+
+    platform = connect_to_platform(instance.workspace_id)
 
     instance.project_field_id = platform.expense_fields.get_project_field_id()
 
@@ -55,4 +57,4 @@ def run_post_save_dependent_fields_triggers(sender, instance: DependentField, **
     :param instance: Row instance of Sender Class
     :return: None
     """
-    print('post_save', instance)
+    schedule_dependent_field_imports(instance.workspace_id, instance.is_import_enabled)

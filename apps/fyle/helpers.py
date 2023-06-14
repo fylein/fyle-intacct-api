@@ -222,3 +222,8 @@ def construct_expense_filter_query(expense_filters: List[ExpenseFilter]):
         join_by = expense_filter.join_by
 
     return final_filter
+
+def connect_to_platform(workspace_id: int) -> PlatformConnector:
+    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+
+    return PlatformConnector(fyle_credentials=fyle_credentials)
