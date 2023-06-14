@@ -6,9 +6,8 @@ import logging
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
-from apps.mappings.tasks import create_dependent_custom_field_in_fyle
+from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
 from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
-from apps.workspaces.models import FyleCredential
 
 from .helpers import connect_to_platform
 from .models import DependentField

@@ -80,10 +80,9 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
                         'field_name': instance.source_field
                     })
 
-        if not instance.source_field:
-            async_task(
-                'apps.mappings.tasks.auto_create_expense_fields_mappings',
-                int(instance.workspace_id),
-                instance.destination_field,
-                instance.source_field
-            )
+        async_task(
+            'apps.mappings.tasks.auto_create_expense_fields_mappings',
+            int(instance.workspace_id),
+            instance.destination_field,
+            instance.source_field
+        )
