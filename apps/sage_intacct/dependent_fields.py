@@ -7,12 +7,11 @@ from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 
-
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
 from apps.fyle.helpers import connect_to_platform
 from apps.fyle.models import DependentField
-from apps.mappings.tasks import construct_custom_field_placeholder
+from apps.mappings.tasks import construct_custom_field_placeholder, sync_sage_intacct_attributes
 from apps.sage_intacct.models import CostType
 from apps.workspaces.models import SageIntacctCredential
 
@@ -28,17 +27,18 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field: Depe
     # JSONBAgg get both status
     # projects = CostType.objects.filter(workspace_id=workspace_id).values('project_name').annotate(tasks=JSONBAgg('task_name', distinct=True))
     # tasks = CostType.objects.filter(workspace_id=workspace_id).values('task_name').annotate(cost_types=JSONBAgg('name', distinct=True))
-    projects = CostType.objects.filter(workspace_id=workspace_id).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
-    tasks = CostType.objects.filter(workspace_id=workspace_id).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
+
+    filters = {
+        'workspace_id': workspace_id,
+    }
+
+    if dependent_field.last_successful_import_at:
+        filters['updated_at__gte'] = dependent_field.last_successful_import_at
+
+    projects = CostType.objects.filter(**filters).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
+    tasks = CostType.objects.filter(**filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
 
     # TODO: check auto-sync possibility, via sdk
-
-    # check if we can cancel the 2nd task in same chain
-    # chain.append('task post')
-    # chain.append('cost type post')
-
-    # TODO: remove sync of dependent fields for fyle refresh
-
     for project in projects:
         payload = [
             {
@@ -63,12 +63,15 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field: Depe
         ]
         platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
 
+    dependent_field.last_successful_import_at = datetime.now()
+    dependent_field.save()
+
 
 def import_dependent_fields_to_fyle(workspace_id: str):
     dependent_field = DependentField.objects.get(workspace_id=workspace_id)
     platform = connect_to_platform(workspace_id)
-    # TODO: call sync_cost_types which should sync tasks and cost types
-    # sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
+
+    sync_sage_intacct_attributes('COST_TYPE', workspace_id)
 
     try:
         post_dependent_expense_field_values(workspace_id, dependent_field, platform)

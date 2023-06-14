@@ -205,6 +205,7 @@ def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, tas
 
 
 def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, customer_id: str):
+    # TODO: will need to change this function to export deps
     task_id = None
     task_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,

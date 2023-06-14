@@ -1,7 +1,7 @@
 import logging
 import base64
 from typing import List, Dict
-from datetime import datetime
+from datetime import datetime, timedelta
 import unidecode
 import time
 from django.conf import settings
@@ -264,45 +264,23 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_tasks(self):
-        """
-        Get of Tasks
-        """
-
-        intacct_tasks = self.connection.tasks.get_all()
-        task_attributes = []
-
-        # saving values as combination of taskid, name and recordno to avoid duplicates 
-        for task in intacct_tasks:
-            task_attributes.append({
-                'attribute_type': 'TASK',
-                'display_name': 'task',
-                'value': '{}--{}--{}'.format(task['TASKID'], task['NAME'],  task['RECORDNO']),
-                'destination_id': task['RECORDNO'], # storing record number instead of TASKID to avoid duplicates
-                'detail': {
-                    'project_id': task['PROJECTID'],
-                    'project_name': task['PROJECTNAME'],
-                    'external_id': task['TASKID']
-                },
-                'active': True
-            })
-
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            task_attributes, 'TASK', self.workspace_id, True)
-
-        return []
-
     def sync_cost_types(self):
         """
         Sync of Sage Intacct Cost Types
         """
-        args = {}
-        # if no count in DB:
-        #     add status 
-        # else
-        #     don't add
+        args = {
+            'field': 'STATUS',
+            'value': 'active'
+        }
 
-        cost_types_generator = self.connection.cost_types.get_all_generator(field='STATUS', value='active')
+        latest_synced_cost_type = CostType.objects.filter(workspace_id=self.workspace_id).order_by('-updated_at').first()
+
+        if latest_synced_cost_type:
+            # subtracting 1 day from the latest_synced_cost_type since time is not involved
+            latest_synced_timestamp = latest_synced_cost_type.updated_at - timedelta(days=1)
+            args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
+
+        cost_types_generator = self.connection.cost_types.get_all_generator(**args)
 
         for cost_types in cost_types_generator:
             CostType.bulk_create_or_update(cost_types, self.workspace_id)

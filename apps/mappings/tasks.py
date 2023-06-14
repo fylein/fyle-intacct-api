@@ -390,9 +390,6 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     elif sageintacct_attribute_type == 'VENDOR':
         sage_intacct_connection.sync_vendors()
     
-    elif sageintacct_attribute_type == 'TASK':
-        sage_intacct_connection.sync_tasks()
-    
     elif sageintacct_attribute_type == 'COST_TYPE':
         sage_intacct_connection.sync_cost_types()
 
