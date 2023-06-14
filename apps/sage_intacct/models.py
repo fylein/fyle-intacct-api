@@ -9,7 +9,7 @@ from django.db import models
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
     EmployeeMapping
 
-from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings
+from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings, DependentField
 from apps.mappings.models import GeneralMapping
 
 from apps.workspaces.models import Configuration, Workspace, FyleCredential
@@ -179,51 +179,35 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     return item_id
 
 
-def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, task_id: str):
+def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field: DependentField, project_id: str, task_id: str):
     cost_type_id = None
 
-    if task_id:
-        cost_type_setting: MappingSetting = MappingSetting.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            destination_field='COST_TYPE'
-        ).first()
+    selected_cost_type = lineitem.custom_properties.get(dependent_field.cost_type_field_name, None)
+    cost_type = CostType.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        task_id=task_id,
+        project_id=project_id,
+        name=selected_cost_type
+    ).first()
 
-        if cost_type_setting:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=cost_type_setting.source_field).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
-            mapping: Mapping = Mapping.objects.filter(
-                source_type=cost_type_setting.source_field,
-                destination_type='COST_TYPE',
-                source__value=source_value,
-                workspace_id=expense_group.workspace_id
-            ).first()
-
-            if mapping:
-                cost_type_id = mapping.destination.detail['external_id']
+    if cost_type:
+        cost_type_id = cost_type.cost_type_id
 
     return cost_type_id
 
 
-def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, customer_id: str):
-    # TODO: will need to change this function to export deps
+def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field: DependentField, project_id: str):
     task_id = None
-    task_setting: MappingSetting = MappingSetting.objects.filter(
+
+    selected_cost_code = lineitem.custom_properties.get(dependent_field.cost_code_field_name, None)
+    cost_type = CostType.objects.filter(
         workspace_id=expense_group.workspace_id,
-        destination_field='TASK'
+        task_name=selected_cost_code,
+        project_id=project_id
     ).first()
 
-    if customer_id and task_setting: 
-        attribute = ExpenseAttribute.objects.filter(attribute_type=task_setting.source_field).first()
-        source_value = lineitem.custom_properties.get(attribute.display_name, None)
-        mapping: Mapping = Mapping.objects.filter(
-            source_type=task_setting.source_field,
-            destination_type='TASK',
-            source__value=source_value,
-            workspace_id=expense_group.workspace_id
-        ).first()
-
-        if mapping:
-            task_id = mapping.destination.detail['external_id']
+    if cost_type:
+        task_id = cost_type.task_id
 
     return task_id
 
@@ -557,6 +541,9 @@ class BillLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         bill = Bill.objects.get(expense_group=expense_group)
+        dependent_field = DependentField.objects.filter(workspace_id=expense_group.workspace_id).first()
+        task_id = None
+        cost_type_id = None
 
         default_employee_location_id = None
         default_employee_department_id = None
@@ -591,8 +578,11 @@ class BillLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
-            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
-            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
+
+            if dependent_field:
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field, project_id)
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field, project_id, task_id)
+
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
@@ -715,6 +705,9 @@ class ExpenseReportLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         expense_report = ExpenseReport.objects.get(expense_group=expense_group)
+        task_id = None
+        cost_type_id = None
+        dependent_field = DependentField.objects.filter(workspace_id=expense_group.workspace_id).first()
 
         default_employee_location_id = None
         default_employee_department_id = None
@@ -749,8 +742,11 @@ class ExpenseReportLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
-            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
-            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
+
+            if dependent_field:
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field, project_id)
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field, project_id, task_id)
+
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             if expense_group.fund_source == 'PERSONAL':
@@ -873,6 +869,9 @@ class JournalEntryLineitem(models.Model):
         """
         expenses = expense_group.expenses.all()
         journal_entry = JournalEntry.objects.get(expense_group=expense_group)
+        task_id = None
+        cost_type_id = None
+        dependent_field = DependentField.objects.filter(workspace_id=expense_group.workspace_id).first()
 
         default_employee_location_id = None
         default_employee_department_id = None
@@ -916,8 +915,11 @@ class JournalEntryLineitem(models.Model):
             employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
             vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
-            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
-            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
+
+            if dependent_field:
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field, project_id)
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field, project_id, task_id)
+
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
@@ -1060,6 +1062,10 @@ class ChargeCardTransactionLineitem(models.Model):
         expenses = expense_group.expenses.all()
         charge_card_transaction = ChargeCardTransaction.objects.get(expense_group=expense_group)
 
+        task_id = None
+        cost_type_id = None
+        dependent_field = DependentField.objects.filter(workspace_id=expense_group.workspace_id).first()
+
         default_employee_location_id = None
         default_employee_department_id = None
 
@@ -1093,8 +1099,10 @@ class ChargeCardTransactionLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
-            task_id = get_task_id_or_none(expense_group, lineitem, project_id)
-            cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, task_id)
+
+            if dependent_field:
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field, project_id)
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field, project_id, task_id)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,
