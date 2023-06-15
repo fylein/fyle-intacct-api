@@ -497,7 +497,7 @@ def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting)
     assert mappings == 0    
 
 
-def test_sync_sage_intacct_attributes(mocker, db):
+def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting):
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Locations.get_all',

@@ -406,7 +406,7 @@ ALTER TABLE public.configurations OWNER TO postgres;
 
 CREATE TABLE public.cost_types (
     id integer NOT NULL,
-    record_number character varying(255) NOT NULL,
+    record_number integer NOT NULL,
     project_key character varying(255) NOT NULL,
     project_id character varying(255) NOT NULL,
     project_name character varying(255) NOT NULL,
@@ -3836,6 +3836,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 144	fyle_accounting_mappings	0022_auto_20230411_1118	2023-06-15 11:38:34.197521+00
 145	sage_intacct	0020_costtypes	2023-06-15 11:38:34.218491+00
 146	sage_intacct	0021_auto_20230608_1310	2023-06-15 11:38:34.25444+00
+147	sage_intacct	0022_auto_20230615_1509	2023-06-15 15:10:11.18372+00
 \.
 
 
@@ -7809,7 +7810,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 46, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 146, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 147, true);
 
 
 --
