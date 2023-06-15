@@ -401,6 +401,97 @@ CREATE TABLE public.configurations (
 ALTER TABLE public.configurations OWNER TO postgres;
 
 --
+-- Name: cost_types; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.cost_types (
+    id integer NOT NULL,
+    record_number character varying(255) NOT NULL,
+    project_key character varying(255) NOT NULL,
+    project_id character varying(255) NOT NULL,
+    project_name character varying(255) NOT NULL,
+    task_key character varying(255) NOT NULL,
+    task_id character varying(255) NOT NULL,
+    status character varying(255),
+    task_name character varying(255) NOT NULL,
+    cost_type_id character varying(255) NOT NULL,
+    name character varying(255) NOT NULL,
+    when_created character varying(255),
+    when_modified character varying(255),
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.cost_types OWNER TO postgres;
+
+--
+-- Name: cost_types_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.cost_types_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.cost_types_id_seq OWNER TO postgres;
+
+--
+-- Name: cost_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.cost_types_id_seq OWNED BY public.cost_types.id;
+
+
+--
+-- Name: dependent_field_settings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.dependent_field_settings (
+    id integer NOT NULL,
+    is_import_enabled boolean NOT NULL,
+    project_field_id integer NOT NULL,
+    cost_code_field_name character varying(255) NOT NULL,
+    cost_code_field_id integer NOT NULL,
+    cost_type_field_name character varying(255) NOT NULL,
+    cost_type_field_id integer NOT NULL,
+    last_successful_import_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.dependent_field_settings OWNER TO postgres;
+
+--
+-- Name: dependent_fields_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.dependent_fields_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.dependent_fields_id_seq OWNER TO postgres;
+
+--
+-- Name: dependent_fields_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.dependent_fields_id_seq OWNED BY public.dependent_field_settings.id;
+
+
+--
 -- Name: destination_attributes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2027,6 +2118,20 @@ ALTER TABLE ONLY public.configurations ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: cost_types id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cost_types ALTER COLUMN id SET DEFAULT nextval('public.cost_types_id_seq'::regclass);
+
+
+--
+-- Name: dependent_field_settings id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.dependent_field_settings ALTER COLUMN id SET DEFAULT nextval('public.dependent_fields_id_seq'::regclass);
+
+
+--
 -- Name: destination_attributes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2471,6 +2576,14 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 174	Can change expense filter	44	change_expensefilter
 175	Can delete expense filter	44	delete_expensefilter
 176	Can view expense filter	44	view_expensefilter
+177	Can add dependent field setting	45	add_dependentfieldsetting
+178	Can change dependent field setting	45	change_dependentfieldsetting
+179	Can delete dependent field setting	45	delete_dependentfieldsetting
+180	Can view dependent field setting	45	view_dependentfieldsetting
+181	Can add cost type	46	add_costtype
+182	Can change cost type	46	change_costtype
+183	Can delete cost type	46	delete_costtype
+184	Can view cost type	46	view_costtype
 \.
 
 
@@ -2539,6 +2652,22 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 
 COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, is_simplify_report_closure_enabled) FROM stdin;
 1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f
+\.
+
+
+--
+-- Data for Name: cost_types; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.cost_types (id, record_number, project_key, project_id, project_name, task_key, task_id, status, task_name, cost_type_id, name, when_created, when_modified, created_at, updated_at, workspace_id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: dependent_field_settings; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id) FROM stdin;
 \.
 
 
@@ -3550,6 +3679,8 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 42	mappings	locationentitymapping
 43	fyle_accounting_mappings	expensefield
 44	fyle	expensefilter
+45	fyle	dependentfieldsetting
+46	sage_intacct	costtype
 \.
 
 
@@ -3700,6 +3831,11 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 139	mappings	0012_auto_20230417_1124	2023-04-17 11:42:04.876255+00
 140	fyle	0018_auto_20230427_0355	2023-04-27 03:56:21.411364+00
 141	fyle	0019_expense_report_title	2023-04-27 16:57:27.877735+00
+142	fyle	0020_dependentfield	2023-06-15 11:38:34.139106+00
+143	fyle	0021_auto_20230615_0808	2023-06-15 11:38:34.1818+00
+144	fyle_accounting_mappings	0022_auto_20230411_1118	2023-06-15 11:38:34.197521+00
+145	sage_intacct	0020_costtypes	2023-06-15 11:38:34.218491+00
+146	sage_intacct	0021_auto_20230608_1310	2023-06-15 11:38:34.25444+00
 \.
 
 
@@ -7631,7 +7767,7 @@ SELECT pg_catalog.setval('public.auth_group_permissions_id_seq', 1, false);
 -- Name: auth_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.auth_permission_id_seq', 176, true);
+SELECT pg_catalog.setval('public.auth_permission_id_seq', 184, true);
 
 
 --
@@ -7639,6 +7775,20 @@ SELECT pg_catalog.setval('public.auth_permission_id_seq', 176, true);
 --
 
 SELECT pg_catalog.setval('public.category_mappings_id_seq', 140, true);
+
+
+--
+-- Name: cost_types_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.cost_types_id_seq', 1, false);
+
+
+--
+-- Name: dependent_fields_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.dependent_fields_id_seq', 1, false);
 
 
 --
@@ -7652,14 +7802,14 @@ SELECT pg_catalog.setval('public.django_admin_log_id_seq', 1, false);
 -- Name: django_content_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_content_type_id_seq', 44, true);
+SELECT pg_catalog.setval('public.django_content_type_id_seq', 46, true);
 
 
 --
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 141, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 146, true);
 
 
 --
@@ -8004,11 +8154,43 @@ ALTER TABLE ONLY public.category_mappings
 
 
 --
--- Name: destination_attributes destination_attributes_destination_id_attribute_dfb58751_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: cost_types cost_types_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cost_types
+    ADD CONSTRAINT cost_types_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cost_types cost_types_record_number_workspace_id_a86dce01_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cost_types
+    ADD CONSTRAINT cost_types_record_number_workspace_id_a86dce01_uniq UNIQUE (record_number, workspace_id);
+
+
+--
+-- Name: dependent_field_settings dependent_fields_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.dependent_field_settings
+    ADD CONSTRAINT dependent_fields_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dependent_field_settings dependent_fields_workspace_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.dependent_field_settings
+    ADD CONSTRAINT dependent_fields_workspace_id_key UNIQUE (workspace_id);
+
+
+--
+-- Name: destination_attributes destination_attributes_destination_id_attribute_d22ab1fe_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.destination_attributes
-    ADD CONSTRAINT destination_attributes_destination_id_attribute_dfb58751_uniq UNIQUE (destination_id, attribute_type, workspace_id);
+    ADD CONSTRAINT destination_attributes_destination_id_attribute_d22ab1fe_uniq UNIQUE (destination_id, attribute_type, workspace_id, display_name);
 
 
 --
@@ -8633,6 +8815,13 @@ CREATE INDEX charge_card_transaction_li_charge_card_transaction_id_508bf6be ON p
 
 
 --
+-- Name: cost_types_workspace_id_c71fcac0; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX cost_types_workspace_id_c71fcac0 ON public.cost_types USING btree (workspace_id);
+
+
+--
 -- Name: django_admin_log_content_type_id_c4bce8eb; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9030,6 +9219,22 @@ ALTER TABLE ONLY public.charge_card_transactions
 
 ALTER TABLE ONLY public.charge_card_transaction_lineitems
     ADD CONSTRAINT charge_card_transact_expense_id_d662cef7_fk_expenses_ FOREIGN KEY (expense_id) REFERENCES public.expenses(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: cost_types cost_types_workspace_id_c71fcac0_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cost_types
+    ADD CONSTRAINT cost_types_workspace_id_c71fcac0_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: dependent_field_settings dependent_fields_workspace_id_6b3920cb_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.dependent_field_settings
+    ADD CONSTRAINT dependent_fields_workspace_id_6b3920cb_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
