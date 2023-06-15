@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from fyle_accounting_mappings.models import MappingSetting
+from fyle_accounting_mappings.models import MappingSetting, ExpenseField
 from django.db import transaction
 from django.db.models import Q
 
@@ -82,10 +82,22 @@ class GeneralMappingsSerializer(serializers.ModelSerializer):
         }
 
 
+class ExpenseFieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpenseField
+        fields = [
+            'id',
+            'attribute_type',
+            'source_field_id',
+            'is_enabled',
+        ]
+
+
 class ImportSettingsSerializer(serializers.ModelSerializer):
     configurations = ConfigurationsSerializer()
     general_mappings = GeneralMappingsSerializer()
     mapping_settings = MappingSettingSerializer(many=True)
+    expense_field = ExpenseFieldSerializer()
     workspace_id = serializers.SerializerMethodField()
 
     class Meta:
@@ -94,13 +106,16 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
             'configurations',
             'general_mappings',
             'mapping_settings',
+            'expense_field',
             'workspace_id'
         ]
         read_only_fields = ['workspace_id']
 
+
     def get_workspace_id(self, instance):
         return instance.id
-    
+
+
     def update(self, instance, validated):
         configurations = validated.pop('configurations')
         general_mappings = validated.pop('general_mappings')
@@ -156,6 +171,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
             instance.save()
 
         return instance
+
 
     def validate(self, data):
         if not data.get('configurations'):

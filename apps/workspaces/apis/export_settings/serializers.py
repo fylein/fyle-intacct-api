@@ -1,6 +1,6 @@
 from apps.workspaces.models import Workspace, Configuration
 from rest_framework import serializers
-from fyle_accounting_mappings.models import MappingSetting
+
 
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
@@ -131,9 +131,11 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['workspace_id']
 
+
     def get_workspace_id(self, instance):
         return instance.id
     
+
     def update(self, instance, validated):
         configurations = validated.pop('configurations')
         expense_group_settings = validated.pop('expense_group_settings')
