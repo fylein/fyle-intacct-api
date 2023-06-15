@@ -2,6 +2,7 @@ import pytest
 from fyle_accounting_mappings.models import MappingSetting, DestinationAttribute
 
 from apps.fyle.models import DependentFieldSetting
+from apps.sage_intacct.models import CostType
 
 
 @pytest.fixture
@@ -38,3 +39,23 @@ def create_dependent_field_setting(db):
     )
 
     return created_field
+
+
+@pytest.fixture
+def create_cost_type(db):
+    workspace_id = 1
+    CostType.objects.update_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'record_number': 34234,
+            'project_key': 34,
+            'project_id': 'pro1',
+            'project_name': 'pro',
+            'task_key': 34,
+            'task_id': 'task1',
+            'task_name': 'task',
+            'status': 'ACTIVE',
+            'cost_type_id': 'cost1',
+            'name': 'cost'
+        }
+    )

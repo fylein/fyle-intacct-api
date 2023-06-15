@@ -497,7 +497,7 @@ def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting)
     assert mappings == 0    
 
 
-def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting):
+def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting, create_cost_type):
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Locations.get_all',
@@ -520,10 +520,16 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=intacct_data['get_vendors']
     )
 
+    mocker.patch(
+        'sageintacctsdk.apis.CostTypes.get_all_generator',
+        return_value=[]
+    )
+
     sync_sage_intacct_attributes('DEPARTMENT', workspace_id=workspace_id)
     sync_sage_intacct_attributes('LOCATION', workspace_id=workspace_id)
     sync_sage_intacct_attributes('PROJECT', workspace_id=workspace_id)
     sync_sage_intacct_attributes('VENDOR', workspace_id=workspace_id)
+    sync_sage_intacct_attributes('COST_TYPE', workspace_id)
 
     projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='PROJECT').count()
