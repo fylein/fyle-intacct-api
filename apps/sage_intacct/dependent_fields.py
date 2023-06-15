@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
+from time import sleep
 
 from django_q.models import Schedule
 from django_q.tasks import async_task
@@ -36,6 +37,7 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
                 'is_enabled': True
             } for task in project['tasks']
         ]
+        sleep(0.2)
         platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
 
 
@@ -51,6 +53,7 @@ def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, pla
                 'is_enabled': True
             } for cost_type in task['cost_types']
         ]
+        sleep(0.2)
         platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
 
 

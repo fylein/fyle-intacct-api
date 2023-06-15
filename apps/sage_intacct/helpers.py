@@ -74,10 +74,3 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
             sync()
         except Exception as exception:
             logger.info(exception)
-
-    # Syncing cost_types and cost_codes async'ly
-    async_task('apps.sage_intacct.helpers.asynchronously_sync_cost_types', sage_intacct_connection)
-
-
-def asynchronously_sync_cost_types(sage_intacct_connection):
-    sage_intacct_connection.sync_cost_types()
