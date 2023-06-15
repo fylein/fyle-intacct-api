@@ -19,10 +19,11 @@ from apps.tasks.models import TaskLog
 
 from .tasks import create_expense_groups, schedule_expense_group_creation
 from .helpers import check_interval_and_sync_dimension, sync_dimensions
-from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentField
+from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
 from .serializers import (
-    ExpenseFilterSerializer, ExpenseGroupExpenseSerializer, ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer,
-    ExpenseGroupSettingsSerializer, DependentFieldSerializer
+    ExpenseFilterSerializer, ExpenseGroupExpenseSerializer, ExpenseGroupSerializer,
+    ExpenseSerializer, ExpenseFieldSerializer, ExpenseGroupSettingsSerializer,
+    DependentFieldSettingSerializer
 )
 
 
@@ -435,10 +436,10 @@ class CustomFieldView(generics.RetrieveAPIView):
         )
 
 
-class DependentFieldView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
+class DependentFieldSettingView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
     """
     Dependent Field view
     """
-    serializer_class = DependentFieldSerializer
+    serializer_class = DependentFieldSettingSerializer
     lookup_field = 'workspace_id'
-    queryset = DependentField.objects.all()
+    queryset = DependentFieldSetting.objects.all()

@@ -10,15 +10,15 @@ from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_
 from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 
 from .helpers import connect_to_platform
-from .models import DependentField
+from .models import DependentFieldSetting
 
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-@receiver(pre_save, sender=DependentField)
-def run_pre_save_dependent_fields_triggers(sender, instance: DependentField, **kwargs):
+@receiver(pre_save, sender=DependentFieldSetting)
+def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFieldSetting, **kwargs):
     """
     :param sender: Sender Class
     :param instance: Row instance of Sender Class
@@ -49,8 +49,8 @@ def run_pre_save_dependent_fields_triggers(sender, instance: DependentField, **k
     instance.cost_type_field_id = cost_type['data']['id']
 
 
-@receiver(post_save, sender=DependentField)
-def run_post_save_dependent_fields_triggers(sender, instance: DependentField, **kwargs):
+@receiver(post_save, sender=DependentFieldSetting)
+def run_post_save_dependent_field_settings_triggers(sender, instance: DependentFieldSetting, **kwargs):
     """
     :param sender: Sender Class
     :param instance: Row instance of Sender Class

@@ -18,7 +18,7 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttr
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
 from apps.fyle.helpers import connect_to_platform
-from apps.fyle.models import DependentField
+from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.sage_intacct.models import CostType

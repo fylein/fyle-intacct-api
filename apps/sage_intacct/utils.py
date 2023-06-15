@@ -15,6 +15,7 @@ from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
 
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
 
@@ -273,11 +274,11 @@ class SageIntacctConnector:
             'value': 'active'
         }
 
-        latest_synced_cost_type = CostType.objects.filter(workspace_id=self.workspace_id).order_by('-updated_at').first()
+        dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id, last_successful_import_at__isnull=False).first()
 
-        if latest_synced_cost_type:
-            # subtracting 1 day from the latest_synced_cost_type since time is not involved
-            latest_synced_timestamp = latest_synced_cost_type.updated_at - timedelta(days=1)
+        if dependent_field_setting:
+            # subtracting 1 day from the last_successful_import_at since time is not involved
+            latest_synced_timestamp = dependent_field_setting.last_successful_import_at - timedelta(days=1)
             args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
 
         cost_types_generator = self.connection.cost_types.get_all_generator(**args)

@@ -1,7 +1,10 @@
 import logging
 from datetime import datetime
+from typing import Dict, List
 
 from django_q.models import Schedule
+from django_q.tasks import async_task
+
 from django.contrib.postgres.aggregates import ArrayAgg
 from fyle_integrations_platform_connector import PlatformConnector
 
@@ -10,7 +13,7 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
 from apps.fyle.helpers import connect_to_platform
-from apps.fyle.models import DependentField
+from apps.fyle.models import DependentFieldSetting
 from apps.mappings.tasks import construct_custom_field_placeholder, sync_sage_intacct_attributes
 from apps.sage_intacct.models import CostType
 from apps.workspaces.models import SageIntacctCredential
@@ -20,66 +23,68 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def post_dependent_expense_field_values(workspace_id: int, dependent_field: DependentField, platform: PlatformConnector = None):
-    if not platform:
-        platform = connect_to_platform(workspace_id)
-
-    # JSONBAgg get both status
-    # projects = CostType.objects.filter(workspace_id=workspace_id).values('project_name').annotate(tasks=JSONBAgg('task_name', distinct=True))
-    # tasks = CostType.objects.filter(workspace_id=workspace_id).values('task_name').annotate(cost_types=JSONBAgg('name', distinct=True))
-
-    filters = {
-        'workspace_id': workspace_id,
-    }
-
-    if dependent_field.last_successful_import_at:
-        filters['updated_at__gte'] = dependent_field.last_successful_import_at
-
+def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
+    # TODO: use JSONBAgg get both status and name which will help in auto-sync satus
     projects = CostType.objects.filter(**filters).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
-    tasks = CostType.objects.filter(**filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
-
-    # TODO: check auto-sync possibility, via sdk
     for project in projects:
         payload = [
             {
-                'parent_expense_field_id': dependent_field.project_field_id,
+                'parent_expense_field_id': dependent_field_setting.project_field_id,
                 'parent_expense_field_value': project['project_name'],
-                'expense_field_id': dependent_field.cost_code_field_id,
+                'expense_field_id': dependent_field_setting.cost_code_field_id,
                 'expense_field_value': task,
                 'is_enabled': True
             } for task in project['tasks']
         ]
         platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
 
+
+def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
+    tasks = CostType.objects.filter(**filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
     for task in tasks:
         payload = [
             {
-                'parent_expense_field_id': dependent_field.cost_code_field_id,
+                'parent_expense_field_id': dependent_field_setting.cost_code_field_id,
                 'parent_expense_field_value': task['task_name'],
-                'expense_field_id': dependent_field.cost_type_field_id,
+                'expense_field_id': dependent_field_setting.cost_type_field_id,
                 'expense_field_value': cost_type,
                 'is_enabled': True
             } for cost_type in task['cost_types']
         ]
         platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
 
-    dependent_field.last_successful_import_at = datetime.now()
-    dependent_field.save()
+
+def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None):
+    if not platform:
+        platform = connect_to_platform(workspace_id)
+
+    filters = {
+        'workspace_id': workspace_id,
+    }
+
+    if dependent_field_setting.last_successful_import_at:
+        filters['updated_at__gte'] = dependent_field_setting.last_successful_import_at
+
+    post_dependent_cost_code(dependent_field_setting, platform, filters)
+    post_dependent_cost_type(dependent_field_setting, platform, filters)
+
+    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
 
 
 def import_dependent_fields_to_fyle(workspace_id: str):
-    dependent_field = DependentField.objects.get(workspace_id=workspace_id)
-    platform = connect_to_platform(workspace_id)
-
-    sync_sage_intacct_attributes('COST_TYPE', workspace_id)
+    dependent_field = DependentFieldSetting.objects.get(workspace_id=workspace_id)
 
     try:
+        platform = connect_to_platform(workspace_id)
+        sync_sage_intacct_attributes('COST_TYPE', workspace_id)
         post_dependent_expense_field_values(workspace_id, dependent_field, platform)
 
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
     except NoPrivilegeError:
         logger.info('Insufficient permission to access the requested module')
+    except Exception as exception:
+        logger.error('Exception while importing dependent fields to fyle - %s', exception)
 
 
 def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type: str, platform: PlatformConnector, parent_field_id: str, source_placeholder: str = None):

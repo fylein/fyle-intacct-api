@@ -513,10 +513,10 @@ class ExpenseFilter(models.Model):
         db_table = 'expense_filters'
 
 
-class DependentField(models.Model):
+class DependentFieldSetting(models.Model):
     """
     Fyle Dependent Fields
-    DB Table: dependent_fields:
+    DB Table: dependent_field_settings:
     """
     id = models.AutoField(primary_key=True)
     is_import_enabled = models.BooleanField(help_text='Is Import Enabled')
@@ -531,4 +531,4 @@ class DependentField(models.Model):
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
     class Meta:
-        db_table = 'dependent_fields'
+        db_table = 'dependent_field_settings'
