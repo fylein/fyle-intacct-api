@@ -5,8 +5,11 @@ from rest_framework.views import status
 from rest_framework import generics
 from rest_framework.response import Response
 
-from fyle_accounting_mappings.models import ExpenseAttribute
+from django_q.tasks import Chain
+
+from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
+from fyle.platform.exceptions import PlatformError
 from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
 
 from fyle_integrations_platform_connector import PlatformConnector
@@ -290,6 +293,13 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+        except PlatformError:
+            return Response(
+                data={
+                    'message': 'Something wrong with PlatformConnector'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class RefreshFyleDimensionView(generics.ListCreateAPIView):
@@ -303,6 +313,23 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
         try:
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
+
+            mapping_settings = MappingSetting.objects.filter(workspace_id=kwargs['workspace_id'], import_to_fyle=True)
+            chain = Chain()
+
+            for mapping_setting in mapping_settings:
+                if mapping_setting.source_field == 'PROJECT':
+                    chain.append('apps.mappings.tasks.auto_import_and_map_fyle_fields', int(kwargs['workspace_id']))
+                elif mapping_setting.source_field == 'COST_CENTER':
+                    chain.append('apps.mappings.tasks.auto_create_cost_center_mappings', int(kwargs['workspace_id']))
+                elif mapping_setting.is_custom:
+                    chain.append('apps.mappings.tasks.async_auto_create_custom_field_mappings',
+                                int(kwargs['workspace_id']))
+
+            if chain.length() > 0:
+                chain.run()
+
+
             sync_dimensions(fyle_credentials, workspace.id)
 
             workspace.source_synced_at = datetime.now()
@@ -315,6 +342,13 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
             return Response(
                 data={
                     'message': 'Fyle credentials not found in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except PlatformError:
+            return Response(
+                data={
+                    'message': 'Something wrong with PlatformConnector'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
