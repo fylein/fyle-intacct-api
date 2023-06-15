@@ -4,7 +4,6 @@ from typing import Dict
 from time import sleep
 
 from django_q.models import Schedule
-from django_q.tasks import async_task
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from fyle_integrations_platform_connector import PlatformConnector
@@ -62,7 +61,7 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
         platform = connect_to_platform(workspace_id)
 
     filters = {
-        'workspace_id': workspace_id,
+        'workspace_id': workspace_id
     }
 
     if dependent_field_setting.last_successful_import_at:
@@ -111,10 +110,7 @@ def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type
         'code': None
     }
 
-    created_field = platform.expense_custom_fields.post(expense_custom_field_payload)
-    platform.expense_custom_fields.sync()
-
-    return created_field
+    return platform.expense_custom_fields.post(expense_custom_field_payload)
 
 
 def schedule_dependent_field_imports(workspace_id: int, is_import_enabled: bool):
