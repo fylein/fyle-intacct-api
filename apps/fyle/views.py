@@ -19,9 +19,12 @@ from apps.tasks.models import TaskLog
 
 from .tasks import create_expense_groups, schedule_expense_group_creation
 from .helpers import check_interval_and_sync_dimension, sync_dimensions
-from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
-from .serializers import ExpenseFilterSerializer, ExpenseGroupExpenseSerializer, ExpenseGroupSerializer, ExpenseSerializer, ExpenseFieldSerializer, \
-    ExpenseGroupSettingsSerializer
+from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
+from .serializers import (
+    ExpenseFilterSerializer, ExpenseGroupExpenseSerializer, ExpenseGroupSerializer,
+    ExpenseSerializer, ExpenseFieldSerializer, ExpenseGroupSettingsSerializer,
+    DependentFieldSettingSerializer
+)
 
 
 class ExpenseGroupView(generics.ListCreateAPIView):
@@ -432,3 +435,11 @@ class CustomFieldView(generics.RetrieveAPIView):
             status=status.HTTP_200_OK
         )
 
+
+class DependentFieldSettingView(generics.CreateAPIView, generics.RetrieveUpdateAPIView):
+    """
+    Dependent Field view
+    """
+    serializer_class = DependentFieldSettingSerializer
+    lookup_field = 'workspace_id'
+    queryset = DependentFieldSetting.objects.all()

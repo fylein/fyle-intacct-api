@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 
-from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, Reimbursement
+from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
 
 
 class ExpenseGroupSerializer(serializers.ModelSerializer):
@@ -73,3 +73,16 @@ class ExpenseFilterSerializer(serializers.ModelSerializer):
         )
 
         return expense_filter
+
+
+class DependentFieldSettingSerializer(serializers.ModelSerializer):
+    """
+    Dependent Field serializer
+    """
+    project_field_id = serializers.IntegerField(required=False)
+    cost_code_field_id = serializers.IntegerField(required=False)
+    cost_type_field_id = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = DependentFieldSetting
+        fields = '__all__'

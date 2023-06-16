@@ -54,19 +54,16 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
     default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'TAX_GROUP', 'CORPORATE_CARD']
 
     instance.source_field = instance.source_field.upper().replace(' ', '_')
-    parent_field_id = instance.expense_field.source_field_id if instance.expense_field else None
 
     if instance.source_field not in default_attributes:
-        #TODO: sync intacct fields before we upload custom field
+        # TODO: sync intacct fields before we upload custom field
         try:
-            if not instance.expense_field:
-                upload_attributes_to_fyle(
-                    workspace_id=int(instance.workspace_id),
-                    sageintacct_attribute_type=instance.destination_field,
-                    fyle_attribute_type=instance.source_field,
-                    parent_field_id=parent_field_id,
-                    source_placeholder=instance.source_placeholder
-                )
+            upload_attributes_to_fyle(
+                workspace_id=int(instance.workspace_id),
+                sageintacct_attribute_type=instance.destination_field,
+                fyle_attribute_type=instance.source_field,
+                source_placeholder=instance.source_placeholder
+            )
 
         except WrongParamsError as error:
             logger.error(
@@ -87,6 +84,5 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
             'apps.mappings.tasks.auto_create_expense_fields_mappings',
             int(instance.workspace_id),
             instance.destination_field,
-            instance.source_field,
-            parent_field_id
+            instance.source_field
         )
