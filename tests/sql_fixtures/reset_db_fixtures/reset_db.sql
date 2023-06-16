@@ -3832,20 +3832,12 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 139	mappings	0012_auto_20230417_1124	2023-04-17 11:42:04.876255+00
 140	fyle	0018_auto_20230427_0355	2023-04-27 03:56:21.411364+00
 141	fyle	0019_expense_report_title	2023-04-27 16:57:27.877735+00
-<<<<<<< HEAD
-142	workspaces	0026_auto_20230531_0926	2023-05-31 12:51:55.690703+00
-143	fyle	0020_auto_20230531_0926	2023-05-31 12:51:55.71629+00
-144	fyle_accounting_mappings	0022_auto_20230411_1118	2023-05-31 12:51:55.73621+00
-145	mappings	0013_auto_20230531_1040	2023-05-31 12:51:55.760705+00
-146	mappings	0014_auto_20230531_1248	2023-05-31 12:51:55.785861+00
-=======
 142	fyle	0020_dependentfield	2023-06-15 11:38:34.139106+00
 143	fyle	0021_auto_20230615_0808	2023-06-15 11:38:34.1818+00
 144	fyle_accounting_mappings	0022_auto_20230411_1118	2023-06-15 11:38:34.197521+00
 145	sage_intacct	0020_costtypes	2023-06-15 11:38:34.218491+00
 146	sage_intacct	0021_auto_20230608_1310	2023-06-15 11:38:34.25444+00
 147	sage_intacct	0022_auto_20230615_1509	2023-06-15 15:10:11.18372+00
->>>>>>> b7882e8dd7d3aa175297956841a0f81eff0d6acf
 \.
 
 
@@ -7819,11 +7811,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 46, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-<<<<<<< HEAD
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 146, true);
-=======
 SELECT pg_catalog.setval('public.django_migrations_id_seq', 147, true);
->>>>>>> b7882e8dd7d3aa175297956841a0f81eff0d6acf
 
 
 --
@@ -8168,8 +8156,6 @@ ALTER TABLE ONLY public.category_mappings
 
 
 --
-<<<<<<< HEAD
-=======
 -- Name: cost_types cost_types_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8202,7 +8188,6 @@ ALTER TABLE ONLY public.dependent_field_settings
 
 
 --
->>>>>>> b7882e8dd7d3aa175297956841a0f81eff0d6acf
 -- Name: destination_attributes destination_attributes_destination_id_attribute_d22ab1fe_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9240,13 +9225,6 @@ ALTER TABLE ONLY public.charge_card_transaction_lineitems
 
 
 --
-<<<<<<< HEAD
--- Name: configurations configurations_workspace_id_560f6e1c_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.configurations
-    ADD CONSTRAINT configurations_workspace_id_560f6e1c_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
-=======
 -- Name: cost_types cost_types_workspace_id_c71fcac0_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9260,7 +9238,6 @@ ALTER TABLE ONLY public.cost_types
 
 ALTER TABLE ONLY public.dependent_field_settings
     ADD CONSTRAINT dependent_fields_workspace_id_6b3920cb_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
->>>>>>> b7882e8dd7d3aa175297956841a0f81eff0d6acf
 
 
 --
