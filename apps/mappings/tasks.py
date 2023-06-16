@@ -389,6 +389,15 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
 
     elif sageintacct_attribute_type == 'VENDOR':
         sage_intacct_connection.sync_vendors()
+
+    elif sageintacct_attribute_type == 'CLASS':
+        sage_intacct_connection.sync_classes()
+
+    elif sageintacct_attribute_type == 'TAX_DETAIL':
+        sage_intacct_connection.sync_tax_details()
+
+    elif sageintacct_attribute_type == 'ITEM':
+        sage_intacct_connection.sync_items()
     
     elif sageintacct_attribute_type == 'COST_TYPE':
         sage_intacct_connection.sync_cost_types()
