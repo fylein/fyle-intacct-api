@@ -511,3 +511,24 @@ class ExpenseFilter(models.Model):
 
     class Meta:
         db_table = 'expense_filters'
+
+
+class DependentFieldSetting(models.Model):
+    """
+    Fyle Dependent Fields
+    DB Table: dependent_field_settings:
+    """
+    id = models.AutoField(primary_key=True)
+    is_import_enabled = models.BooleanField(help_text='Is Import Enabled')
+    project_field_id = models.IntegerField(help_text='Fyle Source Field ID')
+    cost_code_field_name = models.CharField(max_length=255, help_text='Fyle Cost Code Field Name')
+    cost_code_field_id = models.IntegerField(help_text='Fyle Cost Code Field ID')
+    cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name')
+    cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID')
+    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    last_successful_import_at = models.DateTimeField(null=True, help_text='Last Successful Import At')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
+
+    class Meta:
+        db_table = 'dependent_field_settings'

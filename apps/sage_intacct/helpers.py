@@ -3,6 +3,9 @@ import logging
 
 from django.utils.module_loading import import_string
 
+from django_q.tasks import async_task
+
+from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
@@ -49,6 +52,11 @@ def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: Sage
 
     return False
 
+
+def is_dependent_field_import_enabled(workspace_id: int) -> bool:
+    return DependentFieldSetting.objects.filter(workspace_id=workspace_id).exists()
+
+
 def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, dimensions: list = []) -> None:
     sage_intacct_connection = import_string(
         'apps.sage_intacct.utils.SageIntacctConnector'
@@ -57,8 +65,7 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
         dimensions = [
             'locations', 'customers', 'departments', 'tax_details', 'projects', 
             'expense_payment_types', 'classes', 'charge_card_accounts','payment_accounts', 
-            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions',
-            'tasks', 'cost_types'
+            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions'
         ]
 
     for dimension in dimensions:

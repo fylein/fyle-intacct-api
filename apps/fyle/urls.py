@@ -16,10 +16,14 @@ Including another URLconf
 from django.urls import path
 import itertools
 
-from .views import CustomFieldView, ExpenseFilterView, ExpenseGroupExpenseView, ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView, \
-    ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView, FyleFieldsView, \
-        ExpenseAttributesView, ExpenseGroupSettingsView, RefreshFyleDimensionView, SyncFyleDimensionView, \
-        ExpenseGroupCountView
+from .views import (
+    CustomFieldView, ExpenseFilterView, ExpenseGroupExpenseView,
+    ExpenseGroupView, ExpenseGroupScheduleView, ExpenseGroupByIdView,
+    ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView,
+    FyleFieldsView, ExpenseAttributesView, ExpenseGroupSettingsView,
+    RefreshFyleDimensionView, SyncFyleDimensionView, ExpenseGroupCountView,
+    DependentFieldSettingView
+)
 
 expense_groups_paths = [
     path('expense_groups/', ExpenseGroupView.as_view()),
@@ -44,7 +48,8 @@ other_paths = [
     path('fyle_fields/', FyleFieldsView.as_view()),
     path('expense_filters/', ExpenseFilterView.as_view(), name='expense-filters'),
     path('expenses/', ExpenseView.as_view(), name='expenses'),
-    path('custom_fields/', CustomFieldView.as_view(), name='custom-field')
+    path('custom_fields/', CustomFieldView.as_view(), name='custom-field'),
+    path('dependent_field_settings/', DependentFieldSettingView.as_view(), name='dependent-field')
 ]
 
 urlpatterns = list(itertools.chain(expense_groups_paths, fyle_dimension_paths, other_paths))

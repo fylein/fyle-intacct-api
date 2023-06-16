@@ -1,4 +1,6 @@
-from apps.sage_intacct.helpers import schedule_payment_sync, check_interval_and_sync_dimension
+from apps.sage_intacct.helpers import (
+    schedule_payment_sync, check_interval_and_sync_dimension, is_dependent_field_import_enabled
+)
 from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 
 
@@ -20,3 +22,7 @@ def test_check_interval_and_sync_dimension(db):
     workspace.save()
 
     check_interval_and_sync_dimension(workspace, intacct_credentials)
+
+
+def test_is_dependent_field_import_enabled(db, create_dependent_field_setting):
+    assert is_dependent_field_import_enabled(1) == True
