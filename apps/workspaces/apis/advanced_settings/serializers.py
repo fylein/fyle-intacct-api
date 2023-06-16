@@ -156,7 +156,7 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
         )
 
 
-        AdvancedConfigurationsTriggers.run_configurations_triggers(workspace_schedules)
+        AdvancedConfigurationsTriggers.run_post_configurations_triggers(workspace_schedules)
 
         if instance.onboarding_state == 'ADVANCED_CONFIGURATION':
             instance.onboarding_state = 'COMPLETE'

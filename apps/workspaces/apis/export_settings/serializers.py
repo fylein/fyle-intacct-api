@@ -164,7 +164,6 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         if not expense_group_settings['ccc_export_date_type']:
             expense_group_settings['ccc_export_date_type'] = 'current_date'
 
-        expense_group_settings['import_card_credits'] = expense_group_settings['import_card_credits']
 
         ExpenseGroupSettings.update_expense_group_settings(expense_group_settings, workspace_id=workspace_id)
 
