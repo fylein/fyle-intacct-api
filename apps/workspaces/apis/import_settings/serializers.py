@@ -52,7 +52,6 @@ class MappingSettingSerializer(serializers.ModelSerializer):
         model = MappingSetting
         list_serializer_class = MappingSettingFilteredListSerializer
         fields = [
-            'source_field',
             'destination_field',
             'import_to_fyle',
             'is_custom',
@@ -144,7 +143,6 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                     destination_field=setting['destination_field'],
                     workspace_id=instance.id,
                     defaults={
-                        'source_field': setting['source_field'],
                         'import_to_fyle': setting['import_to_fyle'] if 'import_to_fyle' in setting else False,
                         'is_custom': setting['is_custom'] if 'is_custom' in setting else False,
                         'source_placeholder': setting['source_placeholder'] if 'source_placeholder' in setting else None
