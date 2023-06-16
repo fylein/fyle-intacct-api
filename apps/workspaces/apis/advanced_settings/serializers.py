@@ -2,8 +2,6 @@ from rest_framework import serializers
 
 from apps.workspaces.models import Configuration, Workspace, WorkspaceSchedule
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.tasks import schedule_sync
-
 from .triggers import AdvancedConfigurationsTriggers
 
 
@@ -157,15 +155,8 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
             }
         )
 
-        schedule_sync(
-            workspace_id=instance.id,
-            schedule_enabled=workspace_schedules.get('enabled'),
-            hours=workspace_schedules.get('interval_hours'),
-            email_added=workspace_schedules.get('additional_email_options'),
-            emails_selected=workspace_schedules.get('emails_selected')
-        )
 
-        AdvancedConfigurationsTriggers.run_configurations_triggers(configurations_instance)
+        AdvancedConfigurationsTriggers.run_configurations_triggers(workspace_schedules)
 
         if instance.onboarding_state == 'ADVANCED_CONFIGURATION':
             instance.onboarding_state = 'COMPLETE'

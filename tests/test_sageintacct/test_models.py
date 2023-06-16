@@ -10,7 +10,7 @@ from apps.sage_intacct.models import *
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
-def test_create_bill(db):
+def test_create_bill(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -81,7 +81,7 @@ def test_expense_report(db):
         logger.info('General mapping not found')
 
 
-def test_create_journal_entry(db):
+def test_create_journal_entry(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
@@ -124,7 +124,7 @@ def test_create_ap_payment(db):
     assert ap_payment.vendor_id == 'Ashwin'
 
 
-def test_create_charge_card_transaction(db):
+def test_create_charge_card_transaction(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -795,4 +795,49 @@ def test_get_ccc_account_id(db, mocker):
     
     assert cct_id == general_mappings.default_charge_card_id
     
-    
+
+def test_get_cost_type_id_or_none(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    expense_group, expense = create_expense_group_expense
+    cost_type_id = get_cost_type_id_or_none(expense_group, expense, create_dependent_field_setting, 'pro1', 'task1')
+
+    assert cost_type_id == 'cost1'
+
+
+def test_get_task_id_or_none(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    expense_group, expense = create_expense_group_expense
+    task_id = get_task_id_or_none(expense_group, expense, create_dependent_field_setting, 'pro1')
+
+    assert task_id == 'task1'
+
+
+def test_cost_type_bulk_create_or_update(db, create_cost_type):
+    cost_types = [
+        {
+            'RECORDNO': 2342341,
+            'PROJECTKEY': 'pro1234',
+            'PROJECTID': 'pro1234',
+            'PROJECTNAME': 'pro1234',
+            'TASKKEY': 'task1234',
+            'TASKID': 'task1234',
+            'TASKNAME': 'task2341',
+            'COSTTYPEID': 'cost2341',
+            'NAME': 'cost12342',
+            'STATUS': 'Active'
+        },
+        {
+            'RECORDNO': 34234,
+            'PROJECTKEY': 34,
+            'PROJECTID': 'pro1',
+            'PROJECTNAME': 'pro',
+            'TASKKEY': 34,
+            'TASKNAME': 'task1',
+            'STATUS': 'ACTIVE',
+            'COSTTYPEID': 'cost1',
+            'NAME': 'costUpdated',
+            'TASKID': 'task1'
+        }
+    ]
+    CostType.bulk_create_or_update(cost_types, 1)
+
+    assert CostType.objects.filter(record_number=2342341).exists()
+    assert CostType.objects.get(record_number=34234).name == 'costUpdated'
