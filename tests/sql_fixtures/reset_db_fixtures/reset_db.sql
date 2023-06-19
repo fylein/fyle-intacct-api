@@ -1904,7 +1904,8 @@ CREATE TABLE public.workspaces (
     destination_synced_at timestamp with time zone,
     source_synced_at timestamp with time zone,
     cluster_domain character varying(255),
-    ccc_last_synced_at timestamp with time zone
+    ccc_last_synced_at timestamp with time zone,
+    onboarding_state character varying(50)
 );
 
 
@@ -7722,8 +7723,8 @@ COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, sc
 -- Data for Name: workspaces; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at) FROM stdin;
-1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N
+COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at, onboarding_state) FROM stdin;
+1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	CONNECTION
 \.
 
 
@@ -8411,6 +8412,14 @@ ALTER TABLE ONLY public.auth_tokens
 
 
 --
+-- Name: general_mappings general_mappings_workspace_id_19666c5c_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.general_mappings
+    ADD CONSTRAINT general_mappings_workspace_id_19666c5c_uniq UNIQUE (workspace_id);
+
+
+--
 -- Name: journal_entries journal_entries_expense_group_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8984,13 +8993,6 @@ CREATE INDEX fyle_accounting_mappings_mappingsetting_workspace_id_c123c088 ON pu
 
 
 --
--- Name: general_mappings_workspace_id_19666c5c; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX general_mappings_workspace_id_19666c5c ON public.general_mappings USING btree (workspace_id);
-
-
---
 -- Name: journal_entry_lineitems_journal_entry_id_382a8abe; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9420,14 +9422,6 @@ ALTER TABLE ONLY public.auth_tokens
 
 ALTER TABLE ONLY public.general_mappings
     ADD CONSTRAINT general_mappings_workspace_id_19666c5c_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
-
-
---
--- Name: configurations general_settings_workspace_id_091a11f5_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.configurations
-    ADD CONSTRAINT general_settings_workspace_id_091a11f5_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
