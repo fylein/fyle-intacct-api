@@ -4,7 +4,7 @@ select
     w.id as workspace_id,
     wgs.id as configuration_id,
     gm.id as general_mappings_id,
-    si.id as si_creds_id 
+    sic.id as si_creds_id 
 from workspaces w 
 left join 
     configurations wgs on w.id = wgs.workspace_id 
