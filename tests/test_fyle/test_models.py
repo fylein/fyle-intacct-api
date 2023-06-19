@@ -2,6 +2,8 @@ from apps.fyle.models import get_default_expense_state, get_default_expense_grou
     ExpenseGroup, _group_expenses, _format_date, get_default_ccc_expense_state
 from .fixtures import data
 from dateutil import parser
+from apps.tasks.models import TaskLog
+from apps.fyle.tasks import create_expense_groups
 
 
 def test_default_fields():
@@ -107,7 +109,7 @@ def test_support_post_date_integrations(mocker, db, api_client, test_connection)
     workspace_id = 1
     
     #Import assert
-		mocker.patch(
+    mocker.patch(
         'fyle_integrations_platform_connector.apis.Expenses.get',
         return_value=data['expenses']
     )
@@ -132,7 +134,7 @@ def test_support_post_date_integrations(mocker, db, api_client, test_connection)
     assert task_log.status == 'COMPLETE'
 	
 	#Export assert
-	expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group = ExpenseGroup.objects.get(id=1)
 
     posted_at = {'posted_at': '2021-12-24'}
     expense_group.description.update(posted_at)
@@ -140,7 +142,7 @@ def test_support_post_date_integrations(mocker, db, api_client, test_connection)
     transaction_date = get_transaction_date(expense_group).split('T')[0]
     assert transaction_date <= datetime.now().strftime('%Y-%m-%d')
 
-		access_token = test_connection.access_token
+    access_token = test_connection.access_token
     url = '/api/workspaces/{}/sage_intacct/exports/trigger/'.format(workspace_id)
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
