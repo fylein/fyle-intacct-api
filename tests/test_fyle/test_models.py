@@ -102,3 +102,53 @@ def test_get_last_synced_at(db):
     assert reimbursement.workspace_id == 1
     assert reimbursement.settlement_id == 'setzZCuAPxIsB'
     assert reimbursement.state == 'PENDING'
+
+def test_support_post_date_integrations(mocker, db, api_client, test_connection):
+    workspace_id = 1
+    
+    #Import assert
+		mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses']
+    )
+
+    task_log, _ = TaskLog.objects.update_or_create(
+        workspace_id=workspace_id,
+        type='FETCHING_EXPENSES',
+        defaults={
+            'status': 'IN_PROGRESS'
+        }
+    )
+
+    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+    expense_group_settings.reimbursable_export_date_type = 'last_spent_at'
+    expense_group_settings.ccc_export_date_type = 'posted_at'
+    expense_group_settings.save()
+
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+
+    task_log = TaskLog.objects.get(id=task_log.id)
+
+    assert task_log.status == 'COMPLETE'
+	
+	#Export assert
+	expense_group = ExpenseGroup.objects.get(id=1)
+
+    posted_at = {'posted_at': '2021-12-24'}
+    expense_group.description.update(posted_at)
+
+    transaction_date = get_transaction_date(expense_group).split('T')[0]
+    assert transaction_date <= datetime.now().strftime('%Y-%m-%d')
+
+		access_token = test_connection.access_token
+    url = '/api/workspaces/{}/sage_intacct/exports/trigger/'.format(workspace_id)
+
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+    response = api_client.post(
+        url,
+        data={
+            'expense_group_ids': [1],
+            'export_type': 'BILL'
+        })
+    assert response.status_code == 200
