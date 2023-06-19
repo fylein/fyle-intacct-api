@@ -23,7 +23,7 @@ ALLOWED_FIELDS = [
 
 ALLOWED_FORM_INPUT = {
     'group_expenses_by': ['settlement_id', 'claim_number', 'report_id', 'category', 'vendor', 'expense_id', 'expense_number', 'payment_number'],
-    'export_date_type': ['current_date', 'approved_at', 'spent_at', 'verified_at', 'last_spent_at']
+    'export_date_type': ['current_date', 'approved_at', 'spent_at', 'verified_at', 'last_spent_at', 'posted_at']
 }
 
 SOURCE_ACCOUNT_MAP = {
@@ -115,6 +115,7 @@ class Expense(models.Model):
     report_id = models.CharField(max_length=255, help_text='Report ID')
     spent_at = models.DateTimeField(null=True, help_text='Expense spent at')
     approved_at = models.DateTimeField(null=True, help_text='Expense approved at')
+    posted_at = models.DateTimeField(null=True, help_text='Date when the money is taken from the bank')
     expense_created_at = models.DateTimeField(help_text='Expense created at')
     expense_updated_at = models.DateTimeField(help_text='Expense updated at')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
@@ -170,6 +171,7 @@ class Expense(models.Model):
                     'report_title': expense['report_title'],
                     'spent_at': expense['spent_at'],
                     'approved_at': expense['approved_at'],
+                    'posted_at': expense['posted_at'],
                     'expense_created_at': expense['expense_created_at'],
                     'expense_updated_at': expense['expense_updated_at'],
                     'fund_source': SOURCE_ACCOUNT_MAP[expense['source_account_type']],
