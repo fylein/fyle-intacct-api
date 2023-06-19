@@ -402,6 +402,9 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     elif sageintacct_attribute_type == 'COST_TYPE':
         sage_intacct_connection.sync_cost_types()
 
+    elif sageintacct_attribute_type == 'CUSTOMER':
+        sage_intacct_connection.sync_customers()
+
     else:
         sage_intacct_connection.sync_user_defined_dimensions()
 
