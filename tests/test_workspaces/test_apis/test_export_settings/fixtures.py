@@ -111,7 +111,13 @@ data = {
         'workspace_id': 1 
     },
     'export_settings_missing_values_configurations': {
-        'configurations': {},
+        'configurations': {
+            'reimbursable_expenses_object': '',
+            'corporate_credit_card_expenses_object': '',
+            'auto_map_employees': '',
+            'is_simplify_report_closure_enabled': True,
+            'employee_field_mapping': ''
+        },
         'expense_group_settings': {
             'reimbursable_expense_group_fields': [
                 'fund_source',
