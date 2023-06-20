@@ -31,7 +31,7 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
 
         MappingSetting.objects.update_or_create(
             destination_field='CHARGE_CARD_NUMBER',
-            workspace_id=instance.id,
+            workspace_id=instance.workspace_id,
             defaults={
                 'source_field': 'CORPORATE_CARD',
                 'import_to_fyle': False,
