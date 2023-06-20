@@ -7,6 +7,18 @@ BEGIN
     RAISE NOTICE 'Deleting data from workspace %', _workspace_id;
 
     DELETE
+    FROM dependent_field_settings dfs
+    WHERE dfs.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % dependent_field_settings', rcount;
+
+    DELETE
+    FROM cost_types ct
+    WHERE ct.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % cost_types', rcount;
+
+    DELETE
     FROM location_entity_mappings lem
     WHERE lem.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;

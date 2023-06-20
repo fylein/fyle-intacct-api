@@ -1,8 +1,16 @@
 import pytest
-from apps.fyle.models import Expense, ExpenseGroup
+from datetime import datetime
+from apps.fyle.models import (
+    ExpenseGroup, DependentFieldSetting, Expense
+)
 from apps.workspaces.models import Configuration
-from apps.sage_intacct.models import Bill, BillLineitem, ExpenseReport, ExpenseReportLineitem, JournalEntry, JournalEntryLineitem, \
-    SageIntacctReimbursement, SageIntacctReimbursementLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem, APPayment, APPaymentLineitem
+from apps.sage_intacct.models import (
+    Bill, BillLineitem, ExpenseReport, ExpenseReportLineitem,
+    JournalEntry, JournalEntryLineitem, SageIntacctReimbursement,
+    SageIntacctReimbursementLineitem, ChargeCardTransaction,
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem,
+    CostType
+)
 from apps.mappings.models import GeneralMapping
 from apps.tasks.models import TaskLog
 
@@ -93,3 +101,87 @@ def create_task_logs(db):
             'status': 'READY'
         }
     )
+
+@pytest.fixture
+def create_cost_type(db):
+    workspace_id = 1
+    CostType.objects.update_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'record_number': 34234,
+            'project_key': 34,
+            'project_id': 'pro1',
+            'project_name': 'pro',
+            'task_key': 34,
+            'task_id': 'task1',
+            'task_name': 'task',
+            'status': 'ACTIVE',
+            'cost_type_id': 'cost1',
+            'name': 'cost'
+        }
+    )
+
+@pytest.fixture
+def create_dependent_field_setting(db):
+    created_field, _ = DependentFieldSetting.objects.update_or_create(
+        workspace_id=1,
+        defaults={
+            'is_import_enabled': True,
+            'project_field_id': 123,
+            'cost_code_field_name': 'Cost Code',
+            'cost_code_field_id': 456,
+            'cost_type_field_name': 'Cost Type',
+            'cost_type_field_id': 789
+        }
+    )
+
+    return created_field
+
+@pytest.fixture
+def create_expense_group_expense(db):
+    expense_group = ExpenseGroup.objects.create(
+        workspace_id=1,
+        fund_source='PERSONAL',
+        description={}
+    )
+
+    expense, _ = Expense.objects.update_or_create(
+        expense_id='dummy_id',
+        defaults={
+            'employee_email': 'employee_email',
+            'category': 'category',
+            'sub_category': 'sub_category',
+            'project': 'pro',
+            'expense_number': 'expense_number',
+            'org_id': 'org_id',
+            'claim_number': 'claim_number',
+            'amount': round(123, 2),
+            'currency': 'USD',
+            'foreign_amount': 123,
+            'foreign_currency': 'USD',
+            'tax_amount': 123,
+            'tax_group_id': 'tax_group_id',
+            'settlement_id': 'settlement_id',
+            'reimbursable': True,
+            'billable': True,
+            'state': 'state',
+            'vendor': 'vendor',
+            'cost_center': 'cost_center',
+            'purpose': 'purpose',
+            'report_id': 'report_id',
+            'report_title': 'report_title',
+            'spent_at': datetime.now(),
+            'approved_at': datetime.now(),
+            'expense_created_at': datetime.now(),
+            'expense_updated_at': datetime.now(),
+            'fund_source': 'PERSONAL',
+            'verified_at': datetime.now(),
+            'custom_properties': {'Cost Type': 'cost', 'Cost Code': 'task'},
+            'payment_number': 'payment_number',
+            'file_ids': [],
+            'corporate_card_id': 'corporate_card_id',
+        }
+    )
+    expense_group.expenses.add(expense)
+
+    return expense_group, expense
