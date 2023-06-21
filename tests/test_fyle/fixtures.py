@@ -80,6 +80,7 @@ data = {
             'file_ids': [],
             'spent_at': '2020-12-22T07:30:26.289842+00:00',
             'approved_at': '2020-12-22T07:30:26.289842+00:00',
+            'posted_at': '2021-12-22T07:30:26.289842+00:00',
             'expense_created_at': '2020-12-23T07:14:13.990650+00:00',
             'expense_updated_at': '2020-12-27T05:26:43.954470+00:00',
             'source_account_type': 'PERSONAL_CASH_ACCOUNT',
