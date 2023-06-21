@@ -402,6 +402,9 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     elif sageintacct_attribute_type == 'COST_TYPE':
         sage_intacct_connection.sync_cost_types()
 
+    elif sageintacct_attribute_type == 'CUSTOMER':
+        sage_intacct_connection.sync_customers()
+
     else:
         sage_intacct_connection.sync_user_defined_dimensions()
 
@@ -746,7 +749,7 @@ def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: s
 
     sync_expense_types_and_accounts(reimbursable_expenses_object, corporate_credit_card_expenses_object, si_connection)
 
-    if reimbursable_expenses_object == 'EXPENSE_REPORT':
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
         si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
             workspace_id=workspace_id, attribute_type='EXPENSE_TYPE'
         )
@@ -926,7 +929,7 @@ def auto_create_category_mappings(workspace_id):
     reimbursable_expenses_object = configuration.reimbursable_expenses_object
     corporate_credit_card_expenses_object = configuration.corporate_credit_card_expenses_object
 
-    if reimbursable_expenses_object == 'EXPENSE_REPORT':
+    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
         reimbursable_destination_type = 'EXPENSE_TYPE'
     else:
         reimbursable_destination_type = 'ACCOUNT'

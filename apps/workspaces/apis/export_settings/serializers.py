@@ -196,5 +196,11 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
 
         if not data.get('expense_group_settings'):
             raise serializers.ValidationError('Expense group settings are required')
+        
+        if not data.get('configurations'):
+            raise serializers.ValidationError('Configurations settings are required')
+            
+        if not data.get('general_mappings'):
+            raise serializers.ValidationError('General mappings are required')
 
         return data
