@@ -1321,7 +1321,7 @@ class CostType(models.Model):
     Sage Intacct Cost Types
     DB Table: cost_types:
     """
-    record_number = models.IntegerField(help_text='Sage Intacct Record No')
+    record_number = models.CharField(max_length=255, help_text='Sage Intacct Record No')
     project_key = models.CharField(max_length=255, help_text='Sage Intacct Project Key')
     project_id = models.CharField(max_length=255, help_text='Sage Intacct Project ID')
     project_name = models.CharField(max_length=255, help_text='Sage Intacct Project Name')
