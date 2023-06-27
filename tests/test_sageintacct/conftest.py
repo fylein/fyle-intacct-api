@@ -1,5 +1,8 @@
 import pytest
 from datetime import datetime
+
+from fyle_accounting_mappings.models import ExpenseAttribute
+
 from apps.fyle.models import (
     ExpenseGroup, DependentFieldSetting, Expense
 )
@@ -119,6 +122,13 @@ def create_cost_type(db):
             'cost_type_id': 'cost1',
             'name': 'cost'
         }
+    )
+    ExpenseAttribute.objects.create(
+        attribute_type='PROJECT',
+        value='pro',
+        display_name='project',
+        source_id='pro1',
+        workspace_id=workspace_id
     )
 
 @pytest.fixture
