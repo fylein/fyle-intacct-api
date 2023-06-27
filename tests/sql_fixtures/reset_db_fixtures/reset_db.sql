@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.2 (Debian 15.2-1.pgdg110+1)
--- Dumped by pg_dump version 15.2 (Debian 15.2-1.pgdg100+1)
+-- Dumped from database version 15.3 (Debian 15.3-1.pgdg120+1)
+-- Dumped by pg_dump version 15.3 (Debian 15.3-1.pgdg100+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -406,7 +406,7 @@ ALTER TABLE public.configurations OWNER TO postgres;
 
 CREATE TABLE public.cost_types (
     id integer NOT NULL,
-    record_number integer NOT NULL,
+    record_number character varying(255) NOT NULL,
     project_key character varying(255) NOT NULL,
     project_id character varying(255) NOT NULL,
     project_name character varying(255) NOT NULL,
@@ -3846,6 +3846,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 152	mappings	0014_auto_20230531_1248	2023-06-21 10:38:22.030324+00
 153	workspaces	0027_auto_20230614_1010	2023-06-21 10:38:22.056433+00
 154	workspaces	0028_auto_20230620_0729	2023-06-21 10:38:22.076365+00
+155	sage_intacct	0023_auto_20230626_1430	2023-06-27 10:58:25.589784+00
 \.
 
 
@@ -7819,7 +7820,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 46, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 154, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 155, true);
 
 
 --
