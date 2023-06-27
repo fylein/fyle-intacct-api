@@ -132,8 +132,8 @@ def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
         expense_group = ExpenseGroup.objects.filter(workspace_id=1)
         expenses = Expense.objects.filter(org_id='or79Cob97KSh')
 
-        assert len(expense_group) == expense_group_count+2
-        assert len(expenses) == expenses_count+2
+        assert len(expense_group) == expense_group_count
+        assert len(expenses) == expenses_count
 
         for expense in expenses:
             if expense.employee_email == 'jhonsnow@fyle.in': 
