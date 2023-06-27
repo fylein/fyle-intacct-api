@@ -24,8 +24,15 @@ logger.level = logging.INFO
 
 
 def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
-    # TODO: use JSONBAgg get both status and name which will help in auto-sync satus
     projects = CostType.objects.filter(**filters).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
+    projects_from_cost_types = [project['project_name'] for project in projects]
+
+    existing_projects_in_fyle = ExpenseAttribute.objects.filter(
+        workspace_id=dependent_field_setting.workspace_id,
+        attribute_type='PROJECT',
+        value__in=projects_from_cost_types
+    ).values_list('value', flat=True)
+
     for project in projects:
         payload = [
             {
@@ -34,10 +41,11 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
                 'expense_field_id': dependent_field_setting.cost_code_field_id,
                 'expense_field_value': task,
                 'is_enabled': True
-            } for task in project['tasks']
+            } for task in project['tasks'] if project['project_name'] in existing_projects_in_fyle
         ]
-        sleep(0.2)
-        platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+        if payload:
+            sleep(0.2)
+            platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
 
 
 def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
