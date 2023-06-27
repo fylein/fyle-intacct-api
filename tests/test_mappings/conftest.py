@@ -47,7 +47,7 @@ def create_cost_type(db):
     CostType.objects.update_or_create(
         workspace_id=workspace_id,
         defaults={
-            'record_number': 34234,
+            'record_number': '34234',
             'project_key': 34,
             'project_id': 'pro1',
             'project_name': 'pro',
