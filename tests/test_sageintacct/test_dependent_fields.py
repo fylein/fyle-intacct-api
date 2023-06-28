@@ -59,7 +59,7 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
-    post_dependent_cost_type(create_dependent_field_setting, platform, {'workspace_id': 1}, ['task'])
+    post_dependent_cost_type(create_dependent_field_setting, platform, {'workspace_id': 1})
 
     assert mock.call_count == 1
 
