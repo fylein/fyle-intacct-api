@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 from time import sleep
 
 from django_q.models import Schedule
@@ -23,9 +23,10 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
+def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict) -> List[str]:
     projects = CostType.objects.filter(**filters).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
     projects_from_cost_types = [project['project_name'] for project in projects]
+    posted_cost_types = []
 
     existing_projects_in_fyle = ExpenseAttribute.objects.filter(
         workspace_id=dependent_field_setting.workspace_id,
@@ -34,29 +35,25 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
     ).values_list('value', flat=True)
 
     for project in projects:
-        payload = [
-            {
-                'parent_expense_field_id': dependent_field_setting.project_field_id,
-                'parent_expense_field_value': project['project_name'],
-                'expense_field_id': dependent_field_setting.cost_code_field_id,
-                'expense_field_value': task,
-                'is_enabled': True
-            } for task in project['tasks'] if project['project_name'] in existing_projects_in_fyle
-        ]
-        if payload:
-            sleep(0.2)
-            platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+        payload = []
+        for task in project['tasks']:
+            if project['project_name'] in existing_projects_in_fyle:
+                payload.append({
+                    'parent_expense_field_id': dependent_field_setting.project_field_id,
+                    'parent_expense_field_value': project['project_name'],
+                    'expense_field_id': dependent_field_setting.cost_code_field_id,
+                    'expense_field_value': task,
+                    'is_enabled': True
+                })
+                sleep(0.2)
+                platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+                posted_cost_types.append(task)
+
+    return posted_cost_types
 
 
 def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
     tasks = CostType.objects.filter(**filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
-    tasks_from_cost_types = [task['task_name'] for task in tasks]
-
-    existing_tasks_in_fyle = ExpenseAttribute.objects.filter(
-        workspace_id=dependent_field_setting.workspace_id,
-        attribute_type=dependent_field_setting.cost_code_field_name.upper().replace(' ', '_'),
-        value__in=tasks_from_cost_types
-    ).values_list('value', flat=True)
 
     for task in tasks:
         payload = [
@@ -66,7 +63,7 @@ def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, pla
                 'expense_field_id': dependent_field_setting.cost_type_field_id,
                 'expense_field_value': cost_type,
                 'is_enabled': True
-            } for cost_type in task['cost_types'] if task['task_name'] in existing_tasks_in_fyle
+            } for cost_type in task['cost_types']
         ]
 
         if payload:
@@ -85,8 +82,11 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
     if dependent_field_setting.last_successful_import_at:
         filters['updated_at__gte'] = dependent_field_setting.last_successful_import_at
 
-    post_dependent_cost_code(dependent_field_setting, platform, filters)
-    post_dependent_cost_type(dependent_field_setting, platform, filters)
+    posted_cost_types = post_dependent_cost_code(dependent_field_setting, platform, filters)
+
+    if posted_cost_types:
+        filters['task_name__in'] = posted_cost_types
+        post_dependent_cost_type(dependent_field_setting, platform, filters)
 
     DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
 
