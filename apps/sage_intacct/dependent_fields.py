@@ -50,6 +50,14 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
 
 def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
     tasks = CostType.objects.filter(**filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
+    tasks_from_cost_types = [task['task_name'] for task in tasks]
+
+    existing_tasks_in_fyle = ExpenseAttribute.objects.filter(
+        workspace_id=dependent_field_setting.workspace_id,
+        attribute_type=dependent_field_setting.cost_code_field_name.upper().replace(' ', '_'),
+        value__in=tasks_from_cost_types
+    ).values_list('value', flat=True)
+
     for task in tasks:
         payload = [
             {
@@ -58,10 +66,12 @@ def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, pla
                 'expense_field_id': dependent_field_setting.cost_type_field_id,
                 'expense_field_value': cost_type,
                 'is_enabled': True
-            } for cost_type in task['cost_types']
+            } for cost_type in task['cost_types'] if task['task_name'] in existing_tasks_in_fyle
         ]
-        sleep(0.2)
-        platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+
+        if payload:
+            sleep(0.2)
+            platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
 
 
 def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None):

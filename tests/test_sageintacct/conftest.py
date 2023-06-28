@@ -130,6 +130,13 @@ def create_cost_type(db):
         source_id='pro1',
         workspace_id=workspace_id
     )
+    ExpenseAttribute.objects.create(
+        attribute_type='COST_CODE',
+        value='task',
+        display_name='cost code',
+        source_id='task1',
+        workspace_id=workspace_id
+    )
 
 @pytest.fixture
 def create_dependent_field_setting(db):
