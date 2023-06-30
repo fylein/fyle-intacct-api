@@ -73,9 +73,10 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
-    post_dependent_cost_code(create_dependent_field_setting, platform, {'workspace_id': 1})
+    posted_cost_types = post_dependent_cost_code(create_dependent_field_setting, platform, {'workspace_id': 1})
 
     assert mock.call_count == 1
+    assert posted_cost_types == ['task']
 
 
 def test_post_dependent_expense_field_values(db, mocker, create_cost_type, create_dependent_field_setting):
@@ -88,10 +89,6 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
     current_datetime = datetime.now()
     post_dependent_expense_field_values(workspace_id, create_dependent_field_setting)
     assert DependentFieldSetting.objects.get(id=create_dependent_field_setting.id).last_successful_import_at != current_datetime
-
-    from django.contrib.postgres.aggregates import ArrayAgg
-    from apps.sage_intacct.models import CostType
-    projects = CostType.objects.filter(workspace_id=1).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
     
     # There should be 2 post calls, 1 for cost_type and 1 for cost_code
     assert mock.call_count == 2

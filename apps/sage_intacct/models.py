@@ -267,6 +267,8 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
         return expense_group.description['verified_at']
     elif 'last_spent_at' in expense_group.description and expense_group.description['last_spent_at']:
         return expense_group.description['last_spent_at']
+    elif 'posted_at' in expense_group.description and expense_group.description['posted_at']:
+        return expense_group.description['posted_at']
 
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
@@ -1321,7 +1323,7 @@ class CostType(models.Model):
     Sage Intacct Cost Types
     DB Table: cost_types:
     """
-    record_number = models.IntegerField(help_text='Sage Intacct Record No')
+    record_number = models.CharField(max_length=255, help_text='Sage Intacct Record No')
     project_key = models.CharField(max_length=255, help_text='Sage Intacct Project Key')
     project_id = models.CharField(max_length=255, help_text='Sage Intacct Project ID')
     project_name = models.CharField(max_length=255, help_text='Sage Intacct Project Name')

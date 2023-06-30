@@ -813,7 +813,7 @@ def test_get_task_id_or_none(db, create_expense_group_expense, create_cost_type,
 def test_cost_type_bulk_create_or_update(db, create_cost_type):
     cost_types = [
         {
-            'RECORDNO': 2342341,
+            'RECORDNO': '2342341',
             'PROJECTKEY': 'pro1234',
             'PROJECTID': 'pro1234',
             'PROJECTNAME': 'pro1234',
@@ -825,7 +825,7 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type):
             'STATUS': 'Active'
         },
         {
-            'RECORDNO': 34234,
+            'RECORDNO': '34234',
             'PROJECTKEY': 34,
             'PROJECTID': 'pro1',
             'PROJECTNAME': 'pro',
@@ -839,5 +839,5 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type):
     ]
     CostType.bulk_create_or_update(cost_types, 1)
 
-    assert CostType.objects.filter(record_number=2342341).exists()
-    assert CostType.objects.get(record_number=34234).name == 'costUpdated'
+    assert CostType.objects.filter(record_number='2342341').exists()
+    assert CostType.objects.get(record_number='34234').name == 'costUpdated'
