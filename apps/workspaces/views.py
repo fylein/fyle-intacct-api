@@ -110,6 +110,21 @@ class WorkspaceView(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    def patch(self, request, **kwargs):
+        """
+        PATCH workspace
+        """
+        workspace_instance = Workspace.objects.get(pk=kwargs['workspace_id'])
+        serializer = WorkspaceSerializer(
+            workspace_instance, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                data=serializer.data,
+                status=status.HTTP_200_OK
+            )
+
 
 class ConnectFyleView(viewsets.ViewSet):
     """
@@ -265,6 +280,8 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                     si_user_password=encrypted_password,
                     workspace=workspace
                 )
+                workspace.onboarding_state = 'LOCATION_ENTITY_MAPPINGS'
+                workspace.save()
             else:
                 SageIntacctSDK(
                     sender_id=sender_id,

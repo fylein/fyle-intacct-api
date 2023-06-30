@@ -18,11 +18,24 @@ from apps.mappings.tasks import (
     schedule_fyle_attributes_creation,
     upload_attributes_to_fyle
 )
-from apps.workspaces.models import Configuration
+from apps.workspaces.models import Configuration, Workspace
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
+from apps.mappings.models import LocationEntityMapping
 
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=LocationEntityMapping)
+def run_post_location_entity_mappings(sender, instance: LocationEntityMapping, **kwargs):
+    """
+    :param sender: Sender Class
+    :param instance: Row instance of Sender Class
+    :return: None
+    """
+    workspace = Workspace.objects.get(id=instance.workspace_id)
+    workspace.onboarding_state = 'EXPORT_SETTINGS'
+    workspace.save()
 
 
 @receiver(post_save, sender=MappingSetting)
