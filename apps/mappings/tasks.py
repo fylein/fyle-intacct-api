@@ -163,6 +163,37 @@ def post_projects_in_batches(platform: PlatformConnector, workspace_id: int, des
 
         Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', destination_field, workspace_id)
     
+    expense_attributes_count = ExpenseAttribute.objects.filter(attribute_type='PROJECT',workspace_id=workspace_id).count()
+    expense_attribute_to_be_changed = []
+    for offset in range(0, expense_attributes_count, page_size):
+        limit = offset + page_size
+
+        fyle_projects = ExpenseAttribute.objects.filter(
+            workspace_id=workspace_id,
+            attribute_type="PROJECT",
+            auto_mapped=True
+        ).order_by('value', 'id')[offset:limit]
+
+        expense_field_values = list(
+            set(field.value for field in fyle_projects)
+        )
+
+        destination_field_values = DestinationAttribute.objects.filter(
+        attribute_type=destination_field,
+        workspace_id=workspace_id,
+        value__in=expense_field_values
+        ).values_list('value', flat=True)
+
+        for field in fyle_projects:
+            if field.value not in destination_field_values:
+                field.active = False
+                field.save()
+                expense_attribute_to_be_changed.append(field)
+        
+        fyle_payload = create_fyle_projects_payload(projects=[],existing_project_names=[],updated_projects=expense_attribute_to_be_changed)
+        platform.projects.post_bulk(fyle_payload)
+        platform.projects.sync()
+
     if destination_field == 'PROJECT':
         project_ids_to_be_changed = disable_expense_attributes('PROJECT', 'PROJECT', workspace_id)
         if project_ids_to_be_changed:
@@ -186,6 +217,8 @@ def auto_create_project_mappings(workspace_id: int):
         mapping_setting = MappingSetting.objects.get(
             source_field='PROJECT', workspace_id=workspace_id
         )
+
+        print('mapping_setting',mapping_setting.__dict__)
 
         sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
