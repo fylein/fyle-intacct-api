@@ -1629,7 +1629,7 @@ CREATE TABLE public.sage_intacct_credentials (
     id integer NOT NULL,
     si_user_id text NOT NULL,
     si_company_id text NOT NULL,
-    si_company_name text NOT NULL,
+    si_company_name text,
     si_user_password text NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
@@ -1906,7 +1906,8 @@ CREATE TABLE public.workspaces (
     source_synced_at timestamp with time zone,
     cluster_domain character varying(255),
     ccc_last_synced_at timestamp with time zone,
-    onboarding_state character varying(50)
+    onboarding_state character varying(50),
+    app_version character varying(2) NOT NULL
 );
 
 
@@ -3847,6 +3848,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 153	workspaces	0027_auto_20230614_1010	2023-06-21 10:38:22.056433+00
 154	workspaces	0028_auto_20230620_0729	2023-06-21 10:38:22.076365+00
 155	sage_intacct	0023_auto_20230626_1430	2023-06-27 10:58:25.589784+00
+156	workspaces	0029_auto_20230630_1145	2023-06-30 15:03:32.662957+00
 \.
 
 
@@ -7732,8 +7734,8 @@ COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, sc
 -- Data for Name: workspaces; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at, onboarding_state) FROM stdin;
-1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	CONNECTION
+COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at, onboarding_state, app_version) FROM stdin;
+1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	CONNECTION	v2
 \.
 
 
@@ -7820,7 +7822,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 46, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 155, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 156, true);
 
 
 --

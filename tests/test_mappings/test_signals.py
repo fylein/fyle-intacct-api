@@ -136,3 +136,18 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
     
     custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTs').count()
     assert custom_mappings == 0
+
+def run_post_location_entity_mappings(db):
+
+    workspace = Workspace.objects.get(workspace_id=1)
+    print('workspace', workspace.onboarding_state)
+
+    LocationEntityMapping.update_or_create(
+        workspace_id=1,
+        defaults={
+            "country_name": "USA"
+        }
+    )
+    workspace = Workspace.objects.get(workspace_id=1)
+    print('sdfsdf', workspace.onboarding_state)
+    assert 1==2
