@@ -596,6 +596,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_journal_entry
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
 
@@ -706,6 +707,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_expense_report
             expense_group.export_type = 'EXPENSE_REPORT'
             expense_group.save()
 
@@ -805,6 +807,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_bill
             expense_group.export_type = 'BILL'
             expense_group.save()
 
@@ -901,6 +904,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_charge_card_transaction
             expense_group.export_type = 'CHARGE_CARD_TRANSACTION'
             expense_group.save()
 

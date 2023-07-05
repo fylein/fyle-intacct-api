@@ -78,6 +78,7 @@ class ExpenseGroupView(generics.ListCreateAPIView):
             status=status.HTTP_200_OK
         )
 
+
 class ExpenseGroupCountView(generics.ListAPIView):
     """
     Expense Group Count View
@@ -95,6 +96,7 @@ class ExpenseGroupCountView(generics.ListAPIView):
             data={'count': expense_groups_count},
             status=status.HTTP_200_OK
         )
+
 
 class ExpenseGroupScheduleView(generics.CreateAPIView):
     """
@@ -445,3 +447,45 @@ class DependentFieldSettingView(generics.CreateAPIView, generics.RetrieveUpdateA
     serializer_class = DependentFieldSettingSerializer
     lookup_field = 'workspace_id'
     queryset = DependentFieldSetting.objects.all()
+
+
+class ExportableExpenseGroupsView(generics.RetrieveAPIView):
+    """
+    List Exportable Expense Groups
+    """
+    def get(self, request, *args, **kwargs):
+        configuration = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
+        fund_source = []
+
+        if configuration.reimbursable_expenses_object:
+            fund_source.append('PERSONAL')
+        if configuration.corporate_credit_card_expenses_object:
+            fund_source.append('CCC')
+
+        expense_group_ids = ExpenseGroup.objects.filter(
+            workspace_id=self.kwargs['workspace_id'],
+            exported_at__isnull=True,
+            fund_source__in=fund_source
+        ).values_list('id', flat=True)
+
+        return Response(
+            data={'exportable_expense_group_ids': expense_group_ids},
+            status=status.HTTP_200_OK
+        )
+
+
+class ExpenseGroupSyncView(generics.CreateAPIView):
+    """
+    Create expense groups
+    """
+    def post(self, request, *args, **kwargs):
+        """
+        Post expense groups creation
+        """
+        task_log, fund_source = get_task_log_and_fund_source(kwargs['workspace_id'])
+
+        async_create_expense_groups(kwargs['workspace_id'], fund_source, task_log)
+
+        return Response(
+            status=status.HTTP_200_OK
+        )
