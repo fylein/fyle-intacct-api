@@ -114,7 +114,8 @@ class WorkspaceView(viewsets.ViewSet):
         """
         PATCH workspace
         """
-        workspace_instance = Workspace.objects.get(pk=kwargs['workspace_id'])
+
+        workspace_instance = Workspace.objects.get(pk=request.data['workspace_id'])
         serializer = WorkspaceSerializer(
             workspace_instance, data=request.data, partial=True
         )

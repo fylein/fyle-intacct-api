@@ -66,7 +66,7 @@ def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
     url = '/api/workspaces/'
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     mocker.patch(
         'apps.workspaces.views.get_fyle_admin',
         return_value=fyle_data['get_my_profile']
@@ -89,6 +89,7 @@ def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
     data['workspace']['app_version'] = 'v2'
     response = api_client.patch(url,
         data={
+            'workspace_id': workspace.id,
             'app_version': 'v2'
         }
     )
