@@ -84,12 +84,13 @@ def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
     response = json.loads(response.content)
     assert dict_compare_keys(response, data['workspace']) == [], 'workspaces api returns a diff in the keys'
 
+    workspace_id=1
+    url = '/api/workspaces/{}/'.format(workspace_id)
     workspace = Workspace.objects.get(id=data['workspace']['id'])
     assert workspace.app_version == 'v2'
     data['workspace']['app_version'] = 'v2'
     response = api_client.patch(url,
         data={
-            'workspace_id': workspace.id,
             'app_version': 'v2'
         }
     )
