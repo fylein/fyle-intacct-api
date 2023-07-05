@@ -87,7 +87,11 @@ def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
     workspace = Workspace.objects.get(id=data['workspace']['id'])
     assert workspace.app_version == 'v2'
     data['workspace']['app_version'] = 'v2'
-    response = api_client.patch(url, data=data['workspace'])
+    response = api_client.patch(url,
+        data={
+            'app_version': 'v2'
+        }
+    )
 
     workspace = Workspace.objects.get(id=data['workspace']['id'])
     assert workspace.app_version == 'v2'
