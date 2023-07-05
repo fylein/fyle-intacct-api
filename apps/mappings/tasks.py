@@ -219,8 +219,6 @@ def auto_create_project_mappings(workspace_id: int):
             source_field='PROJECT', workspace_id=workspace_id
         )
 
-        print('mapping_setting',mapping_setting.__dict__)
-
         sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
 
         post_projects_in_batches(platform, workspace_id, mapping_setting.destination_field)
