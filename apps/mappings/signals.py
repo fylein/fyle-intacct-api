@@ -20,7 +20,7 @@ from apps.mappings.tasks import (
 )
 from apps.workspaces.models import Configuration
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
-
+from apps.tasks.models import Error
 
 logger = logging.getLogger(__name__)
 

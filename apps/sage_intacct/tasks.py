@@ -18,7 +18,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 from fyle_intacct_api.exceptions import BulkError
 
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
-from apps.tasks.models import TaskLog
+from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
 
@@ -398,6 +398,17 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     if not errors:
         errors.append(exception.response)
 
+    Error.objects.update_or_create(
+            workspace_id=expense_group.workspace_id,
+            expense_group=expense_group,
+            defaults={
+                'type': 'INTACCT_ERROR',
+                'error_title': exception.response['error']['description'],
+                'error_detail': errors,
+                'is_resolved': False
+            }
+        )
+
     task_log.status = 'FAILED'
     task_log.detail = None
     task_log.sage_intacct_errors = errors
@@ -427,6 +438,12 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                 source_employee__value=expense_group.description.get('employee_email'),
                 workspace_id=expense_group.workspace_id
             )
+
+            employee_attribute = ExpenseAttribute.objects.filter(
+                value=expense_group.description.get('employee_email'),
+                workspace_id=expense_group.workspace_id,
+                attribute_type='EMPLOYEE'
+            ).first()
 
             if configuration.employee_field_mapping == 'EMPLOYEE':
                 entity = entity.destination_employee
@@ -498,6 +515,18 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             'message': error_message
         })
 
+        if employee_attribute:
+            Error.objects.update_or_create(
+                workspace_id=expense_group.workspace_id,
+                expense_attribute=employee_attribute,
+                defaults={
+                    'type': 'EMPLOYEE_MAPPING',
+                    'error_title': employee_attribute.value,
+                    'error_detail': 'Employee mapping is missing',
+                    'is_resolved': False
+                }
+            )
+
     expenses = expense_group.expenses.all()
 
     for lineitem in expenses:
@@ -507,6 +536,12 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         category_mapping = CategoryMapping.objects.filter(
             source_category__value=category,
             workspace_id=expense_group.workspace_id
+        ).first()
+
+        category_attribute = ExpenseAttribute.objects.filter(
+            value=category,
+            workspace_id=expense_group.workspace_id,
+            attribute_type='CATEGORY'
         ).first()
 
         if category_mapping:
@@ -529,7 +564,20 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                 'type': 'Category Mapping',
                 'message': 'Category Mapping Not Found'
             })
-        
+
+            if category_attribute:
+                Error.objects.update_or_create(
+                    workspace_id=expense_group.workspace_id,
+                    expense_attribute=category_attribute,
+                    defaults={
+                        'type': 'CATEGORY_MAPPING',
+                        'error_title': category_attribute.value,
+                        'error_detail': 'Category mapping is missing',
+                        'is_resolved': False
+                    }
+                )
+
+
         if configuration.import_tax_codes:
             if general_mapping and not (general_mapping.default_tax_code_id or general_mapping.default_tax_code_name):
                 bulk_errors.append({

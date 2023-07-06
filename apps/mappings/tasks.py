@@ -13,20 +13,41 @@ from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as Fyle
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
-    CategoryMapping, ExpenseField
+    CategoryMapping
 
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
-from apps.fyle.helpers import connect_to_platform
-from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.sage_intacct.models import CostType
+from apps.tasks.models import Error
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
 from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+
+def resolve_expense_attribute_errors(
+    source_attribute_type: str, workspace_id: int, destination_attribute_type: str = None):
+    """
+    Resolve Expense Attribute Errors
+    :return: None
+    """
+    errored_attribute_ids: List[int] = Error.objects.filter(
+        is_resolved=False,
+        workspace_id=workspace_id,
+        type='{}_MAPPING'.format(source_attribute_type)
+    ).values_list('expense_attribute_id', flat=True)
+
+    if errored_attribute_ids:
+        mapped_attribute_ids = []
+
+        mapped_attribute_ids: List[int] = Mapping.objects.filter(
+            source_id__in=errored_attribute_ids
+        ).values_list('source_id', flat=True)
+
+        if mapped_attribute_ids:
+            Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
 
 
 def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: bool = False):
