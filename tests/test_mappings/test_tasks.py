@@ -35,7 +35,7 @@ def test_resolve_expense_attribute_errors(db):
         }
     )
 
-    resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'CONTACT')
+    resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'ACCOUNT')
     assert Error.objects.get(id=error.id).is_resolved == True
 
 
