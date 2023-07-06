@@ -403,8 +403,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
             expense_group=expense_group,
             defaults={
                 'type': 'INTACCT_ERROR',
-                'error_title': exception.response['error']['description'],
-                'error_detail': errors,
+                'error_title': 'this is a error',
+                'error_detail': 'error dedsf',
                 'is_resolved': False
             }
         )
@@ -431,6 +431,13 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             'message': 'General mappings not found'
         })
 
+    
+    employee_attribute = ExpenseAttribute.objects.filter(
+                value=expense_group.description.get('employee_email'),
+                workspace_id=expense_group.workspace_id,
+                attribute_type='EMPLOYEE'
+    ).first()
+
     try:
         if expense_group.fund_source == 'PERSONAL':
             error_message = 'Employee Mapping not found'
@@ -438,12 +445,6 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                 source_employee__value=expense_group.description.get('employee_email'),
                 workspace_id=expense_group.workspace_id
             )
-
-            employee_attribute = ExpenseAttribute.objects.filter(
-                value=expense_group.description.get('employee_email'),
-                workspace_id=expense_group.workspace_id,
-                attribute_type='EMPLOYEE'
-            ).first()
 
             if configuration.employee_field_mapping == 'EMPLOYEE':
                 entity = entity.destination_employee

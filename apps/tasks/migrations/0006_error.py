@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('fyle', '0023_expense_posted_at'),
-        ('fyle_accounting_mappings', '0023_auto_20230630_1145'),
+        ('fyle_accounting_mappings', '0018_auto_20220419_0709'),
         ('workspaces', '0028_auto_20230620_0729'),
         ('tasks', '0005_tasklog_journal_entry'),
     ]
