@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name='Error',
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('type', models.CharField(choices=[('EMPLOYEE_MAPPING', 'EMPLOYEE_MAPPING'), ('CATEGORY_MAPPING', 'CATEGORY_MAPPING'), ('XERO_ERROR', 'XERO_ERROR')], help_text='Error type', max_length=50)),
+                ('type', models.CharField(choices=[('EMPLOYEE_MAPPING', 'EMPLOYEE_MAPPING'), ('CATEGORY_MAPPING', 'CATEGORY_MAPPING'), ('INTACCT_ERROR', 'INTACCT_ERROR')], help_text='Error type', max_length=50)),
                 ('is_resolved', models.BooleanField(default=False, help_text='Is resolved')),
                 ('error_title', models.CharField(help_text='Error title', max_length=255)),
                 ('error_detail', models.TextField(help_text='Error detail')),

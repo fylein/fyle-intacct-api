@@ -11,7 +11,7 @@ from apps.sage_intacct.models import Bill, ExpenseReport, ChargeCardTransaction,
 ERROR_TYPE_CHOICES = (
     ('EMPLOYEE_MAPPING', 'EMPLOYEE_MAPPING'),
     ('CATEGORY_MAPPING', 'CATEGORY_MAPPING'),
-    ('XERO_ERROR', 'XERO_ERROR')
+    ('INTACCT_ERROR', 'INTACCT_ERROR')
 )
 
 def get_default():
