@@ -10,7 +10,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django_q.tasks import async_task
 
-from fyle_accounting_mappings.models import MappingSetting, Mapping, EmployeeMapping
+from fyle_accounting_mappings.models import MappingSetting, Mapping, EmployeeMapping, CategoryMapping
 from fyle.platform.exceptions import WrongParamsError
 
 from apps.mappings.tasks import (
@@ -37,12 +37,12 @@ def resolve_post_mapping_errors(sender, instance: Mapping, **kwargs):
             error.save()
             
 
-@receiver(post_save, sender=EmployeeMapping)
+@receiver(post_save, sender=CategoryMapping)
 def resolve_post_category_mapping_errors(sender, instance: Mapping, **kwargs):
     """
     Resolve errors after mapping is created
     """
-    error = Error.objects.filter(expense_attribute_id=instance.source_employee_id).first()
+    error = Error.objects.filter(expense_attribute_id=instance.source_category_id).first()
     if error:
         error.is_resolved = True
         error.save()

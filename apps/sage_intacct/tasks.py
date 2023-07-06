@@ -616,9 +616,10 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
                 configuration.employee_field_mapping
             )
 
+        __validate_expense_group(expense_group, configuration)
+
         created_attachment_id = None
         with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group)
 
@@ -723,8 +724,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
                 configuration.employee_field_mapping
             )
 
+        __validate_expense_group(expense_group, configuration)
+
         with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
 
             expense_report_object = ExpenseReport.create_expense_report(expense_group)
 
@@ -832,9 +834,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
                 configuration.employee_field_mapping
             )
 
-        with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
+        __validate_expense_group(expense_group, configuration)
 
+        with transaction.atomic():
             bill_object = Bill.create_bill(expense_group)
 
             bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group, configuration)
@@ -922,8 +924,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
     try:
         merchant = expense_group.expenses.first().vendor
         get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+        __validate_expense_group(expense_group, configuration)
         with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
 
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
