@@ -3,7 +3,7 @@ Workspace Serializers
 """
 from rest_framework import serializers
 
-from .models import Workspace, Configuration, FyleCredential, SageIntacctCredential, WorkspaceSchedule
+from .models import Workspace, Configuration, FyleCredential, SageIntacctCredential, WorkspaceSchedule, LastExportDetail
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):
@@ -83,4 +83,13 @@ class WorkspaceScheduleSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = WorkspaceSchedule
+        fields = '__all__'
+
+
+class LastExportDetailSerializer(serializers.ModelSerializer):
+    """
+    Last export detail serializer
+    """
+    class Meta:
+        model = LastExportDetail
         fields = '__all__'

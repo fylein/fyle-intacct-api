@@ -26,9 +26,9 @@ from fyle_intacct_api.utils import assert_valid
 from apps.fyle.models import ExpenseGroupSettings
 from apps.fyle.helpers import get_cluster_domain
 
-from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule
+from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule, LastExportDetail
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
-    ConfigurationSerializer, WorkspaceScheduleSerializer
+    ConfigurationSerializer, WorkspaceScheduleSerializer, LastExportDetailSerializer
 from .tasks import schedule_sync
 
 User = get_user_model()
@@ -486,3 +486,27 @@ class WorkspaceAdminsView(viewsets.ViewSet):
                 status=status.HTTP_200_OK
             )
 
+
+class LastExportDetailView(viewsets.ViewSet):
+    """
+    Last Export Details
+    """
+    serializer_class = LastExportDetailSerializer
+
+    def get(self, request, *args, **kwargs):
+        """
+        last export detail
+        """
+        last_export_detail = LastExportDetail.objects.filter(workspace_id=kwargs['workspace_id']).first()
+        if last_export_detail and last_export_detail.last_exported_at and last_export_detail.total_expense_groups_count:
+            return Response(
+                data=self.serializer_class(last_export_detail).data,
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                data={
+                    'message': 'latest exported details does not exist in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
