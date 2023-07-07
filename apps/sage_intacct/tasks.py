@@ -35,7 +35,7 @@ def update_last_export_details(workspace_id):
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
 
     failed_exports = TaskLog.objects.filter(
-        ~Q(type__in=['CREATING_BILL_PAYMENT']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
+        ~Q(type__in=['CREATING_BILL_PAYMENT', 'FETCHING_EXPENSES']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
     ).count()
 
     successful_exports = TaskLog.objects.filter(
@@ -263,7 +263,7 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
             if expense_groups.count() == index + 1:
                 last_export = True
 
-            chain.append('apps.sage_intacct.tasks.create_journal_entry', expense_group, task_log.id)
+            chain.append('apps.sage_intacct.tasks.create_journal_entry', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:
@@ -307,7 +307,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
             if expense_groups.count() == index + 1:
                 last_export = True
 
-            chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log.id)
+            chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:
@@ -350,7 +350,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
             if expense_groups.count() == index + 1:
                 last_export = True
 
-            chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log.id)
+            chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:
@@ -394,7 +394,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             if expense_groups.count() == index + 1:
                 last_export = True
 
-            chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log.id)
+            chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:

@@ -15,11 +15,62 @@ from apps.fyle.tasks import create_expense_groups
 from apps.sage_intacct.tasks import schedule_expense_reports_creation, schedule_bills_creation, \
     schedule_charge_card_transaction_creation, schedule_journal_entries_creation
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import User, Workspace, WorkspaceSchedule, Configuration, SageIntacctCredential, FyleCredential
+from apps.workspaces.models import LastExportDetail, Workspace, WorkspaceSchedule, Configuration, SageIntacctCredential, FyleCredential
 
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+
+def export_to_intacct(workspace_id, export_mode=None):
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
+    last_exported_at = datetime.now()
+    is_expenses_exported = False
+
+    if configuration.reimbursable_expenses_object:
+        expense_group_ids = ExpenseGroup.objects.filter(
+            fund_source='PERSONAL', exported_at__isnull=True).values_list('id', flat=True)
+
+        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
+            schedule_expense_reports_creation(
+                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+            )
+
+        elif configuration.reimbursable_expenses_object == 'BILL':
+            schedule_bills_creation(
+                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+            )
+
+        elif configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
+            schedule_journal_entries_creation(
+                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+            )
+
+    if configuration.corporate_credit_card_expenses_object:
+        expense_group_ids = ExpenseGroup.objects.filter(
+            fund_source='CCC', exported_at__isnull=True).values_list('id', flat=True)
+
+        if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+            schedule_charge_card_transaction_creation(
+                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+            )
+
+        elif configuration.corporate_credit_card_expenses_object == 'BILL':
+            schedule_bills_creation(
+                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+            )
+
+        elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+            schedule_expense_reports_creation(
+                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+            )
+
+    if is_expenses_exported:
+        last_export_detail.last_exported_at = last_exported_at
+        last_export_detail.export_mode = export_mode or 'MANUAL'
+        last_export_detail.save()
+
 
 def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours: int):
     if schedule_enabled:
@@ -40,6 +91,7 @@ def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours
 
         if schedule:
             schedule.delete()
+
 
 def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_added: List, emails_selected: List):
     ws_schedule, _ = WorkspaceSchedule.objects.get_or_create(
@@ -81,6 +133,7 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
 
     return ws_schedule
 
+
 def run_sync_schedule(workspace_id):
     """
     Run schedule
@@ -103,48 +156,14 @@ def run_sync_schedule(workspace_id):
     if configuration.reimbursable_expenses_object:
         fund_source.append('PERSONAL')
 
+
     create_expense_groups(
         workspace_id=workspace_id, fund_source=fund_source, task_log=task_log
     )
 
     if task_log.status == 'COMPLETE':
-        if configuration.reimbursable_expenses_object:
-            expense_group_ids = ExpenseGroup.objects.filter(
-                fund_source='PERSONAL', exported_at__isnull=True).values_list('id', flat=True)
+        export_to_intacct(workspace_id, 'AUTO')
 
-            if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
-                schedule_expense_reports_creation(
-                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
-                )
-
-            elif configuration.reimbursable_expenses_object == 'BILL':
-                schedule_bills_creation(
-                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
-                )
-
-            elif configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
-                schedule_journal_entries_creation(
-                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
-                )
-
-        if configuration.corporate_credit_card_expenses_object:
-            expense_group_ids = ExpenseGroup.objects.filter(
-                fund_source='CCC', exported_at__isnull=True).values_list('id', flat=True)
-
-            if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
-                schedule_charge_card_transaction_creation(
-                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
-                )
-
-            elif configuration.corporate_credit_card_expenses_object == 'BILL':
-                schedule_bills_creation(
-                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
-                )
-
-            elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-                schedule_expense_reports_creation(
-                    workspace_id=workspace_id, expense_group_ids=expense_group_ids
-                )
 
 def run_email_notification(workspace_id):
 

@@ -17,7 +17,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential, Configuration, Workspace
 from apps.tasks.models import TaskLog
 
-from .tasks import create_expense_groups, schedule_expense_group_creation
+from .tasks import create_expense_groups, schedule_expense_group_creation, get_task_log_and_fund_source
 from .helpers import check_interval_and_sync_dimension, sync_dimensions
 from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
 from .serializers import (
@@ -503,7 +503,7 @@ class ExpenseGroupSyncView(generics.CreateAPIView):
         """
         task_log, fund_source = get_task_log_and_fund_source(kwargs['workspace_id'])
 
-        async_create_expense_groups(kwargs['workspace_id'], fund_source, task_log)
+        create_expense_groups(kwargs['workspace_id'], fund_source, task_log)
 
         return Response(
             status=status.HTTP_200_OK
