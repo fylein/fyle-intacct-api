@@ -42,7 +42,7 @@ class Workspace(models.Model):
     ccc_last_synced_at = models.DateTimeField(help_text='Datetime when ccc expenses were pulled last', null=True)
     source_synced_at = models.DateTimeField(help_text='Datetime when source dimensions were pulled', null=True)
     destination_synced_at = models.DateTimeField(help_text='Datetime when destination dimensions were pulled', null=True)
-    app_version = models.CharField(max_length=2, help_text='App version', default='v2', choices=APP_VERSION_CHOICES)
+    app_version = models.CharField(max_length=2, help_text='App version', default='v1', choices=APP_VERSION_CHOICES)
     onboarding_state = models.CharField(
         max_length=50, choices=ONBOARDING_STATE_CHOICES, default=get_default_onboarding_state,
         help_text='Onboarding status of the workspace', null=True

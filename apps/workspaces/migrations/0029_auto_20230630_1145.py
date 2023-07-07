@@ -13,7 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='workspace',
             name='app_version',
-            field=models.CharField(choices=[('v1', 'v1'), ('v2', 'v2')], default='v2', help_text='App version', max_length=2),
+            field=models.CharField(choices=[('v1', 'v1'), ('v2', 'v2')], default='v1', help_text='App version', max_length=2),
         ),
         migrations.AlterField(
             model_name='sageintacctcredential',
