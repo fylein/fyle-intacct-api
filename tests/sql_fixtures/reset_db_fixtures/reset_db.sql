@@ -1436,6 +1436,47 @@ ALTER SEQUENCE public.journal_entry_lineitems_id_seq OWNED BY public.journal_ent
 
 
 --
+-- Name: last_export_details; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.last_export_details (
+    id integer NOT NULL,
+    last_exported_at timestamp with time zone,
+    export_mode character varying(50),
+    total_expense_groups_count integer,
+    successful_expense_groups_count integer,
+    failed_expense_groups_count integer,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.last_export_details OWNER TO postgres;
+
+--
+-- Name: last_export_details_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.last_export_details_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.last_export_details_id_seq OWNER TO postgres;
+
+--
+-- Name: last_export_details_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.last_export_details_id_seq OWNED BY public.last_export_details.id;
+
+
+--
 -- Name: location_entity_mappings; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2277,6 +2318,13 @@ ALTER TABLE ONLY public.journal_entry_lineitems ALTER COLUMN id SET DEFAULT next
 
 
 --
+-- Name: last_export_details id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details ALTER COLUMN id SET DEFAULT nextval('public.last_export_details_id_seq'::regclass);
+
+
+--
 -- Name: location_entity_mappings id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2589,6 +2637,10 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 182	Can change cost type	46	change_costtype
 183	Can delete cost type	46	delete_costtype
 184	Can view cost type	46	view_costtype
+185	Can add last export detail	47	add_lastexportdetail
+186	Can change last export detail	47	change_lastexportdetail
+187	Can delete last export detail	47	delete_lastexportdetail
+188	Can view last export detail	47	view_lastexportdetail
 \.
 
 
@@ -3686,6 +3738,7 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 44	fyle	expensefilter
 45	fyle	dependentfieldsetting
 46	sage_intacct	costtype
+47	workspaces	lastexportdetail
 \.
 
 
@@ -3851,6 +3904,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 154	workspaces	0028_auto_20230620_0729	2023-06-21 10:38:22.076365+00
 155	sage_intacct	0023_auto_20230626_1430	2023-06-27 10:58:25.589784+00
 156	fyle	0024_auto_20230705_1057	2023-07-06 05:38:46.331815+00
+157	workspaces	0029_lastexportdetail	2023-07-07 10:16:00.343352+00
 \.
 
 
@@ -7312,6 +7366,15 @@ COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location
 
 
 --
+-- Data for Name: last_export_details; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id) FROM stdin;
+4	2023-07-07 11:57:53.184441+00	MANUAL	2	0	0	2023-07-07 11:57:53.184441+00	2023-07-07 11:57:53.184441+00	1
+\.
+
+
+--
 -- Data for Name: location_entity_mappings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -7824,7 +7887,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 46, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 156, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 155, true);
 
 
 --
@@ -7937,6 +8000,13 @@ SELECT pg_catalog.setval('public.journal_entries_id_seq', 10, true);
 --
 
 SELECT pg_catalog.setval('public.journal_entry_lineitems_id_seq', 10, true);
+
+
+--
+-- Name: last_export_details_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.last_export_details_id_seq', 4, true);
 
 
 --
@@ -8462,6 +8532,22 @@ ALTER TABLE ONLY public.journal_entry_lineitems
 
 ALTER TABLE ONLY public.journal_entry_lineitems
     ADD CONSTRAINT journal_entry_lineitems_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: last_export_details last_export_details_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details
+    ADD CONSTRAINT last_export_details_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: last_export_details last_export_details_workspace_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details
+    ADD CONSTRAINT last_export_details_workspace_id_key UNIQUE (workspace_id);
 
 
 --
@@ -9459,6 +9545,14 @@ ALTER TABLE ONLY public.journal_entry_lineitems
 
 ALTER TABLE ONLY public.journal_entry_lineitems
     ADD CONSTRAINT journal_entry_lineitems_expense_id_5a5ca4ff_fk_expenses_id FOREIGN KEY (expense_id) REFERENCES public.expenses(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: last_export_details last_export_details_workspace_id_0af72f0e_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details
+    ADD CONSTRAINT last_export_details_workspace_id_0af72f0e_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

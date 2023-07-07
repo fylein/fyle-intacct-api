@@ -514,7 +514,7 @@ class LastExportDetailView(viewsets.ViewSet):
             )
 
 
-class ExportToXeroView(viewsets.ViewSet):
+class ExportToIntacctView(viewsets.ViewSet):
     """
     Export Expenses to QBO
     """
