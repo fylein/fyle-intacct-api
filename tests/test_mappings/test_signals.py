@@ -97,7 +97,7 @@ def test_resolve_post_category_mapping_errors(test_connection):
     )
 
     error = Error.objects.filter(expense_attribute_id=category_mapping.source_category_id).first()
-    assert error.is_resolved == False
+    assert error.is_resolved == True
 
 
 def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
