@@ -35,7 +35,27 @@ def test_resolve_expense_attribute_errors(db):
         }
     )
 
-    resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'ACCOUNT')
+    resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'EMPLOYEE')
+    assert Error.objects.get(id=error.id).is_resolved == True
+
+    source_category = ExpenseAttribute.objects.filter(
+        id=106,
+        workspace_id=1,
+        attribute_type='CATEGORY'
+    ).first()
+
+    Error.objects.update_or_create(
+        workspace_id=1,
+        expense_attribute=source_category,
+        defaults={
+            'type': 'CATEGORY_MAPPING',
+            'error_title': source_category.value,
+            'error_detail': 'Category mapping is missing',
+            'is_resolved': False
+        }
+    )
+
+    resolve_expense_attribute_errors('CATEGORY', workspace_id, 'ACCOUNT')
     assert Error.objects.get(id=error.id).is_resolved == True
 
 

@@ -68,17 +68,17 @@ def resolve_expense_attribute_errors(
             if destination_attribute_type == 'EXPENSE_TYPE':
                 params = {
                     'source_category_id__in': errored_attribute_ids,
-                    'categorymapping__destination_expense_head_id__isnull': False
+                    'destination_expense_head_id__isnull': False
                 }
             else:
                 params = {
                     'source_category_id__in': errored_attribute_ids,
-                    'categorymapping__destination_account_id__isnull': False
+                    'destination_account_id__isnull': False
                 }
                 
             mapped_attribute_ids: List[int] = CategoryMapping.objects.filter(
                 **params
-            ).values_list('source_employee_id', flat=True)
+            ).values_list('source_category_id', flat=True)
 
         if mapped_attribute_ids:
             Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
