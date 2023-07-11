@@ -433,9 +433,9 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
 
     
     employee_attribute = ExpenseAttribute.objects.filter(
-                value=expense_group.description.get('employee_email'),
-                workspace_id=expense_group.workspace_id,
-                attribute_type='EMPLOYEE'
+        value=expense_group.description.get('employee_email'),
+        workspace_id=expense_group.workspace_id,
+        attribute_type='EMPLOYEE'
     ).first()
 
     try:

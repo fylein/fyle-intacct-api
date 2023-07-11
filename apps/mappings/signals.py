@@ -30,22 +30,20 @@ def resolve_post_mapping_errors(sender, instance: Mapping, **kwargs):
     """
     Resolve errors after mapping is created
     """
-    if instance.source_type in ('TAX_GROUP'):
-        error = Error.objects.filter(expense_attribute_id=instance.source_id).first()
-        if error:
-            error.is_resolved = True
-            error.save()
-            
+    if instance.source_type == 'TAX_GROUP':
+        Error.objects.filter(expense_attribute_id=instance.source_id).update(
+            is_resolved=True
+        )
+         
 
 @receiver(post_save, sender=CategoryMapping)
 def resolve_post_category_mapping_errors(sender, instance: Mapping, **kwargs):
     """
     Resolve errors after mapping is created
     """
-    error = Error.objects.filter(expense_attribute_id=instance.source_category_id).first()
-    if error:
-        error.is_resolved = True
-        error.save()
+    Error.objects.filter(expense_attribute_id=instance.source_category_id).update(
+        is_resolved=True
+    )
 
 
 @receiver(post_save, sender=EmployeeMapping)
@@ -53,10 +51,9 @@ def resolve_post_employees_mapping_errors(sender, instance: Mapping, **kwargs):
     """
     Resolve errors after mapping is created
     """
-    error = Error.objects.filter(expense_attribute_id=instance.source_employee_id).first()
-    if error:
-        error.is_resolved = True
-        error.save()
+    Error.objects.filter(expense_attribute_id=instance.source_employee_id).update(
+        is_resolved=True
+    )
 
 
 @receiver(post_save, sender=MappingSetting)

@@ -13,7 +13,7 @@ from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as Fyle
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
-    CategoryMapping
+    CategoryMapping, EmployeeMapping
 
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
 
@@ -42,12 +42,47 @@ def resolve_expense_attribute_errors(
     if errored_attribute_ids:
         mapped_attribute_ids = []
 
-        mapped_attribute_ids: List[int] = Mapping.objects.filter(
-            source_id__in=errored_attribute_ids
-        ).values_list('source_id', flat=True)
+        
+        if source_attribute_type == "TAX_GROUP":
+    
+            mapped_attribute_ids: List[int] = Mapping.objects.filter(
+                source_id__in=errored_attribute_ids
+            ).values_list('source_id', flat=True)
+        
+        elif source_attribute_type == "EMPLOYEE":
+            if destination_attribute_type == "EMPLOYEE":
+                params = {
+                    'source_employee_id__in': errored_attribute_ids,
+                    'destination_employee_id__isnull': False,
+                }
+            else:
+                params = {
+                    'source_employee_id__in': errored_attribute_ids,
+                    'destination_vendor_id__isnull': False,
+                }
+            mapped_attribute_ids: List[int] = EmployeeMapping.objects.filter(
+                **params
+            ).values_list('source_employee_id', flat=True)
+    
+        elif source_attribute_type == "CATEGORY":
+            if destination_attribute_type == 'EXPENSE_TYPE':
+                params = {
+                    'source_category_id__in': errored_attribute_ids,
+                    'categorymapping__destination_expense_head_id__isnull': False
+                }
+            else:
+                params = {
+                    'source_category_id__in': errored_attribute_ids,
+                    'categorymapping__destination_account_id__isnull': False
+                }
+                
+            mapped_attribute_ids: List[int] = CategoryMapping.objects.filter(
+                **params
+            ).values_list('source_employee_id', flat=True)
 
         if mapped_attribute_ids:
             Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
+    
 
 
 def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: bool = False):
@@ -295,6 +330,12 @@ def async_auto_map_employees(workspace_id: int):
             sage_intacct_connection.sync_vendors()
 
         EmployeesAutoMappingHelper(workspace_id, destination_type, employee_mapping_preference).reimburse_mapping()
+        resolve_expense_attribute_errors(
+            source_attribute_type="EMPLOYEE",
+            workspace_id=workspace_id,
+            destination_attribute_type=destination_type,
+        )
+
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct Credentials does not exist - %s', workspace_id)
     
@@ -1009,6 +1050,12 @@ def auto_create_category_mappings(workspace_id):
         if reimbursable_expenses_object == 'EXPENSE_REPORT' and \
                 corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
             bulk_create_ccc_category_mappings(workspace_id)
+        
+        resolve_expense_attribute_errors(
+            source_attribute_type="CATEGORY", 
+            destination_attribute_type=reimbursable_destination_type, 
+            workspace_id=workspace_id
+        )
 
         return []
 
@@ -1054,6 +1101,9 @@ def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_
 
     platform_connection.tax_groups.sync()
     Mapping.bulk_create_mappings(si_attributes, 'TAX_GROUP', 'TAX_DETAIL', workspace_id)
+    resolve_expense_attribute_errors(
+        source_attribute_type="TAX_GROUP", workspace_id=workspace_id
+    )
 
 
 def create_fyle_tax_group_payload(si_attributes: List[DestinationAttribute], existing_fyle_tax_groups: list):
