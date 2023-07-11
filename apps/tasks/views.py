@@ -20,6 +20,25 @@ class TasksView(generics.ListAPIView):
         """
         Return task logs in workspace
         """
+        task_status = self.request.query_params.getlist('status')
+        task_type = ['CREATING_AP_PAYMENT', 'CREATING_REIMBURSEMENT']
+
+        if len(task_status) == 1 and task_status[0] == 'ALL':
+            task_status = ['ENQUEUED', 'IN_PROGRESS', 'FAILED', 'COMPLETE']
+
+        task_logs = TaskLog.objects.filter(~Q(type__in=task_type), 
+            workspace_id=self.kwargs['workspace_id'], status__in=task_status).order_by('-updated_at').all()
+        return task_logs
+
+
+class NewTaskView(generics.ListAPIView):
+
+    serializer_class = TaskLogSerializer
+
+    def get_queryset(self):
+        """
+        Return task logs in workspace
+        """
         task_type = self.request.query_params.get('task_type')
         expense_group_ids = self.request.query_params.get('expense_group_ids')
         task_status = self.request.query_params.get('status')
