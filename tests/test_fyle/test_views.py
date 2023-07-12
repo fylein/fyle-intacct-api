@@ -69,6 +69,12 @@ def test_expense_group_view(api_client, test_connection):
     })
     response = json.loads(response.content)
     assert response['count'] == 3
+    
+    response = api_client.get(url, {
+      'expense_group_ids': '1,3'
+    })
+    response = json.loads(response.content)
+    assert response['count'] == 2
 
     task_log, _ = TaskLog.objects.update_or_create(
         workspace_id=1,
