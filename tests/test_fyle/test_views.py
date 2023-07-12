@@ -12,6 +12,19 @@ from unittest import mock
 from apps.fyle.helpers import sync_dimensions
 
 
+def test_exportable_expense_group_view(api_client, test_connection):
+
+    access_token = test_connection.access_token
+    url = '/api/workspaces/1/fyle/exportable_expense_groups/'
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+    response = api_client.get(url)
+    assert response.status_code==200
+
+    response = json.loads(response.content)
+    assert response['exportable_expense_group_ids'] == [1, 2, 3]
+
+
 def test_expense_group_view(api_client, test_connection):
     access_token = test_connection.access_token
 
