@@ -32,6 +32,9 @@ def export_to_intacct(workspace_id, export_mode=None):
         expense_group_ids = ExpenseGroup.objects.filter(
             fund_source='PERSONAL', exported_at__isnull=True).values_list('id', flat=True)
 
+        if len(expense_group_ids):
+            is_expenses_exported = True
+
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(
                 workspace_id=workspace_id, expense_group_ids=expense_group_ids
@@ -50,6 +53,9 @@ def export_to_intacct(workspace_id, export_mode=None):
     if configuration.corporate_credit_card_expenses_object:
         expense_group_ids = ExpenseGroup.objects.filter(
             fund_source='CCC', exported_at__isnull=True).values_list('id', flat=True)
+
+        if len(expense_group_ids):
+            is_expenses_exported = True
 
         if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
             schedule_charge_card_transaction_creation(
