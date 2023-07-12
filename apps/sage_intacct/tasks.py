@@ -403,8 +403,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
             expense_group=expense_group,
             defaults={
                 'type': 'INTACCT_ERROR',
-                'error_title': 'this is a error',
-                'error_detail': 'error dedsf',
+                'error_title': 'Sage Intacct Internal Error',
+                'error_detail': errors[0],
                 'is_resolved': False
             }
         )

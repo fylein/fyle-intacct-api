@@ -38,6 +38,20 @@ def test_resolve_expense_attribute_errors(db):
     resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'EMPLOYEE')
     assert Error.objects.get(id=error.id).is_resolved == True
 
+    error, _ = Error.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        expense_attribute=employee_attribute,
+        defaults={
+            'type': 'EMPLOYEE_MAPPING',
+            'error_title': employee_attribute.value,
+            'error_detail': 'Employee mapping is missing',
+            'is_resolved': False
+        }
+    )
+
+    resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'VENDOR')
+    assert Error.objects.get(id=error.id).is_resolved == True
+
     source_category = ExpenseAttribute.objects.filter(
         id=106,
         workspace_id=1,
