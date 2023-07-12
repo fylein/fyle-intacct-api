@@ -18,7 +18,7 @@ set
 from 
   ws 
 where 
-  workspace_id = ws.expense_attributes_workspace_id;
+  employee_email = ws.expense_attributes_employee_email;
 
 -- Run this in after running the above query.
 with ex as (

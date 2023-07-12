@@ -489,29 +489,19 @@ class WorkspaceAdminsView(viewsets.ViewSet):
             )
 
 
-class LastExportDetailView(viewsets.ViewSet):
+class LastExportDetailView(generics.RetrieveAPIView):
     """
     Last Export Details
     """
-    serializer_class = LastExportDetailSerializer
+    
+    authentication_classes = []
+    permission_classes = []
+ 
+    lookup_field = 'workspace_id'
+    lookup_url_kwarg = 'workspace_id'
 
-    def get(self, request, *args, **kwargs):
-        """
-        last export detail
-        """
-        last_export_detail = LastExportDetail.objects.filter(workspace_id=kwargs['workspace_id']).first()
-        if last_export_detail and last_export_detail.last_exported_at and last_export_detail.total_expense_groups_count:
-            return Response(
-                data=self.serializer_class(last_export_detail).data,
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                data={
-                    'message': 'latest exported details does not exist in workspace'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    queryset = LastExportDetail.objects.filter(last_exported_at__isnull=False, total_expense_groups_count__gt=0)
+    serializer_class = LastExportDetailSerializer
 
 
 class ExportToIntacctView(viewsets.ViewSet):

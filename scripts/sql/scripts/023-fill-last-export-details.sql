@@ -24,5 +24,3 @@ where
     from 
       last_export_details
   );
-
-commit;

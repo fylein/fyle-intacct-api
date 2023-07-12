@@ -66,6 +66,11 @@ def export_to_intacct(workspace_id, export_mode=None):
                 workspace_id=workspace_id, expense_group_ids=expense_group_ids
             )
 
+        elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
+            schedule_journal_entries_creation(
+                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+            )
+
     if is_expenses_exported:
         last_export_detail.last_exported_at = last_exported_at
         last_export_detail.export_mode = export_mode or 'MANUAL'

@@ -35,11 +35,11 @@ def update_last_export_details(workspace_id):
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
 
     failed_exports = TaskLog.objects.filter(
-        ~Q(type__in=['CREATING_BILL_PAYMENT', 'FETCHING_EXPENSES']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
+        ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
     ).count()
 
     successful_exports = TaskLog.objects.filter(
-        ~Q(type__in=['CREATING_BILL_PAYMENT', 'FETCHING_EXPENSES']),
+        ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']),
         workspace_id=workspace_id,
         status='COMPLETE',
         updated_at__gt=last_export_detail.last_exported_at
