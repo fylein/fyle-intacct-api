@@ -417,4 +417,4 @@ def test_last_export_detail_view(mocker, db, api_client, test_connection):
     last_export_detail.save()
 
     response = api_client.get(url)
-    assert response.status_code == 400
+    assert response.status_code == 404
