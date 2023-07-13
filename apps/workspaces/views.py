@@ -512,27 +512,3 @@ class ExportToIntacctView(viewsets.ViewSet):
         return Response(
             status=status.HTTP_200_OK
         )
-
-
-rollback;
-begin;
-
-with ws as (
-  select 
-    expense_attributes.detail ->> 'full_name' as expense_attributes_full_name,
-    expense_attributes.workspace_id as expense_attributes_workspace_id,
-    expense_attributes.value as expense_attribute_email
-  from 
-    expense_groups 
-    inner join expense_attributes on expense_attributes.value = expense_groups.description ->> 'employee_email' 
-  where 
-    expense_groups.workspace_id = expense_attributes.workspace_id
-) 
-update 
-  expense_groups 
-set 
-  employee_name = ws.expense_attributes_full_name 
-from 
-  ws 
-where 
-  expense_groups.description ->> 'employee_email'  = ws.expense_attribute_email;
