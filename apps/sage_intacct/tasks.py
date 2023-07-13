@@ -365,6 +365,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     logger.info(exception.response)
     
     errors = []
+    error_title = None
+    error_msg = None
 
     if 'error' in exception.response:
         sage_intacct_errors = exception.response['error']
@@ -383,6 +385,9 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
                          if ('correction' in error and error['correction']) else 'Not available'
                 })
 
+            error_title = errors[0]['correction'] if ('correction' in errors[0] and errors[0]['correction']) else errors[0]['short_description']
+            error_msg = errors[0]['long_description']
+
         elif isinstance(sage_intacct_errors, dict):
             error = sage_intacct_errors
             errors.append({
@@ -395,16 +400,23 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
                     if ('correction' in error and error['correction']) else 'Not available'
             })
 
+            error_title = errors[0]['correction'] if ('correction' in errors[0] and errors[0]['correction']) else errors[0]['short_description']
+            error_msg = errors[0]['long_description']
+
     if not errors:
         errors.append(exception.response)
+        error_title = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
+        error_msg = exception.response
 
+    print('ello', errors)
+    print(error_msg, error_title)
     Error.objects.update_or_create(
             workspace_id=expense_group.workspace_id,
             expense_group=expense_group,
             defaults={
                 'type': 'INTACCT_ERROR',
-                'error_title': 'Sage Intacct Internal Error',
-                'error_detail': errors[0],
+                'error_title': error_title,
+                'error_detail': error_msg,
                 'is_resolved': False
             }
         )

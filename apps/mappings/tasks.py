@@ -27,6 +27,45 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
+def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_type: str, errored_attribute_ids: List[int]):
+
+    mapped_attribute_ids = []
+
+    if source_attribute_type == "TAX_GROUP":
+        mapped_attribute_ids: List[int] = Mapping.objects.filter(
+            source_id__in=errored_attribute_ids
+        ).values_list('source_id', flat=True)
+
+    elif source_attribute_type == "EMPLOYEE":
+        params = {
+            'source_employee_id__in': errored_attribute_ids,
+        }
+
+        if destination_attribute_type == "EMPLOYEE":
+            params['destination_employee_id__isnull'] = False
+        else:
+            params['destination_vendor_id__isnull'] = False
+        mapped_attribute_ids: List[int] = EmployeeMapping.objects.filter(
+            **params
+        ).values_list('source_employee_id', flat=True)
+
+    elif source_attribute_type == "CATEGORY":
+        params = {
+            'source_category_id__in': errored_attribute_ids,
+        }
+
+        if destination_attribute_type == 'EXPENSE_TYPE':
+            params['destination_expense_head_id__isnull'] = False
+        else:
+            params['destination_account_id__isnull'] =  False
+
+        mapped_attribute_ids: List[int] = CategoryMapping.objects.filter(
+            **params
+        ).values_list('source_category_id', flat=True)
+
+    return mapped_attribute_ids
+
+
 def resolve_expense_attribute_errors(
     source_attribute_type: str, workspace_id: int, destination_attribute_type: str = None):
     """
@@ -40,49 +79,10 @@ def resolve_expense_attribute_errors(
     ).values_list('expense_attribute_id', flat=True)
 
     if errored_attribute_ids:
-        mapped_attribute_ids = []
-
-        
-        if source_attribute_type == "TAX_GROUP":
-    
-            mapped_attribute_ids: List[int] = Mapping.objects.filter(
-                source_id__in=errored_attribute_ids
-            ).values_list('source_id', flat=True)
-        
-        elif source_attribute_type == "EMPLOYEE":
-            if destination_attribute_type == "EMPLOYEE":
-                params = {
-                    'source_employee_id__in': errored_attribute_ids,
-                    'destination_employee_id__isnull': False,
-                }
-            else:
-                params = {
-                    'source_employee_id__in': errored_attribute_ids,
-                    'destination_vendor_id__isnull': False,
-                }
-            mapped_attribute_ids: List[int] = EmployeeMapping.objects.filter(
-                **params
-            ).values_list('source_employee_id', flat=True)
-    
-        elif source_attribute_type == "CATEGORY":
-            if destination_attribute_type == 'EXPENSE_TYPE':
-                params = {
-                    'source_category_id__in': errored_attribute_ids,
-                    'destination_expense_head_id__isnull': False
-                }
-            else:
-                params = {
-                    'source_category_id__in': errored_attribute_ids,
-                    'destination_account_id__isnull': False
-                }
-                
-            mapped_attribute_ids: List[int] = CategoryMapping.objects.filter(
-                **params
-            ).values_list('source_category_id', flat=True)
+        mapped_attribute_ids = get_mapped_attributes_ids(source_attribute_type, destination_attribute_type, errored_attribute_ids)
 
         if mapped_attribute_ids:
             Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
-    
 
 
 def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: bool = False):
@@ -103,6 +103,7 @@ def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: b
                 attribute_values.append(attribute.value.lower())
 
     return unique_attributes
+
 
 def disable_expense_attributes(source_field, destination_field, workspace_id):
 

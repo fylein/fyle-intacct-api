@@ -21,7 +21,6 @@ class ErrorsView(generics.ListAPIView):
             params['type'] = type
 
         if is_resolved is not None:
-            is_resolved = is_resolved.lower() == 'true'
-            params['is_resolved'] = is_resolved
+            params['is_resolved'] = False
 
         return Error.objects.filter(**params)
