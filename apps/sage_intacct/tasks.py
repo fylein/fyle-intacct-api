@@ -397,10 +397,11 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
                     if ('correction' in error and error['correction']) else 'Not available'
             })
 
+
+    if errors:
         error_title = errors[0]['correction'] if (errors[0]['correction'] != 'Not available') else errors[0]['short_description']
         error_msg = errors[0]['long_description']
-
-    if not errors:
+    else:
         errors.append(exception.response)
 
 
