@@ -366,8 +366,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     
     errors = []
     error_title = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
-    error_msg = 'Something unexpected happened with workspace_id: %s %s'.format(task_log.workspace_id, exception.response)
-
+    error_msg = 'Something unexpected happened with the workspace'
     if 'error' in exception.response:
         sage_intacct_errors = exception.response['error']
         error_msg = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
@@ -399,7 +398,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
 
 
     if errors:
-        error_title = errors[0]['correction'] if (errors[0]['correction'] != 'Not available') else errors[0]['short_description']
+        error_title = errors[0]['correction'] if (errors[0]['correction'] and errors[0]['correction'] != 'not available') else errors[0]['short_description']
         error_msg = errors[0]['long_description']
     else:
         errors.append(exception.response)
