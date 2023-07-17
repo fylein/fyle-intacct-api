@@ -31,6 +31,34 @@ class TasksView(generics.ListAPIView):
         return task_logs
 
 
+class NewTaskView(generics.ListAPIView):
+
+    serializer_class = TaskLogSerializer
+
+    def get_queryset(self):
+        """
+        Return task logs in workspace
+        """
+        task_type = self.request.query_params.get('task_type')
+        expense_group_ids = self.request.query_params.get('expense_group_ids')
+        task_status = self.request.query_params.get('status')
+
+        filters = {
+            'workspace_id': self.kwargs['workspace_id']
+        }
+
+        if task_type:
+            filters['type__in'] = task_type.split(',')
+
+        if expense_group_ids:
+            filters['expense_group_id__in'] = expense_group_ids.split(',')
+
+        if task_status:
+            filters['status__in'] = task_status.split(',')
+    
+        return TaskLog.objects.filter(**filters).order_by('-updated_at').all()
+
+
 class TasksByIdView(generics.RetrieveAPIView):
     """
     Get Task by Ids

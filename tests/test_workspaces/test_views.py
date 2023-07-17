@@ -1,18 +1,12 @@
 import json
 from unittest import mock
-from fyle_intacct_api import settings
 from django.contrib.auth import get_user_model
 from fyle_rest_auth.utils import AuthUtils
 from tests.helper import dict_compare_keys
-from sageintacctsdk import SageIntacctSDK, exceptions as sage_intacct_exc
+from sageintacctsdk import exceptions as sage_intacct_exc
 from fyle.platform import exceptions as fyle_exc
-<<<<<<< HEAD
-from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail
-=======
-from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, Workspace
->>>>>>> 4891bf01b8f3609dfd0ed3ced7c835d20112a15a
+from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail, Workspace
 from .fixtures import data
-from ..test_sageintacct.fixtures import data as sageintacct_data
 from ..test_fyle.fixtures import data as fyle_data
 
 User = get_user_model()

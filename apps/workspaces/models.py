@@ -22,7 +22,7 @@ ONBOARDING_STATE_CHOICES = (
 EXPORT_MODE_CHOICES = (
     ('MANUAL', 'MANUAL'),
     ('AUTO', 'AUTO')
-
+)
 
 APP_VERSION_CHOICES = (
     ('v1', 'v1'),
