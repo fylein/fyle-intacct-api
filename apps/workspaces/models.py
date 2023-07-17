@@ -19,6 +19,11 @@ ONBOARDING_STATE_CHOICES = (
     ('COMPLETE', 'COMPLETE')
 )
 
+APP_VERSION_CHOICES = (
+    ('v1', 'v1'),
+    ('v2', 'v2')
+)
+
 
 def get_default_onboarding_state():
     return 'CONNECTION'
@@ -37,6 +42,7 @@ class Workspace(models.Model):
     ccc_last_synced_at = models.DateTimeField(help_text='Datetime when ccc expenses were pulled last', null=True)
     source_synced_at = models.DateTimeField(help_text='Datetime when source dimensions were pulled', null=True)
     destination_synced_at = models.DateTimeField(help_text='Datetime when destination dimensions were pulled', null=True)
+    app_version = models.CharField(max_length=2, help_text='App version', default='v1', choices=APP_VERSION_CHOICES)
     onboarding_state = models.CharField(
         max_length=50, choices=ONBOARDING_STATE_CHOICES, default=get_default_onboarding_state,
         help_text='Onboarding status of the workspace', null=True
@@ -136,7 +142,7 @@ class SageIntacctCredential(models.Model):
     id = models.AutoField(primary_key=True)
     si_user_id = models.TextField(help_text='Stores Sage Intacct user id')
     si_company_id = models.TextField(help_text='Stores Sage Intacct company id')
-    si_company_name = models.TextField(help_text='Stores Sage Intacct company name')
+    si_company_name = models.TextField(help_text='Stores Sage Intacct company name', null=True)
     si_user_password = models.TextField(help_text='Stores Sage Intacct user password')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')

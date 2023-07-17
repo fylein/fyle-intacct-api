@@ -3,10 +3,24 @@ import json
 from unittest import mock
 from django_q.models import Schedule
 from fyle_accounting_mappings.models import MappingSetting, Mapping
-from apps.workspaces.models import Configuration
+from apps.workspaces.models import Configuration, Workspace
+from apps.mappings.models import LocationEntityMapping
 from fyle.platform.exceptions import WrongParamsError
 from ..test_fyle.fixtures import data as fyle_data
 
+
+def test_run_post_location_entity_mappings(db, mocker, test_connection):
+
+    workspace = Workspace.objects.get(id=1)
+    assert workspace.onboarding_state == 'CONNECTION'
+    LocationEntityMapping.objects.update_or_create(
+        workspace_id=1,
+        defaults={
+            "country_name": "USA"
+        }
+    )
+    workspace = Workspace.objects.get(id=1)
+    assert workspace.onboarding_state == 'EXPORT_SETTINGS'
 
 def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mocker.patch(
