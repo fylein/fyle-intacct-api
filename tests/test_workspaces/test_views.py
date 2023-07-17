@@ -6,7 +6,11 @@ from fyle_rest_auth.utils import AuthUtils
 from tests.helper import dict_compare_keys
 from sageintacctsdk import SageIntacctSDK, exceptions as sage_intacct_exc
 from fyle.platform import exceptions as fyle_exc
+<<<<<<< HEAD
+from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail
+=======
 from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, Workspace
+>>>>>>> 4891bf01b8f3609dfd0ed3ced7c835d20112a15a
 from .fixtures import data
 from ..test_sageintacct.fixtures import data as sageintacct_data
 from ..test_fyle.fixtures import data as fyle_data
@@ -401,3 +405,34 @@ def test_workspace_admin_view(mocker, api_client, test_connection):
 
     response = api_client.get(url)
     assert response.status_code == 200
+
+
+def test_export_to_intacct(mocker, api_client, test_connection):
+    mocker.patch(
+        'apps.workspaces.views.export_to_intacct',
+        return_value=None
+    )
+
+    workspace_id = 1
+    url = '/api/workspaces/{}/exports/trigger/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.post(url)
+    assert response.status_code == 200
+
+
+def test_last_export_detail_view(mocker, db, api_client, test_connection):
+
+    workspace_id = 1
+    url = '/api/workspaces/{}/export_detail/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.get(url)
+    assert response.status_code == 200
+
+    last_export_detail = LastExportDetail.objects.filter(workspace_id=workspace_id).first()
+    last_export_detail.total_expense_groups_count = 0
+    last_export_detail.save()
+
+    response = api_client.get(url)
+    assert response.status_code == 404

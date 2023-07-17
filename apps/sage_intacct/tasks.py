@@ -20,7 +20,7 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration, LastExportDetail
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
@@ -29,6 +29,28 @@ from .utils import SageIntacctConnector
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+
+def update_last_export_details(workspace_id):
+    last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
+
+    failed_exports = TaskLog.objects.filter(
+        ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
+    ).count()
+
+    successful_exports = TaskLog.objects.filter(
+        ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']),
+        workspace_id=workspace_id,
+        status='COMPLETE',
+        updated_at__gt=last_export_detail.last_exported_at
+    ).count()
+
+    last_export_detail.failed_expense_groups_count = failed_exports
+    last_export_detail.successful_expense_groups_count = successful_exports
+    last_export_detail.total_expense_groups_count = failed_exports + successful_exports
+    last_export_detail.save()
+
+    return last_export_detail
 
 
 def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, expense_group: ExpenseGroup):
@@ -203,6 +225,7 @@ def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
 
     return vendor
 
+
 def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List[str]):
     """
     Schedule journal entries creation
@@ -223,7 +246,7 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
         chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
         chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
-        for expense_group in expense_groups:
+        for index, expense_group in enumerate(expense_groups):
             task_log, _ = TaskLog.objects.get_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_group=expense_group,
@@ -235,12 +258,17 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
                 task_log.save()
+            
+            last_export = False
+            if expense_groups.count() == index + 1:
+                last_export = True
 
-            chain.append('apps.sage_intacct.tasks.create_journal_entry', expense_group, task_log.id)
+            chain.append('apps.sage_intacct.tasks.create_journal_entry', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:
             chain.run()
+
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str]):
     """
@@ -262,7 +290,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
         chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
         chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
-        for expense_group in expense_groups:
+        for index, expense_group in enumerate(expense_groups):
             task_log, _ = TaskLog.objects.get_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_group=expense_group,
@@ -275,7 +303,11 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
                 task_log.status = 'ENQUEUED'
                 task_log.save()
 
-            chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log.id)
+            last_export = False
+            if expense_groups.count() == index + 1:
+                last_export = True
+
+            chain.append('apps.sage_intacct.tasks.create_expense_report', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:
@@ -301,7 +333,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
         chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
         chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
-        for expense_group in expense_groups:
+        for index, expense_group in enumerate(expense_groups):
             task_log, _ = TaskLog.objects.get_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_group=expense_group,
@@ -313,8 +345,12 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str]):
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
                 task_log.save()
+            
+            last_export = False
+            if expense_groups.count() == index + 1:
+                last_export = True
 
-            chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log.id)
+            chain.append('apps.sage_intacct.tasks.create_bill', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:
@@ -341,7 +377,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
         chain.append('apps.fyle.helpers.sync_dimensions', fyle_credentials, workspace_id)
         chain.append('apps.fyle.tasks.sync_reimbursements', fyle_credentials, workspace_id)
 
-        for expense_group in expense_groups:
+        for index, expense_group in enumerate(expense_groups):
             task_log, _ = TaskLog.objects.get_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_group=expense_group,
@@ -353,8 +389,12 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
                 task_log.save()
+            
+            last_export = False
+            if expense_groups.count() == index + 1:
+                last_export = True
 
-            chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log.id)
+            chain.append('apps.sage_intacct.tasks.create_charge_card_transaction', expense_group, task_log.id, last_export)
             task_log.save()
 
         if chain.length() > 2:
@@ -601,7 +641,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
+def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
@@ -652,6 +692,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_journal_entry
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
 
@@ -708,8 +749,11 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
+    if last_export:
+        update_last_export_details(expense_group.workspace_id)
 
-def create_expense_report(expense_group: ExpenseGroup, task_log_id):
+
+def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
@@ -763,6 +807,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_expense_report
             expense_group.export_type = 'EXPENSE_REPORT'
             expense_group.save()
 
@@ -817,8 +862,11 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id):
         task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
+    if last_export:
+        update_last_export_details(expense_group.workspace_id)
 
-def create_bill(expense_group: ExpenseGroup, task_log_id):
+
+def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
@@ -862,6 +910,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_bill
             expense_group.export_type = 'BILL'
             expense_group.save()
 
@@ -916,9 +965,12 @@ def create_bill(expense_group: ExpenseGroup, task_log_id):
         task_log.status = 'FATAL'
         task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+    
+    if last_export:
+        update_last_export_details(expense_group.workspace_id)
 
 
-def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
+def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
@@ -958,6 +1010,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
             task_log.save()
 
             expense_group.exported_at = datetime.now()
+            expense_group.response_logs = created_charge_card_transaction
             expense_group.export_type = 'CHARGE_CARD_TRANSACTION'
             expense_group.save()
 
@@ -1012,6 +1065,9 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id):
         task_log.status = 'FATAL'
         task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+
+    if last_export:
+        update_last_export_details(expense_group.workspace_id)
 
 
 def check_expenses_reimbursement_status(expenses):

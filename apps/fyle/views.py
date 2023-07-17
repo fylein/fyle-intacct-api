@@ -17,7 +17,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential, Configuration, Workspace
 from apps.tasks.models import TaskLog
 
-from .tasks import create_expense_groups, schedule_expense_group_creation
+from .tasks import create_expense_groups, schedule_expense_group_creation, get_task_log_and_fund_source
 from .helpers import check_interval_and_sync_dimension, sync_dimensions
 from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
 from .serializers import (
@@ -35,6 +35,16 @@ class ExpenseGroupView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         state = self.request.query_params.get('state', 'ALL')
+        start_date = self.request.query_params.get('start_date', None)
+        end_date = self.request.query_params.get('end_date', None)
+        expense_group_ids = self.request.query_params.get('expense_group_ids', None)
+        exported_at = self.request.query_params.get('exported_at', None)
+
+        if expense_group_ids:
+            return ExpenseGroup.objects.filter(
+                workspace_id=self.kwargs['workspace_id'],
+                id__in=expense_group_ids.split(',')
+            )
 
         if state == 'ALL':
             return ExpenseGroup.objects.filter(workspace_id=self.kwargs['workspace_id']).order_by('-updated_at')
@@ -44,8 +54,17 @@ class ExpenseGroupView(generics.ListCreateAPIView):
                                                workspace_id=self.kwargs['workspace_id']).order_by('-updated_at')
 
         elif state == 'COMPLETE':
-            return ExpenseGroup.objects.filter(tasklog__status='COMPLETE',
-                                               workspace_id=self.kwargs['workspace_id']).order_by('-exported_at')
+            filters = {
+                'workspace_id': self.kwargs['workspace_id'],
+                'tasklog__status': 'COMPLETE'
+            }
+
+            if start_date and end_date:
+                filters['exported_at__range'] = [start_date, end_date]
+
+            if exported_at:
+                filters['exported_at__gte'] = exported_at
+            return ExpenseGroup.objects.filter(**filters).order_by('-exported_at')
 
         elif state == 'READY':
             return ExpenseGroup.objects.filter(
@@ -78,6 +97,7 @@ class ExpenseGroupView(generics.ListCreateAPIView):
             status=status.HTTP_200_OK
         )
 
+
 class ExpenseGroupCountView(generics.ListAPIView):
     """
     Expense Group Count View
@@ -95,6 +115,7 @@ class ExpenseGroupCountView(generics.ListAPIView):
             data={'count': expense_groups_count},
             status=status.HTTP_200_OK
         )
+
 
 class ExpenseGroupScheduleView(generics.CreateAPIView):
     """
@@ -445,3 +466,45 @@ class DependentFieldSettingView(generics.CreateAPIView, generics.RetrieveUpdateA
     serializer_class = DependentFieldSettingSerializer
     lookup_field = 'workspace_id'
     queryset = DependentFieldSetting.objects.all()
+
+
+class ExportableExpenseGroupsView(generics.RetrieveAPIView):
+    """
+    List Exportable Expense Groups
+    """
+    def get(self, request, *args, **kwargs):
+        configuration = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
+        fund_source = []
+
+        if configuration.reimbursable_expenses_object:
+            fund_source.append('PERSONAL')
+        if configuration.corporate_credit_card_expenses_object:
+            fund_source.append('CCC')
+
+        expense_group_ids = ExpenseGroup.objects.filter(
+            workspace_id=self.kwargs['workspace_id'],
+            exported_at__isnull=True,
+            fund_source__in=fund_source
+        ).values_list('id', flat=True)
+
+        return Response(
+            data={'exportable_expense_group_ids': expense_group_ids},
+            status=status.HTTP_200_OK
+        )
+
+
+class ExpenseGroupSyncView(generics.CreateAPIView):
+    """
+    Create expense groups
+    """
+    def post(self, request, *args, **kwargs):
+        """
+        Post expense groups creation
+        """
+        task_log, fund_source = get_task_log_and_fund_source(kwargs['workspace_id'])
+
+        create_expense_groups(kwargs['workspace_id'], fund_source, task_log)
+
+        return Response(
+            status=status.HTTP_200_OK
+        )

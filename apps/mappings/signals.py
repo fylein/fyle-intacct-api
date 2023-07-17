@@ -23,7 +23,6 @@ from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
 from apps.tasks.models import Error
 from apps.mappings.models import LocationEntityMapping
 
-
 logger = logging.getLogger(__name__)
 
 

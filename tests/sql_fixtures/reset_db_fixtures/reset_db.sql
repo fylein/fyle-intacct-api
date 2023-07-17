@@ -981,7 +981,9 @@ CREATE TABLE public.expense_groups (
     workspace_id integer NOT NULL,
     fund_source character varying(255) NOT NULL,
     exported_at timestamp with time zone,
-    export_type character varying(50)
+    export_type character varying(50),
+    employee_name character varying(100),
+    response_logs jsonb
 );
 
 
@@ -1098,7 +1100,8 @@ CREATE TABLE public.expenses (
     corporate_card_id character varying(255),
     is_skipped boolean,
     report_title text,
-    posted_at timestamp with time zone
+    posted_at timestamp with time zone,
+    employee_name character varying(255)
 );
 
 
@@ -1472,6 +1475,47 @@ ALTER TABLE public.journal_entry_lineitems_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.journal_entry_lineitems_id_seq OWNED BY public.journal_entry_lineitems.id;
+
+
+--
+-- Name: last_export_details; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.last_export_details (
+    id integer NOT NULL,
+    last_exported_at timestamp with time zone,
+    export_mode character varying(50),
+    total_expense_groups_count integer,
+    successful_expense_groups_count integer,
+    failed_expense_groups_count integer,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.last_export_details OWNER TO postgres;
+
+--
+-- Name: last_export_details_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.last_export_details_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.last_export_details_id_seq OWNER TO postgres;
+
+--
+-- Name: last_export_details_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.last_export_details_id_seq OWNED BY public.last_export_details.id;
 
 
 --
@@ -2324,6 +2368,13 @@ ALTER TABLE ONLY public.journal_entry_lineitems ALTER COLUMN id SET DEFAULT next
 
 
 --
+-- Name: last_export_details id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details ALTER COLUMN id SET DEFAULT nextval('public.last_export_details_id_seq'::regclass);
+
+
+--
 -- Name: location_entity_mappings id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2640,6 +2691,10 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 186	Can change error	47	change_error
 187	Can delete error	47	delete_error
 188	Can view error	47	view_error
+189	Can add last export detail	47	add_lastexportdetail
+190	Can change last export detail	47	change_lastexportdetail
+191	Can delete last export detail	47	delete_lastexportdetail
+192	Can view last export detail	47	view_lastexportdetail
 \.
 
 
@@ -3738,6 +3793,7 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 45	fyle	dependentfieldsetting
 46	sage_intacct	costtype
 47	tasks	error
+48	workspaces	lastexportdetail
 \.
 
 
@@ -3904,6 +3960,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 155	sage_intacct	0023_auto_20230626_1430	2023-06-27 10:58:25.589784+00
 156	workspaces	0029_auto_20230630_1145	2023-06-30 15:03:32.662957+00
 157	tasks	0006_error	2023-07-06 06:56:10.470672+00
+158	fyle	0024_auto_20230705_1057	2023-07-06 05:38:46.331815+00
+159	workspaces	0030_lastexportdetail	2023-07-07 10:16:00.343352+00
 \.
 
 
@@ -7294,10 +7352,10 @@ COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corpo
 -- Data for Name: expense_groups; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at, export_type) FROM stdin;
-1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N	\N
-2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N	\N
-3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N	\N
+COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at, export_type, employee_name, response_logs) FROM stdin;
+1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N	\N	\N	\N
+2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N	\N	\N	\N
+3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N	\N	\N	\N
 \.
 
 
@@ -7332,10 +7390,10 @@ COPY public.expense_reports (id, employee_id, description, supdoc_id, created_at
 -- Data for Name: expenses; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped, report_title, posted_at) FROM stdin;
-1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f	\N	\N
-2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f	\N	\N
-3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f	\N	\N
+COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped, report_title, posted_at, employee_name) FROM stdin;
+1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f	\N	\N	\N
+2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f	\N	\N	\N
+3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f	\N	\N	\N
 \.
 
 
@@ -7370,6 +7428,15 @@ COPY public.journal_entries (id, description, memo, currency, supdoc_id, transac
 --
 
 COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location_id, class_id, department_id, customer_id, item_id, memo, user_defined_dimensions, amount, billable, transaction_date, created_at, updated_at, expense_id, journal_entry_id, employee_id, vendor_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+\.
+
+
+--
+-- Data for Name: last_export_details; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id) FROM stdin;
+4	2023-07-07 11:57:53.184441+00	MANUAL	2	0	0	2023-07-07 11:57:53.184441+00	2023-07-07 11:57:53.184441+00	1
 \.
 
 
@@ -8009,6 +8076,13 @@ SELECT pg_catalog.setval('public.journal_entry_lineitems_id_seq', 10, true);
 
 
 --
+-- Name: last_export_details_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.last_export_details_id_seq', 4, true);
+
+
+--
 -- Name: location_entity_mappings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -8547,6 +8621,22 @@ ALTER TABLE ONLY public.journal_entry_lineitems
 
 ALTER TABLE ONLY public.journal_entry_lineitems
     ADD CONSTRAINT journal_entry_lineitems_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: last_export_details last_export_details_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details
+    ADD CONSTRAINT last_export_details_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: last_export_details last_export_details_workspace_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details
+    ADD CONSTRAINT last_export_details_workspace_id_key UNIQUE (workspace_id);
 
 
 --
@@ -9582,6 +9672,14 @@ ALTER TABLE ONLY public.journal_entry_lineitems
 
 ALTER TABLE ONLY public.journal_entry_lineitems
     ADD CONSTRAINT journal_entry_lineitems_expense_id_5a5ca4ff_fk_expenses_id FOREIGN KEY (expense_id) REFERENCES public.expenses(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: last_export_details last_export_details_workspace_id_0af72f0e_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.last_export_details
+    ADD CONSTRAINT last_export_details_workspace_id_0af72f0e_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
