@@ -1,4 +1,3 @@
-import pytest
 from unittest import mock
 from django_q.models import Schedule
 from fyle_accounting_mappings.models import DestinationAttribute, CategoryMapping, \
@@ -10,8 +9,68 @@ from ..test_fyle.fixtures import data as fyle_data
 from .fixtures import data
 from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential, Configuration
+from apps.fyle.models import ExpenseGroup
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError, InternalServerError
 from sageintacctsdk.exceptions import NoPrivilegeError
+
+
+def test_resolve_expense_attribute_errors(db):
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=3)
+
+    employee_attribute = ExpenseAttribute.objects.filter(
+        value=expense_group.description.get('employee_email'),
+        workspace_id=expense_group.workspace_id,
+        attribute_type='EMPLOYEE'
+    ).first()
+
+    error, _ = Error.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        expense_attribute=employee_attribute,
+        defaults={
+            'type': 'EMPLOYEE_MAPPING',
+            'error_title': employee_attribute.value,
+            'error_detail': 'Employee mapping is missing',
+            'is_resolved': False
+        }
+    )
+
+    resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'EMPLOYEE')
+    assert Error.objects.get(id=error.id).is_resolved == True
+
+    error, _ = Error.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        expense_attribute=employee_attribute,
+        defaults={
+            'type': 'EMPLOYEE_MAPPING',
+            'error_title': employee_attribute.value,
+            'error_detail': 'Employee mapping is missing',
+            'is_resolved': False
+        }
+    )
+
+    resolve_expense_attribute_errors('EMPLOYEE', workspace_id, 'VENDOR')
+    assert Error.objects.get(id=error.id).is_resolved == True
+
+    source_category = ExpenseAttribute.objects.filter(
+        id=106,
+        workspace_id=1,
+        attribute_type='CATEGORY'
+    ).first()
+
+    Error.objects.update_or_create(
+        workspace_id=1,
+        expense_attribute=source_category,
+        defaults={
+            'type': 'CATEGORY_MAPPING',
+            'error_title': source_category.value,
+            'error_detail': 'Category mapping is missing',
+            'is_resolved': False
+        }
+    )
+
+    resolve_expense_attribute_errors('CATEGORY', workspace_id, 'ACCOUNT')
+    assert Error.objects.get(id=error.id).is_resolved == True
 
 
 def test_auto_create_tax_codes_mappings(db, mocker):

@@ -1153,7 +1153,7 @@ def test__validate_expense_group(mocker, db):
         __validate_expense_group(expense_group, configuration)
     except:
         logger.info('Mappings are missing')
-    
+
     configuration.employee_field_mapping = 'VENDOR'
     configuration.save()
 
@@ -1167,7 +1167,7 @@ def test__validate_expense_group(mocker, db):
         __validate_expense_group(expense_group, configuration)
     except BulkError as exception:
         logger.info(exception.response)
-    
+
     expense_group = ExpenseGroup.objects.get(id=1)
 
     expense_group.description.update({'employee_email': 'user48888@fyleforgotham.in'})
@@ -1181,7 +1181,7 @@ def test__validate_expense_group(mocker, db):
         __validate_expense_group(expense_group, configuration)
     except BulkError as exception:
         logger.info(exception.response)
-    
+
     general_mapping.delete()
     try:
         __validate_expense_group(expense_group, configuration)
