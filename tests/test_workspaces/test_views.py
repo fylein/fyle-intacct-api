@@ -6,7 +6,7 @@ from fyle_rest_auth.utils import AuthUtils
 from tests.helper import dict_compare_keys
 from sageintacctsdk import SageIntacctSDK, exceptions as sage_intacct_exc
 from fyle.platform import exceptions as fyle_exc
-from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration
+from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, Workspace
 from .fixtures import data
 from ..test_sageintacct.fixtures import data as sageintacct_data
 from ..test_fyle.fixtures import data as fyle_data
@@ -61,12 +61,12 @@ def test_get_workspace_by_id(api_client, test_connection):
     assert response.status_code == 400
 
 
-def test_post_of_workspace(api_client, test_connection, mocker):
+def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
 
     url = '/api/workspaces/'
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     mocker.patch(
         'apps.workspaces.views.get_fyle_admin',
         return_value=fyle_data['get_my_profile']
@@ -78,11 +78,25 @@ def test_post_of_workspace(api_client, test_connection, mocker):
             'cluster_domain': 'https://staging.fyle.tech/'
         }
     )
+
     response = api_client.post(url)
     assert response.status_code == 200
-
     response = json.loads(response.content)
     assert dict_compare_keys(response, data['workspace']) == [], 'workspaces api returns a diff in the keys'
+
+    workspace_id=1
+    url = '/api/workspaces/{}/'.format(workspace_id)
+    workspace = Workspace.objects.get(id=data['workspace']['id'])
+    assert workspace.app_version == 'v2'
+    data['workspace']['app_version'] = 'v2'
+    response = api_client.patch(url,
+        data={
+            'app_version': 'v2'
+        }
+    )
+
+    workspace = Workspace.objects.get(id=data['workspace']['id'])
+    assert workspace.app_version == 'v2'
 
 
 def test_connect_fyle_view(api_client, test_connection):
