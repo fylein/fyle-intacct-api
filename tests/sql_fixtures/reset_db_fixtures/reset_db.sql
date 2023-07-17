@@ -2691,10 +2691,10 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 186	Can change error	47	change_error
 187	Can delete error	47	delete_error
 188	Can view error	47	view_error
-189	Can add last export detail	47	add_lastexportdetail
-190	Can change last export detail	47	change_lastexportdetail
-191	Can delete last export detail	47	delete_lastexportdetail
-192	Can view last export detail	47	view_lastexportdetail
+189	Can add last export detail	48	add_lastexportdetail
+190	Can change last export detail	48	change_lastexportdetail
+191	Can delete last export detail	48	delete_lastexportdetail
+192	Can view last export detail	48	view_lastexportdetail
 \.
 
 
