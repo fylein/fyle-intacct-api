@@ -26,10 +26,10 @@ from fyle_intacct_api.utils import assert_valid
 from apps.fyle.models import ExpenseGroupSettings
 from apps.fyle.helpers import get_cluster_domain
 
-from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule
+from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule, LastExportDetail
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
-    ConfigurationSerializer, WorkspaceScheduleSerializer
-from .tasks import schedule_sync
+    ConfigurationSerializer, WorkspaceScheduleSerializer, LastExportDetailSerializer
+from .tasks import schedule_sync, export_to_intacct
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -63,6 +63,8 @@ class WorkspaceView(viewsets.ViewSet):
 
             workspace = Workspace.objects.create(name=org_name, fyle_org_id=org_id, cluster_domain=cluster_domain)
             ExpenseGroupSettings.objects.create(workspace_id=workspace.id)
+
+            LastExportDetail.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 
@@ -108,6 +110,22 @@ class WorkspaceView(viewsets.ViewSet):
                     'message': 'Workspace with this id does not exist'
                 },
                 status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def patch(self, request, **kwargs):
+        """
+        PATCH workspace
+        """
+
+        workspace_instance = Workspace.objects.get(pk=kwargs['workspace_id'])
+        serializer = WorkspaceSerializer(
+            workspace_instance, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                data=serializer.data,
+                status=status.HTTP_200_OK
             )
 
 
@@ -265,6 +283,8 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                     si_user_password=encrypted_password,
                     workspace=workspace
                 )
+                workspace.onboarding_state = 'LOCATION_ENTITY_MAPPINGS'
+                workspace.save()
             else:
                 SageIntacctSDK(
                     sender_id=sender_id,
@@ -486,3 +506,27 @@ class WorkspaceAdminsView(viewsets.ViewSet):
                 status=status.HTTP_200_OK
             )
 
+
+class LastExportDetailView(generics.RetrieveAPIView):
+    """
+    Last Export Details
+    """
+ 
+    lookup_field = 'workspace_id'
+    lookup_url_kwarg = 'workspace_id'
+
+    queryset = LastExportDetail.objects.filter(last_exported_at__isnull=False, total_expense_groups_count__gt=0)
+    serializer_class = LastExportDetailSerializer
+
+
+class ExportToIntacctView(viewsets.ViewSet):
+    """
+    Export Expenses to QBO
+    """
+
+    def post(self, request, *args, **kwargs):
+        export_to_intacct(workspace_id=kwargs['workspace_id'])
+
+        return Response(
+            status=status.HTTP_200_OK
+        )

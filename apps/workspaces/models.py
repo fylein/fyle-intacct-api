@@ -19,6 +19,16 @@ ONBOARDING_STATE_CHOICES = (
     ('COMPLETE', 'COMPLETE')
 )
 
+EXPORT_MODE_CHOICES = (
+    ('MANUAL', 'MANUAL'),
+    ('AUTO', 'AUTO')
+
+
+APP_VERSION_CHOICES = (
+    ('v1', 'v1'),
+    ('v2', 'v2')
+)
+
 
 def get_default_onboarding_state():
     return 'CONNECTION'
@@ -37,6 +47,7 @@ class Workspace(models.Model):
     ccc_last_synced_at = models.DateTimeField(help_text='Datetime when ccc expenses were pulled last', null=True)
     source_synced_at = models.DateTimeField(help_text='Datetime when source dimensions were pulled', null=True)
     destination_synced_at = models.DateTimeField(help_text='Datetime when destination dimensions were pulled', null=True)
+    app_version = models.CharField(max_length=2, help_text='App version', default='v1', choices=APP_VERSION_CHOICES)
     onboarding_state = models.CharField(
         max_length=50, choices=ONBOARDING_STATE_CHOICES, default=get_default_onboarding_state,
         help_text='Onboarding status of the workspace', null=True
@@ -136,7 +147,7 @@ class SageIntacctCredential(models.Model):
     id = models.AutoField(primary_key=True)
     si_user_id = models.TextField(help_text='Stores Sage Intacct user id')
     si_company_id = models.TextField(help_text='Stores Sage Intacct company id')
-    si_company_name = models.TextField(help_text='Stores Sage Intacct company name')
+    si_company_name = models.TextField(help_text='Stores Sage Intacct company name', null=True)
     si_user_password = models.TextField(help_text='Stores Sage Intacct user password')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
@@ -177,3 +188,23 @@ class WorkspaceSchedule(models.Model):
 
     class Meta:
         db_table = 'workspace_schedules'
+
+
+class LastExportDetail(models.Model):
+    """
+    Table to store Last Export Details
+    """
+    id = models.AutoField(primary_key=True)
+    last_exported_at = models.DateTimeField(help_text='Last exported at datetime', null=True)
+    export_mode = models.CharField(
+        max_length=50, help_text='Mode of the export Auto / Manual', choices=EXPORT_MODE_CHOICES, null=True
+    )
+    total_expense_groups_count = models.IntegerField(help_text='Total count of expense groups exported', null=True)
+    successful_expense_groups_count = models.IntegerField(help_text='count of successful expense_groups ', null=True)
+    failed_expense_groups_count = models.IntegerField(help_text='count of failed expense_groups ', null=True)
+    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'last_export_details'
