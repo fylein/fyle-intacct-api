@@ -10,7 +10,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django_q.tasks import async_task
 
-from fyle_accounting_mappings.models import MappingSetting
+from fyle_accounting_mappings.models import MappingSetting, Mapping, EmployeeMapping, CategoryMapping
 from fyle.platform.exceptions import WrongParamsError
 
 from apps.mappings.tasks import (
@@ -18,10 +18,55 @@ from apps.mappings.tasks import (
     schedule_fyle_attributes_creation,
     upload_attributes_to_fyle
 )
-from apps.workspaces.models import Configuration
+from apps.workspaces.models import Configuration, Workspace
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
+from apps.tasks.models import Error
+from apps.mappings.models import LocationEntityMapping
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=Mapping)
+def resolve_post_mapping_errors(sender, instance: Mapping, **kwargs):
+    """
+    Resolve errors after mapping is created
+    """
+    if instance.source_type == 'TAX_GROUP':
+        Error.objects.filter(expense_attribute_id=instance.source_id).update(
+            is_resolved=True
+        )
+         
+
+@receiver(post_save, sender=CategoryMapping)
+def resolve_post_category_mapping_errors(sender, instance: Mapping, **kwargs):
+    """
+    Resolve errors after mapping is created
+    """
+    Error.objects.filter(expense_attribute_id=instance.source_category_id).update(
+        is_resolved=True
+    )
+
+
+@receiver(post_save, sender=EmployeeMapping)
+def resolve_post_employees_mapping_errors(sender, instance: Mapping, **kwargs):
+    """
+    Resolve errors after mapping is created
+    """
+    Error.objects.filter(expense_attribute_id=instance.source_employee_id).update(
+        is_resolved=True
+    )
+
+
+@receiver(post_save, sender=LocationEntityMapping)
+def run_post_location_entity_mappings(sender, instance: LocationEntityMapping, **kwargs):
+    """
+    :param sender: Sender Class
+    :param instance: Row instance of Sender Class
+    :return: None
+    """
+    workspace = Workspace.objects.get(id=instance.workspace_id)
+    workspace.onboarding_state = 'EXPORT_SETTINGS'
+    workspace.save()
 
 
 @receiver(post_save, sender=MappingSetting)

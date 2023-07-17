@@ -18,7 +18,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 from fyle_intacct_api.exceptions import BulkError
 
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
-from apps.tasks.models import TaskLog
+from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration, LastExportDetail
 
@@ -405,7 +405,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     logger.info(exception.response)
     
     errors = []
-
+    error_title = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
+    error_msg = 'Something unexpected happened with the workspace'
     if 'error' in exception.response:
         sage_intacct_errors = exception.response['error']
         error_msg = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
@@ -435,8 +436,24 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
                     if ('correction' in error and error['correction']) else 'Not available'
             })
 
-    if not errors:
+
+    if errors:
+        error_title = errors[0]['correction'] if (errors[0]['correction'] and errors[0]['correction'] != 'not available') else errors[0]['short_description']
+        error_msg = errors[0]['long_description']
+    else:
         errors.append(exception.response)
+
+
+    Error.objects.update_or_create(
+            workspace_id=expense_group.workspace_id,
+            expense_group=expense_group,
+            defaults={
+                'type': 'INTACCT_ERROR',
+                'error_title': error_title,
+                'error_detail': error_msg,
+                'is_resolved': False
+            }
+        )
 
     task_log.status = 'FAILED'
     task_log.detail = None
@@ -459,6 +476,13 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             'type': 'General Mappings',
             'message': 'General mappings not found'
         })
+
+    
+    employee_attribute = ExpenseAttribute.objects.filter(
+        value=expense_group.description.get('employee_email'),
+        workspace_id=expense_group.workspace_id,
+        attribute_type='EMPLOYEE'
+    ).first()
 
     try:
         if expense_group.fund_source == 'PERSONAL':
@@ -538,6 +562,18 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             'message': error_message
         })
 
+        if employee_attribute:
+            Error.objects.update_or_create(
+                workspace_id=expense_group.workspace_id,
+                expense_attribute=employee_attribute,
+                defaults={
+                    'type': 'EMPLOYEE_MAPPING',
+                    'error_title': employee_attribute.value,
+                    'error_detail': 'Employee mapping is missing',
+                    'is_resolved': False
+                }
+            )
+
     expenses = expense_group.expenses.all()
 
     for lineitem in expenses:
@@ -547,6 +583,12 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         category_mapping = CategoryMapping.objects.filter(
             source_category__value=category,
             workspace_id=expense_group.workspace_id
+        ).first()
+
+        category_attribute = ExpenseAttribute.objects.filter(
+            value=category,
+            workspace_id=expense_group.workspace_id,
+            attribute_type='CATEGORY'
         ).first()
 
         if category_mapping:
@@ -569,7 +611,20 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                 'type': 'Category Mapping',
                 'message': 'Category Mapping Not Found'
             })
-        
+
+            if category_attribute:
+                Error.objects.update_or_create(
+                    workspace_id=expense_group.workspace_id,
+                    expense_attribute=category_attribute,
+                    defaults={
+                        'type': 'CATEGORY_MAPPING',
+                        'error_title': category_attribute.value,
+                        'error_detail': 'Category mapping is missing',
+                        'is_resolved': False
+                    }
+                )
+
+
         if configuration.import_tax_codes:
             if general_mapping and not (general_mapping.default_tax_code_id or general_mapping.default_tax_code_name):
                 bulk_errors.append({
@@ -607,9 +662,10 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
                 configuration.employee_field_mapping
             )
 
+        __validate_expense_group(expense_group, configuration)
+
         created_attachment_id = None
         with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group)
 
@@ -718,8 +774,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
                 configuration.employee_field_mapping
             )
 
+        __validate_expense_group(expense_group, configuration)
+
         with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
 
             expense_report_object = ExpenseReport.create_expense_report(expense_group)
 
@@ -831,9 +888,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
                 configuration.employee_field_mapping
             )
 
-        with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
+        __validate_expense_group(expense_group, configuration)
 
+        with transaction.atomic():
             bill_object = Bill.create_bill(expense_group)
 
             bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group, configuration)
@@ -925,8 +982,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
     try:
         merchant = expense_group.expenses.first().vendor
         get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+        __validate_expense_group(expense_group, configuration)
         with transaction.atomic():
-            __validate_expense_group(expense_group, configuration)
 
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
