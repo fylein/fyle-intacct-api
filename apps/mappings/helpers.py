@@ -22,6 +22,7 @@ def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
     if not configuration.auto_map_employees:
         schedule_auto_map_charge_card_employees(workspace_id=int(configuration.workspace_id))
 
+
 def schedule_or_delete_fyle_import_tasks(configuration: Configuration):
     """
     :param configuration: Workspace Configuration Instance

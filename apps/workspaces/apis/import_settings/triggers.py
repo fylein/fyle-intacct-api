@@ -3,6 +3,8 @@ from django.db.models import Q
 
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
 from apps.workspaces.models import Configuration
+from apps.fyle.models import DependentFieldSetting
+from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 from fyle_accounting_mappings.models import MappingSetting
 
 
@@ -44,3 +46,9 @@ class ImportSettingsTrigger:
         ).delete()
 
         schedule_or_delete_fyle_import_tasks(configurations_instance)
+        
+    
+    def run_post_save_dependent_field_settings_triggers(self, df_instance: DependentFieldSetting):
+
+        schedule_dependent_field_imports(df_instance.workspace_id, df_instance.is_import_enabled)
+ 

@@ -3,6 +3,8 @@ from fyle_accounting_mappings.models import MappingSetting
 from django.db import transaction
 from django.db.models import Q
 
+from apps.fyle.serializers import DependentFieldSettingSerializer
+from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import Workspace, Configuration
 from apps.mappings.models import GeneralMapping
 from .triggers import ImportSettingsTrigger
@@ -62,7 +64,12 @@ class MappingSettingSerializer(serializers.ModelSerializer):
 class ConfigurationsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Configuration
-        fields = ['import_categories', 'import_tax_codes', 'import_vendors_as_merchants']
+        fields = [
+            'import_categories',
+            'import_tax_codes', 
+            'import_vendors_as_merchants',
+            'import_projects'
+        ]
 
 
 class GeneralMappingsSerializer(serializers.ModelSerializer):
@@ -85,6 +92,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
     configurations = ConfigurationsSerializer()
     general_mappings = GeneralMappingsSerializer()
     mapping_settings = MappingSettingSerializer(many=True)
+    dependent_fields = DependentFieldSettingSerializer()
     workspace_id = serializers.SerializerMethodField()
 
     class Meta:
@@ -149,7 +157,15 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                     }
                 )
         
+            if configurations['import_projects']:
+                DependentFieldSetting.objects.update_or_create(
+                    workspace_id=instance.id,
+                    defaults={}
+                )
+            
             trigger.post_save_mapping_settings(configurations_instance)
+            trigger.run_post_save_dependent_field_settings_triggers()
+
 
         if instance.onboarding_state == 'IMPORT_SETTINGS':
             instance.onboarding_state = 'ADVANCED_SETTINGS'

@@ -22,6 +22,7 @@ from apps.workspaces.models import Configuration, Workspace
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
 from apps.tasks.models import Error
 from apps.mappings.models import LocationEntityMapping
+from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 
 logger = logging.getLogger(__name__)
 

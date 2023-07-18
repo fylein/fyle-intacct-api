@@ -3,11 +3,13 @@ Workspace Signals
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import MappingSetting
 
 from apps.fyle.helpers import add_expense_id_to_expense_group_settings
 from apps.sage_intacct.helpers import schedule_payment_sync
+from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 from apps.mappings.helpers import schedule_or_delete_auto_mapping_tasks
 
 from .models import Configuration
@@ -48,6 +50,16 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
 
         if mapping_setting:
             mapping_setting.delete()
+
+    
+    if not instance.import_projects:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle',
+            args='{}'.format(instance.workspace_id)
+        ).first()
+        
+        if schedule:
+            schedule.delete()
 
     schedule_or_delete_auto_mapping_tasks(configuration=instance)
     schedule_payment_sync(configuration=instance)

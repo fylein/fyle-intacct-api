@@ -36,7 +36,8 @@ def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFi
         workspace_id=instance.workspace_id,
         fyle_attribute_type=instance.cost_code_field_name,
         platform=platform,
-        parent_field_id=instance.project_field_id
+        source_placeholder=instance.cost_type_placeholder,
+        parent_field_id=instance.project_field_id,
     )
     instance.cost_code_field_id = cost_code['data']['id']
 
@@ -44,16 +45,7 @@ def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFi
         workspace_id=instance.workspace_id,
         fyle_attribute_type=instance.cost_type_field_name,
         platform=platform,
-        parent_field_id=instance.cost_code_field_id
+        source_placeholder=instance.cost_type_placeholder,
+        parent_field_id=instance.cost_code_field_id,
     )
     instance.cost_type_field_id = cost_type['data']['id']
-
-
-@receiver(post_save, sender=DependentFieldSetting)
-def run_post_save_dependent_field_settings_triggers(sender, instance: DependentFieldSetting, **kwargs):
-    """
-    :param sender: Sender Class
-    :param instance: Row instance of Sender Class
-    :return: None
-    """
-    schedule_dependent_field_imports(instance.workspace_id, instance.is_import_enabled)
