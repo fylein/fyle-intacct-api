@@ -149,7 +149,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
     except NoPrivilegeError:
         logger.info('Insufficient permission to access the requested module')
         task_log.detail = {
-            'message': 'Fyle credentials do not exist in workspace'
+            'message': 'Insufficient permission to access the requested module'
         }
         task_log.status = 'FAILED'
         task_log.save()
