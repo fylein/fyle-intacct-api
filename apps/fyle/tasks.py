@@ -147,9 +147,9 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
             task_log.save()
 
     except NoPrivilegeError:
-        logger.info('Insufficient permission to access the requested module')
+        logger.info('Invalid Fyle Credentials / Admin is disabled')
         task_log.detail = {
-            'message': 'Insufficient permission to access the requested module'
+            'message': 'Invalid Fyle Credentials / Admin is disabled'
         }
         task_log.status = 'FAILED'
         task_log.save()
