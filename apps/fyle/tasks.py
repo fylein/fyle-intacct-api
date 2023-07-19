@@ -7,7 +7,7 @@ from django.db import transaction
 from django_q.tasks import async_task
 
 from fyle_integrations_platform_connector import PlatformConnector
-from sageintacctsdk.exceptions import NoPrivilegeError
+from fyle.platform.exceptions import NoPrivilegeError
 
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
