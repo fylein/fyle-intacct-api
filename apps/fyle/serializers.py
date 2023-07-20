@@ -83,6 +83,7 @@ class DependentFieldSettingSerializer(serializers.ModelSerializer):
     project_field_id = serializers.IntegerField(required=False)
     cost_code_field_id = serializers.IntegerField(required=False)
     cost_type_field_id = serializers.IntegerField(required=False)
+    workspace = serializers.CharField(required=False)
 
     class Meta:
         model = DependentFieldSetting

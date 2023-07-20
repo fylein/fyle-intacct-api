@@ -542,12 +542,11 @@ class DependentFieldSetting(models.Model):
     cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID')
     cost_type_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost Type')
     workspace = models.OneToOneField(
-        Workspace, 
+        Workspace,
         on_delete=models.PROTECT, 
         help_text='Reference to Workspace',
         related_name='dependent_fields'
     )
-    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
     last_successful_import_at = models.DateTimeField(null=True, help_text='Last Successful Import At')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')

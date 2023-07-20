@@ -3,8 +3,8 @@ from fyle_accounting_mappings.models import MappingSetting
 from django.db import transaction
 from django.db.models import Q
 
-from apps.fyle.serializers import DependentFieldSettingSerializer
 from apps.fyle.models import DependentFieldSetting
+from apps.fyle.serializers import DependentFieldSettingSerializer
 from apps.workspaces.models import Workspace, Configuration
 from apps.mappings.models import GeneralMapping
 from .triggers import ImportSettingsTrigger
@@ -68,7 +68,6 @@ class ConfigurationsSerializer(serializers.ModelSerializer):
             'import_categories',
             'import_tax_codes', 
             'import_vendors_as_merchants',
-            'import_projects'
         ]
 
 
@@ -92,8 +91,9 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
     configurations = ConfigurationsSerializer()
     general_mappings = GeneralMappingsSerializer()
     mapping_settings = MappingSettingSerializer(many=True)
-    dependent_fields = DependentFieldSettingSerializer()
+    dependent_fields = DependentFieldSettingSerializer(allow_null=True, required=False)
     workspace_id = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Workspace
@@ -147,7 +147,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                     'import_to_fyle': True,
                     'is_custom': False
                 })
-        
+            
+
             for setting in mapping_settings:
                 MappingSetting.objects.update_or_create(
                     destination_field=setting['destination_field'],
@@ -159,12 +160,12 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                     }
                 )
         
-            if configurations['import_projects'] and dependent_fields:
+            if configurations_instance.import_projects and dependent_fields:
                 DependentFieldSetting.objects.update_or_create(
                     workspace_id=instance.id,
                     defaults=dependent_fields
                 )
-            
+
             trigger.post_save_mapping_settings(configurations_instance)
 
 
@@ -184,4 +185,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
 
         if not data.get('general_mappings'):
             raise serializers.ValidationError('General mappings are required')
+            
+        if not data.get('dependent_fields'):
+            pass
+
         return data
