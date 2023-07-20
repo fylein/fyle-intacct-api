@@ -7,6 +7,7 @@ from django.db import transaction
 from django_q.tasks import async_task
 
 from fyle_integrations_platform_connector import PlatformConnector
+from fyle.platform.exceptions import NoPrivilegeError
 
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
@@ -144,6 +145,14 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
 
             task_log.status = 'COMPLETE'
             task_log.save()
+
+    except NoPrivilegeError:
+        logger.info('Invalid Fyle Credentials / Admin is disabled')
+        task_log.detail = {
+            'message': 'Invalid Fyle Credentials / Admin is disabled'
+        }
+        task_log.status = 'FAILED'
+        task_log.save()
 
     except FyleCredential.DoesNotExist:
         logger.info('Fyle credentials not found %s', workspace_id)
