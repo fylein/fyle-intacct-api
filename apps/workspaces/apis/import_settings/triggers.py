@@ -46,9 +46,3 @@ class ImportSettingsTrigger:
         ).delete()
 
         schedule_or_delete_fyle_import_tasks(configurations_instance)
-        
-    
-    def run_post_save_dependent_field_settings_triggers(self, df_instance: DependentFieldSetting):
-
-        schedule_dependent_field_imports(df_instance.workspace_id, df_instance.is_import_enabled)
- 

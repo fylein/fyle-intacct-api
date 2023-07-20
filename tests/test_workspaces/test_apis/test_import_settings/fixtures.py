@@ -31,6 +31,7 @@ data = {
                 "source_placeholder": "class",
             },
         ],
+        "dependent_fields": {}
     },
     "import_settings_without_mapping": {
         "configurations": {
@@ -52,6 +53,7 @@ data = {
                 "source_placeholder": "class",
             }
         ],
+        "dependent_fields": {}
     },
     "response": {
         "configurations": {
@@ -86,6 +88,7 @@ data = {
             },
         ],
         "workspace_id": 9,
+        "dependent_fields": {}
     },
     "invalid_general_mappings": {
         "configurations": {
@@ -103,6 +106,7 @@ data = {
                 "source_placeholder": "cost center",
             }
         ],
+        "dependent_fields": {}
     },
     "invalid_mapping_settings": {
         "configurations": {
@@ -114,5 +118,6 @@ data = {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
         },
         "mapping_settings": None,
+        "dependent_fields": {}
     },
 }

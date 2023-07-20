@@ -101,6 +101,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
             'configurations',
             'general_mappings',
             'mapping_settings',
+            'dependent_fields',
             'workspace_id'
         ]
         read_only_fields = ['workspace_id']
@@ -114,6 +115,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         configurations = validated.pop('configurations')
         general_mappings = validated.pop('general_mappings')
         mapping_settings = validated.pop('mapping_settings')
+        dependent_fields = validated.pop('dependent_fields')
 
         with transaction.atomic():
             configurations_instance, _ = Configuration.objects.update_or_create(
@@ -157,14 +159,13 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                     }
                 )
         
-            if configurations['import_projects']:
+            if configurations['import_projects'] and dependent_fields:
                 DependentFieldSetting.objects.update_or_create(
                     workspace_id=instance.id,
-                    defaults={}
+                    defaults=dependent_fields
                 )
             
             trigger.post_save_mapping_settings(configurations_instance)
-            trigger.run_post_save_dependent_field_settings_triggers()
 
 
         if instance.onboarding_state == 'IMPORT_SETTINGS':

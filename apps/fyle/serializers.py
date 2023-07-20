@@ -83,24 +83,7 @@ class DependentFieldSettingSerializer(serializers.ModelSerializer):
     project_field_id = serializers.IntegerField(required=False)
     cost_code_field_id = serializers.IntegerField(required=False)
     cost_type_field_id = serializers.IntegerField(required=False)
-    workspace_id = serializers.SerializerMethodField()
 
     class Meta:
         model = DependentFieldSetting
         fields = '__all__'
-
-
-    def get_workspace_id(self, instance):
-        return instance.id
-
-    def create(self, validated_data):
-
-        workspace_id = self.context['request'].parser_context.get('kwargs').get('workspace_id')
-        dependet_field_settings, _ = DependentFieldSetting.objects.update_or_create(
-            workspace_id=workspace_id,
-            defaults=validated_data
-        )
-        
-        schedule_dependent_field_imports(workspace_id, validated_data['is_import_enabled'])
-
-        return dependet_field_settings

@@ -4,6 +4,7 @@ Fyle Signal
 import logging
 
 from django.db.models.signals import post_save, pre_save
+from django_q.tasks import async_task
 from django.dispatch import receiver
 
 from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
@@ -49,3 +50,15 @@ def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFi
         parent_field_id=instance.cost_code_field_id,
     )
     instance.cost_type_field_id = cost_type['data']['id']
+
+
+@receiver(post_save, sender=DependentFieldSetting)
+def run_post_save_dependent_field_settings_triggers(sender, instance: DependentFieldSetting, **kwargs):
+    """
+    :param sender: Sender Class
+    :param instance: Row instance of Sender Class
+    :return: None
+    """
+
+    if instance.workspace.app_version == 'v1':
+        async_task('import_dependent_fields_to_fyle', instance.workspace_id)
