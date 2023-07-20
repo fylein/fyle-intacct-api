@@ -5,7 +5,7 @@ from apps.fyle.signals import run_post_save_dependent_field_settings_triggers
 
 
 def test_run_post_save_dependent_field_settings_triggers(mocker, db):
-    dependent_field, _ = DependentFieldSetting(
+    dependent_field = DependentFieldSetting(
         workspace_id=1,
         is_import_enabled=True,
         project_field_id=123,
