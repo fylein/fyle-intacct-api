@@ -51,15 +51,5 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
         if mapping_setting:
             mapping_setting.delete()
 
-    
-    if not instance.import_projects:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle',
-            args='{}'.format(instance.workspace_id)
-        ).first()
-        
-        if schedule:
-            schedule.delete()
-
     schedule_or_delete_auto_mapping_tasks(configuration=instance)
     schedule_payment_sync(configuration=instance)
