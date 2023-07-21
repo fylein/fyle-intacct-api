@@ -19,7 +19,7 @@ from apps.mappings.tasks import (
     upload_attributes_to_fyle
 )
 from apps.workspaces.models import Configuration, Workspace
-from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
+from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks
 from apps.tasks.models import Error
 from apps.mappings.models import LocationEntityMapping
 
@@ -79,7 +79,7 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
     configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
 
     if instance.source_field == 'PROJECT':
-        schedule_or_delete_fyle_import_tasks(configuration)
+        schedule_or_delete_fyle_import_tasks(configuration, instance)
     
     if instance.source_field == 'COST_CENTER':
         schedule_cost_centers_creation(instance.import_to_fyle, int(instance.workspace_id))
