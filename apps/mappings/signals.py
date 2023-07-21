@@ -32,23 +32,18 @@ def pre_save_category_mappings(sender, instance: CategoryMapping, **kwargs):
     Create CCC mapping if reimbursable type in ER and ccc in (bill, je, ccc)
     """
     
-    configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
-    
-    if not instance.destination_account_id:  # Check for old app
-        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
-                configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
+    if instance.destination_expense_head and not instance.destination_account_id:
+        if instance.destination_expense_head.detail and \
+            'gl_account_no' in instance.destination_expense_head.detail and \
+                instance.destination_expense_head.detail['gl_account_no']:
             
-            if instance.destination_expense_head.detail and \
-                'gl_account_no' in instance.destination_expense_head.detail and \
-                    instance.destination_expense_head.detail['gl_account_no']:
-                
-                destination_attribute = DestinationAttribute.objects.filter(
-                    workspace_id=instance.workspace_id,
-                    attribute_type='ACCOUNT',
-                    destination_id=instance.destination_expense_head.detail['gl_account_no']
-                ).first()
-                
-                instance.destination_account_id = destination_attribute.id
+            destination_attribute = DestinationAttribute.objects.filter(
+                workspace_id=instance.workspace_id,
+                attribute_type='ACCOUNT',
+                destination_id=instance.destination_expense_head.detail['gl_account_no']
+            ).first()
+            
+            instance.destination_account_id = destination_attribute.id
 
 
 @receiver(post_save, sender=Mapping)
