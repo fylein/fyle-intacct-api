@@ -35,16 +35,13 @@ def pre_save_category_mappings(sender, instance: CategoryMapping, **kwargs):
     configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
     
     if not instance.destination_account_id:  # Check for old app
-        print('i am here')
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
                 configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
             
-            print('wow i am here too')
             if instance.destination_expense_head.detail and \
                 'gl_account_no' in instance.destination_expense_head.detail and \
                     instance.destination_expense_head.detail['gl_account_no']:
                 
-                print('this is not possible')
                 destination_attribute = DestinationAttribute.objects.filter(
                     workspace_id=instance.workspace_id,
                     attribute_type='ACCOUNT',
