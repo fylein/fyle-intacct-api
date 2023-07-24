@@ -4,7 +4,6 @@ from django.db import transaction
 from django.db.models import Q
 
 from apps.fyle.models import DependentFieldSetting
-from apps.fyle.serializers import DependentFieldSettingSerializer
 from apps.workspaces.models import Workspace, Configuration
 from apps.mappings.models import GeneralMapping
 from .triggers import ImportSettingsTrigger
@@ -91,21 +90,22 @@ class DependentFieldSettingSerializer(serializers.ModelSerializer):
     """
     Dependent Field serializer
     """
-    project_field_id = serializers.IntegerField(required=False)
-    cost_code_field_id = serializers.IntegerField(required=False)
-    cost_type_field_id = serializers.IntegerField(required=False)
-    workspace = serializers.IntegerField(required=False)
-
     class Meta:
         model = DependentFieldSetting
-        fields = '__all__'
+        fields = [
+            'cost_code_field_name',
+            'cost_code_placeholder',
+            'cost_type_field_name',
+            'cost_type_placeholder',
+            'is_import_enabled',
+        ]
 
 
 class ImportSettingsSerializer(serializers.ModelSerializer):
     configurations = ConfigurationsSerializer()
     general_mappings = GeneralMappingsSerializer()
-    mapping_settings = MappingSettingSerializer(many=True)
     dependent_field_settings = DependentFieldSettingSerializer(allow_null=True, required=False)
+    mapping_settings = MappingSettingSerializer(many=True)
     workspace_id = serializers.SerializerMethodField()
 
 
@@ -114,8 +114,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         fields = [
             'configurations',
             'general_mappings',
-            'mapping_settings',
             'dependent_field_settings',
+            'mapping_settings',
             'workspace_id'
         ]
         read_only_fields = ['workspace_id']
@@ -128,8 +128,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
     def update(self, instance, validated):
         configurations = validated.pop('configurations')
         general_mappings = validated.pop('general_mappings')
+        dependent_field_settings = validated.pop('dependent_field_settings')
         mapping_settings = validated.pop('mapping_settings')
-        dependent_fields = validated.pop('dependent_field_settings')
 
         with transaction.atomic():
             configurations_instance, _ = Configuration.objects.update_or_create(
@@ -173,11 +173,12 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                         'source_placeholder': setting['source_placeholder'] if 'source_placeholder' in setting else None
                     }
                 )
-        
-            if configurations_instance.import_projects and dependent_fields:
+
+            project_mapping = MappingSetting.objects.filter(workspace_id=instance.id, destination_field='PROJECT').first()
+            if project_mapping and project_mapping.import_to_fyle and dependent_field_settings:
                 DependentFieldSetting.objects.update_or_create(
                     workspace_id=instance.id,
-                    defaults=dependent_fields
+                    defaults=dependent_field_settings
                 )
 
             trigger.post_save_mapping_settings(configurations_instance)

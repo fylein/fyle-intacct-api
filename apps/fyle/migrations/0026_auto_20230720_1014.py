@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dependentfieldsetting',
             name='workspace',
-            field=models.OneToOneField(help_text='Reference to Workspace', on_delete=django.db.models.deletion.PROTECT, related_name='dependent_fields', to='workspaces.workspace'),
+            field=models.OneToOneField(help_text='Reference to Workspace', on_delete=django.db.models.deletion.PROTECT, related_name='dependent_field_settings', to='workspaces.workspace'),
         ),
     ]

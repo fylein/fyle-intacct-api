@@ -545,7 +545,7 @@ class DependentFieldSetting(models.Model):
         Workspace,
         on_delete=models.PROTECT, 
         help_text='Reference to Workspace',
-        related_name='dependent_fields'
+        related_name='dependent_field_settings'
     )
     last_successful_import_at = models.DateTimeField(null=True, help_text='Last Successful Import At')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
