@@ -32,7 +32,7 @@ data = {
             },
         ],
         "dependent_field_settings": {
-            "is_import_enabled": False,
+            "is_import_enabled": True,
             "cost_code_field_name": "Cost Code Jake Jellenahal",
             "cost_type_field_name": "Cost Type Logan paul",
             "cost_code_placeholder": "this is a dummy placeholder for cost code",
