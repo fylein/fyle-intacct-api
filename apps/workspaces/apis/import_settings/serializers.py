@@ -53,6 +53,7 @@ class MappingSettingSerializer(serializers.ModelSerializer):
         model = MappingSetting
         list_serializer_class = MappingSettingFilteredListSerializer
         fields = [
+            'source_field',
             'destination_field',
             'import_to_fyle',
             'is_custom',
@@ -114,8 +115,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         fields = [
             'configurations',
             'general_mappings',
-            'dependent_field_settings',
             'mapping_settings',
+            'dependent_field_settings',
             'workspace_id'
         ]
         read_only_fields = ['workspace_id']
@@ -128,8 +129,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
     def update(self, instance, validated):
         configurations = validated.pop('configurations')
         general_mappings = validated.pop('general_mappings')
-        dependent_field_settings = validated.pop('dependent_field_settings')
         mapping_settings = validated.pop('mapping_settings')
+        dependent_field_settings = validated.pop('dependent_field_settings')
 
         with transaction.atomic():
             configurations_instance, _ = Configuration.objects.update_or_create(
