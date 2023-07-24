@@ -3,7 +3,6 @@ Workspace Signals
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import MappingSetting
 
