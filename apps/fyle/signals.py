@@ -39,6 +39,7 @@ def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFi
         source_placeholder=instance.cost_code_placeholder,
         parent_field_id=instance.project_field_id,
     )
+
     instance.cost_code_field_id = cost_code['data']['id']
 
     cost_type = create_dependent_custom_field_in_fyle(
