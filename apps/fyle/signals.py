@@ -8,7 +8,6 @@ from django_q.tasks import async_task
 from django.dispatch import receiver
 
 from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
-from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 
 from .helpers import connect_to_platform
 from .models import DependentFieldSetting
@@ -37,7 +36,7 @@ def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFi
         workspace_id=instance.workspace_id,
         fyle_attribute_type=instance.cost_code_field_name,
         platform=platform,
-        source_placeholder=instance.cost_type_placeholder,
+        source_placeholder=instance.cost_code_placeholder,
         parent_field_id=instance.project_field_id,
     )
     instance.cost_code_field_id = cost_code['data']['id']
@@ -61,4 +60,4 @@ def run_post_save_dependent_field_settings_triggers(sender, instance: DependentF
     """
 
     if instance.workspace.app_version == 'v1':
-        async_task('import_dependent_fields_to_fyle', instance.workspace_id)
+        async_task('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', instance.workspace_id)

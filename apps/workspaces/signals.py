@@ -9,7 +9,6 @@ from fyle_accounting_mappings.models import MappingSetting
 
 from apps.fyle.helpers import add_expense_id_to_expense_group_settings
 from apps.sage_intacct.helpers import schedule_payment_sync
-from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 from apps.mappings.helpers import schedule_or_delete_auto_mapping_tasks
 
 from .models import Configuration

@@ -87,11 +87,25 @@ class GeneralMappingsSerializer(serializers.ModelSerializer):
         }
 
 
+class DependentFieldSettingSerializer(serializers.ModelSerializer):
+    """
+    Dependent Field serializer
+    """
+    project_field_id = serializers.IntegerField(required=False)
+    cost_code_field_id = serializers.IntegerField(required=False)
+    cost_type_field_id = serializers.IntegerField(required=False)
+    workspace = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = DependentFieldSetting
+        fields = '__all__'
+
+
 class ImportSettingsSerializer(serializers.ModelSerializer):
     configurations = ConfigurationsSerializer()
     general_mappings = GeneralMappingsSerializer()
     mapping_settings = MappingSettingSerializer(many=True)
-    dependent_fields = DependentFieldSettingSerializer(allow_null=True, required=False)
+    dependent_field_settings = DependentFieldSettingSerializer(allow_null=True, required=False)
     workspace_id = serializers.SerializerMethodField()
 
 
@@ -101,7 +115,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
             'configurations',
             'general_mappings',
             'mapping_settings',
-            'dependent_fields',
+            'dependent_field_settings',
             'workspace_id'
         ]
         read_only_fields = ['workspace_id']
@@ -115,7 +129,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         configurations = validated.pop('configurations')
         general_mappings = validated.pop('general_mappings')
         mapping_settings = validated.pop('mapping_settings')
-        dependent_fields = validated.pop('dependent_fields')
+        dependent_fields = validated.pop('dependent_field_settings')
 
         with transaction.atomic():
             configurations_instance, _ = Configuration.objects.update_or_create(

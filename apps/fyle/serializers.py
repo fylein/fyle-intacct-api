@@ -1,8 +1,9 @@
 from rest_framework import serializers
 
+
 from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
+
 from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
 
 
@@ -83,7 +84,6 @@ class DependentFieldSettingSerializer(serializers.ModelSerializer):
     project_field_id = serializers.IntegerField(required=False)
     cost_code_field_id = serializers.IntegerField(required=False)
     cost_type_field_id = serializers.IntegerField(required=False)
-    workspace = serializers.CharField(required=False)
 
     class Meta:
         model = DependentFieldSetting
