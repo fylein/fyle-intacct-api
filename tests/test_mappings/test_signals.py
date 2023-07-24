@@ -11,6 +11,31 @@ from fyle.platform.exceptions import WrongParamsError
 from ..test_fyle.fixtures import data as fyle_data
 
 
+
+def test_pre_save_category_mappings(test_connection, mocker, db):
+
+    category_mapping, _ = CategoryMapping.objects.update_or_create(
+       source_category_id=106,
+       destination_expense_head_id=926,
+       workspace_id=1
+    )
+
+    assert category_mapping.destination_expense_head_id == 926
+    assert category_mapping.destination_account_id == 796
+
+    category_mapping.destination_expense_head_id = None
+    category_mapping.save()
+    
+    category_mapping, _ = CategoryMapping.objects.update_or_create(
+        source_category_id=106,
+        destination_account_id=796,
+        workspace_id=1
+    )
+    
+    assert category_mapping.destination_account_id == 796
+    assert category_mapping.destination_expense_head_id == None
+    
+
 def test_resolve_post_mapping_errors(test_connection, mocker, db):
     tax_group = ExpenseAttribute.objects.filter(
         value='GST on capital @0%',
