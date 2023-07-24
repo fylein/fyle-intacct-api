@@ -17,24 +17,24 @@ def chain_import_fields_to_fyle(workspace_id):
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     chain = Chain()
 
-    if configuration.import_vendors_as_merchants:
-        chain.append(
-            'apps.mappings.imported_task.Merchant.trigger_import',
-            workspace_id
-        )
+    # if configuration.import_vendors_as_merchants:
+    #     chain.append(
+    #         'apps.mappings.imported_task.Merchant.trigger_import',
+    #         workspace_id
+    #     )
 
-    if configuration.import_categories:
-        chain.append(
-            'apps.mappings.imported_task.Categorie.trigger_import',
-            workspace_id
-        )   
+    # if configuration.import_categories:
+    #     chain.append(
+    #         'apps.mappings.imported_task.Categories.trigger_import',
+    #         workspace_id
+    #     )   
 
-    if configuration.import_tax_codes:
-        chain.append(
-            'apps.mappings.imported_task.TaxGroup.trigger_import',
-            workspace_id
-        )
-        
+    # if configuration.import_tax_codes:
+    #     chain.append(
+    #         'apps.mappings.imported_task.TaxGroup.trigger_import',
+    #         workspace_id
+    #     )
+
     for mapping_setting in mapping_settings:
         if mapping_setting.is_custom :
             chain.append(

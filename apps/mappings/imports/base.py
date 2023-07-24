@@ -12,7 +12,8 @@ from apps.workspaces.models import FyleCredential
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
 from apps.sage_intacct.utils import SageIntacctConnector
-is_last_batch = False
+from apps.mappings.exceptions import handle_exceptions
+
 
 class Base:
     def __init__(self, workspace_id: int, source_field: str, destination_field: str, class_name: str):
@@ -86,11 +87,13 @@ class Base:
 
             self.import_destination_attribute_to_fyle(import_log)
 
+    @handle_exceptions
     def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
         Import Native Field to Fyle and Auto Create Mappings
         Supported Native Fields: PROJECT, CATEGORY, COST_CENTER, TAX_GROUP
-        """     
+        """
+
         # Sync Fyle Attributes
         fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
@@ -173,44 +176,60 @@ class Base:
 
         si_attributes_count = DestinationAttribute.objects.filter(attribute_type=self.destination_field, workspace_id=self.workspace_id).count()
 
-        import_log.total_batches_count = math.ceil(si_attributes_count / 200)
+        import_log.total_batches_count = math.ceil(si_attributes_count/2)
         import_log.save()
 
         #this gives the paginated si attributes
         destination_attributes_generator = self.get_destination_attributes_generator(si_attributes_count, import_log)
 
         # Do all operations in batches with generator
-        for paginated_si_attributes in destination_attributes_generator:
+        for paginated_si_attributes, is_last_batch in destination_attributes_generator:
             # Create Payload
-            fyle_payload = self.setup_fyle_payload_creation(paginated_si_attributes,  is_auto_sync_status_allowed, import_log)
+            fyle_payload = self.setup_fyle_payload_creation(
+                paginated_si_attributes=paginated_si_attributes,
+                is_auto_sync_status_allowed=is_auto_sync_status_allowed,
+                import_log=import_log
+            )
             print("""
 
                 This si the fyle payload
 
             """)
             print(fyle_payload)
-            if fyle_payload:
-                platform_class = self.__get_platform_class(platform)
+            # Fix this part the update of import_log should be called ragrdless of the fyle payload
+            platform_class = self.__get_platform_class(platform)
 
-                self.post_to_fyle_and_sync(fyle_payload, platform_class, is_last_batch, import_log)
+            self.post_to_fyle_and_sync(
+                fyle_payload=fyle_payload,
+                resource_class=platform_class,
+                is_last_batch=is_last_batch,
+                import_log=import_log
+            )
 
     def get_destination_attributes_generator(self, si_attributes_count: int, import_log: ImportLog):
-        batch_size = 200
+        batch_size = 2
         filters = self.__construct_attributes_filter(self.destination_field, import_log)
-        is_last_batch = False
+        print("""
+              
+              Thsis si the genrator ka count
+              
+              
+              
+              
+            """)
         for offset in range(0, si_attributes_count, batch_size):
             limit = offset + batch_size
+            print(limit)
+            print(si_attributes_count)
             paginated_si_attributes = DestinationAttribute.objects.filter(**filters).order_by('value', 'id')[offset:limit]
 
             # Remove duplicate attributes
-            # TODO : Fix the is_last_batch logic
             paginated_si_attributes = self.__remove_duplicate_attributes(paginated_si_attributes)
             is_last_batch = True if limit >= si_attributes_count else False
 
             print('is_last_batch', is_last_batch)
             print(paginated_si_attributes, 'paginated_si_attributes')
-
-            yield paginated_si_attributes
+            yield paginated_si_attributes, is_last_batch
 
     def setup_fyle_payload_creation(
         self,
@@ -235,17 +254,38 @@ class Base:
     
     def post_to_fyle_and_sync(self, fyle_payload, resource_class, is_last_batch, import_log: ImportLog):
         # Post Payload to Fyle
-        resource_class.post_bulk(fyle_payload)
+        if fyle_payload:
+            resource_class.post_bulk(fyle_payload)
 
         self.update_import_log_post_import(is_last_batch, import_log)
 
     def update_import_log_post_import(self, is_last_batch: bool, import_log: ImportLog):
-            if is_last_batch:
-                import_log.last_successful_run_at = datetime.now()
-                import_log.status = 'COMPLETE'
-                import_log.processed_batches_count = 0
-                import_log.total_batches_count = 0
-            else:
-                import_log.processed_batches_count += 1
+        print("""
 
-            import_log.save()
+
+
+
+            update_import_log_post_import()
+
+        """)
+        if is_last_batch:
+            print("""
+                  
+                  
+                  
+                  This isi the if block 
+                  
+                  
+                  """)
+            print('is_last_batch', is_last_batch)
+            import_log.last_successful_run_at = datetime.now()
+            import_log.processed_batches_count += 1
+            import_log.status = 'COMPLETE'
+            import_log.error_log = []
+        else:
+            import_log.processed_batches_count += 1
+            print("Adding is done")
+            print(import_log.processed_batches_count)
+            print(import_log.total_batches_count)
+
+        import_log.save()

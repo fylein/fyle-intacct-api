@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.2 (Debian 15.2-1.pgdg110+1)
+-- Dumped from database version 15.3 (Debian 15.3-1.pgdg120+1)
 -- Dumped by pg_dump version 15.3 (Debian 15.3-1.pgdg100+1)
 
 SET statement_timeout = 0;
@@ -1382,6 +1382,48 @@ CREATE TABLE public.general_mappings (
 ALTER TABLE public.general_mappings OWNER TO postgres;
 
 --
+-- Name: import_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.import_logs (
+    id integer NOT NULL,
+    attribute_type character varying(150) NOT NULL,
+    status character varying(255),
+    error_log jsonb NOT NULL,
+    total_batches_count integer NOT NULL,
+    processed_batches_count integer NOT NULL,
+    last_successful_run_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.import_logs OWNER TO postgres;
+
+--
+-- Name: import_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.import_logs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.import_logs_id_seq OWNER TO postgres;
+
+--
+-- Name: import_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.import_logs_id_seq OWNED BY public.import_logs.id;
+
+
+--
 -- Name: journal_entries; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2354,6 +2396,13 @@ ALTER TABLE ONLY public.general_mappings ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: import_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs ALTER COLUMN id SET DEFAULT nextval('public.import_logs_id_seq'::regclass);
+
+
+--
 -- Name: journal_entries id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2695,6 +2744,10 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 190	Can change last export detail	48	change_lastexportdetail
 191	Can delete last export detail	48	delete_lastexportdetail
 192	Can view last export detail	48	view_lastexportdetail
+193	Can add import log	49	add_importlog
+194	Can change import log	49	change_importlog
+195	Can delete import log	49	delete_importlog
+196	Can view import log	49	view_importlog
 \.
 
 
@@ -3794,6 +3847,7 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 46	sage_intacct	costtype
 47	tasks	error
 48	workspaces	lastexportdetail
+49	mappings	importlog
 \.
 
 
@@ -3962,6 +4016,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 157	tasks	0006_error	2023-07-06 06:56:10.470672+00
 158	fyle	0024_auto_20230705_1057	2023-07-06 05:38:46.331815+00
 159	workspaces	0030_lastexportdetail	2023-07-07 10:16:00.343352+00
+161	mappings	0015_importlog	2023-07-21 12:07:18.503281+00
 \.
 
 
@@ -4705,6 +4760,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2482	USER_DIMENSION_COPY	User Dimension Copy	Machine Shop	expense_custom_field.user dimension copy.22	2022-09-20 08:39:10.845779+00	2022-09-20 08:39:10.845821+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2483	USER_DIMENSION_COPY	User Dimension Copy	Kookies by Kathy	expense_custom_field.user dimension copy.23	2022-09-20 08:39:10.84595+00	2022-09-20 08:39:10.845992+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2484	USER_DIMENSION_COPY	User Dimension Copy	Shara Barnett:Barnett Design	expense_custom_field.user dimension copy.24	2022-09-20 08:39:10.846113+00	2022-09-20 08:39:10.846162+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
+3079	MERCHANT	Merchant	Samantha Washington	852	2022-09-20 08:40:15.889336+00	2022-09-20 08:40:15.889366+00	1	\N	\N	f	f
 2485	USER_DIMENSION_COPY	User Dimension Copy	Amy's Bird Sanctuary	expense_custom_field.user dimension copy.25	2022-09-20 08:39:10.846296+00	2022-09-20 08:39:10.846337+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2517	LOCATION	Location	Australia	expense_custom_field.location.5	2022-09-20 08:39:10.894617+00	2022-09-20 08:39:10.894661+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
 2486	USER_DIMENSION_COPY	User Dimension Copy	Amy's Bird Sanctuary:Test Project	expense_custom_field.user dimension copy.26	2022-09-20 08:39:10.846451+00	2022-09-20 08:39:10.846497+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
@@ -4853,6 +4909,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2621	USER_DIMENSION	User Dimension	IT	expense_custom_field.user dimension.5	2022-09-20 08:39:10.981144+00	2022-09-20 08:39:10.981171+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
 2622	TEAM_2_POSTMAN	Team 2 Postman	Dukes Basketball Camp	expense_custom_field.team 2 postman.1	2022-09-20 08:39:10.992147+00	2022-09-20 08:39:10.992414+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2623	TEAM_2_POSTMAN	Team 2 Postman	Gevelber Photography	expense_custom_field.team 2 postman.2	2022-09-20 08:39:10.993352+00	2022-09-20 08:39:10.993408+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
+2699	TAX_GROUP	Tax Group	CA-Zero @0.0%	tg1KNSwtyeAW	2022-09-20 08:39:11.572056+00	2022-09-20 08:39:11.572106+00	1	\N	{"tax_rate": 0.0}	f	f
 2624	TEAM_2_POSTMAN	Team 2 Postman	Geeta Kalapatapu	expense_custom_field.team 2 postman.3	2022-09-20 08:39:10.993564+00	2022-09-20 08:39:10.993635+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2625	TEAM_2_POSTMAN	Team 2 Postman	Bill's Windsurf Shop	expense_custom_field.team 2 postman.4	2022-09-20 08:39:10.993761+00	2022-09-20 08:39:10.993806+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2626	TEAM_2_POSTMAN	Team 2 Postman	Diego Rodriguez	expense_custom_field.team 2 postman.5	2022-09-20 08:39:10.993903+00	2022-09-20 08:39:10.993941+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
@@ -4929,7 +4986,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2696	TAX_GROUP	Tax Group	Z90LGUXCKD	tg0vUVJLRPvA	2022-09-20 08:39:11.566512+00	2022-09-20 08:39:11.567168+00	1	\N	{"tax_rate": 0.18}	f	f
 2697	TAX_GROUP	Tax Group	R3BO0U5YZF	tg0vxs8Hz5F9	2022-09-20 08:39:11.567715+00	2022-09-20 08:39:11.567789+00	1	\N	{"tax_rate": 0.18}	f	f
 2698	TAX_GROUP	Tax Group	PMNG0N8KSZ	tg1FdqJCybJs	2022-09-20 08:39:11.570109+00	2022-09-20 08:39:11.570194+00	1	\N	{"tax_rate": 0.18}	f	f
-2699	TAX_GROUP	Tax Group	CA-Zero @0.0%	tg1KNSwtyeAW	2022-09-20 08:39:11.572056+00	2022-09-20 08:39:11.572106+00	1	\N	{"tax_rate": 0.0}	f	f
 2700	TAX_GROUP	Tax Group	MTD7QH6N7D	tg1QK6lhb8J1	2022-09-20 08:39:11.572435+00	2022-09-20 08:39:11.572536+00	1	\N	{"tax_rate": 0.18}	f	f
 2701	TAX_GROUP	Tax Group	QT8T97FF18	tg1Wr2J6mG2S	2022-09-20 08:39:11.572958+00	2022-09-20 08:39:11.573223+00	1	\N	{"tax_rate": 0.18}	f	f
 2702	TAX_GROUP	Tax Group	RGLB5QES1M	tg1xpyImHPmA	2022-09-20 08:39:11.574082+00	2022-09-20 08:39:11.574216+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -5101,6 +5157,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2881	TAX_GROUP	Tax Group	DWK2H94RM7	tgMslNJflABK	2022-09-20 08:39:11.678522+00	2022-09-20 08:39:11.678542+00	1	\N	{"tax_rate": 0.18}	f	f
 2882	TAX_GROUP	Tax Group	WFRIUTX9C7	tgMu6kwxCgQ5	2022-09-20 08:39:11.678663+00	2022-09-20 08:39:11.67869+00	1	\N	{"tax_rate": 0.18}	f	f
 2883	TAX_GROUP	Tax Group	6OJKRIJ9CD	tgmyCZ1JPg4G	2022-09-20 08:39:11.678745+00	2022-09-20 08:39:11.678802+00	1	\N	{"tax_rate": 0.18}	f	f
+3078	MERCHANT	Merchant	Robertson & Associates	852	2022-09-20 08:40:15.889211+00	2022-09-20 08:40:15.889253+00	1	\N	\N	f	f
 2885	TAX_GROUP	Tax Group	County: New York County @1.5%	tgn16RsBIa8O	2022-09-20 08:39:11.678974+00	2022-09-20 08:39:11.678995+00	1	\N	{"tax_rate": 0.01}	f	f
 2886	TAX_GROUP	Tax Group	M8MES6DZKB	tgn18EUCd2TJ	2022-09-20 08:39:11.679057+00	2022-09-20 08:39:11.679077+00	1	\N	{"tax_rate": 0.18}	f	f
 2887	TAX_GROUP	Tax Group	UTJEMXABWZ	tgN1c7PcZnTf	2022-09-20 08:39:11.679163+00	2022-09-20 08:39:11.679183+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -5157,6 +5214,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2944	TAX_GROUP	Tax Group	ABN: Nilesh @54.0%	tgRPkX7ymV2K	2022-09-20 08:39:11.988959+00	2022-09-20 08:39:11.988986+00	1	\N	{"tax_rate": 0.54}	f	f
 2945	TAX_GROUP	Tax Group	7ZAAQDCQQN	tgRqeA5a9h0W	2022-09-20 08:39:11.989052+00	2022-09-20 08:39:11.98908+00	1	\N	{"tax_rate": 0.18}	f	f
 2946	TAX_GROUP	Tax Group	GST: CPT-AU @10.0%	tgrSg9F7Y9sK	2022-09-20 08:39:11.989146+00	2022-09-20 08:39:11.989173+00	1	\N	{"tax_rate": 0.1}	f	f
+3080	MERCHANT	Merchant	SPEEDWAY	852	2022-09-20 08:40:15.88943+00	2022-09-20 08:40:15.889465+00	1	\N	\N	f	f
 2948	TAX_GROUP	Tax Group	ABN: Ashwin Tax Group @6.0%	tgrVpyLhsOsw	2022-09-20 08:39:11.989334+00	2022-09-20 08:39:11.989361+00	1	\N	{"tax_rate": 0.06}	f	f
 2949	TAX_GROUP	Tax Group	MD8XPYK2C6	tgRz68cIQU2p	2022-09-20 08:39:11.98957+00	2022-09-20 08:39:11.98961+00	1	\N	{"tax_rate": 0.18}	f	f
 2950	TAX_GROUP	Tax Group	D47UDLB4F8	tgS0DHQJFw70	2022-09-20 08:39:11.989969+00	2022-09-20 08:39:11.990003+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -5279,9 +5337,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3075	MERCHANT	Merchant	Norton Lumber and Building Materials	852	2022-09-20 08:40:15.885902+00	2022-09-20 08:40:15.885941+00	1	\N	\N	f	f
 3076	MERCHANT	Merchant	Pam Seitz	852	2022-09-20 08:40:15.888852+00	2022-09-20 08:40:15.888895+00	1	\N	\N	f	f
 3077	MERCHANT	Merchant	PG&E	852	2022-09-20 08:40:15.888964+00	2022-09-20 08:40:15.888994+00	1	\N	\N	f	f
-3078	MERCHANT	Merchant	Robertson & Associates	852	2022-09-20 08:40:15.889211+00	2022-09-20 08:40:15.889253+00	1	\N	\N	f	f
-3079	MERCHANT	Merchant	Samantha Washington	852	2022-09-20 08:40:15.889336+00	2022-09-20 08:40:15.889366+00	1	\N	\N	f	f
-3080	MERCHANT	Merchant	SPEEDWAY	852	2022-09-20 08:40:15.88943+00	2022-09-20 08:40:15.889465+00	1	\N	\N	f	f
 3081	MERCHANT	Merchant	Squeaky Kleen Car Wash	852	2022-09-20 08:40:15.889588+00	2022-09-20 08:40:15.924766+00	1	\N	\N	f	f
 3082	MERCHANT	Merchant	Sravan	852	2022-09-20 08:40:15.925107+00	2022-09-20 08:40:15.925797+00	1	\N	\N	f	f
 3083	MERCHANT	Merchant	Sravan KSK	852	2022-09-20 08:40:15.929249+00	2022-09-20 08:40:15.929334+00	1	\N	\N	f	f
@@ -5425,6 +5480,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2857	TAX_GROUP	Tax Group	Standard Rate Input	tgkrTg3hsBGo	2022-09-20 08:39:11.674255+00	2022-09-20 08:39:11.674277+00	1	\N	{"tax_rate": 0.15}	t	f
 2869	TAX_GROUP	Tax Group	G10 Capital Acquisition	tgLj0KdoNp6n	2022-09-20 08:39:11.676154+00	2022-09-20 08:39:11.676176+00	1	\N	{"tax_rate": 0.1}	t	f
 103	CATEGORY	Category	kfliuyfdlify liuflif	184629	2022-09-20 08:39:03.37353+00	2022-09-20 08:39:03.373552+00	1	t	\N	f	f
+106	CATEGORY	Category	Miscellaneous	163671	2022-09-20 08:39:03.374511+00	2022-09-20 08:39:03.374531+00	1	t	\N	f	f
 2873	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Reduced Rate UK Input	tgLq1ZgwHe2N	2022-09-20 08:39:11.676895+00	2022-09-20 08:39:11.676915+00	1	\N	{"tax_rate": 0.05}	t	f
 2875	TAX_GROUP	Tax Group	G13 Capital Purchases for Input Tax Sales	tgm1nnhMeKs4	2022-09-20 08:39:11.677165+00	2022-09-20 08:39:11.677204+00	1	\N	{"tax_rate": 0.1}	t	f
 2884	TAX_GROUP	Tax Group	EC Purchase Goods Reduced Rate Input	tgMYde7GlsXF	2022-09-20 08:39:11.67889+00	2022-09-20 08:39:11.678912+00	1	\N	{"tax_rate": 0.05}	t	f
@@ -5476,7 +5532,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 100	CATEGORY	Category	Nilesh Pant	192536	2022-09-20 08:39:03.372895+00	2022-09-20 08:39:03.372924+00	1	t	\N	f	f
 101	CATEGORY	Category	Material purchase	191262	2022-09-20 08:39:03.373338+00	2022-09-20 08:39:03.373381+00	1	t	\N	f	f
 102	CATEGORY	Category	Nilesh	184628	2022-09-20 08:39:03.373469+00	2022-09-20 08:39:03.37348+00	1	t	\N	f	f
-106	CATEGORY	Category	Miscellaneous	163671	2022-09-20 08:39:03.374511+00	2022-09-20 08:39:03.374531+00	1	t	\N	f	f
 107	CATEGORY	Category	Penalties & Settlements	163672	2022-09-20 08:39:03.374574+00	2022-09-20 08:39:03.374595+00	1	t	\N	f	f
 108	CATEGORY	Category	Reconciliation Discrepancies	163673	2022-09-20 08:39:03.37465+00	2022-09-20 08:39:03.374671+00	1	t	\N	f	f
 109	CATEGORY	Category	Checking	162001	2022-09-20 08:39:03.375565+00	2022-09-20 08:39:03.375613+00	1	t	\N	f	f
@@ -7416,6 +7471,14 @@ COPY public.general_mappings (id, default_location_name, default_location_id, de
 
 
 --
+-- Data for Name: import_logs; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.import_logs (id, attribute_type, status, error_log, total_batches_count, processed_batches_count, last_successful_run_at, created_at, updated_at, workspace_id) FROM stdin;
+\.
+
+
+--
 -- Data for Name: journal_entries; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -7911,7 +7974,7 @@ SELECT pg_catalog.setval('public.auth_group_permissions_id_seq', 1, false);
 -- Name: auth_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.auth_permission_id_seq', 188, true);
+SELECT pg_catalog.setval('public.auth_permission_id_seq', 196, true);
 
 
 --
@@ -7946,14 +8009,14 @@ SELECT pg_catalog.setval('public.django_admin_log_id_seq', 1, false);
 -- Name: django_content_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_content_type_id_seq', 47, true);
+SELECT pg_catalog.setval('public.django_content_type_id_seq', 49, true);
 
 
 --
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 156, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 161, true);
 
 
 --
@@ -8059,6 +8122,13 @@ SELECT pg_catalog.setval('public.fyle_expensegroup_id_seq', 9, true);
 --
 
 SELECT pg_catalog.setval('public.fyle_rest_auth_authtokens_id_seq', 1, true);
+
+
+--
+-- Name: import_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.import_logs_id_seq', 1, false);
 
 
 --
@@ -8589,6 +8659,22 @@ ALTER TABLE ONLY public.auth_tokens
 
 ALTER TABLE ONLY public.general_mappings
     ADD CONSTRAINT general_mappings_workspace_id_19666c5c_uniq UNIQUE (workspace_id);
+
+
+--
+-- Name: import_logs import_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs
+    ADD CONSTRAINT import_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: import_logs import_logs_workspace_id_attribute_type_42f69b7b_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs
+    ADD CONSTRAINT import_logs_workspace_id_attribute_type_42f69b7b_uniq UNIQUE (workspace_id, attribute_type);
 
 
 --
@@ -9195,6 +9281,13 @@ CREATE INDEX fyle_accounting_mappings_mappingsetting_workspace_id_c123c088 ON pu
 
 
 --
+-- Name: import_logs_workspace_id_e5acf2ff; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX import_logs_workspace_id_e5acf2ff ON public.import_logs USING btree (workspace_id);
+
+
+--
 -- Name: journal_entry_lineitems_journal_entry_id_382a8abe; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9648,6 +9741,14 @@ ALTER TABLE ONLY public.auth_tokens
 
 ALTER TABLE ONLY public.general_mappings
     ADD CONSTRAINT general_mappings_workspace_id_19666c5c_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: import_logs import_logs_workspace_id_e5acf2ff_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs
+    ADD CONSTRAINT import_logs_workspace_id_e5acf2ff_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
