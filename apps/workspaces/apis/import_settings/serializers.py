@@ -200,7 +200,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         if not data.get('general_mappings'):
             raise serializers.ValidationError('General mappings are required')
             
-        if not data.get('dependent_fields'):
+        if not data.get('dependent_field_settings'):
             pass
 
         return data
