@@ -4,10 +4,10 @@ Fyle Signal
 import logging
 
 from django.db.models.signals import post_save, pre_save
+from django_q.tasks import async_task
 from django.dispatch import receiver
 
 from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
-from apps.sage_intacct.dependent_fields import schedule_dependent_field_imports
 
 from .helpers import connect_to_platform
 from .models import DependentFieldSetting
@@ -36,15 +36,18 @@ def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFi
         workspace_id=instance.workspace_id,
         fyle_attribute_type=instance.cost_code_field_name,
         platform=platform,
-        parent_field_id=instance.project_field_id
+        source_placeholder=instance.cost_code_placeholder,
+        parent_field_id=instance.project_field_id,
     )
+
     instance.cost_code_field_id = cost_code['data']['id']
 
     cost_type = create_dependent_custom_field_in_fyle(
         workspace_id=instance.workspace_id,
         fyle_attribute_type=instance.cost_type_field_name,
         platform=platform,
-        parent_field_id=instance.cost_code_field_id
+        source_placeholder=instance.cost_type_placeholder,
+        parent_field_id=instance.cost_code_field_id,
     )
     instance.cost_type_field_id = cost_type['data']['id']
 
@@ -56,4 +59,6 @@ def run_post_save_dependent_field_settings_triggers(sender, instance: DependentF
     :param instance: Row instance of Sender Class
     :return: None
     """
-    schedule_dependent_field_imports(instance.workspace_id, instance.is_import_enabled)
+
+    if instance.workspace.app_version == 'v1':
+        async_task('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', instance.workspace_id)

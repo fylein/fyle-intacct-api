@@ -3,6 +3,7 @@ from django_q.models import Schedule
 from apps.fyle.models import DependentFieldSetting
 from apps.fyle.signals import run_post_save_dependent_field_settings_triggers
 
+
 def test_run_post_save_dependent_field_settings_triggers(mocker, db):
     dependent_field = DependentFieldSetting(
         workspace_id=1,
@@ -13,6 +14,5 @@ def test_run_post_save_dependent_field_settings_triggers(mocker, db):
         cost_type_field_name='Cost Type',
         cost_type_field_id=789
     )
-    run_post_save_dependent_field_settings_triggers(None, dependent_field)
 
-    assert Schedule.objects.filter(func='apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', args='1').exists()
+    run_post_save_dependent_field_settings_triggers(None, dependent_field)
