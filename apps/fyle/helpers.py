@@ -145,7 +145,6 @@ def sync_dimensions(fyle_credentials: FyleCredential, workspace_id: int) -> None
 
 def construct_expense_filter(expense_filter):
     constructed_expense_filter = {}
-
     # If the expense filter is a custom field 
     if expense_filter.is_custom:
         # If the operator is not isnull
@@ -162,6 +161,10 @@ def construct_expense_filter(expense_filter):
                 # If the custom field is of type NUMBER, convert the values to integers
                 if expense_filter.custom_field_type == 'NUMBER':
                     expense_filter.values = [int(value) for value in expense_filter.values]
+                # If the expense filter is a custom field and the operator is yes or no(checkbox)
+                if expense_filter.custom_field_type == 'BOOLEAN':
+                    expense_filter.operator = 'exact'
+                    expense_filter.values[0] = True if expense_filter.values[0] == 'true' else False
                 # Construct the filter for the custom property
                 filter1 = {
                     f'custom_properties__{expense_filter.condition}__{expense_filter.operator}':
@@ -189,12 +192,6 @@ def construct_expense_filter(expense_filter):
             else:
                 # If the isnull filter value is False, invert the exact filter using the ~Q operator and assign it to the constructed expense filter
                 constructed_expense_filter = ~Q(**filter2)
-        # If the expense filter is a custom field and the operator is yes or no(checkbox)
-        elif  expense_filter.custom_field_type == 'BOOLEAN':
-            filter1 = {
-                f'custom_properties__{expense_filter.condition}__exact': expense_filter.values[0].lower()
-            }
-            constructed_expense_filter = ~Q(**filter1)
 
     # For all non-custom fields
     else:
