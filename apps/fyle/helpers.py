@@ -187,6 +187,12 @@ def construct_expense_filter(expense_filter):
         else:
             # If the isnull filter value is False, invert the exact filter using the ~Q operator and assign it to the constructed expense filter
             constructed_expense_filter = ~Q(**filter2)
+    # If the expense filter is a custom field and the operator is yes or no(checkbox)
+    elif expense_filter.is_custom and expense_filter.custom_field_type == 'BOOLEAN' and (expense_filter.operator == 'yes' or expense_filter.is_custom and expense_filter.operator == 'no'):
+        filter1 = {
+            f'custom_properties__{expense_filter.condition}__exact': expense_filter.values[0].lower()
+        }
+        constructed_expense_filter = ~Q(**filter1)
 
     # For all non-custom fields
     else:
