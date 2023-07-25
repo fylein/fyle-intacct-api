@@ -355,6 +355,23 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
+    #custom-properties-number
+    expense_filter = ExpenseFilter(
+        condition = 'Kratos',
+        operator = 'exact',
+        values = ['1'],
+        rank = 1,
+        is_custom = True,
+        custom_field_type = 'NUMBER'
+    )
+
+    constructed_expense_filter = construct_expense_filter(expense_filter)
+
+    filter_1 = {'custom_properties__Kratos__exact': 1}
+    response = Q(**filter_1)
+
+    assert constructed_expense_filter == response
+
 
 @pytest.mark.django_db()
 def test_multiple_construct_expense_filter():
