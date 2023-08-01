@@ -1,5 +1,3 @@
-import time
-
 from django_q.tasks import Chain
 
 from fyle_accounting_mappings.models import MappingSetting
@@ -7,8 +5,8 @@ from apps.workspaces.models import Configuration
 
 
 IMPORT_TASK_TARGET_MAP = {
-    'PROJECT': 'Project.trigger_import',
-    'COST_CENTER': 'CostCenter.trigger_import'
+    'PROJECT': 'projects.trigger_import_via_schedule',
+    'COST_CENTER': 'cost_centers.trigger_import_via_schedule'
 }
 
 
@@ -16,6 +14,14 @@ def chain_import_fields_to_fyle(workspace_id):
     mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     chain = Chain()
+    print("""
+          
+          
+          chain_import_fields_to_fyle
+          
+          
+          
+        """)
 
     # if configuration.import_vendors_as_merchants:
     #     chain.append(
@@ -44,8 +50,9 @@ def chain_import_fields_to_fyle(workspace_id):
                 mapping_setting.source_field
             )
         else:
+            print("Inside else block")
             chain.append(
-                'apps.mappings.imported_task.{}'.format(IMPORT_TASK_TARGET_MAP[mapping_setting.source_field]),
+                'apps.mappings.imports.{}'.format(IMPORT_TASK_TARGET_MAP[mapping_setting.source_field]),
                 workspace_id,
                 mapping_setting.destination_field
             )

@@ -1229,7 +1229,7 @@ def post_merchants(platform_connection: PlatformConnector, workspace_id: int, fi
     if fyle_payload:
         platform_connection.merchants.post(fyle_payload)
 
-    platform_connection.merchants.sync(workspace_id)
+    platform_connection.merchants.sync()
 
 
 def auto_create_vendors_as_merchants(workspace_id):
@@ -1241,7 +1241,7 @@ def auto_create_vendors_as_merchants(workspace_id):
         existing_merchants_name = ExpenseAttribute.objects.filter(attribute_type='MERCHANT', workspace_id=workspace_id)
         first_run = False if existing_merchants_name else True
 
-        fyle_connection.merchants.sync(workspace_id)
+        fyle_connection.merchants.sync()
 
         sync_sage_intacct_attributes('VENDOR', workspace_id)
         post_merchants(fyle_connection, workspace_id, first_run)
@@ -1279,7 +1279,6 @@ def auto_import_and_map_fyle_fields(workspace_id):
     Auto import and map fyle fields
     """
     configuration: Configuration = Configuration.objects.get(workspace_id=workspace_id)
-    project_mapping = MappingSetting.objects.filter(source_field='PROJECT', workspace_id=configuration.workspace_id).first()
 
     chain = Chain()
 
@@ -1289,9 +1288,7 @@ def auto_import_and_map_fyle_fields(workspace_id):
     if configuration.import_categories:
         chain.append('apps.mappings.tasks.auto_create_category_mappings', workspace_id)
 
-    if project_mapping and project_mapping.import_to_fyle:
-        chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
-
+    print(chain.length())
     if chain.length() > 0:
         chain.run()
 

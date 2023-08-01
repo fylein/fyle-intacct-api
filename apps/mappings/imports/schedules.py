@@ -30,6 +30,14 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, instance:
     :return: None
     """
     # Check if there is a task to be scheduled
+    print("""
+
+
+
+
+        schedule_or_delete_fyle_import_tasks
+
+    """)
     task_to_be_scheduled = MappingSetting.objects.filter(
         import_to_fyle=True,
         workspace_id=configuration.workspace_id,
@@ -42,6 +50,7 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, instance:
             configuration.import_vendors_as_merchants or
             configuration.import_tax_codes
     ):
+        print("Inside if block")
         Schedule.objects.update_or_create(
             func='apps.mappings.queues.chain_import_fields_to_fyle',
             args='{}'.format(configuration.workspace_id),

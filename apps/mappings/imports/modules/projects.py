@@ -1,9 +1,10 @@
+from datetime import datetime
 from .base import Base
-from fyle_accounting_mappings.models import DestinationAttribute
+from apps.mappings.models import ImportLog
 
 class Project(Base):
-    def __init__(self, workspace_id: int, destination_field: str):
-        super().__init__(workspace_id, 'PROJECT' , destination_field, 'projects')
+    def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime):
+        super().__init__(workspace_id, 'PROJECT' , destination_field, 'projects', sync_after)
 
     def trigger_import(self):
         self.check_import_log_and_start_import()
@@ -50,5 +51,8 @@ class Project(Base):
 
         return payload
 
-
-#TODO changhe the imported_task to imports
+def trigger_import_via_schedule(workspace_id: int, destination_field: str):
+    import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').first()
+    sync_after = import_log.last_successful_run_at if import_log else None
+    project = Project(workspace_id, destination_field, sync_after)
+    project.trigger_import()

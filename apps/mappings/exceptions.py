@@ -12,7 +12,7 @@ logger.level = logging.INFO
 
 
 def handle_exceptions(func):
-    def new_fn(projects_ins, *args):
+    def new_fn(expense_attribute_instance, *args):
         import_log: ImportLog = args[0]
         workspace_id = import_log.workspace_id
         attribute_type = import_log.attribute_type
@@ -25,7 +25,7 @@ def handle_exceptions(func):
             'response': None
         }
         try:
-            return func(projects_ins, *args)
+            return func(expense_attribute_instance, *args)
         except WrongParamsError as exception:
             error['message'] = exception.message
             error['response'] = exception.response

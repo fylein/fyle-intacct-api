@@ -1,6 +1,10 @@
 import math
 from typing import List
-from datetime import datetime
+from datetime import (
+    datetime,
+    timedelta,
+    timezone
+)
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     Mapping,
@@ -16,11 +20,12 @@ from apps.mappings.exceptions import handle_exceptions
 
 
 class Base:
-    def __init__(self, workspace_id: int, source_field: str, destination_field: str, class_name: str):
+    def __init__(self, workspace_id: int, source_field: str, destination_field: str, class_name: str, sync_after:datetime):
         self.workspace_id = workspace_id
         self.source_field = source_field
         self.destination_field = destination_field
         self.class_name = class_name
+        self.sync_after = sync_after
 
 
     def __get_platform_class(self, platform: PlatformConnector):
@@ -66,7 +71,11 @@ class Base:
         """
         checks if the import is already in progress and if not, starts the import process
         """
-        print("check_import_log_and_start_import()")
+        print("""
+              
+            check_import_log_and_start_import()
+            
+        """)
         import_log, is_created = ImportLog.objects.get_or_create(
             workspace_id=self.workspace_id,
             attribute_type=self.source_field,
@@ -75,11 +84,15 @@ class Base:
             }
         )
         # and updated_at < now() - interval '30 mins'
-        if import_log.status == 'IN_PROGRESS' and not is_created:
+        time_diff = datetime.now() - timedelta(minutes=30)
+        offset_aware_datetime_diff = time_diff.replace(tzinfo=timezone.utc)
+        if import_log.status == 'IN_PROGRESS' and not is_created and import_log.updated_at < (offset_aware_datetime_diff):
+            print("In the If block")
             return
 
         else:
             # Update the required values since we're beginning the import process
+            print("In the else block")
             import_log.status = 'IN_PROGRESS'
             import_log.processed_batches_count = 0
             import_log.total_batches_count = 0
@@ -133,7 +146,10 @@ class Base:
 
     def sync_expense_attributes(self, platform: PlatformConnector):
         platform_class = self.__get_platform_class(platform)
-        platform_class.sync()
+        if self.sync_after is not None:
+            platform_class.sync(self.sync_after)
+        else:
+            platform_class.sync()
 
     
     def sync_destination_attributes(self, sageintacct_attribute_type: str):
