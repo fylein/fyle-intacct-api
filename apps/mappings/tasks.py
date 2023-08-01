@@ -1279,6 +1279,7 @@ def auto_import_and_map_fyle_fields(workspace_id):
     Auto import and map fyle fields
     """
     configuration: Configuration = Configuration.objects.get(workspace_id=workspace_id)
+    project_mapping = MappingSetting.objects.filter(source_field='PROJECT', workspace_id=configuration.workspace_id).first()
 
     chain = Chain()
 
@@ -1288,7 +1289,9 @@ def auto_import_and_map_fyle_fields(workspace_id):
     if configuration.import_categories:
         chain.append('apps.mappings.tasks.auto_create_category_mappings', workspace_id)
 
-    print(chain.length())
+    if project_mapping and project_mapping.import_to_fyle:
+        chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
+
     if chain.length() > 0:
         chain.run()
 
