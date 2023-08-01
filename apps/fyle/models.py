@@ -58,12 +58,11 @@ EXPENSE_FILTER_OPERATOR = (
 	('isnull', 'isnull'),
 	('in', 'in'),
 	('iexact' , 'iexact'),
+    ('exact' , 'exact'),
 	('icontains', 'icontains'),
 	('lt', 'lt'),
 	('lte', 'lte'),
-	('not_in', 'not_in'),
-    ('yes', 'yes'),
-	('no', 'no')
+	('not_in', 'not_in')
 )
 
 def _format_date(date_string) -> datetime:

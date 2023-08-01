@@ -163,7 +163,6 @@ def construct_expense_filter(expense_filter):
                     expense_filter.values = [int(value) for value in expense_filter.values]
                 # If the expense filter is a custom field and the operator is yes or no(checkbox)
                 if expense_filter.custom_field_type == 'BOOLEAN':
-                    expense_filter.operator = 'exact'
                     expense_filter.values[0] = True if expense_filter.values[0] == 'true' else False
                 # Construct the filter for the custom property
                 filter1 = {

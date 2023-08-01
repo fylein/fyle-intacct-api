@@ -341,7 +341,7 @@ def test_construct_expense_filter():
     #custom-properties-checkbok--yes
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
-        operator = 'yes',
+        operator = 'exact',
         values = ['true'],
         rank = 1,
         is_custom = True,
