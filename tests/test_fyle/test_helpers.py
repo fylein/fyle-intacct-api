@@ -639,3 +639,36 @@ def test_multiple_construct_expense_filter():
     response = (Q(**filter_2) | Q(**filter_3))
 
     assert final_filter == response
+
+    #custom-properties-checkbok--no with rank 2
+    expense_filters = [
+        ExpenseFilter(
+            condition = 'Kratos',
+            operator = 'in',
+            values = ['BOOK', 'Dev-D'],
+            rank = 1,
+            is_custom = True,
+            join_by = 'AND'
+        ),
+        ExpenseFilter(
+            condition = 'Kratoss',
+            operator = 'exact',
+            values = ['false'],
+            rank = 2,
+            is_custom = True,
+            custom_field_type = 'BOOLEAN'
+        )
+    ]
+
+    final_filter = construct_expense_filter_query(expense_filters)
+
+    filter_1 = {'custom_properties__Kratos__in':['BOOK', 'Dev-D']}
+    filter_2 = {'custom_properties__Kratoss__exact': False}
+
+    response = (Q(**filter_1)) & Q(**filter_2)
+
+    print("final", final_filter)
+
+    print("acc", response)
+
+    assert final_filter == response
