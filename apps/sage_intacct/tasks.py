@@ -20,7 +20,7 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration, LastExportDetail
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration, LastExportDetail, WorkspaceSchedule
 
 from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
