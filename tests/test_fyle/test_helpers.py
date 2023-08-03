@@ -338,6 +338,57 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
+    #custom-properties-checkbok--yes
+    expense_filter = ExpenseFilter(
+        condition = 'Kratos',
+        operator = 'exact',
+        values = ['true'],
+        rank = 1,
+        is_custom = True,
+        custom_field_type = 'BOOLEAN'
+    )
+
+    constructed_expense_filter = construct_expense_filter(expense_filter)
+
+    filter_1 = {'custom_properties__Kratos__exact': True}
+    response = Q(**filter_1)
+
+    assert constructed_expense_filter == response
+
+    #custom-properties-number
+    expense_filter = ExpenseFilter(
+        condition = 'Kratos',
+        operator = 'exact',
+        values = ['1'],
+        rank = 1,
+        is_custom = True,
+        custom_field_type = 'NUMBER'
+    )
+
+    constructed_expense_filter = construct_expense_filter(expense_filter)
+
+    filter_1 = {'custom_properties__Kratos__exact': 1}
+    response = Q(**filter_1)
+
+    assert constructed_expense_filter == response
+
+    #custom-properties-selete
+    expense_filter = ExpenseFilter(
+        condition = 'Kratos',
+        operator = 'not_in',
+        values = ['BOOK', 'Dev-D'],
+        rank = 1,
+        is_custom = True,
+        custom_field_type = 'SELECT'
+    )
+
+    constructed_expense_filter = construct_expense_filter(expense_filter)
+
+    filter_1 = {'custom_properties__Kratos__in': ['BOOK', 'Dev-D']}
+    response = ~Q(**filter_1)
+
+    assert constructed_expense_filter == response
+
 
 @pytest.mark.django_db()
 def test_multiple_construct_expense_filter():
@@ -586,5 +637,38 @@ def test_multiple_construct_expense_filter():
     filter_2 = {'custom_properties__Killua Text__isnull': True}
     filter_3 = {'custom_properties__Killua Text__exact': None}
     response = (Q(**filter_2) | Q(**filter_3))
+
+    assert final_filter == response
+
+    #custom-properties-checkbok--no with rank 2
+    expense_filters = [
+        ExpenseFilter(
+            condition = 'Kratos',
+            operator = 'in',
+            values = ['BOOK', 'Dev-D'],
+            rank = 1,
+            is_custom = True,
+            join_by = 'AND'
+        ),
+        ExpenseFilter(
+            condition = 'Kratoss',
+            operator = 'exact',
+            values = ['false'],
+            rank = 2,
+            is_custom = True,
+            custom_field_type = 'BOOLEAN'
+        )
+    ]
+
+    final_filter = construct_expense_filter_query(expense_filters)
+
+    filter_1 = {'custom_properties__Kratos__in':['BOOK', 'Dev-D']}
+    filter_2 = {'custom_properties__Kratoss__exact': False}
+
+    response = (Q(**filter_1)) & Q(**filter_2)
+
+    print("final", final_filter)
+
+    print("acc", response)
 
     assert final_filter == response

@@ -50,17 +50,19 @@ EXPENSE_FILTER_JOIN_BY = (
 EXPENSE_FILTER_CUSTOM_FIELD_TYPE = (
     ('SELECT', 'SELECT'),
     ('NUMBER', 'NUMBER'),
-    ('TEXT','TEXT')
+    ('TEXT','TEXT'),
+    ('BOOLEAN', 'BOOLEAN')
 )
 
 EXPENSE_FILTER_OPERATOR = (
 	('isnull', 'isnull'),
 	('in', 'in'),
 	('iexact' , 'iexact'),
+    ('exact' , 'exact'),
 	('icontains', 'icontains'),
 	('lt', 'lt'),
 	('lte', 'lte'),
-	('not_in', 'not_in')
+	('not_in', 'not_in'),
 )
 
 def _format_date(date_string) -> datetime:
