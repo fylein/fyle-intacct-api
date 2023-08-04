@@ -3,10 +3,11 @@ Mappings Signal
 """
 import logging
 import json
+from django.db.models import Q
 
 from rest_framework.exceptions import ValidationError
 
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
 from django_q.tasks import async_task
 
@@ -86,6 +87,15 @@ def run_post_location_entity_mappings(sender, instance: LocationEntityMapping, *
     workspace = Workspace.objects.get(id=instance.workspace_id)
     workspace.onboarding_state = 'EXPORT_SETTINGS'
     workspace.save()
+
+
+@receiver(post_delete, sender=LocationEntityMapping)
+def run_post_delete_location_entity_mappings(sender, instance: LocationEntityMapping, **kwargs):
+    workspace = Workspace.objects.get(id=instance.workspace_id)
+    if workspace.onboarding_state in ('CONNECTION', 'EXPORT_SETTINGS'):
+        DestinationAttribute.objects.filter(~Q(attribute_type='LOCATION'), workspace_id=instance.workspace_id).delete()
+        workspace.onboarding_state = 'CONNECTION'
+        workspace.save()
 
 
 @receiver(post_save, sender=MappingSetting)

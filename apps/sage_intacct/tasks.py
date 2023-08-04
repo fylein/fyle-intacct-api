@@ -10,21 +10,39 @@ from django_q.tasks import Chain
 
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
-from fyle_accounting_mappings.models import Mapping, ExpenseAttribute, MappingSetting, DestinationAttribute, \
-    CategoryMapping, EmployeeMapping
-
 from fyle_integrations_platform_connector import PlatformConnector
+from fyle_accounting_mappings.models import (
+        Mapping, 
+        ExpenseAttribute, 
+        DestinationAttribute,
+        CategoryMapping, 
+        EmployeeMapping
+    )
 
 from fyle_intacct_api.exceptions import BulkError
-
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration, LastExportDetail
-
-from .models import ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, \
-    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement, \
-    SageIntacctReimbursementLineitem
+from apps.workspaces.models import (
+        SageIntacctCredential, 
+        FyleCredential, 
+        Configuration, 
+        LastExportDetail
+    )
+from apps.sage_intacct.models import (
+        ExpenseReport, 
+        ExpenseReportLineitem, 
+        Bill,
+        BillLineitem, 
+        ChargeCardTransaction,
+        ChargeCardTransactionLineitem, 
+        APPayment, 
+        APPaymentLineitem, 
+        JournalEntry, 
+        JournalEntryLineitem, 
+        SageIntacctReimbursement,
+        SageIntacctReimbursementLineitem
+    )
 from .utils import SageIntacctConnector
 
 logger = logging.getLogger(__name__)

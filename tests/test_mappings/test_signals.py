@@ -128,7 +128,7 @@ def test_resolve_post_category_mapping_errors(test_connection):
 def test_run_post_location_entity_mappings(db, mocker, test_connection):
 
     workspace = Workspace.objects.get(id=1)
-    assert workspace.onboarding_state == 'CONNECTION'
+    assert workspace.onboarding_state == 'IMPORT_SETTINGS'
     LocationEntityMapping.objects.update_or_create(
         workspace_id=1,
         defaults={
