@@ -19,7 +19,7 @@ from apps.mappings.tasks import (
     upload_attributes_to_fyle
 )
 from apps.workspaces.models import Configuration, Workspace
-from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks
+from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks
 from apps.tasks.models import Error
 from apps.mappings.models import LocationEntityMapping
 

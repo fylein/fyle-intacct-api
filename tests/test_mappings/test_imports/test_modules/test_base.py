@@ -5,8 +5,7 @@ from fyle_accounting_mappings.models import (
 )
 from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential
-from apps.mappings.models import ImportLog
-from apps.mappings.imports.projects import Project
+from apps.mappings.imports.modules.projects import Project
 from .fixtures import data
 from .helpers import *
 

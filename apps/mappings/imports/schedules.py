@@ -10,18 +10,6 @@ from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting
 
 
-def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
-    """
-    :param configuration: Workspace Configuration Instance
-    :return: None
-    """
-    schedule_or_delete_fyle_import_tasks(configuration)
-    schedule_auto_map_employees(
-        employee_mapping_preference=configuration.auto_map_employees, workspace_id=int(configuration.workspace_id))
-
-    if not configuration.auto_map_employees:
-        schedule_auto_map_charge_card_employees(workspace_id=int(configuration.workspace_id))
-
 def schedule_or_delete_fyle_import_tasks(configuration: Configuration, instance: MappingSetting = None):
     """
     Schedule or delete Fyle import tasks based on the configuration.
@@ -30,14 +18,6 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, instance:
     :return: None
     """
     # Check if there is a task to be scheduled
-    print("""
-
-
-
-
-        schedule_or_delete_fyle_import_tasks
-
-    """)
     task_to_be_scheduled = MappingSetting.objects.filter(
         import_to_fyle=True,
         workspace_id=configuration.workspace_id,
@@ -50,9 +30,8 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, instance:
             configuration.import_vendors_as_merchants or
             configuration.import_tax_codes
     ):
-        print("Inside if block")
         Schedule.objects.update_or_create(
-            func='apps.mappings.queues.chain_import_fields_to_fyle',
+            func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
             args='{}'.format(configuration.workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -64,6 +43,6 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, instance:
 
     # If none of the conditions are met, delete the existing schedule
     Schedule.objects.filter(
-        func='apps.mappings.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
         args='{}'.format(configuration.workspace_id)
     ).delete()

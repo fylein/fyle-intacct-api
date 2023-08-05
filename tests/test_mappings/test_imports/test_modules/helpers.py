@@ -1,4 +1,4 @@
-from apps.mappings.imports.base import Base
+from apps.mappings.imports.modules.base import Base
 from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential
 

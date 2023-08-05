@@ -1,10 +1,10 @@
 from datetime import datetime
-from .base import Base
+from apps.mappings.imports.modules.base import Base
 from apps.mappings.models import ImportLog
 
 class Project(Base):
     def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime):
-        super().__init__(workspace_id, 'PROJECT' , destination_field, 'projects', sync_after)
+        super().__init__(workspace_id, 'PROJECT' , destination_field, 'projects', sync_after, batch_size=2)
 
     def trigger_import(self):
         self.check_import_log_and_start_import()
@@ -17,10 +17,9 @@ class Project(Base):
     ):
         print("""
 
+            construct_fyle_payload() Projects
 
-
-
-            Projects payload block is used""")
+        """)
         
         print(paginated_si_attributes)
         print(existing_fyle_attributes_map)
@@ -50,9 +49,3 @@ class Project(Base):
                 payload.append(project)
 
         return payload
-
-def trigger_import_via_schedule(workspace_id: int, destination_field: str):
-    import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').first()
-    sync_after = import_log.last_successful_run_at if import_log else None
-    project = Project(workspace_id, destination_field, sync_after)
-    project.trigger_import()
