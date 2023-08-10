@@ -463,7 +463,9 @@ CREATE TABLE public.dependent_field_settings (
     last_successful_import_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    cost_code_placeholder text,
+    cost_type_placeholder text
 );
 
 
@@ -1532,7 +1534,8 @@ CREATE TABLE public.last_export_details (
     failed_expense_groups_count integer,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    next_export_at timestamp with time zone
 );
 
 
@@ -2831,7 +2834,7 @@ COPY public.cost_types (id, record_number, project_key, project_id, project_name
 -- Data for Name: dependent_field_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id) FROM stdin;
+COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder) FROM stdin;
 \.
 
 
@@ -4016,7 +4019,12 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 157	tasks	0006_error	2023-07-06 06:56:10.470672+00
 158	fyle	0024_auto_20230705_1057	2023-07-06 05:38:46.331815+00
 159	workspaces	0030_lastexportdetail	2023-07-07 10:16:00.343352+00
-161	mappings	0015_importlog	2023-07-21 12:07:18.503281+00
+160	fyle	0025_auto_20230718_2027	2023-07-18 20:37:26.097468+00
+161	fyle	0025_auto_20230720_1012	2023-08-03 14:22:12.599287+00
+162	fyle	0026_auto_20230720_1014	2023-08-03 14:22:12.658375+00
+163	fyle	0027_auto_20230801_0715	2023-08-03 14:22:12.71138+00
+164	workspaces	0031_lastexportdetail_next_export	2023-08-03 14:22:12.731411+00
+165	workspaces	0032_auto_20230810_0702	2023-08-10 08:02:48.464882+00
 \.
 
 
@@ -7498,8 +7506,8 @@ COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location
 -- Data for Name: last_export_details; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id) FROM stdin;
-4	2023-07-07 11:57:53.184441+00	MANUAL	2	0	0	2023-07-07 11:57:53.184441+00	2023-07-07 11:57:53.184441+00	1
+COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id, next_export_at) FROM stdin;
+4	2023-07-07 11:57:53.184441+00	MANUAL	2	0	0	2023-07-07 11:57:53.184441+00	2023-07-07 11:57:53.184441+00	1	\N
 \.
 
 
@@ -7929,7 +7937,7 @@ COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, sc
 --
 
 COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at, onboarding_state, app_version) FROM stdin;
-1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	CONNECTION	v2
+1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	IMPORT_SETTINGS	v1
 \.
 
 
@@ -8016,7 +8024,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 49, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 161, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 165, true);
 
 
 --
@@ -9528,11 +9536,11 @@ ALTER TABLE ONLY public.cost_types
 
 
 --
--- Name: dependent_field_settings dependent_fields_workspace_id_6b3920cb_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: dependent_field_settings dependent_field_settings_workspace_id_dd0a1e77_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.dependent_field_settings
-    ADD CONSTRAINT dependent_fields_workspace_id_6b3920cb_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+    ADD CONSTRAINT dependent_field_settings_workspace_id_dd0a1e77_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

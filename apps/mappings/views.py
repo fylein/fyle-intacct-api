@@ -12,11 +12,13 @@ from .models import GeneralMapping, LocationEntityMapping
 from .utils import MappingUtils
 
 
-class LocationEntityMappingView(generics.ListCreateAPIView):
+class LocationEntityMappingView(generics.ListCreateAPIView, generics.DestroyAPIView):
     """
     Location Entity mappings view
     """
     serializer_class = LocationEntityMappingSerializer
+    queryset = LocationEntityMapping.objects.all()
+    lookup_field = 'workspace_id'
 
     def get(self, request, *args, **kwargs):
         """

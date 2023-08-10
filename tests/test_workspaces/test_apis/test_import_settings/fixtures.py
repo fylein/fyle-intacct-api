@@ -31,6 +31,13 @@ data = {
                 "source_placeholder": "class",
             },
         ],
+        "dependent_field_settings": {
+            "cost_code_field_name": "Cost Code Jake Jellenahal",
+            "cost_code_placeholder": "this is a dummy placeholder for cost code",
+            "cost_type_field_name": "Cost Type Logan paul",
+            "cost_type_placeholder": "this sia is dummy placeholder for cost type",
+            "is_import_enabled": True,
+        },
     },
     "import_settings_without_mapping": {
         "configurations": {
@@ -52,6 +59,7 @@ data = {
                 "source_placeholder": "class",
             }
         ],
+        "dependent_field_settings": None,
     },
     "response": {
         "configurations": {
@@ -86,6 +94,13 @@ data = {
             },
         ],
         "workspace_id": 9,
+        "dependent_field_settings": {
+            "cost_code_field_name": "Cost Code Jake Jellenahal",
+            "cost_code_placeholder": "this is a dummy placeholder for cost code",
+            "cost_type_field_name": "Cost Type Logan paul",
+            "cost_type_placeholder": "this sia is dummy placeholder for cost type",
+            "is_import_enabled": True,
+        },
     },
     "invalid_general_mappings": {
         "configurations": {
@@ -103,6 +118,7 @@ data = {
                 "source_placeholder": "cost center",
             }
         ],
+        "dependent_field_settings": None,
     },
     "invalid_mapping_settings": {
         "configurations": {
@@ -114,5 +130,6 @@ data = {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
         },
         "mapping_settings": None,
+        "dependent_field_settings": None,
     },
 }

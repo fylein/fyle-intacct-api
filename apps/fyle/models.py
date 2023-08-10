@@ -50,17 +50,19 @@ EXPENSE_FILTER_JOIN_BY = (
 EXPENSE_FILTER_CUSTOM_FIELD_TYPE = (
     ('SELECT', 'SELECT'),
     ('NUMBER', 'NUMBER'),
-    ('TEXT','TEXT')
+    ('TEXT','TEXT'),
+    ('BOOLEAN', 'BOOLEAN')
 )
 
 EXPENSE_FILTER_OPERATOR = (
 	('isnull', 'isnull'),
 	('in', 'in'),
 	('iexact' , 'iexact'),
+    ('exact' , 'exact'),
 	('icontains', 'icontains'),
 	('lt', 'lt'),
 	('lte', 'lte'),
-	('not_in', 'not_in')
+	('not_in', 'not_in'),
 )
 
 def _format_date(date_string) -> datetime:
@@ -537,9 +539,16 @@ class DependentFieldSetting(models.Model):
     project_field_id = models.IntegerField(help_text='Fyle Source Field ID')
     cost_code_field_name = models.CharField(max_length=255, help_text='Fyle Cost Code Field Name')
     cost_code_field_id = models.IntegerField(help_text='Fyle Cost Code Field ID')
+    cost_code_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost code')
     cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name')
     cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID')
-    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    cost_type_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost Type')
+    workspace = models.OneToOneField(
+        Workspace,
+        on_delete=models.PROTECT, 
+        help_text='Reference to Workspace',
+        related_name='dependent_field_settings'
+    )
     last_successful_import_at = models.DateTimeField(null=True, help_text='Last Successful Import At')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')

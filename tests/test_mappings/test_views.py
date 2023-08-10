@@ -143,9 +143,8 @@ def test_location_entity_mappings(api_client, test_connection):
 
     response = api_client.get(url)
     assert response.status_code == 200
-
-    location_entity_mappings = LocationEntityMapping.objects.get(workspace_id=workspace_id)
-    location_entity_mappings.delete()
-
-    response = api_client.get(url)
-    assert response.status_code == 400
+        
+    response = api_client.delete(url)
+    location_entity = LocationEntityMapping.objects.filter(workspace_id=1).first()
+    assert response.status_code == 204
+    assert location_entity == None
