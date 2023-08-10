@@ -17,6 +17,8 @@ class LocationEntityMappingView(generics.ListCreateAPIView, generics.DestroyAPIV
     Location Entity mappings view
     """
     serializer_class = LocationEntityMappingSerializer
+    queryset = LocationEntityMapping.objects.all()
+    lookup_field = 'workspace_id'
 
     def get(self, request, *args, **kwargs):
         """

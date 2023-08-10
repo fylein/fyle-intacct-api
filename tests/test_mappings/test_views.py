@@ -146,5 +146,5 @@ def test_location_entity_mappings(api_client, test_connection):
         
     response = api_client.delete(url)
     location_entity = LocationEntityMapping.objects.filter(workspace_id=1).first()
-    assert response.status_code == 200
+    assert response.status_code == 404
     assert location_entity == None
