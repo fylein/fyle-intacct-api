@@ -1493,7 +1493,7 @@ CREATE TABLE public.last_export_details (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
-    next_export timestamp with time zone
+    next_export_at timestamp with time zone
 );
 
 
@@ -3970,6 +3970,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 162	fyle	0026_auto_20230720_1014	2023-08-03 14:22:12.658375+00
 163	fyle	0027_auto_20230801_0715	2023-08-03 14:22:12.71138+00
 164	workspaces	0031_lastexportdetail_next_export	2023-08-03 14:22:12.731411+00
+165	workspaces	0032_auto_20230810_0702	2023-08-10 08:02:48.464882+00
 \.
 
 
@@ -7443,7 +7444,7 @@ COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location
 -- Data for Name: last_export_details; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id, next_export) FROM stdin;
+COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id, next_export_at) FROM stdin;
 4	2023-07-07 11:57:53.184441+00	MANUAL	2	0	0	2023-07-07 11:57:53.184441+00	2023-07-07 11:57:53.184441+00	1	\N
 \.
 
@@ -7961,7 +7962,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 47, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 164, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 165, true);
 
 
 --

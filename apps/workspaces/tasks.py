@@ -84,7 +84,7 @@ def export_to_intacct(workspace_id, export_mode=None):
         last_export_detail.export_mode = export_mode or 'MANUAL'
 
         if workspace_schedule:
-            last_export_detail.next_export = last_exported_at + timedelta(hours=workspace_schedule.interval_hours)
+            last_export_detail.next_export_at = last_exported_at + timedelta(hours=workspace_schedule.interval_hours)
 
         last_export_detail.save()
 
