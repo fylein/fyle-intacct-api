@@ -93,7 +93,7 @@ def run_post_location_entity_mappings(sender, instance: LocationEntityMapping, *
 def run_post_delete_location_entity_mappings(sender, instance: LocationEntityMapping, **kwargs):
     workspace = Workspace.objects.get(id=instance.workspace_id)
     if workspace.onboarding_state in ('CONNECTION', 'EXPORT_SETTINGS'):
-        DestinationAttribute.objects.filter(~Q(attribute_type='LOCATION'), workspace_id=instance.workspace_id).delete()
+        DestinationAttribute.objects.filter(~Q(attribute_type='LOCATION_ENTITY'), workspace_id=instance.workspace_id).delete()
         workspace.onboarding_state = 'CONNECTION'
         workspace.save()
 

@@ -12,7 +12,7 @@ from .models import GeneralMapping, LocationEntityMapping
 from .utils import MappingUtils
 
 
-class LocationEntityMappingView(generics.ListCreateAPIView):
+class LocationEntityMappingView(generics.ListCreateAPIView, generics.DestroyAPIView):
     """
     Location Entity mappings view
     """
@@ -29,26 +29,6 @@ class LocationEntityMappingView(generics.ListCreateAPIView):
                 data=self.serializer_class(location_entity_mappings).data,
                 status=status.HTTP_200_OK
             )
-        except LocationEntityMapping.DoesNotExist:
-            return Response(
-                {
-                    'message': 'Location Entity mappings do not exist for the workspace'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-    def delete(self, request, *args, **kwargs):
-        try:
-            location_entity_mappings = LocationEntityMapping.objects.get(workspace_id=kwargs['workspace_id'])
-            location_entity_mappings.delete()
-            
-            return Response(
-                {
-                    'message': 'Location Entity Mapping Deleted Successfully'
-                },
-                status=status.HTTP_200_OK
-            )
-        
         except LocationEntityMapping.DoesNotExist:
             return Response(
                 {
