@@ -1,43 +1,40 @@
-# import pytest
-# from apps.mappings.imports.projects import Project
-# from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
-# from fyle_integrations_platform_connector import PlatformConnector
-# from apps.workspaces.models import FyleCredential
-# from .fixtures import data
+import pytest
+from apps.mappings.imports.modules.projects import Project
+from fyle_accounting_mappings.models import DestinationAttribute
+from .fixtures import data
 
-# def test_sync_destination_attributes(mocker, db):
-#     workspace_id = 1
+def test_construct_fyle_payload(db):
+    project = Project(1, 'PROJECT', None)
 
-#     mocker.patch(
-#         'sageintacctsdk.apis.Projects.get_all',
-#         return_value=data['get_projects']
-#     )
-#     mocker.patch(
-#         'sageintacctsdk.apis.Projects.count',
-#         return_value=18
-#     )
+    # create new case
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT')
+    existing_fyle_attributes_map = {}
+    is_auto_sync_status_allowed = project._Base__get_auto_sync_permission()
 
-#     project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
-#     assert project_count == 16
+    fyle_payload = project.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        is_auto_sync_status_allowed
+    )
 
-#     project = Project(workspace_id, 'PROJECT')
-#     project.sync_destination_attributes('PROJECT')
+    assert fyle_payload == data['create_fyle_project_payload_create_new_case']
 
-#     new_project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
-#     assert new_project_count == 18
+    # disable case
+    DestinationAttribute.objects.filter(
+        workspace_id=1,
+        attribute_type='PROJECT',
+        value__in=['Fyle Sage Intacct Integration','Platform APIs']
+    ).update(active=False)
 
-# def test_sync_expense_atrributes(mocker, db):
-#     workspace_id = 1
-#     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-#     platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT')
 
-#     mocker.patch(
-#         'fyle.platform.apis.v1beta.admin.Projects.list_all',
-#         return_value=[]
-#     )
+    paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes]
+    existing_fyle_attributes_map = project.get_existing_fyle_attributes(paginated_destination_attribute_values)
 
-#     project = Project(workspace_id, 'PROJECT')
-#     project.sync_expense_attributes(platform)
+    fyle_payload = project.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        is_auto_sync_status_allowed
+    )
 
-#     projects_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
-#     assert projects_count == 1244
+    assert fyle_payload == data['create_fyle_project_payload_create_disable_case']

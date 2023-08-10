@@ -291,14 +291,6 @@ class SageIntacctConnector:
         """
         Get projects
         """
-
-        print("""
-
-
-
-            Thsi si the destination attribute sync_projects()
-
-            """)
         projects_count = self.connection.projects.count()
         if projects_count < SYNC_UPPER_LIMIT['projects']:
             projects = self.connection.projects.get_all()

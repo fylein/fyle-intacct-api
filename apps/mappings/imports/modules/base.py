@@ -47,7 +47,7 @@ class Base:
 
         return is_auto_sync_status_allowed
     
-    def __construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: list = [], mapping_is_null: bool = False):
+    def __construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: list = []):
         filters = {
             'attribute_type': attribute_type,
             'workspace_id': self.workspace_id
@@ -58,9 +58,6 @@ class Base:
 
         if paginated_destination_attribute_values:
             filters['value__in'] = paginated_destination_attribute_values
-
-        if mapping_is_null:
-            filters['mapping__isnull'] = True
 
         return filters
     
@@ -89,13 +86,11 @@ class Base:
         time_diff = datetime.now() - timedelta(minutes=30)
         offset_aware_datetime_diff = time_diff.replace(tzinfo=timezone.utc)
 
-        if (import_log.status == 'IN_PROGRESS' and not is_created) or (self.sync_after > offset_aware_datetime_diff):
-            print("In the If block")
+        if (import_log.status == 'IN_PROGRESS' and not is_created) or (self.sync_after and (self.sync_after > offset_aware_datetime_diff)):
             return
 
         else:
             # Update the required values since we're beginning the import process
-            print("In the else block")
             import_log.status = 'IN_PROGRESS'
             import_log.processed_batches_count = 0
             import_log.total_batches_count = 0
@@ -127,12 +122,6 @@ class Base:
         self.create_mappings()
 
     def create_mappings(self):
-        print("""
-
-            create_mappings()
-
-        """)
-
         paginated_destination_attributes_without_duplicates = []
         paginated_destination_attributes = DestinationAttribute.objects.filter(
             workspace_id=self.workspace_id, attribute_type=self.destination_field, mapping__isnull=True
@@ -140,8 +129,6 @@ class Base:
         paginated_destination_attributes_without_duplicates = self.__remove_duplicate_attributes(paginated_destination_attributes)
 
         if paginated_destination_attributes_without_duplicates:
-            print("create mappigs if block is entered")
-            print(paginated_destination_attributes_without_duplicates)
             Mapping.bulk_create_mappings(paginated_destination_attributes_without_duplicates, self.source_field, self.destination_field, self.workspace_id)
 
     def sync_expense_attributes(self, platform: PlatformConnector):
@@ -155,11 +142,6 @@ class Base:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=self.workspace_id)
         sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=self.workspace_id)
 
-        print("""
-
-            Sync Destination Attributes
-
-        """)
         sync_methods = {
             'LOCATION': sage_intacct_connection.sync_locations,
             'PROJECT': sage_intacct_connection.sync_projects,
@@ -184,11 +166,6 @@ class Base:
         """
         Construct Payload and Import to fyle in Batches
         """
-        print("""
-
-            construct_payload_and_import_to_fyle()
-
-        """)
         is_auto_sync_status_allowed = self.__get_auto_sync_permission()
 
         filters = self.__construct_attributes_filter(self.destination_field)
@@ -215,12 +192,7 @@ class Base:
                 paginated_destination_attributes=paginated_destination_attributes,
                 is_auto_sync_status_allowed=is_auto_sync_status_allowed
             )
-            print("""
 
-                This si the fyle payload
-
-            """)
-            print(fyle_payload)
             # Fix this part the update of import_log should be called ragrdless of the fyle payload
             self.post_to_fyle_and_sync(
                 fyle_payload=fyle_payload,
@@ -233,25 +205,11 @@ class Base:
 
     def get_destination_attributes_generator(self, destination_attributes_count: int, filters: dict):
         batch_size = self.batch_size
-        print("""
-
-        get_destination_attributes_generator
-                    
-        """)
         for offset in range(0, destination_attributes_count, batch_size):
             limit = offset + batch_size
-            print("{0}, {1}".format(offset, limit))
-            print(filters, 'filters')
-
             paginated_destination_attributes = DestinationAttribute.objects.filter(**filters).order_by('value', 'id')[offset:limit]
-            print("log")
-            print(paginated_destination_attributes, 'paginated_destination_attributes')
             paginated_destination_attributes_without_duplicates = self.__remove_duplicate_attributes(paginated_destination_attributes)
-
             is_last_batch = True if limit >= destination_attributes_count else False
-
-            print('is_last_batch', is_last_batch)
-            print(paginated_destination_attributes_without_duplicates, 'paginated_destination_attributes_without_duplicates')
 
             yield paginated_destination_attributes_without_duplicates, is_last_batch
 
@@ -285,27 +243,12 @@ class Base:
         self.update_import_log_post_import(is_last_batch, import_log)
 
     def update_import_log_post_import(self, is_last_batch: bool, import_log: ImportLog):
-        print("""
-
-            update_import_log_post_import()
-
-        """)
         if is_last_batch:
-            print("""
-                  
-            This isi the if block 
-            
-            
-            """)
-            print('is_last_batch', is_last_batch)
             import_log.last_successful_run_at = datetime.now()
             import_log.processed_batches_count += 1
             import_log.status = 'COMPLETE'
             import_log.error_log = []
         else:
             import_log.processed_batches_count += 1
-            print("Adding is done")
-            print(import_log.processed_batches_count)
-            print(import_log.total_batches_count)
 
         import_log.save()
