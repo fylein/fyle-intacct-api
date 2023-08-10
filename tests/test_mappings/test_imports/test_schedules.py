@@ -3,6 +3,7 @@ from fyle_accounting_mappings.models import MappingSetting
 from apps.workspaces.models import Configuration
 from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks
 
+
 def test_schedule_tax_groups_creation(db):
     workspace_id = 1
     configuration = Configuration.objects.get(workspace_id=workspace_id)

@@ -3,6 +3,7 @@ from apps.mappings.imports.modules.projects import Project
 from fyle_accounting_mappings.models import DestinationAttribute
 from .fixtures import data
 
+
 def test_construct_fyle_payload(db):
     project = Project(1, 'PROJECT', None)
 

@@ -7,8 +7,12 @@ from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
     InternalServerError
 )
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
+from sageintacctsdk.exceptions import (
+    InvalidTokenError,
+    NoPrivilegeError
+)
 from apps.workspaces.models import SageIntacctCredential
+
 
 def test_handle_exceptions(db):
     ImportLog.objects.create(

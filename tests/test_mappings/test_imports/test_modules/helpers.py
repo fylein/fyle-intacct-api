@@ -2,6 +2,7 @@ from apps.mappings.imports.modules.base import Base
 from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential
 
+
 def get_base_class_instance(
         workspace_id: int = 1,
         source_field: str='PROJECT',

@@ -1,8 +1,14 @@
 import logging
 import traceback
-
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
-from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError, InternalServerError
+from sageintacctsdk.exceptions import (
+    InvalidTokenError,
+    NoPrivilegeError
+)
+from fyle.platform.exceptions import (
+    WrongParamsError,
+    InvalidTokenError as FyleInvalidTokenError,
+    InternalServerError
+)
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
 

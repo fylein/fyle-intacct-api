@@ -104,7 +104,6 @@ class Base:
         Import Native Field to Fyle and Auto Create Mappings
         Supported Native Fields: PROJECT, CATEGORY, COST_CENTER, TAX_GROUP
         """
-
         # Sync Fyle Attributes
         fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
@@ -173,7 +172,7 @@ class Base:
         destination_attributes_count = DestinationAttribute.objects.filter(**filters).count()
 
         if destination_attributes_count == 0:
-            import_log.status = 'COMPLETED'
+            import_log.status = 'COMPLETE'
             import_log.last_successful_run_at = datetime.now()
             import_log.total_batches_count = 0
             import_log.processed_batches_count = 0

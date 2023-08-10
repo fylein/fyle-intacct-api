@@ -16,6 +16,7 @@ from apps.mappings.models import ImportLog
 from .fixtures import data as destination_attributes_data
 from .helpers import *
 
+
 def test_sync_destination_attributes(mocker, db):
     workspace_id = 1
 
@@ -279,7 +280,7 @@ def test_auto_create_destination_attributes(mocker, db):
     project.sync_after = sync_after
 
     import_log = ImportLog.objects.filter(workspace_id=1).first()
-    import_log.status = 'COMPLETED'
+    import_log.status = 'COMPLETE'
     import_log.attribute_type = 'PROJECT'
     import_log.total_batches_count = 10
     import_log.processed_batches_count = 10
@@ -333,7 +334,7 @@ def test_auto_create_destination_attributes(mocker, db):
     response = project.trigger_import()
 
     import_log = ImportLog.objects.filter(workspace_id=1, attribute_type='PROJECT').first()
-    assert import_log.status == 'COMPLETED'
+    assert import_log.status == 'COMPLETE'
     assert import_log.total_batches_count == 0
     assert import_log.processed_batches_count == 0
     assert response == None

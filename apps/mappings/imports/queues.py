@@ -1,7 +1,5 @@
 from django_q.tasks import Chain
-
 from fyle_accounting_mappings.models import MappingSetting
-from apps.workspaces.models import Configuration
 
 
 IMPORT_TASK_TARGET_MAP = {
