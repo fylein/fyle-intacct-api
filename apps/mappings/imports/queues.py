@@ -8,6 +8,10 @@ IMPORT_TASK_TARGET_MAP = {
 
 
 def chain_import_fields_to_fyle(workspace_id):
+    """
+    Chain import fields to Fyle
+    :param workspace_id: Workspace Id
+    """
     mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
     chain = Chain()
 

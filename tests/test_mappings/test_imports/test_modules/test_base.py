@@ -44,9 +44,6 @@ def test_sync_expense_atrributes(mocker, db):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    # We return an empty list here because we do increamental sync based on the updated_at timestamp.
-    # Since we already have values for PROJECT in DB for workspace_id=1, we return an empty list.
-    # TODO: Add support for a diffrent workspace where we return a list of projects.
     mocker.patch(
         'fyle.platform.apis.v1beta.admin.Projects.list_all',
         return_value=[]
@@ -94,7 +91,6 @@ def test__remove_duplicates(db):
     attributes = base._Base__remove_duplicate_attributes(attributes)
     assert len(attributes) == 55
 
-
 def test__get_platform_class(db):
     base = get_base_class_instance()
     platform = get_platform_connection(1)
@@ -139,12 +135,14 @@ def test__construct_attributes_filter(db):
 
 def test_auto_create_destination_attributes(mocker, db):
     project = Project(1, 'PROJECT', None)
+    project.sync_after = None
+
+    # delete all destination attributes, expense attributes and mappings
     Mapping.objects.filter(workspace_id=1, source_type='PROJECT', destination_type='PROJECT').delete()
     DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()
     ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()
-    project.sync_after = None
 
-    # create new case for proejects import
+    # create new case for projects import
     with mock.patch('fyle.platform.apis.v1beta.admin.Projects.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.Projects.post_bulk',
@@ -163,7 +161,6 @@ def test_auto_create_destination_attributes(mocker, db):
             destination_attributes_data['create_new_auto_create_projects_expense_attributes_1'] 
         ]
 
-
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT').count()
 
         assert expense_attributes_count == 0
@@ -181,6 +178,7 @@ def test_auto_create_destination_attributes(mocker, db):
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='PROJECT', destination_type='PROJECT').count()
         
         assert mappings_count == 13
+
 
     # disable case for project import
     with mock.patch('fyle.platform.apis.v1beta.admin.Projects.list_all') as mock_call:
