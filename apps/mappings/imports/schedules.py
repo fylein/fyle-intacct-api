@@ -12,17 +12,19 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, instance:
     :return: None
     """
     # Check if there is a task to be scheduled
-    task_to_be_scheduled = MappingSetting.objects.filter(
-        import_to_fyle=True,
-        workspace_id=configuration.workspace_id,
-        source_field=instance.source_field
-    ).first()
+    if instance:
+        task_to_be_scheduled = MappingSetting.objects.filter(
+            import_to_fyle=True,
+            workspace_id=configuration.workspace_id,
+            source_field=instance.source_field
+        ).first()
 
     # Check if any of the configuration flags are True
-    if task_to_be_scheduled or (
-            configuration.import_categories or
-            configuration.import_vendors_as_merchants or
-            configuration.import_tax_codes
+    if (instance and task_to_be_scheduled) or (
+        configuration.import_categories or
+        configuration.import_projects or
+        configuration.import_vendors_as_merchants or
+        configuration.import_tax_codes
     ):
         Schedule.objects.update_or_create(
             func='apps.mappings.imports.queues.chain_import_fields_to_fyle',

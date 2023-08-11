@@ -9,7 +9,7 @@ class Project(Base):
     Class for Projects module
     """
     def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime):
-        super().__init__(workspace_id, 'PROJECT' , destination_field, 'projects', sync_after)
+        super().__init__(workspace_id, 'PROJECT' , destination_field, 'projects', sync_after, batch_size=2)
 
     def trigger_import(self):
         """

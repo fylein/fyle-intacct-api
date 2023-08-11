@@ -667,8 +667,4 @@ def test_multiple_construct_expense_filter():
 
     response = (Q(**filter_1)) & Q(**filter_2)
 
-    print("final", final_filter)
-
-    print("acc", response)
-
     assert final_filter == response
