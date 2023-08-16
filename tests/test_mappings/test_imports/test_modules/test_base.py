@@ -97,10 +97,10 @@ def test__get_platform_class(db):
 
     assert base._Base__get_platform_class(platform) == platform.projects
 
-    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', class_name='categories')
+    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories')
     assert base._Base__get_platform_class(platform) == platform.categories
 
-    base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', class_name='cost_centers')
+    base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', platform_class_name='cost_centers')
     assert base._Base__get_platform_class(platform) == platform.cost_centers
 
 def test__get_auto_sync_permission(db):
@@ -108,11 +108,11 @@ def test__get_auto_sync_permission(db):
 
     assert base._Base__get_auto_sync_permission() == True
 
-    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', class_name='categories')
+    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories')
 
     assert base._Base__get_auto_sync_permission() == True
 
-    base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', class_name='cost_centers')
+    base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', platform_class_name='cost_centers')
 
     assert base._Base__get_auto_sync_permission() == False
 
@@ -125,7 +125,7 @@ def test__construct_attributes_filter(db):
     sync_after = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S.%f')
 
 
-    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', class_name='categories', sync_after=sync_after)
+    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories', sync_after=sync_after)
 
     assert base._Base__construct_attributes_filter('CATEGORY') == {'attribute_type': 'CATEGORY', 'workspace_id': 1, 'updated_at__gte': sync_after}
 

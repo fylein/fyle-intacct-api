@@ -7,7 +7,7 @@ def get_base_class_instance(
         workspace_id: int = 1,
         source_field: str='PROJECT',
         destination_field: str = 'PROJECT',
-        class_name: str='projects',
+        platform_class_name: str='projects',
         sync_after: str = None
     ):
 
@@ -15,7 +15,7 @@ def get_base_class_instance(
         workspace_id=workspace_id,
         source_field =source_field ,
         destination_field = destination_field,
-        class_name = class_name,
+        platform_class_name = platform_class_name,
         sync_after = sync_after
     )
 

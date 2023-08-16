@@ -1,5 +1,5 @@
 import pytest
-from apps.mappings.exceptions import handle_exceptions
+from apps.mappings.exceptions import handle_import_exceptions
 from apps.mappings.models import ImportLog
 from apps.mappings.imports.modules.projects import Project
 from fyle.platform.exceptions import (
@@ -14,7 +14,7 @@ from sageintacctsdk.exceptions import (
 from apps.workspaces.models import SageIntacctCredential
 
 
-def test_handle_exceptions(db):
+def test_handle_import_exceptions(db):
     ImportLog.objects.create(
         workspace_id=1,
         status = 'IN_PROGRESS',
@@ -28,7 +28,7 @@ def test_handle_exceptions(db):
     
 
     # WrongParamsError 
-    @handle_exceptions
+    @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise WrongParamsError('This is WrongParamsError')
     
@@ -36,12 +36,10 @@ def test_handle_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['type'] == 'WrongParamsError'
     assert import_log.error_log['message'] == 'This is WrongParamsError'
-    assert import_log.error_log['alert'] == True
 
     # FyleInvalidTokenError 
-    @handle_exceptions
+    @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise FyleInvalidTokenError('This is FyleInvalidTokenError')
     
@@ -49,12 +47,10 @@ def test_handle_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['type'] == 'FyleInvalidTokenError'
     assert import_log.error_log['message'] == 'Invalid Token for fyle'
-    assert import_log.error_log['alert'] == False
 
     # InternalServerError 
-    @handle_exceptions
+    @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InternalServerError('This is InternalServerError')
     
@@ -62,12 +58,10 @@ def test_handle_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['type'] == 'InternalServerError'
     assert import_log.error_log['message'] == 'Internal server error while importing to Fyle'
-    assert import_log.error_log['alert'] == True
 
     # InvalidTokenError 
-    @handle_exceptions
+    @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InvalidTokenError('This is InvalidTokenError')
     
@@ -75,12 +69,10 @@ def test_handle_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['type'] == 'SageIntacctCredential.DoesNotExist/InvalidTokenError'
     assert import_log.error_log['message'] == 'Invalid Token or Sage Intacct credentials does not exist workspace_id - 1'
-    assert import_log.error_log['alert'] == True
 
     # SageIntacctCredential.DoesNotExist
-    @handle_exceptions
+    @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise SageIntacctCredential.DoesNotExist('This is SageIntacctCredential.DoesNotExist')
     
@@ -88,12 +80,10 @@ def test_handle_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['type'] == 'SageIntacctCredential.DoesNotExist/InvalidTokenError'
     assert import_log.error_log['message'] == 'Invalid Token or Sage Intacct credentials does not exist workspace_id - 1'
-    assert import_log.error_log['alert'] == True
 
     # NoPrivilegeError
-    @handle_exceptions
+    @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise NoPrivilegeError('This is NoPrivilegeError')
     
@@ -101,19 +91,15 @@ def test_handle_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['type'] == 'NoPrivilegeError'
     assert import_log.error_log['message'] == 'Insufficient permission to access the requested module'
-    assert import_log.error_log['alert'] == False
 
     # Exception
-    @handle_exceptions
+    @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise Exception('This is a general Exception')
     
     to_be_decoreated(project, import_log)
 
-    assert import_log.status == 'FAILED'
+    assert import_log.status == 'FATAL'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['type'] == 'Uknown Exception'
     assert import_log.error_log['message'] == 'Something went wrong'
-    assert import_log.error_log['alert'] == True

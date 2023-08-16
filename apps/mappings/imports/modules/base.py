@@ -15,7 +15,7 @@ from apps.workspaces.models import FyleCredential
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.mappings.exceptions import handle_exceptions
+from apps.mappings.exceptions import handle_import_exceptions
 
 
 class Base:
@@ -27,16 +27,14 @@ class Base:
             workspace_id: int,
             source_field: str,
             destination_field: str,
-            class_name: str,
+            platform_class_name: str,
             sync_after:datetime,
-            batch_size: int = 200
         ):
         self.workspace_id = workspace_id
         self.source_field = source_field
         self.destination_field = destination_field
-        self.class_name = class_name
+        self.platform_class_name = platform_class_name
         self.sync_after = sync_after
-        self.batch_size = batch_size
 
 
     def __get_platform_class(self, platform: PlatformConnector):
@@ -45,8 +43,7 @@ class Base:
         :param platform: PlatformConnector object
         :return: platform class
         """
-        platform_class = getattr(platform, self.class_name)
-        return platform_class
+        return getattr(platform, self.platform_class_name)
     
     def __get_auto_sync_permission(self):
         """
@@ -59,7 +56,7 @@ class Base:
 
         return is_auto_sync_status_allowed
     
-    def __construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: List = []):
+    def __construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: List[str] = []):
         """
         Construct the attributes filter
         :param attribute_type: attribute type
@@ -95,35 +92,7 @@ class Base:
 
         return unique_attributes
 
-    def check_import_log_and_start_import(self):
-        """
-        Checks if the import is already in progress and if not, starts the import process
-        """
-        import_log, is_created = ImportLog.objects.get_or_create(
-            workspace_id=self.workspace_id,
-            attribute_type=self.source_field,
-            defaults={
-                'status': 'IN_PROGRESS'
-            }
-        )
-        time_difference = datetime.now() - timedelta(minutes=30)
-        offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)
-
-        # If the import is already in progress or if the last successful run is within 30 minutes, don't start the import process
-        if (import_log.status == 'IN_PROGRESS' and not is_created) \
-            or (self.sync_after and (self.sync_after > offset_aware_time_difference)):
-            return
-
-        # Update the required values since we're beginning the import process
-        else:
-            import_log.status = 'IN_PROGRESS'
-            import_log.processed_batches_count = 0
-            import_log.total_batches_count = 0
-            import_log.save()
-
-            self.import_destination_attribute_to_fyle(import_log)
-
-    @handle_exceptions
+    @handle_import_exceptions
     def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
         Import destiantion_attributes field to Fyle and Auto Create Mappings
@@ -146,17 +115,17 @@ class Base:
         """
         Create mappings
         """
-        paginated_destination_attributes_without_duplicates = []
-        paginated_destination_attributes = DestinationAttribute.objects.filter(
+        destination_attributes_without_duplicates = []
+        destination_attributes = DestinationAttribute.objects.filter(
             workspace_id=self.workspace_id,
             attribute_type=self.destination_field,
             mapping__isnull=True
         ).order_by('value', 'id')
-        paginated_destination_attributes_without_duplicates = self.__remove_duplicate_attributes(paginated_destination_attributes)
+        destination_attributes_without_duplicates = self.__remove_duplicate_attributes(destination_attributes)
 
-        if paginated_destination_attributes_without_duplicates:
+        if destination_attributes_without_duplicates:
             Mapping.bulk_create_mappings(
-                paginated_destination_attributes_without_duplicates,
+                destination_attributes_without_duplicates,
                 self.source_field,
                 self.destination_field,
                 self.workspace_id
@@ -168,10 +137,7 @@ class Base:
         :param platform: PlatformConnector object
         """
         platform_class = self.__get_platform_class(platform)
-        if self.sync_after is not None:
-            platform_class.sync(self.sync_after)
-        else:
-            platform_class.sync()
+        platform_class.sync(sync_after=self.sync_after if self.sync_after else None)
 
     def sync_destination_attributes(self, sageintacct_attribute_type: str):
         """
@@ -219,7 +185,7 @@ class Base:
             import_log.save()
             return
         else:
-            import_log.total_batches_count = math.ceil(destination_attributes_count/self.batch_size)
+            import_log.total_batches_count = math.ceil(destination_attributes_count/200)
             import_log.save()
 
         destination_attributes_generator = self.get_destination_attributes_generator(destination_attributes_count, filters)
@@ -245,9 +211,8 @@ class Base:
         :param filters: dict
         :return: Generator of destination_attributes
         """
-        batch_size = self.batch_size
-        for offset in range(0, destination_attributes_count, batch_size):
-            limit = offset + batch_size
+        for offset in range(0, destination_attributes_count, 200):
+            limit = offset + 200
             paginated_destination_attributes = DestinationAttribute.objects.filter(**filters).order_by('value', 'id')[offset:limit]
             paginated_destination_attributes_without_duplicates = self.__remove_duplicate_attributes(paginated_destination_attributes)
             is_last_batch = True if limit >= destination_attributes_count else False
@@ -265,8 +230,6 @@ class Base:
         :param is_auto_sync_status_allowed: bool
         :return: Fyle Payload
         """
-
-        # Get Existing Fyle Attributes
         paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes]
         existing_expense_attributes_map = self.get_existing_fyle_attributes(paginated_destination_attribute_values)
 
@@ -280,7 +243,6 @@ class Base:
         """
         filters = self.__construct_attributes_filter(self.source_field, paginated_destination_attribute_values)
         existing_expense_attributes_values = ExpenseAttribute.objects.filter(**filters).values('value', 'source_id')
-
         # This is a map of attribute name to attribute source_id
         return {attribute['value'].lower(): attribute['source_id'] for attribute in existing_expense_attributes_values}
     
@@ -312,3 +274,31 @@ class Base:
             import_log.processed_batches_count += 1
 
         import_log.save()
+
+    def check_import_log_and_start_import(self):
+        """
+        Checks if the import is already in progress and if not, starts the import process
+        """
+        import_log, is_created = ImportLog.objects.get_or_create(
+            workspace_id=self.workspace_id,
+            attribute_type=self.source_field,
+            defaults={
+                'status': 'IN_PROGRESS'
+            }
+        )
+        time_difference = datetime.now() - timedelta(minutes=30)
+        offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)
+
+        # If the import is already in progress or if the last successful run is within 30 minutes, don't start the import process
+        if (import_log.status == 'IN_PROGRESS' and not is_created) \
+            or (self.sync_after and (self.sync_after > offset_aware_time_difference)):
+            return
+
+        # Update the required values since we're beginning the import process
+        else:
+            import_log.status = 'IN_PROGRESS'
+            import_log.processed_batches_count = 0
+            import_log.total_batches_count = 0
+            import_log.save()
+
+            self.import_destination_attribute_to_fyle(import_log)
