@@ -37,6 +37,7 @@ def test_handle_import_exceptions(db):
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'This is WrongParamsError'
+    assert import_log.error_log['alert'] == True
 
     # FyleInvalidTokenError 
     @handle_import_exceptions
@@ -48,6 +49,7 @@ def test_handle_import_exceptions(db):
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'Invalid Token for fyle'
+    assert import_log.error_log['alert'] == False
 
     # InternalServerError 
     @handle_import_exceptions
@@ -59,6 +61,7 @@ def test_handle_import_exceptions(db):
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'Internal server error while importing to Fyle'
+    assert import_log.error_log['alert'] == True
 
     # InvalidTokenError 
     @handle_import_exceptions
@@ -70,6 +73,7 @@ def test_handle_import_exceptions(db):
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'Invalid Token or Sage Intacct credentials does not exist workspace_id - 1'
+    assert import_log.error_log['alert'] == False
 
     # SageIntacctCredential.DoesNotExist
     @handle_import_exceptions
@@ -81,6 +85,7 @@ def test_handle_import_exceptions(db):
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'Invalid Token or Sage Intacct credentials does not exist workspace_id - 1'
+    assert import_log.error_log['alert'] == False
 
     # NoPrivilegeError
     @handle_import_exceptions
@@ -92,6 +97,7 @@ def test_handle_import_exceptions(db):
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'Insufficient permission to access the requested module'
+    assert import_log.error_log['alert'] == False
 
     # Exception
     @handle_import_exceptions
@@ -103,3 +109,4 @@ def test_handle_import_exceptions(db):
     assert import_log.status == 'FATAL'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'Something went wrong'
+    assert import_log.error_log['alert'] == False

@@ -38,10 +38,12 @@ def handle_import_exceptions(func):
 
         except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
             error['message'] = 'Invalid Token or Sage Intacct credentials does not exist workspace_id - {0}'.format(workspace_id)
+            error['alert'] = False
             import_log.status = 'FAILED'
 
         except FyleInvalidTokenError:
             error['message'] = 'Invalid Token for fyle'
+            error['alert'] = False
             import_log.status = 'FAILED'
         
         except InternalServerError:
@@ -51,12 +53,14 @@ def handle_import_exceptions(func):
         
         except NoPrivilegeError:
             error['message'] = 'Insufficient permission to access the requested module'
+            error['alert'] = False
             import_log.status = 'FAILED'
 
         except Exception:
             response = traceback.format_exc()
             error['message'] = 'Something went wrong'
             error['response'] = response
+            error['alert'] = False
             import_log.status = 'FATAL'
 
         if error['alert']:
