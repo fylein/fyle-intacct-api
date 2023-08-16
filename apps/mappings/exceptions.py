@@ -33,6 +33,7 @@ def handle_import_exceptions(func):
         except WrongParamsError as exception:
             error['message'] = exception.message
             error['response'] = exception.response
+            error['alert'] = True
             import_log.status = 'FAILED'
 
         except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
@@ -45,6 +46,7 @@ def handle_import_exceptions(func):
         
         except InternalServerError:
             error['message'] = 'Internal server error while importing to Fyle'
+            error['alert'] = True
             import_log.status = 'FAILED'
         
         except NoPrivilegeError:
@@ -57,7 +59,10 @@ def handle_import_exceptions(func):
             error['response'] = response
             import_log.status = 'FATAL'
 
-        logger.error(error)
+        if error['alert']:
+            logger.error(error)
+        else:
+            logger.info(error)
         
         import_log.error_log = error
         import_log.save()
