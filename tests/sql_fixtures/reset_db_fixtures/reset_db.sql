@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.2 (Debian 15.2-1.pgdg110+1)
+-- Dumped from database version 15.3 (Debian 15.3-1.pgdg120+1)
 -- Dumped by pg_dump version 15.3 (Debian 15.3-1.pgdg100+1)
 
 SET statement_timeout = 0;
@@ -942,7 +942,6 @@ CREATE TABLE public.expense_group_settings (
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     ccc_export_date_type character varying(100) NOT NULL,
-    import_card_credits boolean NOT NULL,
     ccc_expense_state character varying(100)
 );
 
@@ -7352,8 +7351,8 @@ COPY public.expense_filters (id, condition, operator, "values", rank, join_by, i
 -- Data for Name: expense_group_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corporate_credit_card_expense_group_fields, expense_state, reimbursable_export_date_type, created_at, updated_at, workspace_id, ccc_export_date_type, import_card_credits, ccc_expense_state) FROM stdin;
-1	{employee_email,report_id,claim_number,fund_source}	{employee_email,report_id,expense_id,claim_number,fund_source}	PAYMENT_PROCESSING	current_date	2022-09-20 08:38:03.358472+00	2022-09-20 08:39:32.022875+00	1	spent_at	f	PAID
+COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corporate_credit_card_expense_group_fields, expense_state, reimbursable_export_date_type, created_at, updated_at, workspace_id, ccc_export_date_type, ccc_expense_state) FROM stdin;
+1	{employee_email,report_id,claim_number,fund_source}	{employee_email,report_id,expense_id,claim_number,fund_source}	PAYMENT_PROCESSING	current_date	2022-09-20 08:38:03.358472+00	2022-09-20 08:39:32.022875+00	1	spent_at	PAID
 \.
 
 

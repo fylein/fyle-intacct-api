@@ -115,8 +115,6 @@ def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
     )
 
     expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=1)
-    expense_group_settings.import_card_credits = True
-    expense_group_settings.save()
 
 
     with mock.patch('fyle_integrations_platform_connector.apis.Expenses.get') as mock_call:
