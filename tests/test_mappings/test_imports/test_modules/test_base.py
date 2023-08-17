@@ -1,7 +1,8 @@
 import pytest
 from datetime import (
     datetime,
-    timezone
+    timezone,
+    timedelta
 )
 from fyle_accounting_mappings.models import (
     DestinationAttribute, 
@@ -336,3 +337,28 @@ def test_auto_create_destination_attributes(mocker, db):
     assert import_log.total_batches_count == 0
     assert import_log.processed_batches_count == 0
     assert response == None
+
+def test_expense_attributes_sync_after(db):
+    project = Project(1, 'PROJECT', None)
+
+    current_time = datetime.now() - timedelta(minutes=300)
+    sync_after = current_time.replace(tzinfo=timezone.utc)
+    project.sync_after = sync_after
+
+    expense_attributes = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT')[0:100]
+
+    assert expense_attributes.count() == 100
+
+    paginated_expense_attribute_values = []
+
+    for expense_attribute in expense_attributes:
+        expense_attribute.updated_at = datetime.now().replace(tzinfo=timezone.utc)
+        expense_attribute.save()
+        paginated_expense_attribute_values.append(expense_attribute.value)
+
+
+    filters = project._Base__construct_attributes_filter('PROJECT', paginated_expense_attribute_values)
+
+    expense_attributes = ExpenseAttribute.objects.filter(**filters)
+
+    assert expense_attributes.count() == 100
