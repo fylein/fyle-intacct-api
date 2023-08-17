@@ -21,10 +21,6 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
     :param instance: Row Instance of Sender Class
     :return: None
     """
-    if instance.corporate_credit_card_expenses_object in {'EXPENSE_REPORT', 'BILL', 'JOURNAL_ENTRY'}:
-        expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=int(instance.workspace_id))
-        expense_group_settings.import_card_credits = True
-        expense_group_settings.save()
 
     if instance.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         add_expense_id_to_expense_group_settings(int(instance.workspace_id))
