@@ -180,6 +180,7 @@ class Base:
         if destination_attributes_count == 0:
             import_log.status = 'COMPLETE'
             import_log.last_successful_run_at = datetime.now()
+            import_log.error_log = []
             import_log.total_batches_count = 0
             import_log.processed_batches_count = 0
             import_log.save()

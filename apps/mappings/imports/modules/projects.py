@@ -46,7 +46,7 @@ class Project(Base):
                     attribute.value,
                     attribute.destination_id
                 ),
-                'is_enabled': attribute.active
+                'is_enabled': True if attribute.active is None else attribute.active
             }
 
             # Create a new project if it does not exist in Fyle

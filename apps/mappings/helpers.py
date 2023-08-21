@@ -5,8 +5,6 @@ from django_q.models import Schedule
 from apps.mappings.tasks import schedule_auto_map_employees, \
     schedule_auto_map_charge_card_employees, schedule_tax_groups_creation
 from apps.workspaces.models import Configuration
-from fyle_accounting_mappings.models import MappingSetting
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 
 
 def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
@@ -14,7 +12,6 @@ def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
     :param configuration: Workspace Configuration Instance
     :return: None
     """
-    new_schedule_or_delete_fyle_import_tasks(configuration)
     schedule_or_delete_fyle_import_tasks(configuration)
     schedule_auto_map_employees(
         employee_mapping_preference=configuration.auto_map_employees, workspace_id=int(configuration.workspace_id))
