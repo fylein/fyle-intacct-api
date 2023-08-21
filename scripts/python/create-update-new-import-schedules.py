@@ -20,7 +20,7 @@ try:
     with transaction.atomic():
         for schedule in existing_import_enabled_schedules:
             configuration = Configuration.objects.get(workspace_id=schedule['args'])
-            dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=schedule['args'])
+            dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=schedule['args']).first()
             mapping_setting = MappingSetting.objects.filter(source_field='PROJECT', workspace_id=schedule['args'], import_to_fyle=True).first()
 
             if not configuration.import_categories and not configuration.import_vendors_as_merchants \
