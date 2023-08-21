@@ -61,6 +61,28 @@ data = {
         ],
         "dependent_field_settings": None,
     },
+    "import_settings_schedule_check": {
+        "configurations": {
+            "import_categories": True,
+            "import_items": True,
+            "charts_of_accounts": ["Expense"],
+            "import_tax_codes": True,
+            "import_vendors_as_merchants": True,
+        },
+        "general_mappings": {
+            "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
+        },
+        "mapping_settings": [
+            {
+                "source_field": "PROJECT",
+                "destination_field": "PROJECT",
+                "import_to_fyle": True,
+                "is_custom": False,
+                "source_placeholder": "Select Project",
+            }
+        ],
+        "dependent_field_settings": None,
+    },
     "response": {
         "configurations": {
             "import_categories": True,

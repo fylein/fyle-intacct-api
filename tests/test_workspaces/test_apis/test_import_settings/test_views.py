@@ -1,9 +1,10 @@
 import json
-
+from django_q.models import Schedule
 
 from tests.helper import dict_compare_keys
 
 from apps.workspaces.models import Workspace
+from fyle_accounting_mappings.models import MappingSetting
 from .fixtures import data
 
 
@@ -55,6 +56,29 @@ def test_import_settings(mocker, api_client, test_connection):
         format='json'
     )
     assert response.status_code == 200
+
+    # Test if import_projects add schedule or not
+    url = '/api/v2/workspaces/1/import_settings/'
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+    response = api_client.put(
+        url,
+        data=data['import_settings_schedule_check'],
+        format='json'
+    )
+
+    assert response.status_code == 200
+
+    mapping = MappingSetting.objects.filter(workspace_id=1, source_field='PROJECT').first()
+
+    assert mapping.import_to_fyle  == True
+
+    schedule = Schedule.objects.filter(
+        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        args='{}'.format(1),
+    ).first()
+
+    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.args == '1'
 
     invalid_configurations = data['import_settings']
     invalid_configurations['configurations'] = {}

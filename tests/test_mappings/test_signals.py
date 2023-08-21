@@ -151,8 +151,8 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
 
     workspace_id = 1
 
-    mapping_setting = MappingSetting.objects.filter(source_field='PROJECT', destination_field='PROJECT').first()
-    mapping_setting.delete()
+    MappingSetting.objects.all().delete()
+    Schedule.objects.all().delete()
 
     mapping_setting = MappingSetting(
         source_field='PROJECT',
@@ -161,15 +161,14 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
         import_to_fyle=True,
         is_custom=False
     )
-
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_create_project_mappings',
+        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.tasks.auto_create_project_mappings'
+    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     mapping_setting = MappingSetting(

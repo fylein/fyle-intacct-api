@@ -1383,6 +1383,48 @@ CREATE TABLE public.general_mappings (
 ALTER TABLE public.general_mappings OWNER TO postgres;
 
 --
+-- Name: import_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.import_logs (
+    id integer NOT NULL,
+    attribute_type character varying(150) NOT NULL,
+    status character varying(255),
+    error_log jsonb NOT NULL,
+    total_batches_count integer NOT NULL,
+    processed_batches_count integer NOT NULL,
+    last_successful_run_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.import_logs OWNER TO postgres;
+
+--
+-- Name: import_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.import_logs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.import_logs_id_seq OWNER TO postgres;
+
+--
+-- Name: import_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.import_logs_id_seq OWNED BY public.import_logs.id;
+
+
+--
 -- Name: journal_entries; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2356,6 +2398,13 @@ ALTER TABLE ONLY public.general_mappings ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: import_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs ALTER COLUMN id SET DEFAULT nextval('public.import_logs_id_seq'::regclass);
+
+
+--
 -- Name: journal_entries id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -2697,6 +2746,10 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 190	Can change last export detail	48	change_lastexportdetail
 191	Can delete last export detail	48	delete_lastexportdetail
 192	Can view last export detail	48	view_lastexportdetail
+193	Can add import log	49	add_importlog
+194	Can change import log	49	change_importlog
+195	Can delete import log	49	delete_importlog
+196	Can view import log	49	view_importlog
 \.
 
 
@@ -3796,6 +3849,7 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 46	sage_intacct	costtype
 47	tasks	error
 48	workspaces	lastexportdetail
+49	mappings	importlog
 \.
 
 
@@ -7424,6 +7478,14 @@ COPY public.general_mappings (id, default_location_name, default_location_id, de
 
 
 --
+-- Data for Name: import_logs; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.import_logs (id, attribute_type, status, error_log, total_batches_count, processed_batches_count, last_successful_run_at, created_at, updated_at, workspace_id) FROM stdin;
+\.
+
+
+--
 -- Data for Name: journal_entries; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -7919,7 +7981,7 @@ SELECT pg_catalog.setval('public.auth_group_permissions_id_seq', 1, false);
 -- Name: auth_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.auth_permission_id_seq', 188, true);
+SELECT pg_catalog.setval('public.auth_permission_id_seq', 196, true);
 
 
 --
@@ -7954,7 +8016,7 @@ SELECT pg_catalog.setval('public.django_admin_log_id_seq', 1, false);
 -- Name: django_content_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_content_type_id_seq', 47, true);
+SELECT pg_catalog.setval('public.django_content_type_id_seq', 49, true);
 
 
 --
@@ -8067,6 +8129,13 @@ SELECT pg_catalog.setval('public.fyle_expensegroup_id_seq', 9, true);
 --
 
 SELECT pg_catalog.setval('public.fyle_rest_auth_authtokens_id_seq', 1, true);
+
+
+--
+-- Name: import_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.import_logs_id_seq', 1, false);
 
 
 --
@@ -8597,6 +8666,22 @@ ALTER TABLE ONLY public.auth_tokens
 
 ALTER TABLE ONLY public.general_mappings
     ADD CONSTRAINT general_mappings_workspace_id_19666c5c_uniq UNIQUE (workspace_id);
+
+
+--
+-- Name: import_logs import_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs
+    ADD CONSTRAINT import_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: import_logs import_logs_workspace_id_attribute_type_42f69b7b_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs
+    ADD CONSTRAINT import_logs_workspace_id_attribute_type_42f69b7b_uniq UNIQUE (workspace_id, attribute_type);
 
 
 --
@@ -9203,6 +9288,13 @@ CREATE INDEX fyle_accounting_mappings_mappingsetting_workspace_id_c123c088 ON pu
 
 
 --
+-- Name: import_logs_workspace_id_e5acf2ff; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX import_logs_workspace_id_e5acf2ff ON public.import_logs USING btree (workspace_id);
+
+
+--
 -- Name: journal_entry_lineitems_journal_entry_id_382a8abe; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9656,6 +9748,14 @@ ALTER TABLE ONLY public.auth_tokens
 
 ALTER TABLE ONLY public.general_mappings
     ADD CONSTRAINT general_mappings_workspace_id_19666c5c_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: import_logs import_logs_workspace_id_e5acf2ff_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.import_logs
+    ADD CONSTRAINT import_logs_workspace_id_e5acf2ff_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

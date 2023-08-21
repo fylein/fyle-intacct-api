@@ -160,155 +160,6 @@ def disable_expense_attributes(source_field, destination_field, workspace_id):
 
     return expense_attributes_ids
 
-def create_fyle_projects_payload(projects: List[DestinationAttribute], existing_project_names: list,
-                                 updated_projects: List[ExpenseAttribute] = None):
-    """
-    Create Fyle Projects Payload from Sage Intacct Projects and Customers
-    :param projects: Sage Intacct Projects
-    :return: Fyle Projects Payload
-    """
-    payload = []
-
-    if updated_projects:
-        for project in updated_projects:
-            destination_id_of_project = project.mapping.first().destination.destination_id
-            payload.append({
-                'id': project.source_id,
-                'name': project.value,
-                'code': destination_id_of_project,
-                'description': 'Project - {0}, Id - {1}'.format(
-                    project.value,
-                    destination_id_of_project
-                ),
-                'is_enabled': project.active
-            })
-    else:
-        existing_project_names = [project_name.lower() for project_name in existing_project_names]
-        for project in projects:
-            if project.value.lower() not in existing_project_names:
-                payload.append({
-                    'name': project.value,
-                    'code': project.destination_id,
-                    'description': 'Sage Intacct Project - {0}, Id - {1}'.format(
-                        project.value,
-                        project.destination_id
-                    ),
-                    'is_enabled': True if project.active is None else project.active
-                })
-
-    return payload
-
-def disable_renamed_projects(workspace_id,destination_field):
-    page_size = 200
-    expense_attributes_count = ExpenseAttribute.objects.filter(attribute_type='PROJECT',workspace_id=workspace_id,auto_mapped=True).count()
-    expense_attribute_to_be_disabled = []
-    for offset in range(0, expense_attributes_count, page_size):
-        limit = offset + page_size
-
-        fyle_projects = ExpenseAttribute.objects.filter(
-            workspace_id=workspace_id,
-            attribute_type="PROJECT",
-            auto_mapped=True
-        ).order_by('value', 'id')[offset:limit]
-
-        project_names = list(
-            set(field.value for field in fyle_projects)
-        )
-
-        intacct_projects = DestinationAttribute.objects.filter(
-        attribute_type=destination_field,
-        workspace_id=workspace_id,
-        value__in=project_names
-        ).values_list('value', flat=True)
-
-        for fyle_project in fyle_projects:
-            if fyle_project.value not in intacct_projects:
-                fyle_project.active = False
-                fyle_project.save()
-                expense_attribute_to_be_disabled.append(fyle_project.id)
-        
-        return expense_attribute_to_be_disabled
-
-def post_projects_in_batches(platform: PlatformConnector, workspace_id: int, destination_field: str):
-    existing_project_names = ExpenseAttribute.objects.filter(
-        attribute_type='PROJECT', workspace_id=workspace_id).values_list('value', flat=True)
-    si_attributes_count = DestinationAttribute.objects.filter(
-        attribute_type=destination_field, workspace_id=workspace_id).count()
-    page_size = 200
-
-    for offset in range(0, si_attributes_count, page_size):
-        limit = offset + page_size
-        paginated_si_attributes = DestinationAttribute.objects.filter(
-            attribute_type=destination_field, workspace_id=workspace_id).order_by('value', 'id')[offset:limit]
-
-        paginated_si_attributes = remove_duplicates(paginated_si_attributes)
-
-        fyle_payload: List[Dict] = create_fyle_projects_payload(
-            paginated_si_attributes, existing_project_names)
-        if fyle_payload:
-            platform.projects.post_bulk(fyle_payload)
-            platform.projects.sync()
-
-        Mapping.bulk_create_mappings(paginated_si_attributes, 'PROJECT', destination_field, workspace_id)
-        
-    if destination_field == 'PROJECT':
-        expense_attribute_to_be_disable = disable_renamed_projects(workspace_id,destination_field)
-        project_ids_to_be_changed = disable_expense_attributes('PROJECT', 'PROJECT', workspace_id)
-        project_ids_to_be_changed.extend(expense_attribute_to_be_disable)
-        if project_ids_to_be_changed:
-            expense_attributes = ExpenseAttribute.objects.filter(id__in=project_ids_to_be_changed)
-            fyle_payload: List[Dict] = create_fyle_projects_payload(projects=[], existing_project_names=[], updated_projects=expense_attributes)
-            platform.projects.post_bulk(fyle_payload)
-            platform.projects.sync()
-
-
-def auto_create_project_mappings(workspace_id: int):
-    """
-    Create Project Mappings
-    :return: mappings
-    """
-    try:
-        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-
-        platform = PlatformConnector(fyle_credentials=fyle_credentials)
-        platform.projects.sync()
-
-        mapping_setting = MappingSetting.objects.get(
-            source_field='PROJECT', workspace_id=workspace_id
-        )
-
-        sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
-
-        post_projects_in_batches(platform, workspace_id, mapping_setting.destination_field)
-
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
-    
-    except FyleInvalidTokenError:
-        logger.info('Invalid Token for fyle')
-    
-    except InternalServerError:
-        logger.error('Internal server error while importing to Fyle')
-    
-    except NoPrivilegeError:
-        logger.info('Insufficient permission to access the requested module')
-
-    except WrongParamsError as exception:
-        logger.error(
-            'Error while creating projects workspace_id - %s in Fyle %s %s',
-            workspace_id, exception.message, {'error': exception.response}
-        )
-
-    except Exception:
-        error = traceback.format_exc()
-        error = {
-            'error': error
-        }
-        logger.exception(
-            'Error while creating projects workspace_id - %s error: %s',
-            workspace_id, error
-        )
-
 
 def async_auto_map_employees(workspace_id: int):
     configuration = Configuration.objects.get(workspace_id=workspace_id)
@@ -1230,7 +1081,7 @@ def post_merchants(platform_connection: PlatformConnector, workspace_id: int, fi
     if fyle_payload:
         platform_connection.merchants.post(fyle_payload)
 
-    platform_connection.merchants.sync(workspace_id)
+    platform_connection.merchants.sync()
 
 
 def auto_create_vendors_as_merchants(workspace_id):
@@ -1242,7 +1093,7 @@ def auto_create_vendors_as_merchants(workspace_id):
         existing_merchants_name = ExpenseAttribute.objects.filter(attribute_type='MERCHANT', workspace_id=workspace_id)
         first_run = False if existing_merchants_name else True
 
-        fyle_connection.merchants.sync(workspace_id)
+        fyle_connection.merchants.sync()
 
         sync_sage_intacct_attributes('VENDOR', workspace_id)
         post_merchants(fyle_connection, workspace_id, first_run)
@@ -1291,11 +1142,8 @@ def auto_import_and_map_fyle_fields(workspace_id):
     if configuration.import_categories:
         chain.append('apps.mappings.tasks.auto_create_category_mappings', workspace_id)
 
-    if project_mapping and project_mapping.import_to_fyle:
-        chain.append('apps.mappings.tasks.auto_create_project_mappings', workspace_id)
-
-        if dependent_fields and dependent_fields.is_import_enabled:
-            chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id)
+    if project_mapping and project_mapping.import_to_fyle and dependent_fields and dependent_fields.is_import_enabled:
+        chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id)
 
     if chain.length() > 0:
         chain.run()

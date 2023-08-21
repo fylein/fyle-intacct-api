@@ -145,68 +145,6 @@ def test_schedule_tax_groups_creation(db):
     assert schedule == None
 
 
-def test_auto_create_project_mappings(db, mocker):
-    workspace_id = 1
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.Projects.sync',
-        return_value=[]
-    )
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.Projects.post_bulk',
-        return_value=[]
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Projects.count',
-        return_value=5
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all',
-        return_value=intacct_data['get_projects']
-    )
-
-    project = ExpenseAttribute.objects.filter(value='Direct Mail Campaign').first()
-    project.value = 'random'
-    project.save()
-    
-    response = auto_create_project_mappings(workspace_id=workspace_id)
-    assert response == None
-
-    projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
-    mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='PROJECT').count()
-
-    assert mappings == projects
-
-    DestinationAttribute.objects.filter(id='602').update(active=False)
-    response = auto_create_project_mappings(workspace_id=workspace_id)
-    response == None
-
-    expense_attribute_id = Mapping.objects.filter(destination_id='602').first().source_id
-    expense_attribute = ExpenseAttribute.objects.filter(id=expense_attribute_id).first()
-
-    assert expense_attribute.active == False
-
-
-    with mock.patch('fyle_integrations_platform_connector.apis.Projects.sync') as mock_call:
-        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
-        auto_create_project_mappings(workspace_id=workspace_id)
-
-        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
-        auto_create_project_mappings(workspace_id=workspace_id)
-
-        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
-        auto_create_project_mappings(workspace_id=workspace_id)
-
-        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        auto_create_project_mappings(workspace_id=workspace_id)
-
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-    fyle_credentials.delete()
-
-    response = auto_create_project_mappings(workspace_id=workspace_id)
-
-    assert response == None
-
-
 def test_remove_duplicates(db):
 
     attributes = DestinationAttribute.objects.filter(attribute_type='EMPLOYEE')
