@@ -15,6 +15,9 @@ existing_import_enabled_schedules = Schedule.objects.filter(
     func__in=['apps.mappings.tasks.auto_import_and_map_fyle_fields']
 ).values('args')
 
+schedule_created = 0
+schedule_updated = 0
+
 try:
     # Create/update new schedules in a transaction block
     with transaction.atomic():
@@ -31,6 +34,7 @@ try:
                     func='apps.mappings.tasks.auto_import_and_map_fyle_fields',
                     args=schedule['args']
                 ).first().update(func='apps.mappings.imports.queues.chain_import_fields_to_fyle')
+                schedule_updated += 1
 
             if configuration.import_categories or configuration.import_vendors_as_merchants \
                 or (dependent_field_settings and dependent_field_settings.is_import_enabled)\
@@ -43,6 +47,10 @@ try:
                     minutes=24 * 60,
                     next_run=datetime.now()
                 )
+                schedule_created += 1
+
+    print('Schedules created: {}'.format(schedule_created))
+    print('Schedules updated: {}'.format(schedule_updated))
 
 except Exception as e:
     print(e)
