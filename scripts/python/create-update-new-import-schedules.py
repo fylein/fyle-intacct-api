@@ -27,7 +27,6 @@ try:
                     args=schedule['args']
                 ).first()
                 schedule.delete()
-
             if mapping_setting:
                 Schedule.objects.create(
                     func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
@@ -36,7 +35,6 @@ try:
                     minutes=24 * 60,
                     next_run=datetime.now()
                 )
-
         project_count = MappingSetting.objects.filter(source_field='PROJECT', import_to_fyle=True).count()
         schedule_count = Schedule.objects.filter(func='apps.mappings.imports.queues.chain_import_fields_to_fyle').count()
         import_task_workspace_ids = Configuration.objects.filter(import_categories=True, import_vendors_as_merchants=True).values_list('workspace_id', flat=True)
@@ -47,12 +45,10 @@ try:
         combined_workspace_ids = list(set(combined_workspace_ids))
         combined_workspace_ids_count = len(combined_workspace_ids)
         auto_import_schedule_count = Schedule.objects.filter(func='apps.mappings.tasks.auto_import_and_map_fyle_fields').count()
-
         print(f'project_count: {project_count}')
         print(f'schedule_count: {schedule_count}')
         print(f'combined_workspace_ids_count: {combined_workspace_ids_count}')
         print(f'auto_import_schedule_count: {auto_import_schedule_count}')
-
         # remove this sanity check after running this script
         raise Exception("This is a sanity check")
 
