@@ -1,6 +1,3 @@
-# -- if only project mapping then replace no import_vendors_as_merchants and import_categories and no dependant field
-# -- if both projects and import_categories or auto_create_vendors or dependant_fields then insert
-
 from django.db import transaction
 from datetime import datetime
 from django_q.models import Schedule
@@ -15,9 +12,6 @@ existing_import_enabled_schedules = Schedule.objects.filter(
     func__in=['apps.mappings.tasks.auto_import_and_map_fyle_fields']
 ).values('args')
 
-schedule_created = 0
-schedule_updated = 0
-
 try:
     # Create/update new schedules in a transaction block
     with transaction.atomic():
@@ -25,21 +19,16 @@ try:
             configuration = Configuration.objects.get(workspace_id=schedule['args'])
             dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=schedule['args']).first()
             mapping_setting = MappingSetting.objects.filter(source_field='PROJECT', workspace_id=schedule['args'], import_to_fyle=True).first()
-
+            
             if not configuration.import_categories and not configuration.import_vendors_as_merchants \
-                and (not dependent_field_settings or (dependent_field_settings and not dependent_field_settings.is_import_enabled))\
-                and mapping_setting:
-                #replace the schedule
-                Schedule.objects.filter(
+                and (not dependent_field_settings or (dependent_field_settings and not dependent_field_settings.is_import_enabled)):
+                schedule = Schedule.objects.filter(
                     func='apps.mappings.tasks.auto_import_and_map_fyle_fields',
                     args=schedule['args']
-                ).first().update(func='apps.mappings.imports.queues.chain_import_fields_to_fyle')
-                schedule_updated += 1
+                ).first()
+                schedule.delete()
 
-            if configuration.import_categories or configuration.import_vendors_as_merchants \
-                or (dependent_field_settings and dependent_field_settings.is_import_enabled)\
-                and mapping_setting:
-                #insert the schedule
+            if mapping_setting:
                 Schedule.objects.create(
                     func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
                     args=schedule['args'],
@@ -47,10 +36,25 @@ try:
                     minutes=24 * 60,
                     next_run=datetime.now()
                 )
-                schedule_created += 1
 
-    print('Schedules created: {}'.format(schedule_created))
-    print('Schedules updated: {}'.format(schedule_updated))
+        project_count = MappingSetting.objects.filter(source_field='PROJECT', import_to_fyle=True).count()
+        schedule_count = Schedule.objects.filter(func='apps.mappings.imports.queues.chain_import_fields_to_fyle').count()
+        import_task_workspace_ids = Configuration.objects.filter(import_categories=True, import_vendors_as_merchants=True).values_list('workspace_id', flat=True)
+        dependent_field_workspace_ids = DependentFieldSetting.objects.filter(is_import_enabled=True).values_list('workspace_id', flat=True)
+        combined_workspace_ids = []
+        combined_workspace_ids.extend(import_task_workspace_ids)
+        combined_workspace_ids.extend(dependent_field_workspace_ids)
+        combined_workspace_ids = list(set(combined_workspace_ids))
+        combined_workspace_ids_count = len(combined_workspace_ids)
+        auto_import_schedule_count = Schedule.objects.filter(func='apps.mappings.tasks.auto_import_and_map_fyle_fields').count()
+
+        print(f'project_count: {project_count}')
+        print(f'schedule_count: {schedule_count}')
+        print(f'combined_workspace_ids_count: {combined_workspace_ids_count}')
+        print(f'auto_import_schedule_count: {auto_import_schedule_count}')
+
+        # remove this sanity check after running this script
+        raise Exception("This is a sanity check")
 
 except Exception as e:
     print(e)

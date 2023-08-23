@@ -670,7 +670,7 @@ def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate
     if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
         si_connection.sync_expense_types()
 
-    if reimbursable_expenses_object == 'BILL' or \
+    if reimbursable_expenses_object in ('BILL', 'JOURNAL_ENTRY') or \
         corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
         si_connection.sync_accounts()
 
