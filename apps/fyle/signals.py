@@ -11,6 +11,8 @@ from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_
 
 from .helpers import connect_to_platform
 from .models import DependentFieldSetting
+from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
+from apps.workspaces.models import Configuration
 
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,7 @@ def run_post_save_dependent_field_settings_triggers(sender, instance: DependentF
     :param instance: Row instance of Sender Class
     :return: None
     """
+    configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
 
     if instance.workspace.app_version == 'v1':
-        async_task('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', instance.workspace_id)
+       schedule_or_delete_fyle_import_tasks(configuration)
