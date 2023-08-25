@@ -29,10 +29,14 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration):
     :param configuration: Workspace Configuration Instance
     :return: None
     """
-    project_mapping = MappingSetting.objects.filter(source_field='PROJECT', workspace_id=configuration.workspace_id).first()
-    dependent_fields = DependentFieldSetting.objects.filter(workspace_id=configuration.workspace_id).first()
+    project_mapping = MappingSetting.objects.filter(
+        source_field='PROJECT',
+        workspace_id=configuration.workspace_id,
+        import_to_fyle=True
+    ).first()
+    dependent_fields = DependentFieldSetting.objects.filter(workspace_id=configuration.workspace_id, is_import_enabled=True).first()
 
-    if configuration.import_categories or configuration.import_vendors_as_merchants or (project_mapping and project_mapping.import_to_fyle and dependent_fields and dependent_fields.is_import_enabled):
+    if configuration.import_categories or configuration.import_vendors_as_merchants or (project_mapping and dependent_fields):
         start_datetime = datetime.now()
         Schedule.objects.update_or_create(
             func='apps.mappings.tasks.auto_import_and_map_fyle_fields',
@@ -43,7 +47,7 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration):
                 'next_run': start_datetime
             }
         )
-    elif not configuration.import_categories and not configuration.import_vendors_as_merchants and not (project_mapping and project_mapping.import_to_fyle and dependent_fields and dependent_fields.is_import_enabled):
+    elif not configuration.import_categories and not configuration.import_vendors_as_merchants and not (project_mapping and dependent_fields):
         Schedule.objects.filter(
             func='apps.mappings.tasks.auto_import_and_map_fyle_fields',
             args='{}'.format(configuration.workspace_id)
