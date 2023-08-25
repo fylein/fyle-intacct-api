@@ -157,6 +157,8 @@ class Base:
             'ITEM': sage_intacct_connection.sync_items,
             'CUSTOMER': sage_intacct_connection.sync_customers,
             'COST_TYPE': sage_intacct_connection.sync_cost_types,
+            'EXPENSE_TYPE': sage_intacct_connection.sync_expense_types,
+            'ACCOUNT': sage_intacct_connection.sync_accounts,
         }
         
         sync_method = sync_methods.get(sageintacct_attribute_type, sage_intacct_connection.sync_user_defined_dimensions)

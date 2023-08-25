@@ -4,6 +4,7 @@ from fyle_accounting_mappings.models import MappingSetting
 
 IMPORT_TASK_TARGET_MAP = {
     'PROJECT': 'trigger_projects_import_via_schedule',
+    'CATEGORY': 'trigger_categories_import_via_schedule',
 }
 
 
