@@ -11,7 +11,7 @@ class Category(Base):
     def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime):
         super().__init__(
             workspace_id=workspace_id,
-            source_field='CATEGROY',
+            source_field='CATEGORY',
             destination_field=destination_field,
             platform_class_name='categories',
             sync_after=sync_after
@@ -42,11 +42,7 @@ class Category(Base):
             project = {
                 'name': attribute.value,
                 'code': attribute.destination_id,
-                'description': 'Sage Intacct Project - {0}, Id - {1}'.format(
-                    attribute.value,
-                    attribute.destination_id
-                ),
-                'is_enabled': True if attribute.active is None else attribute.active
+                'is_enabled': attribute.active
             }
 
             # Create a new project if it does not exist in Fyle

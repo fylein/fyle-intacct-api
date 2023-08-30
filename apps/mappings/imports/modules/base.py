@@ -9,7 +9,8 @@ from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     Mapping,
     DestinationAttribute,
-    ExpenseAttribute
+    ExpenseAttribute,
+    CategoryMapping
 )
 from apps.workspaces.models import FyleCredential
 from apps.mappings.models import ImportLog
@@ -101,6 +102,12 @@ class Base:
         fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
+        print("""
+
+            import_destination_attribute_to_fyle
+
+        """)
+
         self.sync_expense_attributes(platform)
 
         self.sync_destination_attributes(self.destination_field)
@@ -115,21 +122,61 @@ class Base:
         """
         Create mappings
         """
-        destination_attributes_without_duplicates = []
-        destination_attributes = DestinationAttribute.objects.filter(
-            workspace_id=self.workspace_id,
-            attribute_type=self.destination_field,
-            mapping__isnull=True
-        ).order_by('value', 'id')
-        destination_attributes_without_duplicates = self.__remove_duplicate_attributes(destination_attributes)
+        print("""
 
-        if destination_attributes_without_duplicates:
-            Mapping.bulk_create_mappings(
+            Create_mappings
+
+
+        """)
+        if self.source_field == 'CATEGORY':
+            print("""
+
+                 Entreed the id block
+
+            """)
+            filters = {
+                'workspace_id': self.workspace_id,
+                'attribute_type': self.destination_field
+            }
+            if self.destination_field == 'EXPENSE_TYPE':
+                filters['destination_expense_head__isnull'] = True
+            elif self.destination_field == 'ACCOUNT':
+                filters['destination_account__isnull'] = True
+
+            # filters = {
+            #     'destination_account__isnull' : True
+            # }
+
+            print(filters)
+
+            # get all the destination attributes that have category mappings as null
+            destination_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)
+
+            destination_attributes_without_duplicates = []
+            destination_attributes_without_duplicates = self.__remove_duplicate_attributes(destination_attributes)
+
+            CategoryMapping.bulk_create_mappings(
                 destination_attributes_without_duplicates,
-                self.source_field,
                 self.destination_field,
                 self.workspace_id
             )
+            
+        else:
+            destination_attributes_without_duplicates = []
+            destination_attributes = DestinationAttribute.objects.filter(
+                workspace_id=self.workspace_id,
+                attribute_type=self.destination_field,
+                mapping__isnull=True
+            ).order_by('value', 'id')
+            destination_attributes_without_duplicates = self.__remove_duplicate_attributes(destination_attributes)
+
+            if destination_attributes_without_duplicates:
+                Mapping.bulk_create_mappings(
+                    destination_attributes_without_duplicates,
+                    self.source_field,
+                    self.destination_field,
+                    self.workspace_id
+                )
 
     def sync_expense_attributes(self, platform: PlatformConnector):
         """
@@ -188,6 +235,8 @@ class Base:
             import_log.save()
             return
         else:
+            print('Thsi is the destination attributes count')
+            print(destination_attributes_count)
             import_log.total_batches_count = math.ceil(destination_attributes_count/200)
             import_log.save()
 
@@ -237,7 +286,7 @@ class Base:
         existing_expense_attributes_map = self.get_existing_fyle_attributes(paginated_destination_attribute_values)
 
         return self.construct_fyle_payload(paginated_destination_attributes, existing_expense_attributes_map, is_auto_sync_status_allowed)
-    
+
     def get_existing_fyle_attributes(self, paginated_destination_attribute_values: List[str]):
         """
         Get Existing Fyle Attributes
@@ -282,6 +331,11 @@ class Base:
         """
         Checks if the import is already in progress and if not, starts the import process
         """
+        print("""
+
+            check_import_log_and_start_import
+
+        """)
         import_log, is_created = ImportLog.objects.get_or_create(
             workspace_id=self.workspace_id,
             attribute_type=self.source_field,
@@ -291,6 +345,8 @@ class Base:
         )
         time_difference = datetime.now() - timedelta(minutes=30)
         offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)
+
+        print(import_log)
 
         # If the import is already in progress or if the last successful run is within 30 minutes, don't start the import process
         if (import_log.status == 'IN_PROGRESS' and not is_created) \
