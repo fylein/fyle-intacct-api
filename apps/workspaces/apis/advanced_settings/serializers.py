@@ -162,18 +162,6 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
                 'default_project_name': general_mappings.get('default_project').get('name'),       
                 'default_item_id': general_mappings.get('default_item').get('id'),
                 'default_item_name': general_mappings.get('default_item').get('name'),
-                'default_credit_card_id': general_mappings.get('default_credit_card').get('id'),
-                'default_credit_card_name': general_mappings.get('default_credit_card').get('name'),
-                'default_gl_account_id': general_mappings.get('default_gl_account').get('id'),
-                'default_gl_account_name': general_mappings.get('default_gl_account').get('name'),
-                'default_charge_card_id': general_mappings.get('default_charge_card').get('id'),
-                'default_charge_card_name': general_mappings.get('default_charge_card').get('name'),
-                'default_ccc_vendor_id': general_mappings.get('default_ccc_vendor').get('id'),
-                'default_ccc_vendor_name': general_mappings.get('default_ccc_vendor').get('name'),
-                'default_reimbursable_expense_payment_type_id': general_mappings.get('default_reimbursable_expense_payment_type').get('id'),
-                'default_reimbursable_expense_payment_type_name': general_mappings.get('default_reimbursable_expense_payment_type').get('name'),
-                'default_ccc_expense_payment_type_id': general_mappings.get('default_ccc_expense_payment_type').get('id'),
-                'default_ccc_expense_payment_type_name': general_mappings.get('default_ccc_expense_payment_type').get('name'),
                 'use_intacct_employee_departments': general_mappings.get('use_intacct_employee_departments'),
                 'use_intacct_employee_locations': general_mappings.get('use_intacct_employee_locations')
             }
