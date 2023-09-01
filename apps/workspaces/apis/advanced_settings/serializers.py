@@ -136,7 +136,7 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
         general_mappings = validated.pop('general_mappings')
         workspace_schedules = validated.pop('workspace_schedules')
 
-        configurations_instance, _ = Configuration.objects.update_or_create(
+        Configuration.objects.update_or_create(
             workspace=instance,
             defaults={
                 'sync_fyle_to_sage_intacct_payments': configurations.get('sync_fyle_to_sage_intacct_payments'),
@@ -151,10 +151,33 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
             workspace=instance,
             defaults={
                 'payment_account_name': general_mappings.get('payment_account').get('name'),
-                'payment_account_id': general_mappings.get('payment_account').get('id')
+                'payment_account_id': general_mappings.get('payment_account').get('id'),
+                'default_location_id': general_mappings.get('default_location').get('id'),
+                'default_location_name': general_mappings.get('default_location').get('name'),
+                'default_department_id': general_mappings.get('default_department').get('id'),
+                'default_department_name': general_mappings.get('default_department').get('name'),
+                'default_class_id': general_mappings.get('default_class').get('id'),
+                'default_class_name': general_mappings.get('default_class').get('name'),
+                'default_project_id': general_mappings.get('default_project').get('id'),
+                'default_project_name': general_mappings.get('default_project').get('name'),       
+                'default_item_id': general_mappings.get('default_item').get('id'),
+                'default_item_name': general_mappings.get('default_item').get('name'),
+                'default_credit_card_id': general_mappings.get('default_credit_card').get('id'),
+                'default_credit_card_name': general_mappings.get('default_credit_card').get('name'),
+                'default_gl_account_id': general_mappings.get('default_gl_account').get('id'),
+                'default_gl_account_name': general_mappings.get('default_gl_account').get('name'),
+                'default_charge_card_id': general_mappings.get('default_charge_card').get('id'),
+                'default_charge_card_name': general_mappings.get('default_charge_card').get('name'),
+                'default_ccc_vendor_id': general_mappings.get('default_ccc_vendor').get('id'),
+                'default_ccc_vendor_name': general_mappings.get('default_ccc_vendor').get('name'),
+                'default_reimbursable_expense_payment_type_id': general_mappings.get('default_reimbursable_expense_payment_type').get('id'),
+                'default_reimbursable_expense_payment_type_name': general_mappings.get('default_reimbursable_expense_payment_type').get('name'),
+                'default_ccc_expense_payment_type_id': general_mappings.get('default_ccc_expense_payment_type').get('id'),
+                'default_ccc_expense_payment_type_name': general_mappings.get('default_ccc_expense_payment_type').get('name'),
+                'use_intacct_employee_departments': general_mappings.get('use_intacct_employee_departments'),
+                'use_intacct_employee_locations': general_mappings.get('use_intacct_employee_locations')
             }
         )
-
 
         AdvancedConfigurationsTriggers.run_post_configurations_triggers(instance.id, workspace_schedules)
 
