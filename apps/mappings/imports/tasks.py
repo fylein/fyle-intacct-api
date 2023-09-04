@@ -26,6 +26,11 @@ def trigger_categories_import_via_schedule(workspace_id: int, destination_field:
     :param workspace_id: Workspace id
     :param destination_field: Destination field
     """
+    print("""
+
+        trigger_categories_import_via_schedule
+    
+    """)
     import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='CATEGORY').first()
     # sync_after = import_log.last_successful_run_at if import_log else None
     sync_after = None

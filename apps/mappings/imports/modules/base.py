@@ -107,14 +107,20 @@ class Base:
             import_destination_attribute_to_fyle
 
         """)
-
+        print("CATEGORY COUNT")
+        print(self.source_field)
+        print(ExpenseAttribute.objects.filter(attribute_type=self.source_field, workspace_id= self.workspace_id).count())
         self.sync_expense_attributes(platform)
+        print("CATEGORY COUNT")
+        print(ExpenseAttribute.objects.filter(attribute_type=self.source_field, workspace_id= self.workspace_id).count())
 
         self.sync_destination_attributes(self.destination_field)
 
         self.construct_payload_and_import_to_fyle(platform, import_log)
         
         self.sync_expense_attributes(platform)
+        print("CATEGORY COUNT")
+        print(ExpenseAttribute.objects.filter(attribute_type=self.source_field, workspace_id= self.workspace_id).count())
 
         self.create_mappings()
 
@@ -146,8 +152,6 @@ class Base:
             # filters = {
             #     'destination_account__isnull' : True
             # }
-
-            print(filters)
 
             # get all the destination attributes that have category mappings as null
             destination_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)
