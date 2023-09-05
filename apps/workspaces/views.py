@@ -348,7 +348,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
     def get(self, request, **kwargs):
         """
         Get Sage Intacct Credentials in Workspace
-        """
+        """ 
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace=workspace)

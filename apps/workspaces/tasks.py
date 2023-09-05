@@ -124,8 +124,7 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
         ws_schedule.emails_selected = emails_selected
         
         if email_added:
-            ws_schedule.additional_email_options.append(email_added)
-
+            ws_schedule.additional_email_options = email_added
 
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.workspaces.tasks.run_sync_schedule',
