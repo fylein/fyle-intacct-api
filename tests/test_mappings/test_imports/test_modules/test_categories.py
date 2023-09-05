@@ -219,20 +219,20 @@ def test_construct_fyle_payload(db):
     DestinationAttribute.objects.filter(
         workspace_id=1,
         attribute_type='EXPENSE_TYPE',
-        value__in=['labhvam','Naruto']
+        value__in=['Internet','Meals']
     ).update(active=False)
 
     ExpenseAttribute.objects.filter(
         workspace_id=1,
         attribute_type='CATEGORY',
-        value__in=['labhvam','Naruto']
+        value__in=['Internet','Meals']
     ).update(active=True)
 
     print("Lolsov")
     print(DestinationAttribute.objects.filter(
         workspace_id=1,
         attribute_type='EXPENSE_TYPE',
-        value__in=['labhvam','Naruto']
+        value__in=['Internet','Meals']
     ))
 
 
