@@ -17,6 +17,7 @@ from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.exceptions import handle_import_exceptions
+from apps.tasks.models import Error
 
 
 class Base:
@@ -93,6 +94,41 @@ class Base:
 
         return unique_attributes
 
+    def __get_mapped_attributes_ids(self, source_attribute_type: str, destination_attribute_type: str, errored_attribute_ids: List[int]):
+        mapped_attribute_ids = []
+        if source_attribute_type == "CATEGORY":
+            params = {
+                'source_category_id__in': errored_attribute_ids,
+            }
+
+            if destination_attribute_type == 'EXPENSE_TYPE':
+                params['destination_expense_head_id__isnull'] = False
+            else:
+                params['destination_account_id__isnull'] =  False
+
+            mapped_attribute_ids: List[int] = CategoryMapping.objects.filter(
+                **params
+            ).values_list('source_category_id', flat=True)
+
+        return mapped_attribute_ids
+    
+    def resolve_expense_attribute_errors(self, source_attribute_type: str, workspace_id: int, destination_attribute_type: str = None):
+        """
+        Resolve Expense Attribute Errors
+        :return: None
+        """
+        errored_attribute_ids: List[int] = Error.objects.filter(
+            is_resolved=False,
+            workspace_id=workspace_id,
+            type='{}_MAPPING'.format(source_attribute_type)
+        ).values_list('expense_attribute_id', flat=True)
+
+        if errored_attribute_ids:
+            mapped_attribute_ids = self.__get_mapped_attributes_ids(source_attribute_type, destination_attribute_type, errored_attribute_ids)
+            print(mapped_attribute_ids)
+            if mapped_attribute_ids:
+                Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
+
     @handle_import_exceptions
     def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
@@ -123,6 +159,13 @@ class Base:
         print(ExpenseAttribute.objects.filter(attribute_type=self.source_field, workspace_id= self.workspace_id).count())
 
         self.create_mappings()
+
+        self.resolve_expense_attribute_errors(
+            source_attribute_type=self.source_field,
+            workspace_id=self.workspace_id,
+            destination_attribute_type=self.destination_field
+        )
+
 
     def create_mappings(self):
         """

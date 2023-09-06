@@ -199,6 +199,40 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         assert pre_run_expense_attribute_count == post_run_expense_attribute_count
 
 
+    # create new case for categories import
+    with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
+        mocker.patch(
+            'fyle_integrations_platform_connector.apis.Categories.post_bulk',
+            return_value=[]
+        )
+        mocker.patch(
+            'sageintacctsdk.apis.Accounts.get_all',
+            return_value=[]
+        )
+        mock_call.side_effect = [
+            [],
+            [] 
+        ]
+
+        expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='CATEGORY').count()
+
+        assert expense_attributes_count == 0
+
+        mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
+        
+        assert mappings_count == 0
+
+        category.trigger_import()
+
+        expense_attributes_count = ExpenseAttribute.objects.filter(attribute_type='CATEGORY').count()
+
+        assert expense_attributes_count == 30
+
+        mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
+        
+        assert mappings_count == 12
+
+
 def test_construct_fyle_payload(db):
     category = Category(1, 'EXPENSE_TYPE', None)
 

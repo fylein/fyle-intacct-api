@@ -7,14 +7,17 @@ from datetime import (
 from fyle_accounting_mappings.models import (
     DestinationAttribute, 
     ExpenseAttribute,
-    Mapping
+    Mapping,
+    CategoryMapping
 )
 from unittest import mock
 from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential
 from apps.mappings.imports.modules.projects import Project
+from apps.mappings.imports.modules.categories import Category
 from apps.mappings.models import ImportLog
 from .fixtures import data as destination_attributes_data
+from apps.tasks.models import Error
 from .helpers import *
 
 
@@ -362,3 +365,46 @@ def test_expense_attributes_sync_after(db):
     expense_attributes = ExpenseAttribute.objects.filter(**filters)
 
     assert expense_attributes.count() == 100
+
+def test_resolve_expense_attribute_errors(db):
+    workspace_id = 1
+    category = Category(1, 'EXPENSE_TYPE', None)
+
+    # getting the expense_attribute
+    source_category = ExpenseAttribute.objects.filter(
+        id=106,
+        workspace_id=1,
+        attribute_type='CATEGORY'
+    ).first()
+
+    print(source_category.value)
+
+    category_mapping_count = CategoryMapping.objects.filter(workspace_id=1, source_category_id=source_category.id).count()
+
+    # category mapping is not present
+    assert category_mapping_count == 0
+
+    error, _  = Error.objects.update_or_create(
+        workspace_id=1,
+        expense_attribute=source_category,
+        defaults={
+            'type': 'CATEGORY_MAPPING',
+            'error_title': source_category.value,
+            'error_detail': 'Category mapping is missing',
+            'is_resolved': False
+        }
+    )
+
+    assert Error.objects.get(id=error.id).is_resolved == False
+
+    destination_attribute = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').first()
+
+    # creating the category mapping
+    CategoryMapping.objects.create(
+        workspace_id=1,
+        source_category_id=source_category.id,
+        destination_expense_head_id=destination_attribute.id
+    )
+
+    category.resolve_expense_attribute_errors('CATEGORY', workspace_id, 'ACCOUNT')
+    assert Error.objects.get(id=error.id).is_resolved == True
