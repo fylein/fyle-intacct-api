@@ -118,30 +118,14 @@ class Base:
         Resolve Expense Attribute Errors
         :return: None
         """
-        print("""
-
-            resolve_expense_attribute_errors
-
-        """)
-        print(Error.objects.filter(workspace_id=self.workspace_id))
-
-
-        err = Error.objects.filter(workspace_id=self.workspace_id).first()
-        print(err.is_resolved)
-        print(err.type)
-
-
         errored_attribute_ids: List[int] = Error.objects.filter(
             is_resolved=False,
             workspace_id=self.workspace_id,
             type='{}_MAPPING'.format(self.source_field)
         ).values_list('expense_attribute_id', flat=True)
 
-        print(errored_attribute_ids)
-
         if errored_attribute_ids:
             mapped_attribute_ids = self.__get_mapped_attributes_ids(errored_attribute_ids)
-            print(mapped_attribute_ids)
             if mapped_attribute_ids:
                 Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
 
@@ -166,11 +150,7 @@ class Base:
 
         self.create_ccc_category_mappings()
 
-        self.resolve_expense_attribute_errors(
-            source_attribute_type=self.source_field,
-            workspace_id=self.workspace_id,
-            destination_attribute_type=self.destination_field
-        )
+        self.resolve_expense_attribute_errors()
 
     def create_ccc_category_mappings(self):
         configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
@@ -182,18 +162,7 @@ class Base:
         """
         Create mappings
         """
-        print("""
-
-            Create_mappings
-
-
-        """)
         if self.source_field == 'CATEGORY':
-            print("""
-
-                 Entreed the id block
-
-            """)
             filters = {
                 'workspace_id': self.workspace_id,
                 'attribute_type': self.destination_field
