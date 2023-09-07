@@ -367,8 +367,16 @@ def test_expense_attributes_sync_after(db):
     assert expense_attributes.count() == 100
 
 def test_resolve_expense_attribute_errors(db):
+    print("""
+
+        resolve_expense_attribute_errors
+
+    """)
     workspace_id = 1
     category = Category(1, 'EXPENSE_TYPE', None)
+
+    # deleting all the Error objects
+    Error.objects.filter(workspace_id=workspace_id).delete()
 
     # getting the expense_attribute
     source_category = ExpenseAttribute.objects.filter(
@@ -377,23 +385,24 @@ def test_resolve_expense_attribute_errors(db):
         attribute_type='CATEGORY'
     ).first()
 
-    print(source_category.value)
-
     category_mapping_count = CategoryMapping.objects.filter(workspace_id=1, source_category_id=source_category.id).count()
 
     # category mapping is not present
     assert category_mapping_count == 0
 
-    error, _  = Error.objects.update_or_create(
-        workspace_id=1,
+    error = Error.objects.create(
+        workspace_id=workspace_id,
         expense_attribute=source_category,
-        defaults={
-            'type': 'CATEGORY_MAPPING',
-            'error_title': source_category.value,
-            'error_detail': 'Category mapping is missing',
-            'is_resolved': False
-        }
+        type='CATEGORY_MAPPING',
+        error_title=source_category.value,
+        error_detail='Category mapping is missing',
+        is_resolved=False
     )
+
+    print("ERROR's persent")
+    err = Error.objects.filter(workspace_id=workspace_id).first()
+    print(err.is_resolved)
+    print(err.type)
 
     assert Error.objects.get(id=error.id).is_resolved == False
 
@@ -406,5 +415,5 @@ def test_resolve_expense_attribute_errors(db):
         destination_expense_head_id=destination_attribute.id
     )
 
-    category.resolve_expense_attribute_errors('CATEGORY', workspace_id, 'ACCOUNT')
+    category.resolve_expense_attribute_errors()
     assert Error.objects.get(id=error.id).is_resolved == True

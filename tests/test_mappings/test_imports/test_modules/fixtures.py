@@ -9807,16 +9807,16 @@ category_data = {
     ],
     "create_fyle_category_payload_create_disable_case": [
         {
-            'name':'Meals',
-            'code':'Meals',
-            'is_enabled':False,
-            'id':'135741'
-        },
-        {
             'name':'Internet',
             'code':'Internet',
             'is_enabled':False,
             'id':'135456'
+        },
+        {
+            'name':'Meals',
+            'code':'Meals',
+            'is_enabled':False,
+            'id':'135741'
         }
     ]
 }

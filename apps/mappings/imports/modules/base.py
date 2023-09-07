@@ -18,6 +18,7 @@ from apps.workspaces.models import SageIntacctCredential
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.exceptions import handle_import_exceptions
 from apps.tasks.models import Error
+from apps.workspaces.models import Configuration
 
 
 class Base:
@@ -94,14 +95,14 @@ class Base:
 
         return unique_attributes
 
-    def __get_mapped_attributes_ids(self, source_attribute_type: str, destination_attribute_type: str, errored_attribute_ids: List[int]):
+    def __get_mapped_attributes_ids(self, errored_attribute_ids: List[int]):
         mapped_attribute_ids = []
-        if source_attribute_type == "CATEGORY":
+        if self.source_field == "CATEGORY":
             params = {
                 'source_category_id__in': errored_attribute_ids,
             }
 
-            if destination_attribute_type == 'EXPENSE_TYPE':
+            if self.destination_field == 'EXPENSE_TYPE':
                 params['destination_expense_head_id__isnull'] = False
             else:
                 params['destination_account_id__isnull'] =  False
@@ -112,19 +113,34 @@ class Base:
 
         return mapped_attribute_ids
     
-    def resolve_expense_attribute_errors(self, source_attribute_type: str, workspace_id: int, destination_attribute_type: str = None):
+    def resolve_expense_attribute_errors(self):
         """
         Resolve Expense Attribute Errors
         :return: None
         """
+        print("""
+
+            resolve_expense_attribute_errors
+
+        """)
+        print(Error.objects.filter(workspace_id=self.workspace_id))
+
+
+        err = Error.objects.filter(workspace_id=self.workspace_id).first()
+        print(err.is_resolved)
+        print(err.type)
+
+
         errored_attribute_ids: List[int] = Error.objects.filter(
             is_resolved=False,
-            workspace_id=workspace_id,
-            type='{}_MAPPING'.format(source_attribute_type)
+            workspace_id=self.workspace_id,
+            type='{}_MAPPING'.format(self.source_field)
         ).values_list('expense_attribute_id', flat=True)
 
+        print(errored_attribute_ids)
+
         if errored_attribute_ids:
-            mapped_attribute_ids = self.__get_mapped_attributes_ids(source_attribute_type, destination_attribute_type, errored_attribute_ids)
+            mapped_attribute_ids = self.__get_mapped_attributes_ids(errored_attribute_ids)
             print(mapped_attribute_ids)
             if mapped_attribute_ids:
                 Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
@@ -138,27 +154,17 @@ class Base:
         fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-        print("""
-
-            import_destination_attribute_to_fyle
-
-        """)
-        print("CATEGORY COUNT")
-        print(self.source_field)
-        print(ExpenseAttribute.objects.filter(attribute_type=self.source_field, workspace_id= self.workspace_id).count())
         self.sync_expense_attributes(platform)
-        print("CATEGORY COUNT")
-        print(ExpenseAttribute.objects.filter(attribute_type=self.source_field, workspace_id= self.workspace_id).count())
 
         self.sync_destination_attributes(self.destination_field)
 
         self.construct_payload_and_import_to_fyle(platform, import_log)
         
         self.sync_expense_attributes(platform)
-        print("CATEGORY COUNT")
-        print(ExpenseAttribute.objects.filter(attribute_type=self.source_field, workspace_id= self.workspace_id).count())
 
         self.create_mappings()
+
+        self.create_ccc_category_mappings()
 
         self.resolve_expense_attribute_errors(
             source_attribute_type=self.source_field,
@@ -166,6 +172,11 @@ class Base:
             destination_attribute_type=self.destination_field
         )
 
+    def create_ccc_category_mappings(self):
+        configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
+        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
+            configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
+            CategoryMapping.bulk_create_ccc_category_mappings(self.workspace_id)
 
     def create_mappings(self):
         """
@@ -191,10 +202,6 @@ class Base:
                 filters['destination_expense_head__isnull'] = True
             elif self.destination_field == 'ACCOUNT':
                 filters['destination_account__isnull'] = True
-
-            # filters = {
-            #     'destination_account__isnull' : True
-            # }
 
             # get all the destination attributes that have category mappings as null
             destination_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)
