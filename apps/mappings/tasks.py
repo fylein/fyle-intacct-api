@@ -9,18 +9,32 @@ from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
-from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError, InternalServerError
+from fyle.platform.exceptions import (
+    WrongParamsError,
+    InvalidTokenError as FyleInvalidTokenError,
+    InternalServerError
+)
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
-from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
-    CategoryMapping, EmployeeMapping
-
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
-
+from fyle_accounting_mappings.models import (
+    Mapping,
+    MappingSetting,
+    ExpenseAttribute,
+    DestinationAttribute,
+    EmployeeMapping
+)
+from sageintacctsdk.exceptions import (
+    InvalidTokenError,
+    NoPrivilegeError
+)
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.tasks.models import Error
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
+from apps.workspaces.models import (
+    SageIntacctCredential,
+    FyleCredential,
+    Configuration
+)
 from apps.fyle.models import DependentFieldSetting
 from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
 

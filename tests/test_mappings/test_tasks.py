@@ -1,16 +1,22 @@
 from unittest import mock
 from django_q.models import Schedule
-from fyle_accounting_mappings.models import DestinationAttribute, CategoryMapping, \
-    Mapping, MappingSetting, EmployeeMapping, ExpenseAttribute
+from fyle_accounting_mappings.models import (
+    DestinationAttribute,
+    Mapping,
+    MappingSetting,
+    EmployeeMapping,
+    ExpenseAttribute
+)
 from apps.mappings.tasks import *
 from fyle_integrations_platform_connector import PlatformConnector
 from ..test_sageintacct.fixtures import data as intacct_data
 from ..test_fyle.fixtures import data as fyle_data
-from .fixtures import data
-from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential, Configuration
 from apps.fyle.models import ExpenseGroup
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError, InternalServerError
+from fyle.platform.exceptions import (
+    InvalidTokenError as FyleInvalidTokenError,
+    InternalServerError
+)
 from sageintacctsdk.exceptions import NoPrivilegeError
 
 
