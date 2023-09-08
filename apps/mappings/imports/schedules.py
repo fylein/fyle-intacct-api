@@ -32,7 +32,6 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, mapping_s
         )
         return
 
-
     # If none of the conditions are met, delete the existing schedule
     Schedule.objects.filter(
         func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
