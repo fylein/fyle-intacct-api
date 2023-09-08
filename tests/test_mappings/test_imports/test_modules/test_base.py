@@ -367,11 +367,6 @@ def test_expense_attributes_sync_after(db):
     assert expense_attributes.count() == 100
 
 def test_resolve_expense_attribute_errors(db):
-    print("""
-
-        resolve_expense_attribute_errors
-
-    """)
     workspace_id = 1
     category = Category(1, 'EXPENSE_TYPE', None)
 
@@ -399,21 +394,19 @@ def test_resolve_expense_attribute_errors(db):
         is_resolved=False
     )
 
-    print("ERROR's persent")
-    err = Error.objects.filter(workspace_id=workspace_id).first()
-    print(err.is_resolved)
-    print(err.type)
-
     assert Error.objects.get(id=error.id).is_resolved == False
 
     destination_attribute = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').first()
 
-    # creating the category mapping
-    CategoryMapping.objects.create(
+    # creating the category mapping in bulk mode to avoid setting the is_resolved flag to true by signal
+    category_list = []
+    category_list.append(
+        CategoryMapping(
         workspace_id=1,
         source_category_id=source_category.id,
         destination_expense_head_id=destination_attribute.id
-    )
+    ))
+    CategoryMapping.objects.bulk_create(category_list)
 
     category.resolve_expense_attribute_errors()
     assert Error.objects.get(id=error.id).is_resolved == True

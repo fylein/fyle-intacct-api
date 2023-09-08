@@ -96,6 +96,11 @@ class Base:
         return unique_attributes
 
     def __get_mapped_attributes_ids(self, errored_attribute_ids: List[int]):
+        print("""
+
+            GET MAPPED ATTRIBUTES IDS
+
+        """)
         mapped_attribute_ids = []
         if self.source_field == "CATEGORY":
             params = {
@@ -118,14 +123,23 @@ class Base:
         Resolve Expense Attribute Errors
         :return: None
         """
+        print("""
+
+            RESOLVE EXPENSE ATTRIBUTE ERRORS
+        
+        """)
         errored_attribute_ids: List[int] = Error.objects.filter(
             is_resolved=False,
             workspace_id=self.workspace_id,
             type='{}_MAPPING'.format(self.source_field)
         ).values_list('expense_attribute_id', flat=True)
 
+        print("errored_attribute_ids: ")
+        print(errored_attribute_ids)
+
         if errored_attribute_ids:
             mapped_attribute_ids = self.__get_mapped_attributes_ids(errored_attribute_ids)
+            print("mpped_attribute_ids: ", mapped_attribute_ids)
             if mapped_attribute_ids:
                 Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
 
@@ -146,16 +160,47 @@ class Base:
         
         self.sync_expense_attributes(platform)
 
+        errored_attribute_ids = Error.objects.filter(
+            workspace_id=self.workspace_id,
+        ).all()
+
+        print("errored_attribute_ids pre create_mappings run:")
+        print(errored_attribute_ids)
+        if errored_attribute_ids:
+            for er in errored_attribute_ids:
+                print(er.is_resolved)
+                print(er.expense_attribute_id)
+
+
         self.create_mappings()
 
         self.create_ccc_category_mappings()
 
+        errored_attribute_ids = Error.objects.filter(
+            workspace_id=self.workspace_id,
+        ).all()
+
+        print("errored_attribute_ids post create_mappings run:")
+        print(errored_attribute_ids)
+        if errored_attribute_ids:
+            for er in errored_attribute_ids:
+                print(er.is_resolved)
+                print(er.expense_attribute_id)
+
+
         self.resolve_expense_attribute_errors()
 
     def create_ccc_category_mappings(self):
+
+        print("""
+
+            CREATE CCC CATEGORY MAPPINGS
+
+        """)
         configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
-            configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
+            configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY') and\
+            self.source_field == 'CATEGORY':
             CategoryMapping.bulk_create_ccc_category_mappings(self.workspace_id)
 
     def create_mappings(self):
@@ -242,11 +287,18 @@ class Base:
         """
         Construct Payload and Import to fyle in Batches
         """
+        print("""
+
+            CONSTRUCT PAYLOAD AND IMPORT TO FYLE IN BATCHES
+
+        """)
         is_auto_sync_status_allowed = self.__get_auto_sync_permission()
 
         filters = self.__construct_attributes_filter(self.destination_field)
 
         destination_attributes_count = DestinationAttribute.objects.filter(**filters).count()
+
+        print("destination_attributes_count: ", destination_attributes_count)
 
         # If there are no destination attributes, mark the import as complete
         if destination_attributes_count == 0:
@@ -258,8 +310,6 @@ class Base:
             import_log.save()
             return
         else:
-            print('Thsi is the destination attributes count')
-            print(destination_attributes_count)
             import_log.total_batches_count = math.ceil(destination_attributes_count/200)
             import_log.save()
 

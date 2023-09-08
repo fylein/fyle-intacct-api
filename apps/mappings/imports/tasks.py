@@ -10,11 +10,6 @@ def trigger_projects_import_via_schedule(workspace_id: int, destination_field: s
     :param workspace_id: Workspace id
     :param destination_field: Destination field
     """
-    print("""
-
-        trigger_projects_import_via_schedule
-    
-    """)
     import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').first()
     sync_after = import_log.last_successful_run_at if import_log else None
     project = Project(workspace_id, destination_field, sync_after)
@@ -26,13 +21,7 @@ def trigger_categories_import_via_schedule(workspace_id: int, destination_field:
     :param workspace_id: Workspace id
     :param destination_field: Destination field
     """
-    print("""
-
-        trigger_categories_import_via_schedule
-    
-    """)
     import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='CATEGORY').first()
-    # sync_after = import_log.last_successful_run_at if import_log else None
-    sync_after = None
+    sync_after = import_log.last_successful_run_at if import_log else None
     category = Category(workspace_id, destination_field, sync_after)
     category.trigger_import()
