@@ -36,14 +36,6 @@ class Category(Base):
         :param is_auto_sync_status_allowed: Is auto sync status allowed
         :return: Fyle payload
         """
-        print("""
-
-            construct_fyle_payload
-
-        """)
-        print(paginated_destination_attributes)
-        print(existing_fyle_attributes_map)
-        print(is_auto_sync_status_allowed)
         payload = []
 
         for attribute in paginated_destination_attributes:
@@ -61,5 +53,4 @@ class Category(Base):
                 project['id'] = existing_fyle_attributes_map[attribute.value.lower()]
                 payload.append(project)
 
-        print(payload)
         return payload

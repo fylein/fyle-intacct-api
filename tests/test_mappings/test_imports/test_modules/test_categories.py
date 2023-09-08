@@ -265,14 +265,6 @@ def test_construct_fyle_payload(db):
         value__in=['Internet','Meals']
     ).update(active=True)
 
-    print("Lolsov")
-    print(DestinationAttribute.objects.filter(
-        workspace_id=1,
-        attribute_type='EXPENSE_TYPE',
-        value__in=['Internet','Meals']
-    ))
-
-
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE')
 
     paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes]

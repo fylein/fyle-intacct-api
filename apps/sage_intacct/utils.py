@@ -177,14 +177,6 @@ class SageIntacctConnector:
         """
         expense_types = self.connection.expense_types.get_all()
 
-        print("""
-
-            sync_expense_types
-
-        """)
-
-        print(expense_types)
-
         expense_types_attributes = []
         destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
                 attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail')
