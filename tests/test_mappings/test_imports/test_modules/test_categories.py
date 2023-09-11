@@ -266,7 +266,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1, destination_account_id__isnull=True).count()
         
-        assert mappings_count == 12
+        assert mappings_count == 0
 
 
 def test_construct_fyle_payload(db):
