@@ -7,7 +7,10 @@ from fyle_accounting_mappings.models import (
     CategoryMapping
 )
 from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import FyleCredential
+from apps.workspaces.models import (
+    FyleCredential,
+    Configuration
+)
 from .fixtures import category_data
 
 
@@ -234,6 +237,36 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
         
         assert mappings_count == 13
+
+    # for 3D mapping case 
+    configuration = Configuration.objects.get(workspace_id=1)
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.corporate_credit_card_expenses_object = 'BILL'
+    configuration.save()
+
+    with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
+        mocker.patch(
+            'fyle_integrations_platform_connector.apis.Categories.post_bulk',
+            return_value=[]
+        )
+        mocker.patch(
+            'sageintacctsdk.apis.Accounts.get_all',
+            return_value=[]
+        )
+        mock_call.side_effect = [
+            [],
+            [] 
+        ]
+
+        mappings_count = CategoryMapping.objects.filter(workspace_id=1, destination_account_id__isnull=True).count()
+        
+        assert mappings_count == 12
+
+        category.trigger_import()
+
+        mappings_count = CategoryMapping.objects.filter(workspace_id=1, destination_account_id__isnull=True).count()
+        
+        assert mappings_count == 12
 
 
 def test_construct_fyle_payload(db):
