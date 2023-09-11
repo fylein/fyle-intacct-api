@@ -79,7 +79,7 @@ class Base:
 
         return filters
     
-    def __remove_duplicate_attributes(self, destination_attributes: List[DestinationAttribute]):
+    def remove_duplicate_attributes(self, destination_attributes: List[DestinationAttribute]):
         """
         Remove duplicate attributes
         :param destination_attributes: destination attributes
@@ -96,6 +96,11 @@ class Base:
         return unique_attributes
 
     def __get_mapped_attributes_ids(self, errored_attribute_ids: List[int]):
+        """
+        Get mapped attributes ids
+        :param errored_attribute_ids: list[int]
+        :return: list[int]
+        """
         mapped_attribute_ids = []
         if self.source_field == "CATEGORY":
             params = {
@@ -129,6 +134,14 @@ class Base:
             if mapped_attribute_ids:
                 Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
 
+    def create_ccc_category_mappings(self):
+
+        configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
+        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
+            configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY') and\
+            self.source_field == 'CATEGORY':
+            CategoryMapping.bulk_create_ccc_category_mappings(self.workspace_id)
+
     @handle_import_exceptions
     def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
@@ -152,56 +165,25 @@ class Base:
 
         self.resolve_expense_attribute_errors()
 
-    def create_ccc_category_mappings(self):
-
-        configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
-        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
-            configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY') and\
-            self.source_field == 'CATEGORY':
-            CategoryMapping.bulk_create_ccc_category_mappings(self.workspace_id)
-
     def create_mappings(self):
         """
         Create mappings
         """
-        if self.source_field == 'CATEGORY':
-            filters = {
-                'workspace_id': self.workspace_id,
-                'attribute_type': self.destination_field
-            }
-            if self.destination_field == 'EXPENSE_TYPE':
-                filters['destination_expense_head__isnull'] = True
-            elif self.destination_field == 'ACCOUNT':
-                filters['destination_account__isnull'] = True
+        destination_attributes_without_duplicates = []
+        destination_attributes = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id,
+            attribute_type=self.destination_field,
+            mapping__isnull=True
+        ).order_by('value', 'id')
+        destination_attributes_without_duplicates = self.remove_duplicate_attributes(destination_attributes)
 
-            # get all the destination attributes that have category mappings as null
-            destination_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)
-
-            destination_attributes_without_duplicates = []
-            destination_attributes_without_duplicates = self.__remove_duplicate_attributes(destination_attributes)
-
-            CategoryMapping.bulk_create_mappings(
+        if destination_attributes_without_duplicates:
+            Mapping.bulk_create_mappings(
                 destination_attributes_without_duplicates,
+                self.source_field,
                 self.destination_field,
                 self.workspace_id
             )
-            
-        else:
-            destination_attributes_without_duplicates = []
-            destination_attributes = DestinationAttribute.objects.filter(
-                workspace_id=self.workspace_id,
-                attribute_type=self.destination_field,
-                mapping__isnull=True
-            ).order_by('value', 'id')
-            destination_attributes_without_duplicates = self.__remove_duplicate_attributes(destination_attributes)
-
-            if destination_attributes_without_duplicates:
-                Mapping.bulk_create_mappings(
-                    destination_attributes_without_duplicates,
-                    self.source_field,
-                    self.destination_field,
-                    self.workspace_id
-                )
 
     def sync_expense_attributes(self, platform: PlatformConnector):
         """
@@ -289,7 +271,7 @@ class Base:
         for offset in range(0, destination_attributes_count, 200):
             limit = offset + 200
             paginated_destination_attributes = DestinationAttribute.objects.filter(**filters).order_by('value', 'id')[offset:limit]
-            paginated_destination_attributes_without_duplicates = self.__remove_duplicate_attributes(paginated_destination_attributes)
+            paginated_destination_attributes_without_duplicates = self.remove_duplicate_attributes(paginated_destination_attributes)
             is_last_batch = True if limit >= destination_attributes_count else False
 
             yield paginated_destination_attributes_without_duplicates, is_last_batch

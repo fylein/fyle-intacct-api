@@ -73,7 +73,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert projects_count == 1244 + destination_attributes_data['create_new_auto_create_projects_expense_attributes_0'][0]['count']
 
 
-def test__remove_duplicates(db):
+def test_remove_duplicates(db):
     attributes = DestinationAttribute.objects.filter(attribute_type='EMPLOYEE')
     
     assert len(attributes) == 55
@@ -92,7 +92,7 @@ def test__remove_duplicates(db):
 
     base = get_base_class_instance()
 
-    attributes = base._Base__remove_duplicate_attributes(attributes)
+    attributes = base.remove_duplicate_attributes(attributes)
     assert len(attributes) == 55
 
 def test__get_platform_class(db):
