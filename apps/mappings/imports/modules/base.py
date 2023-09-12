@@ -135,7 +135,10 @@ class Base:
                 Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
 
     def create_ccc_category_mappings(self):
-
+        """
+        Create CCC Category Mappings
+        :return: None
+        """
         configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
             configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY') and\
