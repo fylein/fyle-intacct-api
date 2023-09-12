@@ -1,16 +1,22 @@
 from unittest import mock
 from django_q.models import Schedule
-from fyle_accounting_mappings.models import DestinationAttribute, CategoryMapping, \
-    Mapping, MappingSetting, EmployeeMapping, ExpenseAttribute
+from fyle_accounting_mappings.models import (
+    DestinationAttribute,
+    Mapping,
+    MappingSetting,
+    EmployeeMapping,
+    ExpenseAttribute
+)
 from apps.mappings.tasks import *
 from fyle_integrations_platform_connector import PlatformConnector
 from ..test_sageintacct.fixtures import data as intacct_data
 from ..test_fyle.fixtures import data as fyle_data
-from .fixtures import data
-from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential, Configuration
 from apps.fyle.models import ExpenseGroup
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError, InternalServerError
+from fyle.platform.exceptions import (
+    InvalidTokenError as FyleInvalidTokenError,
+    InternalServerError
+)
 from sageintacctsdk.exceptions import NoPrivilegeError
 
 
@@ -152,128 +158,6 @@ def test_remove_duplicates(db):
 
     attributes = remove_duplicates(attributes)
     assert len(attributes) == 55
-
-
-def test_upload_categories_to_fyle(mocker, db):
-    workspace_id = 1
-    mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Categories.list_all',
-        return_value=fyle_data['get_all_categories']
-    )
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.Categories.post_bulk',
-        return_value='nilesh'
-    )
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.Categories.sync',
-        return_value=None
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.ExpenseTypes.get_all',
-        return_value=intacct_data['get_expense_types']
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Accounts.get_all',
-        return_value=intacct_data['get_accounts']
-    )
-    fyle_credentials = FyleCredential.objects.filter(workspace_id=1).first()
-    intacct_attributes = upload_categories_to_fyle(workspace_id=workspace_id, reimbursable_expenses_object='EXPENSE_REPORT', corporate_credit_card_expenses_object='BILL', fyle_credentials=fyle_credentials)
-    assert len(intacct_attributes) == 8
-
-    count_of_accounts = DestinationAttribute.objects.filter(
-        attribute_type='ACCOUNT', workspace_id=workspace_id).count()
-    assert count_of_accounts == 170
-
-
-def test_create_fyle_category_payload(mocker, db):
-    workspace_id = 1
-    intacct_attributes = DestinationAttribute.objects.filter(
-        workspace_id=1, attribute_type='ACCOUNT'
-    )
-
-    mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Categories.list_all',
-        return_value=fyle_data['get_all_categories']
-    )
-
-    intacct_attributes = remove_duplicates(intacct_attributes)
-
-    fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-    platform = PlatformConnector(fyle_credentials)
-
-    category_map = get_all_categories_from_fyle(platform=platform)
-    fyle_category_payload = create_fyle_categories_payload(intacct_attributes, category_map)
-    
-    assert dict_compare_keys(fyle_category_payload[0], data['fyle_category_payload'][0]) == [], 'category upload api return diffs in keys'
-
-
-def test_auto_create_category_mappings(db, mocker):
-    workspace_id = 1
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.Categories.post_bulk',
-        return_value=[]
-    )
-
-    mocker.patch(
-        'sageintacctsdk.apis.Accounts.get_all',
-        return_value=intacct_data['get_accounts']
-    )
-
-    mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Categories.list_all',
-        return_value=fyle_data['get_all_categories']
-    )
-
-    mocker.patch(
-        'sageintacctsdk.apis.ExpenseTypes.get_all',
-        return_value=intacct_data['get_expense_types']
-    )
-
-    category_mapping = CategoryMapping.objects.first()
-    category_mapping.destination_account = None
-    category_mapping.save()
-
-    response = auto_create_category_mappings(workspace_id=workspace_id)
-    assert response == []
-
-    mappings = CategoryMapping.objects.filter(workspace_id=workspace_id)
-    assert len(mappings) == 75
-
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
-    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
-    configuration.save()
-
-    response = auto_create_category_mappings(workspace_id=workspace_id)
-    assert response == []
-
-    mappings = CategoryMapping.objects.filter(workspace_id=workspace_id)
-    assert len(mappings) == 75
-
-    DestinationAttribute.objects.filter(id='930').update(active=False)
-    response = auto_create_category_mappings(workspace_id=workspace_id)
-    assert response == []
-
-    expense_attribute_id = CategoryMapping.objects.filter(destination_expense_head_id='930').first().source_category_id
-    expense_attribute = ExpenseAttribute.objects.filter(id=expense_attribute_id).first()
-
-    assert expense_attribute.active == False
-
-    with mock.patch('fyle_integrations_platform_connector.apis.Categories.post_bulk') as mock_call:
-        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
-        auto_create_category_mappings(workspace_id=workspace_id)
-
-        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
-        auto_create_category_mappings(workspace_id=workspace_id)
-
-        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
-        auto_create_category_mappings(workspace_id=workspace_id)
-
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-    fyle_credentials.delete()
-
-    response = auto_create_category_mappings(workspace_id=workspace_id)
-
-    assert response == None
 
 
 def test_async_auto_map_employees(mocker, db):
@@ -577,12 +461,6 @@ def test_schedule_auto_map_charge_card_employees(db):
     ).first()
 
     assert schedule == None
-
-
-def test_bulk_create_ccc_category_mappings(mocker, db):
-    workspace_id = 1
-
-    bulk_create_ccc_category_mappings(workspace_id)
 
 
 def test_auto_create_vendors_as_merchants(db, mocker):

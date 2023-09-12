@@ -7,14 +7,17 @@ from datetime import (
 from fyle_accounting_mappings.models import (
     DestinationAttribute, 
     ExpenseAttribute,
-    Mapping
+    Mapping,
+    CategoryMapping
 )
 from unittest import mock
 from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential
 from apps.mappings.imports.modules.projects import Project
+from apps.mappings.imports.modules.categories import Category
 from apps.mappings.models import ImportLog
 from .fixtures import data as destination_attributes_data
+from apps.tasks.models import Error
 from .helpers import *
 
 
@@ -70,7 +73,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert projects_count == 1244 + destination_attributes_data['create_new_auto_create_projects_expense_attributes_0'][0]['count']
 
 
-def test__remove_duplicates(db):
+def test_remove_duplicates(db):
     attributes = DestinationAttribute.objects.filter(attribute_type='EMPLOYEE')
     
     assert len(attributes) == 55
@@ -89,7 +92,7 @@ def test__remove_duplicates(db):
 
     base = get_base_class_instance()
 
-    attributes = base._Base__remove_duplicate_attributes(attributes)
+    attributes = base.remove_duplicate_attributes(attributes)
     assert len(attributes) == 55
 
 def test__get_platform_class(db):
@@ -362,3 +365,48 @@ def test_expense_attributes_sync_after(db):
     expense_attributes = ExpenseAttribute.objects.filter(**filters)
 
     assert expense_attributes.count() == 100
+
+def test_resolve_expense_attribute_errors(db):
+    workspace_id = 1
+    category = Category(1, 'EXPENSE_TYPE', None)
+
+    # deleting all the Error objects
+    Error.objects.filter(workspace_id=workspace_id).delete()
+
+    # getting the expense_attribute
+    source_category = ExpenseAttribute.objects.filter(
+        id=106,
+        workspace_id=1,
+        attribute_type='CATEGORY'
+    ).first()
+
+    category_mapping_count = CategoryMapping.objects.filter(workspace_id=1, source_category_id=source_category.id).count()
+
+    # category mapping is not present
+    assert category_mapping_count == 0
+
+    error = Error.objects.create(
+        workspace_id=workspace_id,
+        expense_attribute=source_category,
+        type='CATEGORY_MAPPING',
+        error_title=source_category.value,
+        error_detail='Category mapping is missing',
+        is_resolved=False
+    )
+
+    assert Error.objects.get(id=error.id).is_resolved == False
+
+    destination_attribute = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').first()
+
+    # creating the category mapping in bulk mode to avoid setting the is_resolved flag to true by signal
+    category_list = []
+    category_list.append(
+        CategoryMapping(
+        workspace_id=1,
+        source_category_id=source_category.id,
+        destination_expense_head_id=destination_attribute.id
+    ))
+    CategoryMapping.objects.bulk_create(category_list)
+
+    category.resolve_expense_attribute_errors()
+    assert Error.objects.get(id=error.id).is_resolved == True
