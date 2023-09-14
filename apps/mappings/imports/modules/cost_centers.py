@@ -23,6 +23,7 @@ class CostCenter(Base):
         """
         self.check_import_log_and_start_import()
 
+    # remove the is_auto_sync_status_allowed parameter
     def construct_fyle_payload(
         self,
         paginated_destination_attributes: List[DestinationAttribute],
@@ -48,12 +49,8 @@ class CostCenter(Base):
                 )
             }
 
-            # Create a new project if it does not exist in Fyle
+            # Create a new cost-center if it does not exist in Fyle
             if attribute.value.lower() not in existing_fyle_attributes_map:
-                payload.append(cost_center)
-            # Disable the existing project in Fyle if auto-sync status is allowed and the destination_attributes is inactive
-            elif is_auto_sync_status_allowed and not attribute.active:
-                cost_center['id'] = existing_fyle_attributes_map[attribute.value.lower()]
                 payload.append(cost_center)
 
         return payload
