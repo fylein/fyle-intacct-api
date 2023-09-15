@@ -162,4 +162,3 @@ docker-compose.yml
 # Cache db
 cache.db
 fyle_integrations_platform_connector/
-fyle_accounting_mappings/
