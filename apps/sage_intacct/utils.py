@@ -499,10 +499,16 @@ class SageIntacctConnector:
         """
         Get classes
         """
+        print("""
+
+            Sync Class
+
+        """)
         count = self.connection.classes.count()
+        print(count)
         if count <= SYNC_UPPER_LIMIT['classes']:
             classes = self.connection.classes.get_all(field='STATUS', value='active', fields=['NAME', 'CLASSID'])
-
+            print(classes)
             class_attributes = []
 
             for _class in classes:

@@ -37,6 +37,11 @@ class CostCenter(Base):
         :param is_auto_sync_status_allowed: Is auto sync status allowed
         :return: Fyle payload
         """
+        print("""
+
+            Cost_centers_payload
+
+        """)
         payload = []
 
         for attribute in paginated_destination_attributes:
@@ -52,5 +57,7 @@ class CostCenter(Base):
             # Create a new cost-center if it does not exist in Fyle
             if attribute.value.lower() not in existing_fyle_attributes_map:
                 payload.append(cost_center)
+
+        print(payload)
 
         return payload
