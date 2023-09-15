@@ -9,18 +9,32 @@ from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
-from fyle.platform.exceptions import WrongParamsError, InvalidTokenError as FyleInvalidTokenError, InternalServerError
+from fyle.platform.exceptions import (
+    WrongParamsError,
+    InvalidTokenError as FyleInvalidTokenError,
+    InternalServerError
+)
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
-from fyle_accounting_mappings.models import Mapping, MappingSetting, ExpenseAttribute, DestinationAttribute, \
-    CategoryMapping, EmployeeMapping
-
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
-
+from fyle_accounting_mappings.models import (
+    Mapping,
+    MappingSetting,
+    ExpenseAttribute,
+    DestinationAttribute,
+    EmployeeMapping
+)
+from sageintacctsdk.exceptions import (
+    InvalidTokenError,
+    NoPrivilegeError
+)
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.tasks.models import Error
-from apps.workspaces.models import SageIntacctCredential, FyleCredential, Configuration
+from apps.workspaces.models import (
+    SageIntacctCredential,
+    FyleCredential,
+    Configuration
+)
 from apps.fyle.models import DependentFieldSetting
 from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
 
@@ -49,20 +63,6 @@ def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_
         mapped_attribute_ids: List[int] = EmployeeMapping.objects.filter(
             **params
         ).values_list('source_employee_id', flat=True)
-
-    elif source_attribute_type == "CATEGORY":
-        params = {
-            'source_category_id__in': errored_attribute_ids,
-        }
-
-        if destination_attribute_type == 'EXPENSE_TYPE':
-            params['destination_expense_head_id__isnull'] = False
-        else:
-            params['destination_account_id__isnull'] =  False
-
-        mapped_attribute_ids: List[int] = CategoryMapping.objects.filter(
-            **params
-        ).values_list('source_category_id', flat=True)
 
     return mapped_attribute_ids
 
@@ -104,61 +104,6 @@ def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: b
                 attribute_values.append(attribute.value.lower())
 
     return unique_attributes
-
-
-def disable_expense_attributes(source_field, destination_field, workspace_id):
-
-    # Get All the inactive destination attribute ids
-    filter = {
-        'mapping__isnull': False,
-        'mapping__destination_type': destination_field
-    }
-
-    if source_field == 'CATEGORY':
-        if destination_field == 'EXPENSE_TYPE':
-            filter = {
-                'destination_expense_head__isnull': False
-            }
-        elif destination_field == 'ACCOUNT':
-            filter = {
-                'destination_account__isnull': False
-            }
-
-    destination_attribute_ids = DestinationAttribute.objects.filter(
-        attribute_type=destination_field,
-        active=False,
-        workspace_id=workspace_id,
-        **filter
-    ).values_list('id', flat=True)
-
-    # Get all the expense attributes that are mapped to these destination_attribute_ids
-    filter = {
-        'mapping__destination_id__in': destination_attribute_ids
-    }
-
-    if source_field == 'CATEGORY':
-        if destination_field == 'EXPENSE_TYPE':
-            filter = {
-                'categorymapping__destination_expense_head_id__in': destination_attribute_ids
-            }
-        elif destination_field == 'ACCOUNT':
-            filter = {
-                'categorymapping__destination_account_id__in': destination_attribute_ids
-            }
-
-    expense_attributes_to_disable = ExpenseAttribute.objects.filter(
-        attribute_type=source_field,
-        active=True,
-        **filter
-    )
-
-    # Update active column to false for expense attributes to be disabled
-    expense_attributes_ids = []
-    if expense_attributes_to_disable :
-        expense_attributes_ids = [expense_attribute.id for expense_attribute in expense_attributes_to_disable]
-        expense_attributes_to_disable.update(active=False)
-
-    return expense_attributes_ids
 
 
 def async_auto_map_employees(workspace_id: int):
@@ -262,59 +207,6 @@ def schedule_auto_map_charge_card_employees(workspace_id: int):
 
         if schedule:
             schedule.delete()
-
-
-def get_all_categories_from_fyle(platform: PlatformConnector):
-    categories_generator = platform.connection.v1beta.admin.categories.list_all(query_params={
-            'order': 'id.desc'
-        })
-
-    categories = []
-
-    for response in categories_generator:
-        if response.get('data'):
-            categories.extend(response['data'])
-
-    category_name_map = {}
-    for category in categories:
-        if category['sub_category'] and category['name'] != category['sub_category']:
-                    category['name'] = '{0} / {1}'.format(category['name'], category['sub_category'])
-        category_name_map[category['name'].lower()] = category
-
-    return category_name_map
-
-
-def create_fyle_categories_payload(categories: List[DestinationAttribute], category_map: Dict, updated_categories: List[ExpenseAttribute] = [], destination_type: str = None):
-    """
-    Create Fyle Categories Payload from Sage Intacct Expense Types / Accounts
-    :param workspace_id: Workspace integer id
-    :param categories: Sage Intacct Categories / Accounts
-    :return: Fyle Categories Payload
-    """
-    payload = []
-
-    if updated_categories:
-        for category in updated_categories:
-            if destination_type == 'EXPENSE_TYPE':
-                destination_id_of_category = category.categorymapping.destination_expense_head.destination_id
-            elif destination_type == 'ACCOUNT':
-                destination_id_of_category = category.categorymapping.destination_account.destination_id
-            payload.append({
-                'id': category.source_id,
-                'name': category.value,
-                'code': destination_id_of_category,
-                'is_enabled': category.active
-            })
-    else:
-        for category in categories:
-            if category.value.lower() not in category_map:
-                payload.append({
-                    'name': category.value,
-                    'code': category.destination_id,
-                    'is_enabled': category.active
-                })
-
-    return payload
 
 
 def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int):
@@ -665,103 +557,6 @@ def schedule_fyle_attributes_creation(workspace_id: int):
             schedule.delete()
 
 
-def sync_expense_types_and_accounts(reimbursable_expenses_object: str, corporate_credit_card_expenses_object: str,
-    si_connection: SageIntacctConnector):
-    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-        si_connection.sync_expense_types()
-
-    if reimbursable_expenses_object in ('BILL', 'JOURNAL_ENTRY') or \
-        corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
-        si_connection.sync_accounts()
-
-
-def upload_categories_to_fyle(workspace_id: int, reimbursable_expenses_object: str,
-    corporate_credit_card_expenses_object: str, fyle_credentials: FyleCredential):
-    """
-    Upload categories to Fyle
-    """
-    si_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-
-    platform = PlatformConnector(fyle_credentials)
-
-    category_map = get_all_categories_from_fyle(platform=platform)
-
-
-    si_connection = SageIntacctConnector(
-        credentials_object=si_credentials,
-        workspace_id=workspace_id
-    )
-    platform.categories.sync()
-    
-
-    sync_expense_types_and_accounts(reimbursable_expenses_object, corporate_credit_card_expenses_object, si_connection)
-
-    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-        si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-            workspace_id=workspace_id, attribute_type='EXPENSE_TYPE'
-        )
-    else:
-        si_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(
-            workspace_id=workspace_id, attribute_type='ACCOUNT'
-        ).all()
-
-    si_attributes = remove_duplicates(si_attributes)
-
-    fyle_payload: List[Dict] = create_fyle_categories_payload(si_attributes, category_map)
-    if fyle_payload:
-        platform.categories.post_bulk(fyle_payload)
-        platform.categories.sync()
-
-    return si_attributes
-
-
-def bulk_create_ccc_category_mappings(workspace_id: int):
-    """
-    Create Category Mappings for CCC Expenses
-    :param workspace_id: Workspace ID
-    """
-    category_mappings = CategoryMapping.objects.filter(
-        workspace_id=workspace_id,
-        destination_account__isnull=True
-    ).all()
-
-    gl_account_ids = []
-
-    for category_mapping in category_mappings:
-        if category_mapping.destination_expense_head.detail and \
-            'gl_account_no' in category_mapping.destination_expense_head.detail and \
-                category_mapping.destination_expense_head.detail['gl_account_no']:
-            gl_account_ids.append(category_mapping.destination_expense_head.detail['gl_account_no'])
-
-    # Retreiving accounts for creating ccc mapping
-    destination_attributes = DestinationAttribute.objects.filter(
-        workspace_id=workspace_id,
-        attribute_type='ACCOUNT',
-        destination_id__in=gl_account_ids
-    ).values('id', 'destination_id')
-
-    destination_id_pk_map = {}
-
-    for attribute in destination_attributes:
-        destination_id_pk_map[attribute['destination_id'].lower()] = attribute['id']
-
-    mapping_updation_batch = []
-
-    for category_mapping in category_mappings:
-        ccc_account_id = destination_id_pk_map[category_mapping.destination_expense_head.detail['gl_account_no'].lower()]
-        mapping_updation_batch.append(
-            CategoryMapping(
-                id=category_mapping.id,
-                destination_account_id=ccc_account_id
-            )
-        )
-
-    if mapping_updation_batch:
-        CategoryMapping.objects.bulk_update(
-            mapping_updation_batch, fields=['destination_account'], batch_size=50
-        )
-
-
 def construct_filter_based_on_destination(reimbursable_destination_type: str):
     """
     Construct Filter Based on Destination
@@ -775,167 +570,6 @@ def construct_filter_based_on_destination(reimbursable_destination_type: str):
         filters['destination_account__isnull'] = True
 
     return filters
-
-
-def filter_unmapped_destinations(reimbursable_destination_type: str, destination_attributes: List[DestinationAttribute]):
-    """
-    Filter unmapped destinations based on workspace
-    :param reimbursable_destination_type: Reimbursable destination type
-    :param destination_attributes: List of destination attributes
-    """
-    filters = construct_filter_based_on_destination(reimbursable_destination_type)
-
-    destination_attribute_ids = [destination_attribute.id for destination_attribute in destination_attributes]
-
-    # Filtering unmapped categories
-    destination_attributes = DestinationAttribute.objects.filter(
-        pk__in=destination_attribute_ids,
-        **filters
-    ).values('id', 'value')
-
-    return destination_attributes
-
-
-def bulk_create_update_category_mappings(mapping_creation_batch: List[CategoryMapping]):
-    """
-    Bulk Create and Update Category Mappings
-    :param mapping_creation_batch: List of Category Mappings
-    """
-    expense_attributes_to_be_updated = []
-    created_mappings = []
-
-    if mapping_creation_batch:
-        created_mappings = CategoryMapping.objects.bulk_create(mapping_creation_batch, batch_size=50)
-
-    for category_mapping in created_mappings:
-        expense_attributes_to_be_updated.append(
-            ExpenseAttribute(
-                id=category_mapping.source_category.id,
-                auto_mapped=True
-            )
-        )
-
-    if expense_attributes_to_be_updated:
-        ExpenseAttribute.objects.bulk_update(
-            expense_attributes_to_be_updated, fields=['auto_mapped'], batch_size=50)
-
-
-def create_category_mappings(destination_attributes: List[DestinationAttribute],
-                             reimbursable_destination_type: str, workspace_id: int):
-    """
-    Bulk create category mappings
-    :param destination_attributes: Desitination Attributes
-    :param reimbursable_destination_type: Reimbursable Destination Type
-    :param workspace_id: Workspace ID
-    :return: None
-    """
-    destination_attributes = filter_unmapped_destinations(reimbursable_destination_type, destination_attributes)
-
-    attribute_value_list = []
-    attribute_value_list = [destination_attribute['value'] for destination_attribute in destination_attributes]
-
-    # Filtering unmapped categories
-    source_attributes = ExpenseAttribute.objects.filter(
-        workspace_id=workspace_id,
-        attribute_type='CATEGORY',
-        value__in=attribute_value_list,
-        categorymapping__source_category__isnull=True
-    ).values('id', 'value')
-
-    source_attributes_id_map = {source_attribute['value'].lower(): source_attribute['id'] \
-        for source_attribute in source_attributes}
-
-    mapping_creation_batch = []
-
-    for destination_attribute in destination_attributes:
-        if destination_attribute['value'].lower() in source_attributes_id_map:
-            destination = {}
-            if reimbursable_destination_type == 'EXPENSE_TYPE':
-                destination['destination_expense_head_id'] = destination_attribute['id']
-            elif reimbursable_destination_type == 'ACCOUNT':
-                destination['destination_account_id'] = destination_attribute['id']
-
-            mapping_creation_batch.append(
-                CategoryMapping(
-                    source_category_id=source_attributes_id_map[destination_attribute['value'].lower()],
-                    workspace_id=workspace_id,
-                    **destination
-                )
-            )
-
-    bulk_create_update_category_mappings(mapping_creation_batch)
-
-
-def auto_create_category_mappings(workspace_id):
-    """
-    Create Category Mappings
-    :return: mappings
-    """
-    configuration: Configuration = Configuration.objects.get(workspace_id=workspace_id)
-
-    reimbursable_expenses_object = configuration.reimbursable_expenses_object
-    corporate_credit_card_expenses_object = configuration.corporate_credit_card_expenses_object
-
-    if reimbursable_expenses_object == 'EXPENSE_REPORT' or corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-        reimbursable_destination_type = 'EXPENSE_TYPE'
-    else:
-        reimbursable_destination_type = 'ACCOUNT'
-
-    try:
-        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-        platform = PlatformConnector(fyle_credentials=fyle_credentials)
-
-        fyle_categories = upload_categories_to_fyle(
-            workspace_id=workspace_id, reimbursable_expenses_object=reimbursable_expenses_object,
-            corporate_credit_card_expenses_object=corporate_credit_card_expenses_object, fyle_credentials=fyle_credentials)
-
-        create_category_mappings(fyle_categories, reimbursable_destination_type, workspace_id)
-
-        # auto-sync categories and expense accounts
-        category_ids_to_be_changed = disable_expense_attributes('CATEGORY', reimbursable_destination_type, workspace_id)
-        if category_ids_to_be_changed:
-            expense_attributes = ExpenseAttribute.objects.filter(id__in=category_ids_to_be_changed)
-            fyle_payload: List[Dict] = create_fyle_categories_payload(categories=[], category_map={}, updated_categories=expense_attributes, destination_type=reimbursable_destination_type)
-
-            platform.categories.post_bulk(fyle_payload)
-            platform.categories.sync()
-
-        if reimbursable_expenses_object == 'EXPENSE_REPORT' and \
-                corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY'):
-            bulk_create_ccc_category_mappings(workspace_id)
-        
-        resolve_expense_attribute_errors(
-            source_attribute_type="CATEGORY", 
-            destination_attribute_type=reimbursable_destination_type, 
-            workspace_id=workspace_id
-        )
-
-        return []
-
-    except InvalidTokenError:
-        logger.info('Invalid Token or Invalid fyle credentials - %s', workspace_id)
-    
-    except FyleInvalidTokenError:
-        logger.info('Invalid Token for fyle')
-
-    except InternalServerError:
-        logger.error('Internal server error while importing to Fyle')
-
-    except WrongParamsError as exception:
-        logger.error(
-            'Error while creating categories workspace_id - %s in Fyle %s %s',
-            workspace_id, exception.message, {'error': exception.response}
-        )
-
-    except Exception:
-        error = traceback.format_exc()
-        error = {
-            'error': error
-        }
-        logger.exception(
-            'Error while creating categories workspace_id - %s error: %s',
-            workspace_id, error
-        )
 
 
 def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_id: int):
@@ -1142,9 +776,6 @@ def auto_import_and_map_fyle_fields(workspace_id):
 
     if configuration.import_vendors_as_merchants:
         chain.append('apps.mappings.tasks.auto_create_vendors_as_merchants', workspace_id)
-
-    if configuration.import_categories:
-        chain.append('apps.mappings.tasks.auto_create_category_mappings', workspace_id)
 
     if project_mapping and dependent_fields:
         chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id)
