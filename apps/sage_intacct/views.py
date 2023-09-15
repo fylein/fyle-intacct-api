@@ -135,10 +135,12 @@ class SageIntacctFieldsView(generics.ListAPIView):
             workspace_id=self.kwargs['workspace_id']
         ).values('attribute_type', 'display_name').distinct()
 
-        # Adding project by default since we support importing Projects from Sage Intacct even though they don't exist
-        attributes.append({'attribute_type': 'PROJECT', 'display_name': 'Project'})
+        serialized_attributes = SageIntacctFieldSerializer(attributes, many=True).data
 
-        return attributes
+        # Adding project by default since we support importing Projects from Sage Intacct even though they don't exist
+        serialized_attributes.append({'attribute_type': 'PROJECT', 'display_name': 'Project'})
+
+        return serialized_attributes
 
 
 class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
