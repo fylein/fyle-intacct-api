@@ -7,10 +7,7 @@ from fyle_accounting_mappings.models import (
     Mapping
 )
 from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import (
-    FyleCredential,
-    Configuration
-)
+from apps.workspaces.models import FyleCredential
 from .fixtures import cost_center_data
 
 

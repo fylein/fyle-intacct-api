@@ -1,5 +1,5 @@
 from django.db.models import Q
-from datetime import datetime, timezone
+from datetime import datetime
 
 from rest_framework.views import status
 from rest_framework import generics
