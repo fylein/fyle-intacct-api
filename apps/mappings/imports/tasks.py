@@ -17,8 +17,7 @@ def trigger_import_via_schedule(workspace_id: int, destination_field: str, attri
     :param attribute_type: Type of attribute (e.g., 'PROJECT', 'CATEGORY', 'COST_CENTER')
     """
     import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=attribute_type).first()
-    # sync_after = import_log.last_successful_run_at if import_log else None
-    sync_after = None
+    sync_after = import_log.last_successful_run_at if import_log else None
 
     item_class = ATTRIBUTE_TYPE_TO_CLASS[attribute_type]
     item = item_class(workspace_id, destination_field, sync_after)
