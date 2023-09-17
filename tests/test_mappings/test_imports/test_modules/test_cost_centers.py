@@ -41,7 +41,7 @@ def test_sync_expense_atrributes(mocker, db):
     category.sync_expense_attributes(platform)
 
     cost_center_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CENTER').count()
-    # NOTE : we are not using category_data['..'][0]['count'] because some duplicates where present in the data
+    # NOTE : we are not using cost_center_data['..'][0]['count'] because some duplicates where present in the data
     assert cost_center_count == 566 + 7
 
 def test_auto_create_destination_attributes(mocker, db):
@@ -84,8 +84,62 @@ def test_auto_create_destination_attributes(mocker, db):
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'COST_CENTER').count()
 
-        assert expense_attributes_count == 0
+        assert expense_attributes_count == 7
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').count()
         
         assert mappings_count == 7
+
+    # create new project sub-sequent run (we will be adding 2 new CLASSES)
+    with mock.patch('fyle.platform.apis.v1beta.admin.CostCenters.list_all') as mock_call:
+        mocker.patch(
+            'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
+            return_value=[]
+        )
+        mocker.patch(
+            'sageintacctsdk.apis.Classes.get_all',
+            return_value=cost_center_data['create_new_auto_create_cost_centers_destination_attributes_subsequent_run']
+        )
+        mocker.patch(
+            'sageintacctsdk.apis.Classes.count',
+            return_value=7 + 2
+        )
+        mock_call.side_effect = [
+            [],
+            cost_center_data['create_new_auto_create_cost_centers_expense_attributes_2'] 
+        ]
+
+        expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'COST_CENTER').count()
+
+        assert expense_attributes_count == 7
+
+        mappings_count = Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').count()
+        
+        assert mappings_count == 7
+
+        cost_center.trigger_import()
+
+        expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'COST_CENTER').count()
+
+        assert expense_attributes_count == 7 + 2
+
+        mappings_count = Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').count()
+        
+        assert mappings_count == 7 + 2
+
+
+def test_construct_fyle_payload(db):
+    cost_center = CostCenter(1, 'CLASS', None)
+
+    # create new case
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CLASS')
+    existing_fyle_attributes_map = {}
+    is_auto_sync_status_allowed = cost_center._Base__get_auto_sync_permission()
+
+    fyle_payload = cost_center.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        is_auto_sync_status_allowed
+    )
+
+    assert fyle_payload == cost_center_data['create_fyle_cost_center_payload_create_new_case']

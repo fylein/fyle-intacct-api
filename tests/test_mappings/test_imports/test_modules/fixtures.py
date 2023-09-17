@@ -9851,6 +9851,44 @@ cost_center_data = {
             'CLASSID':'9903'
         }
     ],
+    'create_new_auto_create_cost_centers_destination_attributes_subsequent_run' : [
+        {
+            'NAME':'Small Business',
+            'CLASSID':'400'
+        },
+        {
+            'NAME':'Midsize Business',
+            'CLASSID':'500'
+        },
+        {
+            'NAME':'Enterprise',
+            'CLASSID':'600'
+        },
+        {
+            'NAME':'Service Line 2',
+            'CLASSID':'200'
+        },
+        {
+            'NAME':'Service Line 1',
+            'CLASSID':'100'
+        },
+        {
+            'NAME':'Service Line 3',
+            'CLASSID':'300'
+        },
+        {
+            'NAME':'Killua Class',
+            'CLASSID':'9903'
+        },
+        {
+            'NAME':'Hokage',
+            'CLASSID':'389'
+        },
+        {
+            'NAME':'Raikage',
+            'CLASSID':'9904'
+        }
+    ],
     'create_new_auto_create_cost_centers_expense_attributes_0': [
         {
             'count':6,
@@ -10008,6 +10046,68 @@ cost_center_data = {
                 }
             ],
             'offset':0
+        }
+    ],
+    'create_new_auto_create_cost_centers_expense_attributes_2':[
+        {
+            'count':2,
+            'data':[
+                {
+                    'code':None,
+                    'created_at':'2023-09-15T06:06:10.923262+00:00',
+                    'description':'Cost Center - Hokage, Id - 389',
+                    'id':19735,
+                    'is_enabled':True,
+                    'name':'Hokage',
+                    'org_id':'ortL3T2BabCW',
+                    'restricted_spender_user_ids':None,
+                    'updated_at':'2023-09-15T06:06:10.923262+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-09-15T06:06:10.923262+00:00',
+                    'description':'Cost Center - Raikage, Id - 9904',
+                    'id':19736,
+                    'is_enabled':True,
+                    'name':'Raikage',
+                    'org_id':'ortL3T2BabCW',
+                    'restricted_spender_user_ids':None,
+                    'updated_at':'2023-09-15T06:06:10.923262+00:00'
+                }
+            ],
+            'offset':0
+        }
+    ],
+    'create_fyle_cost_center_payload_create_new_case': [
+        {
+            'name':'Small Business',
+            'is_enabled':True,
+            'description':'Cost Center - Small Business, Id - 400'
+        },
+        {
+            'name':'Midsize Business',
+            'is_enabled':True,
+            'description':'Cost Center - Midsize Business, Id - 500'
+        },
+        {
+            'name':'Enterprise',
+            'is_enabled':True,
+            'description':'Cost Center - Enterprise, Id - 600'
+        },
+        {
+            'name':'Service Line 2',
+            'is_enabled':True,
+            'description':'Cost Center - Service Line 2, Id - 200'
+        },
+        {
+            'name':'Service Line 1',
+            'is_enabled':True,
+            'description':'Cost Center - Service Line 1, Id - 100'
+        },
+        {
+            'name':'Service Line 3',
+            'is_enabled':True,
+            'description':'Cost Center - Service Line 3, Id - 300'
         }
     ]
 }
