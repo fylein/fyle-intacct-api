@@ -9,7 +9,7 @@ from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 
 from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
-    schedule_sage_intacct_reimbursement_creation
+    schedule_sage_intacct_reimbursement_creation, schedule_fyle_reimbursements_sync
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -24,6 +24,11 @@ def schedule_payment_sync(configuration: Configuration):
         workspace_id=configuration.workspace_id
     )
 
+    schedule_fyle_reimbursements_sync(
+        sync_sage_intacct_to_fyle_payments=configuration.sync_sage_intacct_to_fyle_payments,
+        workspace_id=configuration.workspace_id
+    )
+
     schedule_ap_payment_creation(
         configuration=configuration,
         workspace_id=configuration.workspace_id
@@ -33,6 +38,7 @@ def schedule_payment_sync(configuration: Configuration):
         configuration=configuration,
         workspace_id=configuration.workspace_id
     )
+
 
 def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: SageIntacctCredential) -> bool:
     """
