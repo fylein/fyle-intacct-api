@@ -251,24 +251,35 @@ data = {
         }
     ],
     'expense_group_id_response': {
-        'id': 1,
-        'fund_source': 'PERSONAL',
-        'response_logs': [],
-        'employee_name': 'Ashwin',
-        'description': {
-            'report_id': 'rp9EvDF8Umk6',
-            'fund_source': 'PERSONAL',
-            'claim_number': 'C/2022/06/R/2',
-            'employee_email': 'ashwin.t@fyle.in'
+        "id":1,
+        "expenses":[
+            {
+                "updated_at":"2022-09-20T08:48:21.737392Z",
+                "claim_number":"C/2022/09/R/21",
+                "employee_email":"ashwin.t@fyle.in",
+                "employee_name":"None",
+                "fund_source":"PERSONAL",
+                "expense_number":"E/2022/09/T/21",
+                "payment_number":"P/2022/09/R/18",
+                "vendor":"Ashwin",
+                "category":"Food",
+                "amount":21.0
+            }
+        ],
+        "fund_source":"PERSONAL",
+        "description":{
+            "report_id":"rpEZGqVCyWxQ",
+            "fund_source":"PERSONAL",
+            "claim_number":"C/2022/09/R/21",
+            "employee_email":"ashwin.t@fyle.in"
         },
-        'created_at': '2022-08-02T20:26:22.939437Z',
-        'exported_at': '2022-08-02T20:27:52.017417Z',
-        'updated_at': '2022-08-02T20:27:52.017711Z',
-        'workspace': 1,
-        'export_type': 'JOURNAL_ENTRY',
-        'expenses': [
-            1
-        ]
+        "response_logs":"None",
+        "employee_name":"None",
+        "created_at":"2022-09-20T08:48:21.765399Z",
+        "export_type":"None",
+        "exported_at":"None",
+        "updated_at":"2022-09-20T08:48:21.765445Z",
+        "workspace":1
     },
     'expense_group_by_id_expenses_response': {
         'id': 1,
