@@ -3,22 +3,22 @@ from apps.mappings.imports.modules.projects import Project
 from apps.mappings.imports.modules.categories import Category
 from apps.mappings.imports.modules.cost_centers import CostCenter
 
-ATTRIBUTE_TYPE_TO_CLASS = {
+SOURCE_FIELD_CLASS_MAP = {
     'PROJECT': Project,
     'CATEGORY': Category,
     'COST_CENTER': CostCenter,
 }
 
-def trigger_import_via_schedule(workspace_id: int, destination_field: str, attribute_type: str):
+def trigger_import_via_schedule(workspace_id: int, destination_field: str, source_field: str):
     """
     Trigger import via schedule
     :param workspace_id: Workspace id
     :param destination_field: Destination field
-    :param attribute_type: Type of attribute (e.g., 'PROJECT', 'CATEGORY', 'COST_CENTER')
+    :param source_field: Type of attribute (e.g., 'PROJECT', 'CATEGORY', 'COST_CENTER')
     """
-    import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=attribute_type).first()
+    import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=source_field).first()
     sync_after = import_log.last_successful_run_at if import_log else None
 
-    item_class = ATTRIBUTE_TYPE_TO_CLASS[attribute_type]
-    item = item_class(workspace_id, destination_field, sync_after)
+    module_class = SOURCE_FIELD_CLASS_MAP[source_field]
+    item = module_class(workspace_id, destination_field, sync_after)
     item.trigger_import()
