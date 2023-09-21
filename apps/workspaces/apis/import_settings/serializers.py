@@ -186,7 +186,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
 
 
         if instance.onboarding_state == 'IMPORT_SETTINGS':
-            instance.onboarding_state = 'ADVANCED_SETTINGS'
+            instance.onboarding_state = 'ADVANCED_CONFIGURATION'
             instance.save()
 
         return instance
