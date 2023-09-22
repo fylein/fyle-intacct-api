@@ -20,12 +20,12 @@ try:
                         'next_run':datetime.now()
                     }
                 )
-        categories_count = Configuration.objects.filter(import_categories=True).count()
+        categories = Configuration.objects.filter(import_categories=True).values_list('workspace_id', flat=True)
+        project = MappingSetting.objects.filter(source_field='PROJECT', import_to_fyle=True).values_list('workspace_id', flat=True)
+        unique_workspace_ids = list(set(categories) | set(project))
+        total_count = len(unique_workspace_ids)
         schedule_count = Schedule.objects.filter(func='apps.mappings.imports.queues.chain_import_fields_to_fyle').count()
-        project_count = MappingSetting.objects.filter(source_field='PROJECT', import_to_fyle=True).count()
-        #make the sanity check a bit more clear
-        print("categoreis_count: {}".format(categories_count))
-        print("project_count: {}".format(project_count))
+        print("total_count: {}".format(total_count))
         print("schedule_count: {}".format(schedule_count))
         raise Exception("This is a sanity check")
 except Exception as e:
