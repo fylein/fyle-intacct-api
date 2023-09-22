@@ -25,7 +25,7 @@ logger.level = logging.INFO
 def export_to_intacct(workspace_id, export_mode=None):
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
-    workspace_schedule = WorkspaceSchedule.objects.filter(workspace_id=workspace_id).first()
+    workspace_schedule = WorkspaceSchedule.objects.filter(workspace_id=workspace_id, interval_hours__gt=0, enabled=True).first()
 
     last_exported_at = datetime.now()
     is_expenses_exported = False
