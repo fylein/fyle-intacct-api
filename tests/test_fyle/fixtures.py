@@ -263,7 +263,10 @@ data = {
                 "payment_number":"P/2022/09/R/18",
                 "vendor":"Ashwin",
                 "category":"Food",
-                "amount":21.0
+                "amount":21.0,
+                "report_id": "dummy_report_id",
+                "settlement_id": "dummy_settlement_id",
+                "expense_id": "dummy_expense_id"
             }
         ],
         "fund_source":"PERSONAL",
