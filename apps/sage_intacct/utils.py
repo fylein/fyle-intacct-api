@@ -1127,7 +1127,6 @@ class SageIntacctConnector:
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
             expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
-            print('expense report payload', expense_report_payload)
             created_expense_report = self.connection.expense_reports.post(expense_report_payload)
             return created_expense_report
         except WrongParamsError as exception:
@@ -1165,15 +1164,18 @@ class SageIntacctConnector:
 
         except WrongParamsError as exception:
             logger.info(exception.response)
-            sage_intacct_errors = exception.response['error']
-            error_words_list = ['period', 'closed', 'Date must be on or after']
-            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
-                if configuration.change_accounting_period:
-                    first_day_of_month = datetime.today().date().replace(day=1)
-                    bill_payload = self.__construct_bill(bill, bill_lineitems)
-                    bill_payload['WHENCREATED'] = first_day_of_month
-                    created_bill = self.connection.bills.post(bill_payload)
-                    return created_bill
+            if 'error' in exception.response:
+                sage_intacct_errors = exception.response['error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+                if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+                        bill_payload = self.__construct_bill(bill, bill_lineitems)
+                        bill_payload['WHENCREATED'] = first_day_of_month
+                        created_bill = self.connection.bills.post(bill_payload)
+                        return created_bill
+                    else:
+                        raise
                 else:
                     raise
             else:
@@ -1191,15 +1193,18 @@ class SageIntacctConnector:
 
         except WrongParamsError as exception:
             logger.info(exception.response)
-            sage_intacct_errors = exception.response['error']
-            error_words_list = ['period', 'closed', 'Date must be on or after']
-            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
-                if configuration.change_accounting_period:
-                    first_day_of_month = datetime.today().date().replace(day=1)
-                    journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
-                    journal_entry_payload['batch_date'] = first_day_of_month
-                    created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
-                    return created_journal_entry
+            if 'error' in exception.response:
+                sage_intacct_errors = exception.response['error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+                if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+                        journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
+                        journal_entry_payload['batch_date'] = first_day_of_month
+                        created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+                        return created_journal_entry
+                    else:
+                        raise
                 else:
                     raise
             else:
@@ -1241,23 +1246,26 @@ class SageIntacctConnector:
 
         except WrongParamsError as exception:
             logger.info(exception.response)
-            sage_intacct_errors = exception.response['error']
-            error_words_list = ['period', 'closed', 'Date must be on or after']
-            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
-                if configuration.change_accounting_period:
-                    first_day_of_month = datetime.today().date().replace(day=1)
-                    charge_card_transaction_payload = self.__construct_charge_card_transaction(
-                        charge_card_transaction, charge_card_transaction_lineitems
-                    )
-                    charge_card_transaction_payload['paymentdate'] = {
-                        'year': first_day_of_month.year,
-                        'month': first_day_of_month.month,
-                        'day': first_day_of_month.day
-                    },
-                    created_charge_card_transaction = self.connection.charge_card_transactions.post(
-                        charge_card_transaction_payload
-                    )
-                    return created_charge_card_transaction
+            if 'error' in exception.response:
+                sage_intacct_errors = exception.response['error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+                if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+                        charge_card_transaction_payload = self.__construct_charge_card_transaction(
+                            charge_card_transaction, charge_card_transaction_lineitems
+                        )
+                        charge_card_transaction_payload['paymentdate'] = {
+                            'year': first_day_of_month.year,
+                            'month': first_day_of_month.month,
+                            'day': first_day_of_month.day
+                        },
+                        created_charge_card_transaction = self.connection.charge_card_transactions.post(
+                            charge_card_transaction_payload
+                        )
+                        return created_charge_card_transaction
+                    else:
+                        raise
                 else:
                     raise
             else:
