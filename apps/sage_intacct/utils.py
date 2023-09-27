@@ -1131,23 +1131,24 @@ class SageIntacctConnector:
             return created_expense_report
         except WrongParamsError as exception:
             logger.info(exception.response)
-            sage_intacct_errors = exception.response['error']
-            error_words_list = ['period', 'closed', 'Date must be on or after']
-            if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
-                if configuration.change_accounting_period:
-                    first_day_of_month = datetime.today().date().replace(day=1)
-                    expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
-                    expense_report_payload['datecreated'] = {
-                        'year': first_day_of_month.year,
-                        'month': first_day_of_month.month,
-                        'day': first_day_of_month.day
-                    },
-                    created_expense_report = self.connection.expense_reports.post(expense_report_payload)
-                    return created_expense_report
+            if 'error' in exception.response:
+                sage_intacct_errors = exception.response['error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+                if any(word in sage_intacct_errors[0]['description2'] for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+                        expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
+                        expense_report_payload['datecreated'] = {
+                            'year': first_day_of_month.year,
+                            'month': first_day_of_month.month,
+                            'day': first_day_of_month.day
+                        },
+                        created_expense_report = self.connection.expense_reports.post(expense_report_payload)
+                        return created_expense_report
+                    else:
+                        raise
                 else:
                     raise
-            else:
-                raise
 
     def post_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]):
         """
