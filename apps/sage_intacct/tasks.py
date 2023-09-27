@@ -419,6 +419,14 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             chain.run()
 
 
+def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup):
+    """
+    Resolve errors for exported expense group
+    :param expense_group: Expense group
+    """
+    Error.objects.filter(workspace_id=expense_group.workspace_id, expense_group=expense_group, is_resolved=False).update(is_resolved=True)
+
+
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.info(exception.response)
     
@@ -460,7 +468,6 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
         error_msg = errors[0]['long_description']
     else:
         errors.append(exception.response)
-
 
     Error.objects.update_or_create(
             workspace_id=expense_group.workspace_id,
@@ -713,6 +720,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             expense_group.response_logs = created_journal_entry
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
+            resolve_errors_for_exported_expense_group(expense_group)
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_journal_entry['data']['glbatch']['RECORDNO'], expense_group)
 
@@ -828,6 +836,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             expense_group.response_logs = created_expense_report
             expense_group.export_type = 'EXPENSE_REPORT'
             expense_group.save()
+            resolve_errors_for_exported_expense_group(expense_group)
 
         created_attachment_id = load_attachments(sage_intacct_connection, record_no, expense_group)
         if created_attachment_id:
@@ -931,6 +940,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             expense_group.response_logs = created_bill
             expense_group.export_type = 'BILL'
             expense_group.save()
+            resolve_errors_for_exported_expense_group(expense_group)
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_bill['data']['apbill']['RECORDNO'], expense_group)
         if created_attachment_id:
@@ -1031,6 +1041,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
             expense_group.response_logs = created_charge_card_transaction
             expense_group.export_type = 'CHARGE_CARD_TRANSACTION'
             expense_group.save()
+            resolve_errors_for_exported_expense_group(expense_group)
 
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_charge_card_transaction['key'], expense_group)
