@@ -1149,6 +1149,8 @@ class SageIntacctConnector:
                         raise
                 else:
                     raise
+            else:
+                raise
 
     def post_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]):
         """
