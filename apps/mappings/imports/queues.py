@@ -2,6 +2,13 @@ from django_q.tasks import Chain
 from fyle_accounting_mappings.models import MappingSetting
 from apps.workspaces.models import Configuration
 
+
+IMPORT_TASK_TARGET_MAP = {
+    'PROJECT': 'trigger_projects_import_via_schedule',
+    'CATEGORY': 'trigger_categories_import_via_schedule',
+}
+
+
 def chain_import_fields_to_fyle(workspace_id):
     """
     Chain import fields to Fyle
@@ -19,19 +26,17 @@ def chain_import_fields_to_fyle(workspace_id):
             destination_field = 'ACCOUNT'
 
         chain.append(
-            'apps.mappings.imports.tasks.trigger_import_via_schedule',
+            'apps.mappings.imports.tasks.{}'.format(IMPORT_TASK_TARGET_MAP['CATEGORY']),
             workspace_id,
-            destination_field,
-            'CATEGORY'
+            destination_field
         )
 
     for mapping_setting in mapping_settings:
-        if mapping_setting.source_field in ['PROJECT', 'COST_CENTER']:
+        if mapping_setting.source_field in IMPORT_TASK_TARGET_MAP:
             chain.append(
-               'apps.mappings.imports.tasks.trigger_import_via_schedule',
+                'apps.mappings.imports.tasks.{}'.format(IMPORT_TASK_TARGET_MAP[mapping_setting.source_field]),
                 workspace_id,
-                mapping_setting.destination_field,
-                mapping_setting.source_field
+                mapping_setting.destination_field
             )
 
     if chain.length() > 0:

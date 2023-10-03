@@ -248,6 +248,125 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
         sage_intacct_connection.sync_user_defined_dimensions()
 
 
+def create_fyle_cost_centers_payload(sageintacct_attributes: List[DestinationAttribute], existing_fyle_cost_centers: list):
+    """
+    Create Fyle Cost Centers Payload from SageIntacct Objects
+    :param workspace_id: Workspace integer id
+    :param sageintacct_attributes: SageIntacct Objects
+    :param fyle_attribute: Fyle Attribute
+    :return: Fyle Cost Centers Payload
+    """
+    fyle_cost_centers_payload = []
+
+    for si_attribute in sageintacct_attributes:
+        if si_attribute.value not in existing_fyle_cost_centers:
+            fyle_cost_centers_payload.append({
+                'name': si_attribute.value,
+                'is_enabled': True if si_attribute.active is None else si_attribute.active,
+                'description': 'Cost Center - {0}, Id - {1}'.format(
+                    si_attribute.value,
+                    si_attribute.destination_id
+                )
+            })
+
+    return fyle_cost_centers_payload
+
+
+def post_cost_centers_in_batches(platform: PlatformConnector, workspace_id: int, sageintacct_attribute_type: str):
+    existing_cost_center_names = ExpenseAttribute.objects.filter(
+        attribute_type='COST_CENTER', workspace_id=workspace_id).values_list('value', flat=True)
+
+    si_attributes_count = DestinationAttribute.objects.filter(
+        attribute_type=sageintacct_attribute_type, workspace_id=workspace_id).count()
+
+    page_size = 200
+
+    for offset in range(0, si_attributes_count, page_size):
+        limit = offset + page_size
+        paginated_si_attributes = DestinationAttribute.objects.filter(
+            attribute_type=sageintacct_attribute_type, workspace_id=workspace_id).order_by('value', 'id')[offset:limit]
+
+        paginated_si_attributes = remove_duplicates(paginated_si_attributes)
+
+        fyle_payload: List[Dict] = create_fyle_cost_centers_payload(
+            paginated_si_attributes, existing_cost_center_names)
+
+        if fyle_payload:
+            platform.cost_centers.post_bulk(fyle_payload)
+            platform.cost_centers.sync()
+
+        Mapping.bulk_create_mappings(paginated_si_attributes, 'COST_CENTER', sageintacct_attribute_type, workspace_id)
+
+
+def auto_create_cost_center_mappings(workspace_id: int):
+    """
+    Create Cost Center Mappings
+    """
+    try:
+        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
+
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
+        mapping_setting = MappingSetting.objects.get(
+            source_field='COST_CENTER', import_to_fyle=True, workspace_id=workspace_id
+        )
+
+        platform.cost_centers.sync()
+
+        sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
+
+        post_cost_centers_in_batches(platform, workspace_id, mapping_setting.destination_field)
+
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle')
+
+    except InternalServerError:
+        logger.error('Internal server error while importing to Fyle')
+
+    except NoPrivilegeError:
+        logger.info('Insufficient permission to access the requested module')
+
+    except WrongParamsError as exception:
+        logger.error(
+            'Error while creating cost centers workspace_id - %s in Fyle %s %s',
+            workspace_id, exception.message, {'error': exception.response}
+        )
+
+    except Exception:
+        error = traceback.format_exc()
+        error = {
+            'error': error
+        }
+        logger.exception(
+            'Error while creating cost centers workspace_id - %s error: %s',
+            workspace_id, error
+        )
+
+
+def schedule_cost_centers_creation(import_to_fyle, workspace_id):
+    if import_to_fyle:
+        schedule, _ = Schedule.objects.update_or_create(
+            func='apps.mappings.tasks.auto_create_cost_center_mappings',
+            args='{}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': datetime.now()
+            }
+        )
+    else:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.mappings.tasks.auto_create_cost_center_mappings',
+            args='{}'.format(workspace_id)
+        ).first()
+
+        if schedule:
+            schedule.delete()
+
+
 def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: str, existing_attribute: Dict):
     new_placeholder = None
     placeholder = None
