@@ -131,7 +131,7 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
 
     instance.source_field = instance.source_field.upper().replace(' ', '_')
 
-    if instance.source_field not in default_attributes:
+    if instance.source_field not in default_attributes and instance.import_to_fyle:
         # TODO: sync intacct fields before we upload custom field
         try:
             upload_attributes_to_fyle(
