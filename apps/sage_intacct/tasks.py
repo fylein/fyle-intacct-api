@@ -833,7 +833,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             task_log.save()
 
             expense_group.exported_at = datetime.now()
-            expense_group.response_logs = created_expense_report
+            expense_group.response_logs = details
             expense_group.export_type = 'EXPENSE_REPORT'
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
