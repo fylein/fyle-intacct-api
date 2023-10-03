@@ -219,6 +219,99 @@ def test_schedule_auto_map_employees(db):
     assert schedule == None
 
 
+def test_auto_create_cost_center_mappings(db, mocker, create_mapping_setting):
+    workspace_id = 1
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
+        return_value=[]
+    )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.CostCenters.sync',
+        return_value=[]
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Departments.get_all',
+        return_value=intacct_data['get_departments']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Dimensions.get_all',
+        return_value=intacct_data['get_user_defined_dimensions']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.DimensionValues.get_all',
+        return_value=intacct_data['get_dimension_value']
+    )
+
+    response = auto_create_cost_center_mappings(workspace_id=workspace_id)
+    assert response == None
+
+    cost_center = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CENTER').count()
+    mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='COST_CENTER').count()
+
+    assert cost_center == 1
+    assert mappings == 0
+
+    with mock.patch('fyle_integrations_platform_connector.apis.CostCenters.sync') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response='invalid params')
+        auto_create_cost_center_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = FyleInvalidTokenError(msg='invalid token for fyle', response='invalid params')
+        auto_create_cost_center_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = InternalServerError(msg='internal server error', response='internal server error')
+        auto_create_cost_center_mappings(workspace_id=workspace_id)
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        auto_create_cost_center_mappings(workspace_id=workspace_id)
+
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_credentials.delete()
+
+    response = auto_create_cost_center_mappings(workspace_id=workspace_id)
+    assert response == None
+
+
+def test_post_cost_centers_in_batches(mocker, db):
+    workspace_id = 1
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
+        return_value=[]
+    )
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.CostCenters.sync',
+        return_value=[]
+    )
+
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_connection = PlatformConnector(fyle_credentials)
+
+    post_cost_centers_in_batches(fyle_connection, workspace_id, 'DEPARTMENT')
+
+
+def test_schedule_cost_centers_creation(db):
+    workspace_id = 1
+
+    schedule_cost_centers_creation(import_to_fyle=True, workspace_id=workspace_id)
+
+    schedule = Schedule.objects.filter(
+        func='apps.mappings.tasks.auto_create_cost_center_mappings',
+        args='{}'.format(workspace_id),
+    ).first()
+    
+    assert schedule.func == 'apps.mappings.tasks.auto_create_cost_center_mappings'
+
+    schedule_cost_centers_creation(import_to_fyle=False, workspace_id=workspace_id)
+
+    schedule = Schedule.objects.filter(
+        func='apps.mappings.tasks.auto_create_cost_center_mappings',
+        args='{}'.format(workspace_id),
+    ).first()
+
+    assert schedule == None
+
+
 def test_schedule_fyle_attributes_creation(db, mocker):
     workspace_id = 1
 
