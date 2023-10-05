@@ -9,7 +9,7 @@ from django.db.models import Q
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django_q.models import Schedule
-from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
+from fyle_accounting_mappings.models import ExpenseAttribute
 from apps.fyle.models import ExpenseGroup
 from apps.fyle.tasks import create_expense_groups
 from apps.sage_intacct.tasks import schedule_expense_reports_creation, schedule_bills_creation, \
@@ -126,13 +126,16 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
         if email_added:
             ws_schedule.additional_email_options = email_added
 
+        # create next run by adding hours to current time
+        next_run = datetime.now() + timedelta(hours=hours)
+
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.workspaces.tasks.run_sync_schedule',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
                 'minutes': hours * 60,
-                'next_run': datetime.now()
+                'next_run': next_run
             }
         )
 
