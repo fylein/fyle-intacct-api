@@ -111,7 +111,6 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
         schedule_or_delete_fyle_import_tasks(configuration)
         new_schedule_or_delete_fyle_import_tasks(configuration, instance)
 
-    
     if instance.source_field == 'COST_CENTER':
         new_schedule_or_delete_fyle_import_tasks(configuration, instance)
 
