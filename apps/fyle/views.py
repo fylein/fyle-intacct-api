@@ -396,8 +396,8 @@ class ExpenseFilterView(generics.ListCreateAPIView, generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         workspace_id = self.kwargs['workspace_id']
-        rank = self.request.query_params.getlist('rank')
-        ExpenseFilter.objects.filter(workspace_id=workspace_id, rank__in=rank).delete()
+        rank = request.data.get('rank')
+        ExpenseFilter.objects.filter(workspace_id=workspace_id, rank=rank).delete()
 
         return Response(data={
             'workspace_id': workspace_id,
