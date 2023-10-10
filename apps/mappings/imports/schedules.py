@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django_q.models import Schedule
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting
@@ -40,3 +40,27 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, mapping_s
             func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
             args='{}'.format(configuration.workspace_id)
         ).delete()
+
+def schedule_or_delete_fyle_import_tasks_custom_fields(workspace_id: int):
+    mapping_settings = MappingSetting.objects.filter(
+        is_custom=True, import_to_fyle=True, workspace_id=workspace_id
+    ).all()
+
+    if mapping_settings:
+        schedule, _= Schedule.objects.get_or_create(
+            func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+            args='{0}'.format(workspace_id),
+            defaults={
+                'schedule_type': Schedule.MINUTES,
+                'minutes': 24 * 60,
+                'next_run': datetime.now() + timedelta(hours=24)
+            }
+        )
+    else:
+        schedule: Schedule = Schedule.objects.filter(
+            func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+            args=workspace_id
+        ).first()
+
+        if schedule:
+            schedule.delete()
