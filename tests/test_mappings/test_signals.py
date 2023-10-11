@@ -198,11 +198,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
+        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.tasks.async_auto_create_custom_field_mappings'
+    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
 

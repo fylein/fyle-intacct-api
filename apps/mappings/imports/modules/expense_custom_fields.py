@@ -93,7 +93,6 @@ class ExpenseCustomField(Base):
                 'code': None
             }
 
-
             if custom_field_id:
                 expense_field = platform.expense_custom_fields.get_by_id(custom_field_id)
                 expense_custom_field_payload['id'] = custom_field_id
