@@ -403,6 +403,11 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
         return_value = []
     )
 
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
+        return_value=[]
+    )
+
     workspace_id = 1
 
     MappingSetting.objects.update_or_create(
