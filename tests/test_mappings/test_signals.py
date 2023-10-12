@@ -1,12 +1,14 @@
 from asyncio.log import logger
+from datetime import datetime, timedelta, timezone
 import pytest
 import json
 from unittest import mock
+from django.db import transaction
 from django_q.models import Schedule
 from fyle_accounting_mappings.models import MappingSetting, Mapping, ExpenseAttribute, EmployeeMapping, CategoryMapping
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, Workspace
-from apps.mappings.models import LocationEntityMapping
+from apps.mappings.models import LocationEntityMapping, ImportLog
 from fyle.platform.exceptions import WrongParamsError
 from ..test_fyle.fixtures import data as fyle_data
 
@@ -244,22 +246,57 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
     )
 
     workspace_id = 1
-
-    custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTs').count()
+    custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTS').count()
     assert custom_mappings == 0
 
-    mapping_setting = MappingSetting(
-        source_field='CUSTOM_INTENTs',
-        destination_field='CUSTOM_INTENTs',
-        workspace_id=workspace_id,
-        import_to_fyle=True,
-        is_custom=True
-    )
     try:
-        mapping_setting.save()
+        mapping_setting = MappingSetting.objects.create(
+            source_field='CUSTOM_INTENTS',
+            destination_field='CUSTOM_INTENTS',
+            workspace_id=workspace_id,
+            import_to_fyle=True,
+            is_custom=True
+        )
     except:
         logger.info('Duplicate custom field name')
+
     custom_mappings = Mapping.objects.last()
     
-    custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTs').count()
+    custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTS').count()
     assert custom_mappings == 0
+
+    import_log = ImportLog.objects.filter(
+        workspace_id=1,
+        attribute_type='CUSTOM_INTENTS'
+    ).first()
+
+    assert import_log.status == 'COMPLETE'
+
+    time_difference = datetime.now() - timedelta(hours=2)
+    offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)
+    import_log.last_successful_run_at = offset_aware_time_difference
+    import_log.save()
+
+    with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response=json.dumps({'code': 400, 'message': 'duplicate key value violates unique constraint '
+        '"idx_expense_fields_org_id_field_name_is_enabled_is_custom"', 'Detail': 'Invalid parametrs'}))
+        mapping_setting = MappingSetting(
+            source_field='CUSTOM_INTENTS',
+            destination_field='CUSTOM_INTENTS',
+            workspace_id=workspace_id,
+            import_to_fyle=True,
+            is_custom=True
+        )
+        try:
+            with transaction.atomic():
+                mapping_setting.save()
+        except:
+            logger.info('Duplicate custom field name')
+
+        import_log = ImportLog.objects.get(
+            workspace_id=1,
+            attribute_type='CUSTOM_INTENTS'
+        )
+
+        # set import_log status to FAILED
+        assert import_log.status == 'COMPLETE'
