@@ -248,20 +248,17 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
     custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTs').count()
     assert custom_mappings == 0
 
-    with mock.patch('apps.mappings.signals.upload_attributes_to_fyle') as mock_call:
-        mock_call.side_effect = WrongParamsError(msg='invalid params', response=json.dumps({'code': 400, 'message': 'duplicate key value violates unique constraint '
-        '"idx_expense_fields_org_id_field_name_is_enabled_is_custom"', 'Detail': 'Invalid parametrs'}))
-        mapping_setting = MappingSetting(
-            source_field='CUSTOM_INTENTs',
-            destination_field='CUSTOM_INTENTs',
-            workspace_id=workspace_id,
-            import_to_fyle=True,
-            is_custom=True
-        )
-        try:
-            mapping_setting.save()
-        except:
-            logger.info('Duplicate custom field name')
+    mapping_setting = MappingSetting(
+        source_field='CUSTOM_INTENTs',
+        destination_field='CUSTOM_INTENTs',
+        workspace_id=workspace_id,
+        import_to_fyle=True,
+        is_custom=True
+    )
+    try:
+        mapping_setting.save()
+    except:
+        logger.info('Duplicate custom field name')
     custom_mappings = Mapping.objects.last()
     
     custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTs').count()

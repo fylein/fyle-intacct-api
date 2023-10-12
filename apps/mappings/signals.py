@@ -21,13 +21,9 @@ from fyle_accounting_mappings.models import (
 )
 from fyle.platform.exceptions import WrongParamsError
 
-from apps.mappings.tasks import (
-    schedule_fyle_attributes_creation,
-    upload_attributes_to_fyle
-)
 from apps.workspaces.models import Configuration
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks, schedule_or_delete_fyle_import_tasks_custom_fields
+from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 from apps.tasks.models import Error
 from apps.mappings.models import LocationEntityMapping
 from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
@@ -126,9 +122,7 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
         new_schedule_or_delete_fyle_import_tasks(configuration, instance)
 
     if instance.is_custom:
-        schedule_or_delete_fyle_import_tasks_custom_fields(int(instance.workspace_id))
-        # schedule_fyle_attributes_creation(int(instance.workspace_id))
-
+        new_schedule_or_delete_fyle_import_tasks(configuration, instance)
 
 @receiver(pre_save, sender=MappingSetting)
 def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
@@ -206,16 +200,8 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
                         'field_name': instance.source_field
                     })
         
-        # setting the import_log.last_successful_run_at to -30mins
+        # setting the import_log.last_successful_run_at to -30mins for the post_save_trigger
         import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=instance.source_field).first()
         last_successful_run_at = import_log.last_successful_run_at - timedelta(minutes=30)
         import_log.last_successful_run_at = last_successful_run_at
         import_log.save()
-
-        async_task(
-            'apps.mappings.imports.tasks.trigger_import_via_schedule',
-            workspace_id,
-            instance.destination_field,
-            instance.source_field,
-            True
-        )

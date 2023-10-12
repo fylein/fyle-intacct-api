@@ -399,11 +399,6 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
     )
 
     mocker.patch(
-        'apps.mappings.signals.upload_attributes_to_fyle',
-        return_value = []
-    )
-
-    mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
         return_value=[]
     )
