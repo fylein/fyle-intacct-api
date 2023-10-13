@@ -4,8 +4,7 @@ from typing import List, Dict
 from apps.mappings.imports.modules.base import Base
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
-    ExpenseAttribute,
-    MappingSetting
+    ExpenseAttribute
 )
 from apps.mappings.exceptions import handle_import_exceptions
 from apps.mappings.models import ImportLog
@@ -34,6 +33,12 @@ class ExpenseCustomField(Base):
         self.check_import_log_and_start_import()
 
     def construct_custom_field_placeholder(self, source_placeholder: str, fyle_attribute: str, existing_attribute: Dict):
+        """
+        Construct placeholder for custom field
+        :param source_placeholder: Placeholder from mapping settings
+        :param fyle_attribute: Fyle attribute
+        :param existing_attribute: Existing attribute
+        """
         new_placeholder = None
         placeholder = None
 
@@ -66,6 +71,12 @@ class ExpenseCustomField(Base):
         platform: PlatformConnector,
         source_placeholder: str = None
     ):
+        """
+        Construct payload for expense custom fields
+        :param sageintacct_attributes: List of destination attributes
+        :param platform: PlatformConnector object
+        :param source_placeholder: Placeholder from mapping settings
+        """
         fyle_expense_custom_field_options = []
         fyle_attribute = self.source_field
 
@@ -109,7 +120,6 @@ class ExpenseCustomField(Base):
         """
         Construct Payload and Import to fyle in Batches
         """
-
         filters = self.construct_attributes_filter(self.destination_field)
 
         destination_attributes_count = DestinationAttribute.objects.filter(**filters).count()
@@ -129,13 +139,6 @@ class ExpenseCustomField(Base):
 
         destination_attributes_generator = self.get_destination_attributes_generator(destination_attributes_count, filters)
         platform_class = self.get_platform_class(platform)
-        print("""
-
-            Platform class
-
-
-        """)
-        print(self.platform_class_name)
 
         for paginated_destination_attributes, is_last_batch in destination_attributes_generator:
             fyle_payload = self.construct_fyle_expense_custom_field_payload(

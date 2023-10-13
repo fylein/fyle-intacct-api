@@ -9,7 +9,6 @@ from tests.helper import dict_compare_keys
 from apps.tasks.models import TaskLog
 from django.urls import reverse
 from unittest import mock
-from apps.fyle.helpers import sync_dimensions
 
 
 def test_exportable_expense_group_view(api_client, test_connection):

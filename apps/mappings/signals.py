@@ -131,13 +131,6 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
     :param instance: Row instance of Sender Class
     :return: None
     """
-
-    print("""
-
-
-            Pre save mapping_setting
-
-        """)
     default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'TAX_GROUP', 'CORPORATE_CARD']
 
     instance.source_field = instance.source_field.upper().replace(' ', '_')
@@ -146,6 +139,7 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
         # TODO: sync intacct fields before we upload custom field
         try:
             workspace_id = int(instance.workspace_id)
+            # Checking is import_log exists or not if not create one
             import_log, is_created = ImportLog.objects.get_or_create(
                 workspace_id=workspace_id,
                 attribute_type=instance.source_field,
@@ -160,11 +154,14 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
                 time_difference = datetime.now() - timedelta(minutes=32)
                 offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)
 
+                # if the import_log is present and the last_successful_run_at is less than 30mins then we need to update it
+                # so that the schedule can run
                 if offset_aware_time_difference < last_successful_run_at:
                     import_log.last_successful_run_at = offset_aware_time_difference
                     last_successful_run_at = offset_aware_time_difference
                     import_log.save()
 
+            # Creating the expense_custom_field object with the correct last_successful_run_at value
             expense_custom_field = ExpenseCustomField(
                 workspace_id=workspace_id,
                 source_field=instance.source_field,
@@ -175,11 +172,15 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
             platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
+            # setting the import_log status to IN_PROGRESS
             import_log.status = 'IN_PROGRESS'
             import_log.save()
 
             expense_custom_field.construct_payload_and_import_to_fyle(platform, import_log)
             expense_custom_field.sync_expense_attributes(platform)
+
+            # NOTE: We are not setting the import_log status to COMPLETE 
+            # since the post_save trigger will run the import again in async manner
 
         except WrongParamsError as error:
             logger.error(

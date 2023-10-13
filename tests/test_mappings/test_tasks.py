@@ -3,7 +3,6 @@ from django_q.models import Schedule
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     Mapping,
-    MappingSetting,
     EmployeeMapping,
     ExpenseAttribute
 )
