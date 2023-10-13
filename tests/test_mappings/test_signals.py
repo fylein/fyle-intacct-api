@@ -5,7 +5,14 @@ import json
 from unittest import mock
 from django.db import transaction
 from django_q.models import Schedule
-from fyle_accounting_mappings.models import MappingSetting, Mapping, ExpenseAttribute, EmployeeMapping, CategoryMapping
+from fyle_accounting_mappings.models import (
+    MappingSetting,
+    Mapping,
+    ExpenseAttribute,
+    EmployeeMapping,
+    CategoryMapping,
+    DestinationAttribute
+)
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, Workspace
 from apps.mappings.models import LocationEntityMapping, ImportLog
@@ -277,9 +284,12 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
     import_log.last_successful_run_at = offset_aware_time_difference
     import_log.save()
 
+    # case where error will occur but we reach the case where there are no destination attributes 
+    # so we mark the import as complete
     with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response=json.dumps({'code': 400, 'message': 'duplicate key value violates unique constraint '
         '"idx_expense_fields_org_id_field_name_is_enabled_is_custom"', 'Detail': 'Invalid parametrs'}))
+
         mapping_setting = MappingSetting(
             source_field='CUSTOM_INTENTS',
             destination_field='CUSTOM_INTENTS',
@@ -287,6 +297,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
             import_to_fyle=True,
             is_custom=True
         )
+
         try:
             with transaction.atomic():
                 mapping_setting.save()
@@ -298,5 +309,42 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
             attribute_type='CUSTOM_INTENTS'
         )
 
-        # set import_log status to FAILED
         assert import_log.status == 'COMPLETE'
+        assert import_log.error_log == []
+        assert import_log.total_batches_count == 0
+        assert import_log.processed_batches_count == 0
+
+    # case where error will occur but we reach the case where there are destination attributes 
+    # so we mark the import as FAILED
+    with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
+        mock_call.side_effect = WrongParamsError(msg='invalid params', response=json.dumps({'code': 400, 'message': 'duplicate key value violates unique constraint '
+        '"idx_expense_fields_org_id_field_name_is_enabled_is_custom"', 'Detail': 'Invalid parametrs'}))
+
+        mapping_setting = MappingSetting(
+            source_field='CUSTOM_INTENTS',
+            destination_field='CUSTOM_INTENTS',
+            workspace_id=workspace_id,
+            import_to_fyle=True,
+            is_custom=True
+        )
+
+        DestinationAttribute.objects.create(
+            attribute_type='CUSTOM_INTENTS',
+            display_name='Custom Intents',
+            value='Labhvam',
+            destination_id='890812',
+            workspace_id=1
+        )
+
+        try:
+            mapping_setting.save()
+        except:
+            logger.info('Duplicate custom field name')
+
+        import_log = ImportLog.objects.get(
+            workspace_id=1,
+            attribute_type='CUSTOM_INTENTS'
+        )
+
+        # set import_log status to FAILED
+        assert import_log.status == 'FAILED'

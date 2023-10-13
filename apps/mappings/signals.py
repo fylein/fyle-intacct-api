@@ -145,7 +145,6 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
     if instance.source_field not in default_attributes and instance.import_to_fyle:
         # TODO: sync intacct fields before we upload custom field
         try:
-            print("This is the try block")
             workspace_id = int(instance.workspace_id)
             import_log, is_created = ImportLog.objects.get_or_create(
                 workspace_id=workspace_id,
@@ -155,28 +154,16 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
                 }
             )
 
-            print(import_log)
-            print(is_created)
-
             last_successful_run_at = None
             if import_log and not is_created:
-                print("eneter the if block for concurrent runs")
-                print("import")
-                print(import_log.last_successful_run_at)
                 last_successful_run_at = import_log.last_successful_run_at
                 time_difference = datetime.now() - timedelta(minutes=32)
                 offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)
 
-                print(last_successful_run_at)
-                print(offset_aware_time_difference)
-
                 if offset_aware_time_difference < last_successful_run_at:
-                    print("Entered this block")
                     import_log.last_successful_run_at = offset_aware_time_difference
                     last_successful_run_at = offset_aware_time_difference
                     import_log.save()
-
-                print(import_log.last_successful_run_at)
 
             expense_custom_field = ExpenseCustomField(
                 workspace_id=workspace_id,
@@ -195,40 +182,30 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
             expense_custom_field.sync_expense_attributes(platform)
 
         except WrongParamsError as error:
-            print("Error block is entered")
-            # print(error)
-            # import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=instance.source_field).first()
-            # print(import_log)
-            # import_log.error_log = error.response
-            # import_log.status = 'FAILED'
-            # import_log.save()
-            # print(import_log)
-            # print(import_log.error_log)
-            # print(import_log.status)
             logger.error(
                 'Error while creating %s workspace_id - %s in Fyle %s %s',
                 instance.source_field, instance.workspace_id, error.message, {'error': error.response}
             )
             if error.response:
-                print("Error response is entered")
                 response = json.loads(error.response)
                 if response and 'message' in response and \
                     response['message'] == ('duplicate key value violates unique constraint '
                     '"idx_expense_fields_org_id_field_name_is_enabled_is_custom"'):
-                    import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=instance.source_field).first()
+
+                    # Set the import_log to failed and add the error_log
+                    import_log = ImportLog.objects.filter(
+                        workspace_id=workspace_id,
+                        attribute_type=instance.source_field
+                    ).first()
                     import_log.error_log = error.response
                     import_log.status = 'FAILED'
                     import_log.save()
-                    print(import_log)
-                    print(import_log.error_log)
-                    print(import_log.status)
+
                     raise ValidationError({
                         'message': 'Duplicate custom field name',
                         'field_name': instance.source_field
                     })
-                
-            
-        
+
         # setting the import_log.last_successful_run_at to -30mins for the post_save_trigger
         import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=instance.source_field).first()
         last_successful_run_at = import_log.last_successful_run_at - timedelta(minutes=30)
