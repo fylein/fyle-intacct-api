@@ -273,9 +273,16 @@ class FyleFieldsView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'LOCATION_ENTITY', 'TAX_GROUP', 'CORPORATE_CARD', 'MERCHANT']
 
-        attributes = ExpenseAttribute.objects.filter(
+        fields = ExpenseAttribute.objects.filter(
             ~Q(attribute_type__in=default_attributes),
-            workspace_id=self.kwargs['workspace_id']
+            workspace_id=self.kwargs['workspace_id'],
+            detail__is_dependent=False
+        ).values('attribute_type', 'display_name').distinct()
+
+        dependent_fields = ExpenseAttribute.objects.filter(
+            ~Q(attribute_type__in=default_attributes),
+            workspace_id=self.kwargs['workspace_id'],
+            detail__is_dependent=True
         ).values('attribute_type', 'display_name').distinct()
 
         expense_fields= [
@@ -283,7 +290,12 @@ class FyleFieldsView(generics.ListAPIView):
             {'attribute_type': 'PROJECT', 'display_name': 'Project'}
         ]
 
-        for attribute in attributes:
+        for attribute in fields:
+            attribute['is_dependent'] = False
+            expense_fields.append(attribute)
+        
+        for attribute in dependent_fields:
+            attribute['is_dependent'] = True
             expense_fields.append(attribute)
 
         return Response(

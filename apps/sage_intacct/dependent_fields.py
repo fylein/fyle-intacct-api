@@ -46,7 +46,7 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
                     'is_enabled': True
                 })
                 sleep(0.2)
-                platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+                platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
                 posted_cost_types.append(task)
 
     return posted_cost_types
@@ -68,7 +68,7 @@ def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, pla
 
         if payload:
             sleep(0.2)
-            platform.expense_fields.bulk_post_dependent_expense_field_values(payload)
+            platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
 
 
 def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None):
