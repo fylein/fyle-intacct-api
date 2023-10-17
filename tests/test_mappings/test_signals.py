@@ -348,3 +348,41 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
 
         # set import_log status to FAILED
         assert import_log.status == 'FAILED'
+
+    # with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
+    #     mock_call.side_effect = WrongParamsError(
+    #         {
+    #             'data': None,
+    #             'error': 'IntegrityError',
+    #             'message': 'The values ("or79Cob97KSh", "text_column15", "1") already exists'
+    #         }
+    #     )
+
+    #     mapping_setting = MappingSetting(
+    #         source_field='CUSTOM_INTENTS',
+    #         destination_field='CUSTOM_INTENTS',
+    #         workspace_id=workspace_id,
+    #         import_to_fyle=True,
+    #         is_custom=True
+    #     )
+
+    #     DestinationAttribute.objects.create(
+    #         attribute_type='CUSTOM_INTENTS',
+    #         display_name='Custom Intents',
+    #         value='Labhvam9',
+    #         destination_id='890813',
+    #         workspace_id=1
+    #     )
+
+    #     try:
+    #         mapping_setting.save()
+    #     except:
+    #         logger.info('Duplicate custom field name')
+
+    #     import_log = ImportLog.objects.get(
+    #         workspace_id=1,
+    #         attribute_type='CUSTOM_INTENTS'
+    #     )
+
+    #     # set import_log status to FAILED
+    #     assert import_log.status == 'FAILED'
