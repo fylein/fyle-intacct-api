@@ -11,6 +11,15 @@ def chain_import_fields_to_fyle(workspace_id):
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     chain = Chain()
 
+    if configuration.import_tax_codes:
+        print('Importing tax codes')
+        chain.append(
+            'apps.mappings.imports.tasks.trigger_import_via_schedule',
+            workspace_id,
+            'TAX_DETAIL',
+            'TAX_GROUP'
+        )
+
     if configuration.import_categories:
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' or \
             configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':

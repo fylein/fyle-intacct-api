@@ -21,8 +21,6 @@ def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
     schedule_or_delete_fyle_import_tasks(configuration)
     schedule_auto_map_employees(
         employee_mapping_preference=configuration.auto_map_employees, workspace_id=int(configuration.workspace_id))
-    
-    schedule_tax_groups_creation(import_tax_codes=configuration.import_tax_codes, workspace_id=configuration.workspace_id)
 
     if not configuration.auto_map_employees:
         schedule_auto_map_charge_card_employees(workspace_id=int(configuration.workspace_id))
@@ -40,7 +38,7 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration):
     ).first()
     dependent_fields = DependentFieldSetting.objects.filter(workspace_id=configuration.workspace_id, is_import_enabled=True).first()
 
-    if configuration.import_categories:
+    if configuration.import_categories or configuration.import_tax_codes:
         new_schedule_or_delete_fyle_import_tasks(configuration)
 
     if configuration.import_vendors_as_merchants or (project_mapping and dependent_fields):
