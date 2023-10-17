@@ -29,7 +29,7 @@ def test_import_settings(mocker, api_client, test_connection):
     )
     
     mocker.patch(
-        'fyle_integrations_platform_connector.apis.ExpenseFields.get_project_field_id',
+        'fyle_integrations_platform_connector.apis.DependentFields.get_project_field_id',
         return_value=12
     )
 

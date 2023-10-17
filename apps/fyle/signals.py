@@ -32,7 +32,7 @@ def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFi
 
     platform = connect_to_platform(instance.workspace_id)
 
-    instance.project_field_id = platform.expense_fields.get_project_field_id()
+    instance.project_field_id = platform.dependent_fields.get_project_field_id()
 
     cost_code = create_dependent_custom_field_in_fyle(
         workspace_id=instance.workspace_id,
