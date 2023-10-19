@@ -286,8 +286,12 @@ class FyleFieldsView(generics.ListAPIView):
         ).values('attribute_type', 'display_name').distinct()
 
         expense_fields= [
-            {'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center'},
-            {'attribute_type': 'PROJECT', 'display_name': 'Project'}
+            {
+                'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center', 'is_dependent': False
+            },
+            {
+                'attribute_type': 'PROJECT', 'display_name': 'Project', 'is_dependent': False
+            }
         ]
 
         for attribute in fields:
