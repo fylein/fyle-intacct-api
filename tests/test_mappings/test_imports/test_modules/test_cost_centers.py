@@ -7,13 +7,16 @@ from fyle_accounting_mappings.models import (
     Mapping
 )
 from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import FyleCredential
+from apps.workspaces.models import FyleCredential, Workspace
 from .fixtures import cost_center_data
 
 
 def test_sync_expense_atrributes(mocker, db):
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_credentials.workspace.fyle_org_id = 'ortL3T2BabCW'
+    fyle_credentials.workspace.save()
+
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     mocker.patch(
@@ -44,6 +47,8 @@ def test_sync_expense_atrributes(mocker, db):
 def test_auto_create_destination_attributes(mocker, db):
     cost_center = CostCenter(1, 'CLASS', None)
     cost_center.sync_after = None
+
+    Workspace.objects.filter(id=1).update(fyle_org_id='ortL3T2BabCW')
 
     # delete all destination attributes, expense attributes and mappings
     Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').delete()
