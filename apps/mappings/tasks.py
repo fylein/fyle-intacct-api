@@ -645,7 +645,6 @@ def auto_import_and_map_fyle_fields(workspace_id):
     """
     Auto import and map fyle fields
     """
-    configuration: Configuration = Configuration.objects.get(workspace_id=workspace_id)
     project_mapping = MappingSetting.objects.filter(
         source_field='PROJECT',
         workspace_id=workspace_id,
@@ -654,9 +653,6 @@ def auto_import_and_map_fyle_fields(workspace_id):
     dependent_fields = DependentFieldSetting.objects.filter(workspace_id=workspace_id, is_import_enabled=True).first()
 
     chain = Chain()
-
-    if configuration.import_vendors_as_merchants:
-        chain.append('apps.mappings.tasks.auto_create_vendors_as_merchants', workspace_id)
 
     if project_mapping and dependent_fields:
         chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id)

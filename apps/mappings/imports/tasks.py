@@ -3,12 +3,14 @@ from apps.mappings.imports.modules.projects import Project
 from apps.mappings.imports.modules.categories import Category
 from apps.mappings.imports.modules.cost_centers import CostCenter
 from apps.mappings.imports.modules.tax_groups import TaxGroup
+from apps.mappings.imports.modules.merchants import Merchant
 
 SOURCE_FIELD_CLASS_MAP = {
     'PROJECT': Project,
     'CATEGORY': Category,
     'COST_CENTER': CostCenter,
-    'TAX_GROUP': TaxGroup
+    'TAX_GROUP': TaxGroup,
+    'MERCHANT': Merchant
 }
 
 def trigger_import_via_schedule(workspace_id: int, destination_field: str, source_field: str):

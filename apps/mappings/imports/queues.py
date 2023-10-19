@@ -12,12 +12,19 @@ def chain_import_fields_to_fyle(workspace_id):
     chain = Chain()
 
     if configuration.import_tax_codes:
-        print('Importing tax codes')
         chain.append(
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
             'TAX_DETAIL',
             'TAX_GROUP'
+        )
+
+    if configuration.import_vendors_as_merchants:
+        chain.append(
+            'apps.mappings.imports.tasks.trigger_import_via_schedule',
+            workspace_id,
+            'VENDOR',
+            'MERCHANT'
         )
 
     if configuration.import_categories:
