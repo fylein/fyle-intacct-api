@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.4 (Debian 15.4-1.pgdg120+1)
+-- Dumped from database version 15.3 (Debian 15.3-1.pgdg120+1)
 -- Dumped by pg_dump version 15.4 (Debian 15.4-1.pgdg100+1)
 
 SET statement_timeout = 0;
@@ -4024,6 +4024,10 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 163	fyle	0027_auto_20230801_0715	2023-08-03 14:22:12.71138+00
 164	workspaces	0031_lastexportdetail_next_export	2023-08-03 14:22:12.731411+00
 165	workspaces	0032_auto_20230810_0702	2023-08-10 08:02:48.464882+00
+166	fyle	0028_remove_expensegroupsettings_import_card_credits	2023-10-19 10:40:26.050248+00
+167	fyle_accounting_mappings	0023_auto_20230918_1316	2023-10-19 10:40:26.096281+00
+168	fyle_accounting_mappings	0024_auto_20230922_0819	2023-10-19 10:40:26.190138+00
+169	mappings	0015_importlog	2023-10-19 10:40:26.232859+00
 \.
 
 
@@ -8023,7 +8027,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 49, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 165, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 169, true);
 
 
 --
@@ -8378,14 +8382,6 @@ ALTER TABLE ONLY public.auth_permission
 
 ALTER TABLE ONLY public.category_mappings
     ADD CONSTRAINT category_mappings_pkey PRIMARY KEY (id);
-
-
---
--- Name: category_mappings category_mappings_source_category_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.category_mappings
-    ADD CONSTRAINT category_mappings_source_category_id_key UNIQUE (source_category_id);
 
 
 --
@@ -9092,6 +9088,13 @@ CREATE INDEX category_mappings_destination_expense_head_id_0ed87fbd ON public.ca
 
 
 --
+-- Name: category_mappings_source_category_id_46f19d95; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX category_mappings_source_category_id_46f19d95 ON public.category_mappings USING btree (source_category_id);
+
+
+--
 -- Name: category_mappings_workspace_id_222ea301; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9695,14 +9698,6 @@ ALTER TABLE ONLY public.expense_reports
 
 
 --
--- Name: mappings fyle_accounting_mapp_destination_id_79497f6e_fk_fyle_acco; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.mappings
-    ADD CONSTRAINT fyle_accounting_mapp_destination_id_79497f6e_fk_fyle_acco FOREIGN KEY (destination_id) REFERENCES public.destination_attributes(id) DEFERRABLE INITIALLY DEFERRED;
-
-
---
 -- Name: mappings fyle_accounting_mapp_workspace_id_10d6edd3_fk_workspace; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9812,6 +9807,14 @@ ALTER TABLE ONLY public.mapping_settings
 
 ALTER TABLE ONLY public.mapping_settings
     ADD CONSTRAINT mapping_settings_workspace_id_590f14f3_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: mappings mappings_destination_id_0c60b033_fk_destination_attributes_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mappings
+    ADD CONSTRAINT mappings_destination_id_0c60b033_fk_destination_attributes_id FOREIGN KEY (destination_id) REFERENCES public.destination_attributes(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
