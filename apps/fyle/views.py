@@ -344,16 +344,14 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
             chain = Chain()
 
             for mapping_setting in mapping_settings:
-                if mapping_setting.source_field in ['PROJECT', 'COST_CENTER']:
+                if mapping_setting.source_field in ['PROJECT', 'COST_CENTER'] or mapping_setting.is_custom:
                     chain.append(
                         'apps.mappings.imports.tasks.trigger_import_via_schedule',
                         int(kwargs['workspace_id']),
                         mapping_setting.destination_field,
-                        mapping_setting.source_field
+                        mapping_setting.source_field,
+                        mapping_setting.is_custom
                     )
-                elif mapping_setting.is_custom:
-                    chain.append('apps.mappings.tasks.async_auto_create_custom_field_mappings',
-                                int(kwargs['workspace_id']))
 
             if chain.length() > 0:
                 chain.run()
