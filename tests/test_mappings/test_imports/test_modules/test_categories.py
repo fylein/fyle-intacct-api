@@ -275,7 +275,7 @@ def test_construct_fyle_payload(db):
     # create new case
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = category._Base__get_auto_sync_permission()
+    is_auto_sync_status_allowed = category.get_auto_sync_permission()
 
     fyle_payload = category.construct_fyle_payload(
         paginated_destination_attributes,

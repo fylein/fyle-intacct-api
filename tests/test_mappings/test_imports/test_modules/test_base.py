@@ -95,35 +95,35 @@ def test_remove_duplicates(db):
     attributes = base.remove_duplicate_attributes(attributes)
     assert len(attributes) == 55
 
-def test__get_platform_class(db):
+def test_get_platform_class(db):
     base = get_base_class_instance()
     platform = get_platform_connection(1)
 
-    assert base._Base__get_platform_class(platform) == platform.projects
+    assert base.get_platform_class(platform) == platform.projects
 
     base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories')
-    assert base._Base__get_platform_class(platform) == platform.categories
+    assert base.get_platform_class(platform) == platform.categories
 
     base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', platform_class_name='cost_centers')
-    assert base._Base__get_platform_class(platform) == platform.cost_centers
+    assert base.get_platform_class(platform) == platform.cost_centers
 
-def test__get_auto_sync_permission(db):
+def test_get_auto_sync_permission(db):
     base = get_base_class_instance()
 
-    assert base._Base__get_auto_sync_permission() == True
+    assert base.get_auto_sync_permission() == True
 
     base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories')
 
-    assert base._Base__get_auto_sync_permission() == True
+    assert base.get_auto_sync_permission() == True
 
     base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', platform_class_name='cost_centers')
 
-    assert base._Base__get_auto_sync_permission() == False
+    assert base.get_auto_sync_permission() == False
 
-def test__construct_attributes_filter(db):
+def test_construct_attributes_filter(db):
     base = get_base_class_instance()
 
-    assert base._Base__construct_attributes_filter('PROJECT') == {'attribute_type': 'PROJECT', 'workspace_id': 1}
+    assert base.construct_attributes_filter('PROJECT') == {'attribute_type': 'PROJECT', 'workspace_id': 1}
 
     date_string = '2023-08-06 12:50:05.875029'
     sync_after = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S.%f')
@@ -131,11 +131,11 @@ def test__construct_attributes_filter(db):
 
     base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories', sync_after=sync_after)
 
-    assert base._Base__construct_attributes_filter('CATEGORY') == {'attribute_type': 'CATEGORY', 'workspace_id': 1, 'updated_at__gte': sync_after}
+    assert base.construct_attributes_filter('CATEGORY') == {'attribute_type': 'CATEGORY', 'workspace_id': 1, 'updated_at__gte': sync_after}
 
     paginated_destination_attribute_values = ['Mobile App Redesign', 'Platform APIs', 'Fyle NetSuite Integration', 'Fyle Sage Intacct Integration', 'Support Taxes', 'T&M Project with Five Tasks', 'Fixed Fee Project with Five Tasks', 'General Overhead', 'General Overhead-Current', 'Youtube proj', 'Integrations', 'Yujiro', 'Pickle']
 
-    assert base._Base__construct_attributes_filter('COST_CENTER', paginated_destination_attribute_values) == {'attribute_type': 'COST_CENTER', 'workspace_id': 1, 'updated_at__gte': sync_after, 'value__in': paginated_destination_attribute_values}
+    assert base.construct_attributes_filter('COST_CENTER', paginated_destination_attribute_values) == {'attribute_type': 'COST_CENTER', 'workspace_id': 1, 'updated_at__gte': sync_after, 'value__in': paginated_destination_attribute_values}
 
 def test_auto_create_destination_attributes(mocker, db):
     project = Project(1, 'PROJECT', None)
@@ -360,7 +360,7 @@ def test_expense_attributes_sync_after(db):
         paginated_expense_attribute_values.append(expense_attribute.value)
 
 
-    filters = project._Base__construct_attributes_filter('PROJECT', paginated_expense_attribute_values)
+    filters = project.construct_attributes_filter('PROJECT', paginated_expense_attribute_values)
 
     expense_attributes = ExpenseAttribute.objects.filter(**filters)
 
