@@ -83,7 +83,7 @@ def get_access_token(refresh_token: str) -> str:
         'refresh_token': refresh_token,
         'client_id': settings.FYLE_CLIENT_ID,
         'client_secret': settings.FYLE_CLIENT_SECRET
-    } 
+    }
     return post_request(settings.FYLE_TOKEN_URI, body=api_data)['access_token']
 
 
