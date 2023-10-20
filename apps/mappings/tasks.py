@@ -46,12 +46,7 @@ def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_
 
     mapped_attribute_ids = []
 
-    if source_attribute_type == "TAX_GROUP":
-        mapped_attribute_ids: List[int] = Mapping.objects.filter(
-            source_id__in=errored_attribute_ids
-        ).values_list('source_id', flat=True)
-
-    elif source_attribute_type == "EMPLOYEE":
+    if source_attribute_type == "EMPLOYEE":
         params = {
             'source_employee_id__in': errored_attribute_ids,
         }
@@ -279,9 +274,6 @@ def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_
 
     platform_connection.tax_groups.sync()
     Mapping.bulk_create_mappings(si_attributes, 'TAX_GROUP', 'TAX_DETAIL', workspace_id)
-    resolve_expense_attribute_errors(
-        source_attribute_type="TAX_GROUP", workspace_id=workspace_id
-    )
 
 
 def create_fyle_tax_group_payload(si_attributes: List[DestinationAttribute], existing_fyle_tax_groups: list):

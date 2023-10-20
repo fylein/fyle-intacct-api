@@ -52,17 +52,6 @@ def pre_save_category_mappings(sender, instance: CategoryMapping, **kwargs):
             ).first()
 
             instance.destination_account_id = destination_attribute.id
-
-
-@receiver(post_save, sender=Mapping)
-def resolve_post_mapping_errors(sender, instance: Mapping, **kwargs):
-    """
-    Resolve errors after mapping is created
-    """
-    if instance.source_type == 'TAX_GROUP':
-        Error.objects.filter(expense_attribute_id=instance.source_id).update(
-            is_resolved=True
-        )
          
 
 @receiver(post_save, sender=CategoryMapping)
