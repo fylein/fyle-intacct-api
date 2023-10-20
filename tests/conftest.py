@@ -53,15 +53,6 @@ def default_session_fixture(request):
     patched_5 = mock.patch('sageintacctsdk.SageIntacctSDK.update_session_id')
     patched_5.__enter__()
 
-    def unpatch():
-        patched_1.__exit__()
-        patched_2.__exit__()
-        patched_3.__exit__()
-        patched_4.__exit__()
-        patched_5.__exit__()
-
-    request.addfinalizer(unpatch)
-
 
 @pytest.fixture()
 def test_connection(db):
