@@ -297,7 +297,7 @@ class FyleFieldsView(generics.ListAPIView):
         for attribute in fields:
             attribute['is_dependent'] = False
             expense_fields.append(attribute)
-        
+
         for attribute in dependent_fields:
             attribute['is_dependent'] = True
             expense_fields.append(attribute)
