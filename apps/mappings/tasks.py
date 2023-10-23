@@ -1,26 +1,19 @@
 import logging
-import traceback
-from datetime import datetime, timedelta
-from dateutil import parser
+from datetime import datetime
 
-from typing import List, Dict
+from typing import List
 
 from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle.platform.exceptions import (
-    WrongParamsError,
     InvalidTokenError as FyleInvalidTokenError,
-    InternalServerError
 )
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import (
-    Mapping,
     MappingSetting,
-    ExpenseAttribute,
-    DestinationAttribute,
     EmployeeMapping
 )
 from sageintacctsdk.exceptions import (
@@ -79,26 +72,6 @@ def resolve_expense_attribute_errors(
 
         if mapped_attribute_ids:
             Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
-
-
-def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: bool = False):
-    unique_attributes = []
-    attribute_values = []
-
-    if is_dependent:
-        for attribute in si_attributes:
-            # when we allow it for other types, we should explicitly fix all these
-            if {attribute.detail['project_name']: attribute.value.lower()} not in attribute_values:
-                unique_attributes.append(attribute)
-                attribute_values.append({attribute.detail['project_name']: attribute.value.lower()})
-
-    else:
-        for attribute in si_attributes:
-            if attribute.value.lower() not in attribute_values:
-                unique_attributes.append(attribute)
-                attribute_values.append(attribute.value.lower())
-
-    return unique_attributes
 
 
 def async_auto_map_employees(workspace_id: int):
@@ -241,97 +214,6 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
 
     else:
         sage_intacct_connection.sync_user_defined_dimensions()
-
-
-def construct_filter_based_on_destination(reimbursable_destination_type: str):
-    """
-    Construct Filter Based on Destination
-    :param reimbursable_destination_type: Reimbursable Destination Type
-    :return: Filter
-    """
-    filters = {}
-    if reimbursable_destination_type == 'EXPENSE_TYPE':
-        filters['destination_expense_head__isnull'] = True
-    elif reimbursable_destination_type == 'ACCOUNT':
-        filters['destination_account__isnull'] = True
-
-    return filters
-
-
-def create_fyle_merchants_payload(vendors, existing_merchants_name):
-    payload: List[str] = []
-    for vendor in vendors:
-        if vendor.value not in existing_merchants_name:
-            payload.append(vendor.value)
-    return payload
-
-
-def post_merchants(platform_connection: PlatformConnector, workspace_id: int, first_run: bool):
-    existing_merchants_name = ExpenseAttribute.objects.filter(
-        attribute_type='MERCHANT', workspace_id=workspace_id).values_list('value', flat=True)
-
-    if first_run:
-        sage_intacct_attributes = DestinationAttribute.objects.filter(
-            attribute_type='VENDOR', workspace_id=workspace_id).order_by('value', 'id')
-    else:
-        merchant = platform_connection.merchants.get()
-        merchant_updated_at = parser.isoparse(merchant['updated_at']).strftime('%Y-%m-%d')
-        sage_intacct_attributes = DestinationAttribute.objects.filter(
-            attribute_type='VENDOR',
-            workspace_id=workspace_id,
-            updated_at__gte=merchant_updated_at
-        ).order_by('value', 'id')
-
-    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes)
-
-    fyle_payload: List[str] = create_fyle_merchants_payload(sage_intacct_attributes, existing_merchants_name)
-
-    if fyle_payload:
-        platform_connection.merchants.post(fyle_payload)
-
-    platform_connection.merchants.sync()
-
-
-def auto_create_vendors_as_merchants(workspace_id):
-    try:
-        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-
-        fyle_connection = PlatformConnector(fyle_credentials)
-
-        existing_merchants_name = ExpenseAttribute.objects.filter(attribute_type='MERCHANT', workspace_id=workspace_id)
-        first_run = False if existing_merchants_name else True
-
-        fyle_connection.merchants.sync()
-
-        sync_sage_intacct_attributes('VENDOR', workspace_id)
-        post_merchants(fyle_connection, workspace_id, first_run)
-
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
-    
-    except FyleInvalidTokenError:
-        logger.info('Invalid Token for fyle - %s', workspace_id)
-    
-    except InternalServerError:
-        logger.error('Internal server error while importing to Fyle')
-
-    except NoPrivilegeError:
-        logger.info('Insufficient permission to access the requested module')
-
-    except WrongParamsError as exception:
-        logger.error(
-            'Error while posting vendors as merchants to fyle for workspace_id - %s in Fyle %s %s',
-            workspace_id, exception.message, {'error': exception.response}
-        )
-
-    except Exception:
-        error = traceback.format_exc()
-        error = {
-            'error': error
-        }
-        logger.exception(
-            'Error while posting vendors as merchants to fyle for workspace_id - %s error: %s',
-            workspace_id, error)
 
 
 def auto_import_and_map_fyle_fields(workspace_id):
