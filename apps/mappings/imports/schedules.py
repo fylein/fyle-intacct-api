@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django_q.models import Schedule
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting
@@ -34,8 +34,14 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, mapping_s
         source_field__in=['CATEGORY', 'PROJECT', 'COST_CENTER', 'TAX_GROUP']
     ).count()
 
-    # If the import_fields_count is 0, delete the schedule
-    if import_fields_count == 0 and not configuration.import_vendors_as_merchants:
+    custom_field_import_fields_count = MappingSetting.objects.filter(
+        import_to_fyle=True,
+        workspace_id=configuration.workspace_id, 
+        is_custom=True
+    ).count()
+
+    # If the import fields count is 0, delete the schedule
+    if import_fields_count == 0 and custom_field_import_fields_count == 0 and not configuration.import_vendors_as_merchants:
         Schedule.objects.filter(
             func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
             args='{}'.format(configuration.workspace_id)
