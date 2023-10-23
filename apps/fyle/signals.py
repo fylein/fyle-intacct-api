@@ -4,7 +4,6 @@ Fyle Signal
 import logging
 
 from django.db.models.signals import post_save, pre_save
-from django_q.tasks import async_task
 from django.dispatch import receiver
 
 from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
