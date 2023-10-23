@@ -4,8 +4,7 @@ from django_q.models import Schedule
 
 from apps.mappings.tasks import (
     schedule_auto_map_employees,
-    schedule_auto_map_charge_card_employees,
-    schedule_tax_groups_creation
+    schedule_auto_map_charge_card_employees
 )
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting
@@ -19,6 +18,7 @@ def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
     :return: None
     """
     schedule_or_delete_fyle_import_tasks(configuration)
+    new_schedule_or_delete_fyle_import_tasks(configuration)
     schedule_auto_map_employees(
         employee_mapping_preference=configuration.auto_map_employees, workspace_id=int(configuration.workspace_id))
 
@@ -37,9 +37,6 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration):
         import_to_fyle=True
     ).first()
     dependent_fields = DependentFieldSetting.objects.filter(workspace_id=configuration.workspace_id, is_import_enabled=True).first()
-
-    if configuration.import_categories or configuration.import_tax_codes or configuration.import_vendors_as_merchants:
-        new_schedule_or_delete_fyle_import_tasks(configuration)
 
     if project_mapping and dependent_fields:
         start_datetime = datetime.now()

@@ -193,7 +193,7 @@ class Base:
         Sync expense attributes
         :param platform: PlatformConnector object
         """
-        platform_class = self.__get_platform_class(platform)
+        platform_class = self.get_platform_class(platform)
         if self.platform_class_name in ['expense_custom_fields', 'merchants']:
             platform_class.sync()
         else:
