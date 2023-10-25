@@ -20,6 +20,14 @@ def chain_import_fields_to_fyle(workspace_id):
             'TAX_GROUP'
         )
 
+    if configuration.import_vendors_as_merchants:
+        chain.append(
+            'apps.mappings.imports.tasks.trigger_import_via_schedule',
+            workspace_id,
+            'VENDOR',
+            'MERCHANT'
+        )
+
     if configuration.import_categories:
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' or \
             configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
