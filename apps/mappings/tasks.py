@@ -29,7 +29,7 @@ from apps.workspaces.models import (
     Configuration
 )
 from apps.fyle.models import DependentFieldSetting
-from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
+
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO

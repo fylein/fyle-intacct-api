@@ -317,7 +317,6 @@ class Base:
         :param is_last_batch: bool
         :param import_log: ImportLog object
         """
-        print(fyle_payload)
         if fyle_payload and self.platform_class_name in ['expense_custom_fields', 'merchants']:
             resource_class.post(fyle_payload)
         elif fyle_payload:
