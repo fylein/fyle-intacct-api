@@ -4,8 +4,7 @@ from django_q.models import Schedule
 
 from apps.mappings.tasks import (
     schedule_auto_map_employees,
-    schedule_auto_map_charge_card_employees,
-    schedule_tax_groups_creation
+    schedule_auto_map_charge_card_employees
 )
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting

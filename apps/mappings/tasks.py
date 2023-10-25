@@ -17,7 +17,6 @@ from fyle.platform.exceptions import (
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import (
-    Mapping,
     MappingSetting,
     ExpenseAttribute,
     DestinationAttribute,

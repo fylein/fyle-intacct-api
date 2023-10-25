@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from django_q.models import Schedule
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting

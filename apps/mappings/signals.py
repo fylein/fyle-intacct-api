@@ -2,8 +2,6 @@
 Mappings Signal
 """
 import logging
-import json
-import traceback
 from django.db.models import Q
 from datetime import datetime, timedelta, timezone
 
@@ -11,7 +9,6 @@ from rest_framework.exceptions import ValidationError
 
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
-from django_q.tasks import async_task
 
 from fyle_accounting_mappings.models import (
     MappingSetting,
