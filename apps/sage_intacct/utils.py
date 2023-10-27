@@ -544,8 +544,14 @@ class SageIntacctConnector:
         """
         Get and Sync Tax Details
         """
+        print("""
+
+            Sync tax details
+
+        """)
         attributes = []
         tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
+        print(tax_details)
         for tax_detail in tax_details:
             if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
                 attributes.append({
