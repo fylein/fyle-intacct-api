@@ -54,7 +54,7 @@ def test_sync_expense_atrributes(mocker, db):
 
     mocker.patch(
         'fyle.platform.apis.v1beta.admin.TaxGroups.list_all',
-        return_value=tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_1']
+        return_value=tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_0']
     )
 
     tax_group.sync_expense_attributes(platform)
@@ -84,8 +84,8 @@ def test_auto_create_destination_attributes(mocker, db):
         )
 
         mock_call.side_effect = [
-            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_1'],
-            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_2'] 
+            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_0'],
+            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_1'] 
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'TAX_GROUP').count()
@@ -113,11 +113,11 @@ def test_auto_create_destination_attributes(mocker, db):
         )
         mocker.patch(
             'sageintacctsdk.apis.TaxDetails.get_all',
-            return_value=tax_groups_data['get_tax_details_destination_attributes']
+            return_value=tax_groups_data['get_tax_details_destination_attributes_subsequent_run']
         )
 
         mock_call.side_effect = [
-            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_1'],
+            [],
             tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_2'] 
         ]
 
@@ -133,13 +133,26 @@ def test_auto_create_destination_attributes(mocker, db):
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'TAX_GROUP').count()
 
-        assert expense_attributes_count == 69
+        assert expense_attributes_count == 69+2
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='TAX_GROUP', destination_type='TAX_DETAIL').count()
         
-        assert mappings_count == 59
+        assert mappings_count == 59+2
 
 
-# def test_construct_fyle_payload(db):
-#     pass
+def test_construct_fyle_payload(db):
+    tax_group = TaxGroup(1, 'TAX_DETAIL', None)
+    tax_group.sync_after = None
 
+    # create new case
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='TAX_DETAIL')
+    existing_fyle_attributes_map = {}
+    is_auto_sync_status_allowed = tax_group.get_auto_sync_permission()
+
+    fyle_payload = tax_group.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        is_auto_sync_status_allowed
+    )
+
+    assert fyle_payload == tax_groups_data['create_fyle_tax_details_payload_create_new_case']
