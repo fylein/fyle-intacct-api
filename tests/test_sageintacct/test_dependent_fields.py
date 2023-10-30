@@ -53,7 +53,7 @@ def test_create_dependent_custom_field_in_fyle(mocker, db):
 def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
     mock = mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -67,7 +67,7 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
 def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
     mock = mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -82,7 +82,7 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
 def test_post_dependent_expense_field_values(db, mocker, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
     mock = mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
 
@@ -103,7 +103,7 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
 
 def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
-    with mock.patch('fyle.platform.apis.v1beta.admin.ExpenseFields.bulk_post_dependent_expense_field_values') as mock_call:
+    with mock.patch('fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values') as mock_call:
         mock_call.side_effect = InvalidTokenError(msg='invalid params', response='invalid params')
         import_dependent_fields_to_fyle(workspace_id)
 

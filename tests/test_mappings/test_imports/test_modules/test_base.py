@@ -12,7 +12,7 @@ from fyle_accounting_mappings.models import (
 )
 from unittest import mock
 from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import FyleCredential
+from apps.workspaces.models import FyleCredential, Workspace
 from apps.mappings.imports.modules.projects import Project
 from apps.mappings.imports.modules.categories import Category
 from apps.mappings.models import ImportLog
@@ -46,6 +46,8 @@ def test_sync_destination_attributes(mocker, db):
 def test_sync_expense_atrributes(mocker, db):
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_credentials.workspace.fyle_org_id = 'orqjgyJ21uge'
+    fyle_credentials.workspace.save()
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     mocker.patch(
@@ -66,7 +68,6 @@ def test_sync_expense_atrributes(mocker, db):
         'fyle.platform.apis.v1beta.admin.Projects.list_all',
         return_value=destination_attributes_data['create_new_auto_create_projects_expense_attributes_0']
     )
-
     project.sync_expense_attributes(platform)
 
     projects_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
@@ -137,10 +138,12 @@ def test_construct_attributes_filter(db):
 
     assert base.construct_attributes_filter('COST_CENTER', paginated_destination_attribute_values) == {'attribute_type': 'COST_CENTER', 'workspace_id': 1, 'updated_at__gte': sync_after, 'value__in': paginated_destination_attribute_values}
 
+
 def test_auto_create_destination_attributes(mocker, db):
     project = Project(1, 'PROJECT', None)
     project.sync_after = None
 
+    Workspace.objects.filter(id=1).update(fyle_org_id='orqjgyJ21uge')
     # delete all destination attributes, expense attributes and mappings
     Mapping.objects.filter(workspace_id=1, source_type='PROJECT', destination_type='PROJECT').delete()
     DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()

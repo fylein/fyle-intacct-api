@@ -140,7 +140,7 @@ def check_interval_and_sync_dimension(workspace: Workspace, fyle_credentials: Fy
 
 def sync_dimensions(fyle_credentials: FyleCredential, workspace_id: int) -> None:
     platform = PlatformConnector(fyle_credentials)
-    platform.import_fyle_dimensions(import_taxes=True)
+    platform.import_fyle_dimensions(import_taxes=True, import_dependent_fields=True)
 
 
 def construct_expense_filter(expense_filter):

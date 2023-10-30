@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.4 (Debian 15.4-1.pgdg120+1)
+-- Dumped from database version 15.3 (Debian 15.3-1.pgdg120+1)
 -- Dumped by pg_dump version 15.4 (Debian 15.4-1.pgdg100+1)
 
 SET statement_timeout = 0;
@@ -4024,6 +4024,10 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 163	fyle	0027_auto_20230801_0715	2023-08-03 14:22:12.71138+00
 164	workspaces	0031_lastexportdetail_next_export	2023-08-03 14:22:12.731411+00
 165	workspaces	0032_auto_20230810_0702	2023-08-10 08:02:48.464882+00
+166	fyle	0028_remove_expensegroupsettings_import_card_credits	2023-10-19 10:40:26.050248+00
+167	fyle_accounting_mappings	0023_auto_20230918_1316	2023-10-19 10:40:26.096281+00
+168	fyle_accounting_mappings	0024_auto_20230922_0819	2023-10-19 10:40:26.190138+00
+169	mappings	0015_importlog	2023-10-19 10:40:26.232859+00
 \.
 
 
@@ -4718,122 +4722,15 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2437	COST_CENTER	Cost Center	Treasury	7222	2022-09-20 08:39:10.503171+00	2022-09-20 08:39:10.503199+00	1	\N	\N	f	f
 2438	COST_CENTER	Cost Center	Internal	7221	2022-09-20 08:39:10.503255+00	2022-09-20 08:39:10.503282+00	1	\N	\N	f	f
 2439	COST_CENTER	Cost Center	Sales and Cross	7220	2022-09-20 08:39:10.503338+00	2022-09-20 08:39:10.503367+00	1	\N	\N	f	f
-2440	SYSTEM_OPERATING	System Operating	Support-M	expense_custom_field.system operating.1	2022-09-20 08:39:10.752946+00	2022-09-20 08:39:10.752986+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2441	SYSTEM_OPERATING	System Operating	GB3-White	expense_custom_field.system operating.2	2022-09-20 08:39:10.753043+00	2022-09-20 08:39:10.753065+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2442	SYSTEM_OPERATING	System Operating	TSM - Black	expense_custom_field.system operating.3	2022-09-20 08:39:10.753128+00	2022-09-20 08:39:10.759395+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
 3180	MERCHANT	Merchant	Entity V700	852	2022-09-20 08:40:24.029423+00	2022-09-20 08:40:24.02945+00	1	\N	\N	f	f
-2443	SYSTEM_OPERATING	System Operating	GB1-White	expense_custom_field.system operating.4	2022-09-20 08:39:10.768644+00	2022-09-20 08:39:10.768789+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2444	SYSTEM_OPERATING	System Operating	DevD	expense_custom_field.system operating.5	2022-09-20 08:39:10.768964+00	2022-09-20 08:39:10.769008+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2445	SYSTEM_OPERATING	System Operating	DevH	expense_custom_field.system operating.6	2022-09-20 08:39:10.769123+00	2022-09-20 08:39:10.769164+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2446	SYSTEM_OPERATING	System Operating	PMBr	expense_custom_field.system operating.7	2022-09-20 08:39:10.769733+00	2022-09-20 08:39:10.769797+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2447	SYSTEM_OPERATING	System Operating	octane squad	expense_custom_field.system operating.8	2022-09-20 08:39:10.769952+00	2022-09-20 08:39:10.769998+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2448	SYSTEM_OPERATING	System Operating	PMD	expense_custom_field.system operating.9	2022-09-20 08:39:10.770144+00	2022-09-20 08:39:10.77035+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2449	SYSTEM_OPERATING	System Operating	wraith squad	expense_custom_field.system operating.10	2022-09-20 08:39:10.770559+00	2022-09-20 08:39:10.770612+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2450	SYSTEM_OPERATING	System Operating	PMDD	expense_custom_field.system operating.11	2022-09-20 08:39:10.770767+00	2022-09-20 08:39:10.771407+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2451	SYSTEM_OPERATING	System Operating	BOOK	expense_custom_field.system operating.12	2022-09-20 08:39:10.771814+00	2022-09-20 08:39:10.77186+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2452	SYSTEM_OPERATING	System Operating	GB9-White	expense_custom_field.system operating.13	2022-09-20 08:39:10.772466+00	2022-09-20 08:39:10.772538+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2453	SYSTEM_OPERATING	System Operating	TSS - Black	expense_custom_field.system operating.14	2022-09-20 08:39:10.772743+00	2022-09-20 08:39:10.7728+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2454	SYSTEM_OPERATING	System Operating	PMWe	expense_custom_field.system operating.15	2022-09-20 08:39:10.773822+00	2022-09-20 08:39:10.773916+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
 683	PROJECT	Project	Project 7	203315	2022-09-20 08:39:06.850486+00	2022-09-20 08:39:06.850626+00	1	t	\N	f	f
-2455	SYSTEM_OPERATING	System Operating	TSL - Black	expense_custom_field.system operating.16	2022-09-20 08:39:10.774574+00	2022-09-20 08:39:10.774624+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2456	SYSTEM_OPERATING	System Operating	Train-MS	expense_custom_field.system operating.17	2022-09-20 08:39:10.774731+00	2022-09-20 08:39:10.774783+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2457	SYSTEM_OPERATING	System Operating	GB6-White	expense_custom_field.system operating.18	2022-09-20 08:39:10.775079+00	2022-09-20 08:39:10.775183+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
 2712	TAX_GROUP	Tax Group	71DTN3JPS4	tg3s7XQ9gMS8	2022-09-20 08:39:11.576836+00	2022-09-20 08:39:11.576896+00	1	\N	{"tax_rate": 0.18}	f	f
-2458	SYSTEM_OPERATING	System Operating	naruto uzumaki	expense_custom_field.system operating.19	2022-09-20 08:39:10.7759+00	2022-09-20 08:39:10.77663+00	1	\N	{"placeholder": "Select System Operating", "custom_field_id": 174995}	f	f
-2459	TEAM	Team	CCC	expense_custom_field.team.1	2022-09-20 08:39:10.823717+00	2022-09-20 08:39:10.824018+00	1	\N	{"placeholder": "Select Team", "custom_field_id": 174175}	f	f
-2460	TEAM	Team	Integrations	expense_custom_field.team.2	2022-09-20 08:39:10.824396+00	2022-09-20 08:39:10.824443+00	1	\N	{"placeholder": "Select Team", "custom_field_id": 174175}	f	f
-2461	USER_DIMENSION_COPY	User Dimension Copy	Wedding Planning by Whitney	expense_custom_field.user dimension copy.1	2022-09-20 08:39:10.841239+00	2022-09-20 08:39:10.841279+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2462	USER_DIMENSION_COPY	User Dimension Copy	Dylan Sollfrank	expense_custom_field.user dimension copy.2	2022-09-20 08:39:10.841361+00	2022-09-20 08:39:10.841384+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2463	USER_DIMENSION_COPY	User Dimension Copy	Admin	expense_custom_field.user dimension copy.3	2022-09-20 08:39:10.841843+00	2022-09-20 08:39:10.841866+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2464	USER_DIMENSION_COPY	User Dimension Copy	Production	expense_custom_field.user dimension copy.4	2022-09-20 08:39:10.841925+00	2022-09-20 08:39:10.841946+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2465	USER_DIMENSION_COPY	User Dimension Copy	Fyle	expense_custom_field.user dimension copy.5	2022-09-20 08:39:10.842016+00	2022-09-20 08:39:10.842046+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2466	USER_DIMENSION_COPY	User Dimension Copy	Diego Rodriguez	expense_custom_field.user dimension copy.6	2022-09-20 08:39:10.842115+00	2022-09-20 08:39:10.842145+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 3043	MERCHANT	Merchant	Ashwin	852	2022-09-20 08:40:15.786052+00	2022-09-20 08:40:15.78614+00	1	\N	\N	f	f
-2467	USER_DIMENSION_COPY	User Dimension Copy	wraith squad	expense_custom_field.user dimension copy.7	2022-09-20 08:39:10.842214+00	2022-09-20 08:39:10.842642+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2468	USER_DIMENSION_COPY	User Dimension Copy	Ashwinn	expense_custom_field.user dimension copy.8	2022-09-20 08:39:10.842746+00	2022-09-20 08:39:10.842769+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2469	USER_DIMENSION_COPY	User Dimension Copy	Geeta Kalapatapu	expense_custom_field.user dimension copy.9	2022-09-20 08:39:10.842833+00	2022-09-20 08:39:10.842862+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2470	USER_DIMENSION_COPY	User Dimension Copy	naruto uzumaki	expense_custom_field.user dimension copy.10	2022-09-20 08:39:10.842931+00	2022-09-20 08:39:10.84296+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2471	USER_DIMENSION_COPY	User Dimension Copy	Travis Waldron	expense_custom_field.user dimension copy.11	2022-09-20 08:39:10.843123+00	2022-09-20 08:39:10.843157+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2472	USER_DIMENSION_COPY	User Dimension Copy	Weiskopf Consulting	expense_custom_field.user dimension copy.12	2022-09-20 08:39:10.843227+00	2022-09-20 08:39:10.843254+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2473	USER_DIMENSION_COPY	User Dimension Copy	Dukes Basketball Camp	expense_custom_field.user dimension copy.13	2022-09-20 08:39:10.843307+00	2022-09-20 08:39:10.843328+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2474	USER_DIMENSION_COPY	User Dimension Copy	Product	expense_custom_field.user dimension copy.14	2022-09-20 08:39:10.843402+00	2022-09-20 08:39:10.843432+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2475	USER_DIMENSION_COPY	User Dimension Copy	Mark Cho	expense_custom_field.user dimension copy.15	2022-09-20 08:39:10.844001+00	2022-09-20 08:39:10.844035+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2476	USER_DIMENSION_COPY	User Dimension Copy	Sushi by Katsuyuki	expense_custom_field.user dimension copy.16	2022-09-20 08:39:10.84414+00	2022-09-20 08:39:10.844161+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2477	USER_DIMENSION_COPY	User Dimension Copy	Diego Rodriguez:Test Project	expense_custom_field.user dimension copy.17	2022-09-20 08:39:10.844328+00	2022-09-20 08:39:10.844377+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2478	USER_DIMENSION_COPY	User Dimension Copy	Sales	expense_custom_field.user dimension copy.18	2022-09-20 08:39:10.844501+00	2022-09-20 08:39:10.844543+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2479	USER_DIMENSION_COPY	User Dimension Copy	Pye's Cakes	expense_custom_field.user dimension copy.19	2022-09-20 08:39:10.845209+00	2022-09-20 08:39:10.845279+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2480	USER_DIMENSION_COPY	User Dimension Copy	Assembly	expense_custom_field.user dimension copy.20	2022-09-20 08:39:10.845433+00	2022-09-20 08:39:10.84548+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2481	USER_DIMENSION_COPY	User Dimension Copy	Freeman Sporting Goods:55 Twin Lane	expense_custom_field.user dimension copy.21	2022-09-20 08:39:10.845613+00	2022-09-20 08:39:10.845654+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2482	USER_DIMENSION_COPY	User Dimension Copy	Machine Shop	expense_custom_field.user dimension copy.22	2022-09-20 08:39:10.845779+00	2022-09-20 08:39:10.845821+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2483	USER_DIMENSION_COPY	User Dimension Copy	Kookies by Kathy	expense_custom_field.user dimension copy.23	2022-09-20 08:39:10.84595+00	2022-09-20 08:39:10.845992+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2484	USER_DIMENSION_COPY	User Dimension Copy	Shara Barnett:Barnett Design	expense_custom_field.user dimension copy.24	2022-09-20 08:39:10.846113+00	2022-09-20 08:39:10.846162+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 3079	MERCHANT	Merchant	Samantha Washington	852	2022-09-20 08:40:15.889336+00	2022-09-20 08:40:15.889366+00	1	\N	\N	f	f
-2485	USER_DIMENSION_COPY	User Dimension Copy	Amy's Bird Sanctuary	expense_custom_field.user dimension copy.25	2022-09-20 08:39:10.846296+00	2022-09-20 08:39:10.846337+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2517	LOCATION	Location	Australia	expense_custom_field.location.5	2022-09-20 08:39:10.894617+00	2022-09-20 08:39:10.894661+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2486	USER_DIMENSION_COPY	User Dimension Copy	Amy's Bird Sanctuary:Test Project	expense_custom_field.user dimension copy.26	2022-09-20 08:39:10.846451+00	2022-09-20 08:39:10.846497+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2487	USER_DIMENSION_COPY	User Dimension Copy	Gevelber Photography	expense_custom_field.user dimension copy.27	2022-09-20 08:39:10.846918+00	2022-09-20 08:39:10.847145+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2488	USER_DIMENSION_COPY	User Dimension Copy	Red Rock Diner	expense_custom_field.user dimension copy.28	2022-09-20 08:39:10.847412+00	2022-09-20 08:39:10.84782+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2489	USER_DIMENSION_COPY	User Dimension Copy	Fabrication	expense_custom_field.user dimension copy.29	2022-09-20 08:39:10.847937+00	2022-09-20 08:39:10.847967+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2490	USER_DIMENSION_COPY	User Dimension Copy	Cool Cars	expense_custom_field.user dimension copy.30	2022-09-20 08:39:10.848037+00	2022-09-20 08:39:10.848058+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2491	USER_DIMENSION_COPY	User Dimension Copy	octane squad	expense_custom_field.user dimension copy.31	2022-09-20 08:39:10.848126+00	2022-09-20 08:39:10.848146+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2492	USER_DIMENSION_COPY	User Dimension Copy	Sravan BLR Customer	expense_custom_field.user dimension copy.32	2022-09-20 08:39:10.848317+00	2022-09-20 08:39:10.848347+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2493	USER_DIMENSION_COPY	User Dimension Copy	Rago Travel Agency	expense_custom_field.user dimension copy.33	2022-09-20 08:39:10.848425+00	2022-09-20 08:39:10.848466+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2494	USER_DIMENSION_COPY	User Dimension Copy	Marketing	expense_custom_field.user dimension copy.34	2022-09-20 08:39:10.8487+00	2022-09-20 08:39:10.848719+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2495	USER_DIMENSION_COPY	User Dimension Copy	John Melton	expense_custom_field.user dimension copy.35	2022-09-20 08:39:10.848768+00	2022-09-20 08:39:10.848789+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2496	USER_DIMENSION_COPY	User Dimension Copy	Inspection	expense_custom_field.user dimension copy.36	2022-09-20 08:39:10.849628+00	2022-09-20 08:39:10.849676+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2497	USER_DIMENSION_COPY	User Dimension Copy	Bill's Windsurf Shop	expense_custom_field.user dimension copy.37	2022-09-20 08:39:10.849904+00	2022-09-20 08:39:10.849946+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2534	DEPARTMENTS	Departments	Admin	expense_custom_field.departments.5	2022-09-20 08:39:10.919259+00	2022-09-20 08:39:10.919285+00	1	\N	{"placeholder": "Select Departments", "custom_field_id": 174997}	f	f
-2498	USER_DIMENSION_COPY	User Dimension Copy	Paulsen Medical Supplies	expense_custom_field.user dimension copy.38	2022-09-20 08:39:10.850109+00	2022-09-20 08:39:10.850578+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2499	USER_DIMENSION_COPY	User Dimension Copy	Kate Whelan	expense_custom_field.user dimension copy.39	2022-09-20 08:39:10.850781+00	2022-09-20 08:39:10.850809+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2500	USER_DIMENSION_COPY	User Dimension Copy	Freeman Sporting Goods:0969 Ocean View Road	expense_custom_field.user dimension copy.40	2022-09-20 08:39:10.850893+00	2022-09-20 08:39:10.850921+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2501	USER_DIMENSION_COPY	User Dimension Copy	Freeman Sporting Goods	expense_custom_field.user dimension copy.41	2022-09-20 08:39:10.850978+00	2022-09-20 08:39:10.850999+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2502	USER_DIMENSION_COPY	User Dimension Copy	Rondonuwu Fruit and Vegi	expense_custom_field.user dimension copy.42	2022-09-20 08:39:10.851058+00	2022-09-20 08:39:10.851074+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2503	USER_DIMENSION_COPY	User Dimension Copy	Shara Barnett	expense_custom_field.user dimension copy.43	2022-09-20 08:39:10.851145+00	2022-09-20 08:39:10.851351+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2504	USER_DIMENSION_COPY	User Dimension Copy	Video Games by Dan	expense_custom_field.user dimension copy.44	2022-09-20 08:39:10.851575+00	2022-09-20 08:39:10.851654+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2505	USER_DIMENSION_COPY	User Dimension Copy	Service	expense_custom_field.user dimension copy.45	2022-09-20 08:39:10.851748+00	2022-09-20 08:39:10.851781+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
 2745	TAX_GROUP	Tax Group	ITS-AU @0.0%	tg9e1bqo5zgV	2022-09-20 08:39:11.626516+00	2022-09-20 08:39:11.626589+00	1	\N	{"tax_rate": 0.0}	f	f
-2506	USER_DIMENSION_COPY	User Dimension Copy	Engineering	expense_custom_field.user dimension copy.46	2022-09-20 08:39:10.851863+00	2022-09-20 08:39:10.851885+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2507	USER_DIMENSION_COPY	User Dimension Copy	Jeff's Jalopies	expense_custom_field.user dimension copy.47	2022-09-20 08:39:10.851945+00	2022-09-20 08:39:10.851965+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2508	USER_DIMENSION_COPY	User Dimension Copy	Sonnenschein Family Store	expense_custom_field.user dimension copy.48	2022-09-20 08:39:10.852026+00	2022-09-20 08:39:10.852063+00	1	\N	{"placeholder": "Select User Dimension Copy", "custom_field_id": 174991}	f	f
-2509	OPERATING_SYSTEM	Operating System	India	expense_custom_field.operating system.1	2022-09-20 08:39:10.877424+00	2022-09-20 08:39:10.877464+00	1	\N	{"placeholder": "Select Operating System", "custom_field_id": 133433}	f	f
-2510	OPERATING_SYSTEM	Operating System	USA1	expense_custom_field.operating system.2	2022-09-20 08:39:10.877535+00	2022-09-20 08:39:10.877557+00	1	\N	{"placeholder": "Select Operating System", "custom_field_id": 133433}	f	f
-2511	OPERATING_SYSTEM	Operating System	USA2	expense_custom_field.operating system.3	2022-09-20 08:39:10.877626+00	2022-09-20 08:39:10.877646+00	1	\N	{"placeholder": "Select Operating System", "custom_field_id": 133433}	f	f
-2512	OPERATING_SYSTEM	Operating System	USA3	expense_custom_field.operating system.4	2022-09-20 08:39:10.877703+00	2022-09-20 08:39:10.877733+00	1	\N	{"placeholder": "Select Operating System", "custom_field_id": 133433}	f	f
-2513	LOCATION	Location	South Africa	expense_custom_field.location.1	2022-09-20 08:39:10.893887+00	2022-09-20 08:39:10.893935+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2514	LOCATION	Location	Bangalore	expense_custom_field.location.2	2022-09-20 08:39:10.894017+00	2022-09-20 08:39:10.89404+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2515	LOCATION	Location	London	expense_custom_field.location.3	2022-09-20 08:39:10.894328+00	2022-09-20 08:39:10.89437+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2516	LOCATION	Location	New South Wales	expense_custom_field.location.4	2022-09-20 08:39:10.894475+00	2022-09-20 08:39:10.894508+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
 3085	MERCHANT	Merchant	test Sharma	852	2022-09-20 08:40:15.929612+00	2022-09-20 08:40:15.929654+00	1	\N	\N	f	f
-2518	LOCATION	Location	naruto uzumaki	expense_custom_field.location.6	2022-09-20 08:39:10.894748+00	2022-09-20 08:39:10.894776+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2519	LOCATION	Location	octane squad	expense_custom_field.location.7	2022-09-20 08:39:10.894841+00	2022-09-20 08:39:10.89487+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2520	LOCATION	Location	Holding Company	expense_custom_field.location.8	2022-09-20 08:39:10.894965+00	2022-09-20 08:39:10.895295+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2521	LOCATION	Location	USA 1	expense_custom_field.location.9	2022-09-20 08:39:10.895395+00	2022-09-20 08:39:10.895418+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
 3098	MERCHANT	Merchant	Ashwin from NetSuite	852	2022-09-20 08:40:15.969892+00	2022-09-20 08:40:15.969921+00	1	\N	\N	f	f
-2522	LOCATION	Location	Elimination - Sub	expense_custom_field.location.10	2022-09-20 08:39:10.89549+00	2022-09-20 08:39:10.895927+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2523	LOCATION	Location	wraith squad	expense_custom_field.location.11	2022-09-20 08:39:10.896367+00	2022-09-20 08:39:10.896398+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2524	LOCATION	Location	USA 2	expense_custom_field.location.12	2022-09-20 08:39:10.896587+00	2022-09-20 08:39:10.896709+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2525	LOCATION	Location	Elimination - Global	expense_custom_field.location.13	2022-09-20 08:39:10.896802+00	2022-09-20 08:39:10.896834+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2526	LOCATION	Location	India	expense_custom_field.location.14	2022-09-20 08:39:10.896903+00	2022-09-20 08:39:10.896922+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2527	LOCATION	Location	Elimination - NA	expense_custom_field.location.15	2022-09-20 08:39:10.896969+00	2022-09-20 08:39:10.896981+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2528	LOCATION	Location	Canada	expense_custom_field.location.16	2022-09-20 08:39:10.897037+00	2022-09-20 08:39:10.897058+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2529	LOCATION	Location	United Kingdom	expense_custom_field.location.17	2022-09-20 08:39:10.897135+00	2022-09-20 08:39:10.89716+00	1	\N	{"placeholder": "Select Location", "custom_field_id": 845}	f	f
-2530	DEPARTMENTS	Departments	Services	expense_custom_field.departments.1	2022-09-20 08:39:10.918377+00	2022-09-20 08:39:10.918564+00	1	\N	{"placeholder": "Select Departments", "custom_field_id": 174997}	f	f
-2531	DEPARTMENTS	Departments	Sales	expense_custom_field.departments.2	2022-09-20 08:39:10.918639+00	2022-09-20 08:39:10.918662+00	1	\N	{"placeholder": "Select Departments", "custom_field_id": 174997}	f	f
-2532	DEPARTMENTS	Departments	IT	expense_custom_field.departments.3	2022-09-20 08:39:10.918729+00	2022-09-20 08:39:10.918799+00	1	\N	{"placeholder": "Select Departments", "custom_field_id": 174997}	f	f
-2533	DEPARTMENTS	Departments	Marketing	expense_custom_field.departments.4	2022-09-20 08:39:10.918962+00	2022-09-20 08:39:10.91917+00	1	\N	{"placeholder": "Select Departments", "custom_field_id": 174997}	f	f
-2535	TEAM_COPY	Team Copy	General Overhead-Current	expense_custom_field.team copy.1	2022-09-20 08:39:10.933098+00	2022-09-20 08:39:10.933126+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2536	TEAM_COPY	Team Copy	General Overhead	expense_custom_field.team copy.2	2022-09-20 08:39:10.933178+00	2022-09-20 08:39:10.933201+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2537	TEAM_COPY	Team Copy	Fyle Sage Intacct Integration	expense_custom_field.team copy.3	2022-09-20 08:39:10.933343+00	2022-09-20 08:39:10.933366+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2538	TEAM_COPY	Team Copy	Integrations	expense_custom_field.team copy.4	2022-09-20 08:39:10.933425+00	2022-09-20 08:39:10.933446+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2539	TEAM_COPY	Team Copy	Fyle Engineering	expense_custom_field.team copy.5	2022-09-20 08:39:10.933516+00	2022-09-20 08:39:10.933545+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2540	TEAM_COPY	Team Copy	Platform APIs	expense_custom_field.team copy.6	2022-09-20 08:39:10.933614+00	2022-09-20 08:39:10.933643+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2541	TEAM_COPY	Team Copy	Support Taxes	expense_custom_field.team copy.7	2022-09-20 08:39:10.933712+00	2022-09-20 08:39:10.933737+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2542	TEAM_COPY	Team Copy	labhvam	expense_custom_field.team copy.8	2022-09-20 08:39:10.933797+00	2022-09-20 08:39:10.933827+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2543	TEAM_COPY	Team Copy	Fyle NetSuite Integration	expense_custom_field.team copy.9	2022-09-20 08:39:10.933895+00	2022-09-20 08:39:10.933924+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
 2746	TAX_GROUP	Tax Group	2VD4DE3305	tg9KXJlbl0fo	2022-09-20 08:39:11.626755+00	2022-09-20 08:39:11.62773+00	1	\N	{"tax_rate": 0.18}	f	f
-2544	TEAM_COPY	Team Copy	T&M Project with Five Tasks	expense_custom_field.team copy.10	2022-09-20 08:39:10.933982+00	2022-09-20 08:39:10.933993+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2545	TEAM_COPY	Team Copy	Fixed Fee Project with Five Tasks	expense_custom_field.team copy.11	2022-09-20 08:39:10.934048+00	2022-09-20 08:39:10.934078+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
-2546	TEAM_COPY	Team Copy	Mobile App Redesign	expense_custom_field.team copy.12	2022-09-20 08:39:10.934146+00	2022-09-20 08:39:10.934176+00	1	\N	{"placeholder": "Select Team Copy", "custom_field_id": 174993}	f	f
 2547	LOCATION_ENTITY	Location Entity	Wedding Planning by Whitney	expense_custom_field.location entity.1	2022-09-20 08:39:10.945031+00	2022-09-20 08:39:10.945075+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2548	LOCATION_ENTITY	Location Entity	Jeff's Jalopies	expense_custom_field.location entity.2	2022-09-20 08:39:10.945155+00	2022-09-20 08:39:10.945185+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2549	LOCATION_ENTITY	Location Entity	Dylan Sollfrank	expense_custom_field.location entity.3	2022-09-20 08:39:10.945253+00	2022-09-20 08:39:10.945281+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
@@ -4844,6 +4741,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2554	LOCATION_ENTITY	Location Entity	USA3	expense_custom_field.location entity.8	2022-09-20 08:39:10.945945+00	2022-09-20 08:39:10.945972+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 684	PROJECT	Project	Project 8	203316	2022-09-20 08:39:06.867492+00	2022-09-20 08:39:06.867576+00	1	t	\N	f	f
 2555	LOCATION_ENTITY	Location Entity	Dukes Basketball Camp	expense_custom_field.location entity.9	2022-09-20 08:39:10.946037+00	2022-09-20 08:39:10.946064+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
+2677	CORPORATE_CARD	Corporate Card	BANK OF INDIA - 219876	baccfiqYgkE8Db	2022-09-20 08:39:11.191992+00	2022-09-20 08:39:11.19202+00	1	\N	{"cardholder_name": null}	f	f
 2556	LOCATION_ENTITY	Location Entity	Weiskopf Consulting	expense_custom_field.location entity.10	2022-09-20 08:39:10.946128+00	2022-09-20 08:39:10.946156+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2557	LOCATION_ENTITY	Location Entity	Mark Cho	expense_custom_field.location entity.11	2022-09-20 08:39:10.94622+00	2022-09-20 08:39:10.946247+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2558	LOCATION_ENTITY	Location Entity	Diego Rodriguez:Test Project	expense_custom_field.location entity.12	2022-09-20 08:39:10.946311+00	2022-09-20 08:39:10.946476+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
@@ -4873,106 +4771,15 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2581	LOCATION_ENTITY	Location Entity	USA2	expense_custom_field.location entity.35	2022-09-20 08:39:10.948964+00	2022-09-20 08:39:10.948981+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2582	LOCATION_ENTITY	Location Entity	Kookies by Kathy	expense_custom_field.location entity.36	2022-09-20 08:39:10.949035+00	2022-09-20 08:39:10.949059+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
 2583	LOCATION_ENTITY	Location Entity	Sonnenschein Family Store	expense_custom_field.location entity.37	2022-09-20 08:39:10.949119+00	2022-09-20 08:39:10.949141+00	1	\N	{"placeholder": "Select Location Entity", "custom_field_id": 179638}	f	f
-2584	CLASS	Class	goat	expense_custom_field.class.1	2022-09-20 08:39:10.963066+00	2022-09-20 08:39:10.963106+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2585	CLASS	Class	Diego Rodriguez	expense_custom_field.class.2	2022-09-20 08:39:10.963175+00	2022-09-20 08:39:10.963203+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2586	CLASS	Class	Dylan Sollfrank	expense_custom_field.class.3	2022-09-20 08:39:10.963386+00	2022-09-20 08:39:10.963414+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2587	CLASS	Class	Rondonuwu Fruit and Vegi	expense_custom_field.class.4	2022-09-20 08:39:10.963476+00	2022-09-20 08:39:10.963515+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2588	CLASS	Class	Bill's Windsurf Shop	expense_custom_field.class.5	2022-09-20 08:39:10.963601+00	2022-09-20 08:39:10.963639+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
 3086	MERCHANT	Merchant	Tim Philip Masonry	852	2022-09-20 08:40:15.929809+00	2022-09-20 08:40:15.929843+00	1	\N	\N	f	f
-2589	CLASS	Class	Kate Whelan	expense_custom_field.class.6	2022-09-20 08:39:10.964058+00	2022-09-20 08:39:10.964089+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2590	CLASS	Class	Mark Cho	expense_custom_field.class.7	2022-09-20 08:39:10.96443+00	2022-09-20 08:39:10.96458+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2591	CLASS	Class	Shara Barnett	expense_custom_field.class.8	2022-09-20 08:39:10.964777+00	2022-09-20 08:39:10.964799+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2592	CLASS	Class	Shara Barnett:Barnett Design	expense_custom_field.class.9	2022-09-20 08:39:10.964976+00	2022-09-20 08:39:10.965004+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2593	CLASS	Class	Kookies by Kathy	expense_custom_field.class.10	2022-09-20 08:39:10.965069+00	2022-09-20 08:39:10.965096+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
 3099	MERCHANT	Merchant	Basket Case	852	2022-09-20 08:40:15.969982+00	2022-09-20 08:40:15.970011+00	1	\N	\N	f	f
-2594	CLASS	Class	Weiskopf Consulting	expense_custom_field.class.11	2022-09-20 08:39:10.965161+00	2022-09-20 08:39:10.965188+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2595	CLASS	Class	Red Rock Diner	expense_custom_field.class.12	2022-09-20 08:39:10.965264+00	2022-09-20 08:39:10.965399+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2596	CLASS	Class	Freeman Sporting Goods:0969 Ocean View Road	expense_custom_field.class.13	2022-09-20 08:39:10.965475+00	2022-09-20 08:39:10.965502+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2597	CLASS	Class	John Melton	expense_custom_field.class.14	2022-09-20 08:39:10.965567+00	2022-09-20 08:39:10.965594+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2598	CLASS	Class	Dukes Basketball Camp	expense_custom_field.class.15	2022-09-20 08:39:10.965658+00	2022-09-20 08:39:10.965685+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2599	CLASS	Class	Sonnenschein Family Store	expense_custom_field.class.16	2022-09-20 08:39:10.965749+00	2022-09-20 08:39:10.965776+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2600	CLASS	Class	octane squad	expense_custom_field.class.17	2022-09-20 08:39:10.96584+00	2022-09-20 08:39:10.965867+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2601	CLASS	Class	Video Games by Dan	expense_custom_field.class.18	2022-09-20 08:39:10.965931+00	2022-09-20 08:39:10.965959+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2602	CLASS	Class	Jeff's Jalopies	expense_custom_field.class.19	2022-09-20 08:39:10.966023+00	2022-09-20 08:39:10.96605+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2603	CLASS	Class	Wedding Planning by Whitney	expense_custom_field.class.20	2022-09-20 08:39:10.966114+00	2022-09-20 08:39:10.966142+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2604	CLASS	Class	Pye's Cakes	expense_custom_field.class.21	2022-09-20 08:39:10.966206+00	2022-09-20 08:39:10.966233+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2605	CLASS	Class	Freeman Sporting Goods	expense_custom_field.class.22	2022-09-20 08:39:10.966298+00	2022-09-20 08:39:10.966325+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2606	CLASS	Class	wraith squad	expense_custom_field.class.23	2022-09-20 08:39:10.966513+00	2022-09-20 08:39:10.966544+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2607	CLASS	Class	Rago Travel Agency	expense_custom_field.class.24	2022-09-20 08:39:10.966621+00	2022-09-20 08:39:10.966649+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2608	CLASS	Class	Geeta Kalapatapu	expense_custom_field.class.25	2022-09-20 08:39:10.966714+00	2022-09-20 08:39:10.966741+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2609	CLASS	Class	Freeman Sporting Goods:55 Twin Lane	expense_custom_field.class.26	2022-09-20 08:39:10.966805+00	2022-09-20 08:39:10.966832+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2610	CLASS	Class	Travis Waldron	expense_custom_field.class.27	2022-09-20 08:39:10.966896+00	2022-09-20 08:39:10.966937+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2611	CLASS	Class	Amy's Bird Sanctuary	expense_custom_field.class.28	2022-09-20 08:39:10.967006+00	2022-09-20 08:39:10.967035+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2612	CLASS	Class	Sushi by Katsuyuki	expense_custom_field.class.29	2022-09-20 08:39:10.967104+00	2022-09-20 08:39:10.967133+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2613	CLASS	Class	Cool Cars	expense_custom_field.class.30	2022-09-20 08:39:10.967202+00	2022-09-20 08:39:10.967231+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2614	CLASS	Class	naruto uzumaki	expense_custom_field.class.31	2022-09-20 08:39:10.967404+00	2022-09-20 08:39:10.967445+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2615	CLASS	Class	Paulsen Medical Supplies	expense_custom_field.class.32	2022-09-20 08:39:10.967513+00	2022-09-20 08:39:10.967541+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
-2616	CLASS	Class	Gevelber Photography	expense_custom_field.class.33	2022-09-20 08:39:10.967605+00	2022-09-20 08:39:10.967633+00	1	\N	{"placeholder": "Select Class", "custom_field_id": 190717}	f	f
 3101	MERCHANT	Merchant	Blooper Bloop	852	2022-09-20 08:40:15.970263+00	2022-09-20 08:40:15.970292+00	1	\N	\N	f	f
-2617	USER_DIMENSION	User Dimension	Services	expense_custom_field.user dimension.1	2022-09-20 08:39:10.980758+00	2022-09-20 08:39:10.980797+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
-2618	USER_DIMENSION	User Dimension	Sales	expense_custom_field.user dimension.2	2022-09-20 08:39:10.980866+00	2022-09-20 08:39:10.980894+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
-2619	USER_DIMENSION	User Dimension	Marketing	expense_custom_field.user dimension.3	2022-09-20 08:39:10.98096+00	2022-09-20 08:39:10.980988+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
-2620	USER_DIMENSION	User Dimension	Admin	expense_custom_field.user dimension.4	2022-09-20 08:39:10.981052+00	2022-09-20 08:39:10.98108+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
-2621	USER_DIMENSION	User Dimension	IT	expense_custom_field.user dimension.5	2022-09-20 08:39:10.981144+00	2022-09-20 08:39:10.981171+00	1	\N	{"placeholder": "Select User Dimension", "custom_field_id": 174176}	f	f
-2622	TEAM_2_POSTMAN	Team 2 Postman	Dukes Basketball Camp	expense_custom_field.team 2 postman.1	2022-09-20 08:39:10.992147+00	2022-09-20 08:39:10.992414+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2623	TEAM_2_POSTMAN	Team 2 Postman	Gevelber Photography	expense_custom_field.team 2 postman.2	2022-09-20 08:39:10.993352+00	2022-09-20 08:39:10.993408+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2699	TAX_GROUP	Tax Group	CA-Zero @0.0%	tg1KNSwtyeAW	2022-09-20 08:39:11.572056+00	2022-09-20 08:39:11.572106+00	1	\N	{"tax_rate": 0.0}	f	f
-2624	TEAM_2_POSTMAN	Team 2 Postman	Geeta Kalapatapu	expense_custom_field.team 2 postman.3	2022-09-20 08:39:10.993564+00	2022-09-20 08:39:10.993635+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2625	TEAM_2_POSTMAN	Team 2 Postman	Bill's Windsurf Shop	expense_custom_field.team 2 postman.4	2022-09-20 08:39:10.993761+00	2022-09-20 08:39:10.993806+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2626	TEAM_2_POSTMAN	Team 2 Postman	Diego Rodriguez	expense_custom_field.team 2 postman.5	2022-09-20 08:39:10.993903+00	2022-09-20 08:39:10.993941+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2627	TEAM_2_POSTMAN	Team 2 Postman	Amy's Bird Sanctuary:Test Project	expense_custom_field.team 2 postman.6	2022-09-20 08:39:10.994057+00	2022-09-20 08:39:10.994101+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2628	TEAM_2_POSTMAN	Team 2 Postman	Dylan Sollfrank	expense_custom_field.team 2 postman.7	2022-09-20 08:39:10.994406+00	2022-09-20 08:39:10.994458+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2629	TEAM_2_POSTMAN	Team 2 Postman	Sravan BLR Customer	expense_custom_field.team 2 postman.8	2022-09-20 08:39:10.994547+00	2022-09-20 08:39:10.994577+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2630	TEAM_2_POSTMAN	Team 2 Postman	Kate Whelan	expense_custom_field.team 2 postman.9	2022-09-20 08:39:10.994662+00	2022-09-20 08:39:10.99471+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2713	TAX_GROUP	Tax Group	V1EJ6D8VGJ	tg45EVaI4yoO	2022-09-20 08:39:11.577033+00	2022-09-20 08:39:11.577082+00	1	\N	{"tax_rate": 0.18}	f	f
-2631	TEAM_2_POSTMAN	Team 2 Postman	Coffee	expense_custom_field.team 2 postman.10	2022-09-20 08:39:10.994792+00	2022-09-20 08:39:10.994821+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2632	TEAM_2_POSTMAN	Team 2 Postman	Sushi by Katsuyuki	expense_custom_field.team 2 postman.11	2022-09-20 08:39:10.99489+00	2022-09-20 08:39:10.994919+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2633	TEAM_2_POSTMAN	Team 2 Postman	Freeman Sporting Goods:55 Twin Lane	expense_custom_field.team 2 postman.12	2022-09-20 08:39:10.99499+00	2022-09-20 08:39:10.995021+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2634	TEAM_2_POSTMAN	Team 2 Postman	Diego Rodriguez:Test Project	expense_custom_field.team 2 postman.13	2022-09-20 08:39:10.995543+00	2022-09-20 08:39:10.995585+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2635	TEAM_2_POSTMAN	Team 2 Postman	Chai	expense_custom_field.team 2 postman.14	2022-09-20 08:39:10.995665+00	2022-09-20 08:39:10.995692+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2636	TEAM_2_POSTMAN	Team 2 Postman	Cool Cars	expense_custom_field.team 2 postman.15	2022-09-20 08:39:10.995758+00	2022-09-20 08:39:10.995785+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2637	TEAM_2_POSTMAN	Team 2 Postman	Amy's Bird Sanctuary	expense_custom_field.team 2 postman.16	2022-09-20 08:39:10.99585+00	2022-09-20 08:39:10.995877+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2638	TEAM_2_POSTMAN	Team 2 Postman	Freeman Sporting Goods	expense_custom_field.team 2 postman.17	2022-09-20 08:39:10.995942+00	2022-09-20 08:39:10.995969+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2639	TEAM_2_POSTMAN	Team 2 Postman	Shara Barnett	expense_custom_field.team 2 postman.18	2022-09-20 08:39:10.996035+00	2022-09-20 08:39:10.996062+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2640	TEAM_2_POSTMAN	Team 2 Postman	Kookies by Kathy	expense_custom_field.team 2 postman.19	2022-09-20 08:39:10.996126+00	2022-09-20 08:39:10.996153+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2641	TEAM_2_POSTMAN	Team 2 Postman	Jeff's Jalopies	expense_custom_field.team 2 postman.20	2022-09-20 08:39:10.996217+00	2022-09-20 08:39:10.996244+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2642	TEAM_2_POSTMAN	Team 2 Postman	Red Rock Diner	expense_custom_field.team 2 postman.21	2022-09-20 08:39:10.996309+00	2022-09-20 08:39:10.996336+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2643	TEAM_2_POSTMAN	Team 2 Postman	Wedding Planning by Whitney	expense_custom_field.team 2 postman.22	2022-09-20 08:39:10.996537+00	2022-09-20 08:39:10.996566+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2644	TEAM_2_POSTMAN	Team 2 Postman	Sonnenschein Family Store	expense_custom_field.team 2 postman.23	2022-09-20 08:39:10.996631+00	2022-09-20 08:39:10.996658+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2645	TEAM_2_POSTMAN	Team 2 Postman	Shara Barnett:Barnett Design	expense_custom_field.team 2 postman.24	2022-09-20 08:39:10.996722+00	2022-09-20 08:39:10.99675+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2646	TEAM_2_POSTMAN	Team 2 Postman	Travis Waldron	expense_custom_field.team 2 postman.25	2022-09-20 08:39:10.996815+00	2022-09-20 08:39:10.996842+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2647	TEAM_2_POSTMAN	Team 2 Postman	Rondonuwu Fruit and Vegi	expense_custom_field.team 2 postman.26	2022-09-20 08:39:10.996907+00	2022-09-20 08:39:10.996934+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2648	TEAM_2_POSTMAN	Team 2 Postman	Ashwinn	expense_custom_field.team 2 postman.27	2022-09-20 08:39:10.996999+00	2022-09-20 08:39:10.997026+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2649	TEAM_2_POSTMAN	Team 2 Postman	Paulsen Medical Supplies	expense_custom_field.team 2 postman.28	2022-09-20 08:39:10.997091+00	2022-09-20 08:39:10.997118+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2650	TEAM_2_POSTMAN	Team 2 Postman	wraith squad	expense_custom_field.team 2 postman.29	2022-09-20 08:39:10.997183+00	2022-09-20 08:39:10.99721+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
 2688	CORPORATE_CARD	Corporate Card	American Express - 29578	bacce3rbqv5Veb	2022-09-20 08:39:11.194168+00	2022-09-20 08:39:11.194195+00	1	\N	{"cardholder_name": "Monica E. Geller-Bing's account"}	f	f
-2651	TEAM_2_POSTMAN	Team 2 Postman	Weiskopf Consulting	expense_custom_field.team 2 postman.30	2022-09-20 08:39:10.997275+00	2022-09-20 08:39:10.997302+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2652	TEAM_2_POSTMAN	Team 2 Postman	octane squad	expense_custom_field.team 2 postman.31	2022-09-20 08:39:10.997483+00	2022-09-20 08:39:10.997513+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2653	TEAM_2_POSTMAN	Team 2 Postman	naruto uzumaki	expense_custom_field.team 2 postman.32	2022-09-20 08:39:10.997589+00	2022-09-20 08:39:10.997616+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2654	TEAM_2_POSTMAN	Team 2 Postman	Rago Travel Agency	expense_custom_field.team 2 postman.33	2022-09-20 08:39:10.997681+00	2022-09-20 08:39:10.997708+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2655	TEAM_2_POSTMAN	Team 2 Postman	Mark Cho	expense_custom_field.team 2 postman.34	2022-09-20 08:39:10.997773+00	2022-09-20 08:39:10.9978+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2656	TEAM_2_POSTMAN	Team 2 Postman	Freeman Sporting Goods:0969 Ocean View Road	expense_custom_field.team 2 postman.35	2022-09-20 08:39:10.997865+00	2022-09-20 08:39:10.997892+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2657	TEAM_2_POSTMAN	Team 2 Postman	Pye's Cakes	expense_custom_field.team 2 postman.36	2022-09-20 08:39:10.997957+00	2022-09-20 08:39:10.998009+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2658	TEAM_2_POSTMAN	Team 2 Postman	John Melton	expense_custom_field.team 2 postman.37	2022-09-20 08:39:10.998079+00	2022-09-20 08:39:10.998108+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2659	TEAM_2_POSTMAN	Team 2 Postman	Video Games by Dan	expense_custom_field.team 2 postman.38	2022-09-20 08:39:10.998183+00	2022-09-20 08:39:10.998211+00	1	\N	{"placeholder": "Select Team 2 Postman", "custom_field_id": 174994}	f	f
-2660	TAX_GROUPS	Tax Groups	Exempt Sales @0.0%	expense_custom_field.tax groups.1	2022-09-20 08:39:11.012135+00	2022-09-20 08:39:11.012188+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2661	TAX_GROUPS	Tax Groups	MB - GST/RST on Purchases @12.0%	expense_custom_field.tax groups.2	2022-09-20 08:39:11.012267+00	2022-09-20 08:39:11.012297+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2662	TAX_GROUPS	Tax Groups	MB - GST/RST on Sales @12.0%	expense_custom_field.tax groups.3	2022-09-20 08:39:11.012367+00	2022-09-20 08:39:11.012398+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2663	TAX_GROUPS	Tax Groups	Oakdale Sales Tax @8.125%	expense_custom_field.tax groups.4	2022-09-20 08:39:11.012589+00	2022-09-20 08:39:11.012619+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2664	TAX_GROUPS	Tax Groups	Sales Tax on Imports @0.0%	expense_custom_field.tax groups.5	2022-09-20 08:39:11.012691+00	2022-09-20 08:39:11.01272+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2665	TAX_GROUPS	Tax Groups	Tax Exempt @0.0%	expense_custom_field.tax groups.6	2022-09-20 08:39:11.012792+00	2022-09-20 08:39:11.012822+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2666	TAX_GROUPS	Tax Groups	Tax on Consulting @8.25%	expense_custom_field.tax groups.7	2022-09-20 08:39:11.012892+00	2022-09-20 08:39:11.012921+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2667	TAX_GROUPS	Tax Groups	Tax on Goods @8.75%	expense_custom_field.tax groups.8	2022-09-20 08:39:11.012991+00	2022-09-20 08:39:11.013047+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2668	TAX_GROUPS	Tax Groups	Tax on Goodss @8.125%	expense_custom_field.tax groups.9	2022-09-20 08:39:11.013119+00	2022-09-20 08:39:11.013158+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2669	TAX_GROUPS	Tax Groups	Tax on Purchases @8.25%	expense_custom_field.tax groups.10	2022-09-20 08:39:11.013351+00	2022-09-20 08:39:11.013383+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2670	TAX_GROUPS	Tax Groups	tax for working @8.125%	expense_custom_field.tax groups.11	2022-09-20 08:39:11.013446+00	2022-09-20 08:39:11.013525+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2671	TAX_GROUPS	Tax Groups	tax for usa @8.125%	expense_custom_field.tax groups.12	2022-09-20 08:39:11.013631+00	2022-09-20 08:39:11.013678+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2672	TAX_GROUPS	Tax Groups	tax for usass @8.125%	expense_custom_field.tax groups.13	2022-09-20 08:39:11.014332+00	2022-09-20 08:39:11.014452+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
-2673	TAX_GROUPS	Tax Groups	tax for ussr @8.125%	expense_custom_field.tax groups.14	2022-09-20 08:39:11.014851+00	2022-09-20 08:39:11.014906+00	1	\N	{"placeholder": "Select Tax Groups", "custom_field_id": 195201}	f	f
 2674	CORPORATE_CARD	Corporate Card	BANK OF INDIA - 219875	baccKkmmW4u1N4	2022-09-20 08:39:11.191689+00	2022-09-20 08:39:11.19173+00	1	\N	{"cardholder_name": null}	f	f
 2675	CORPORATE_CARD	Corporate Card	Bank of America - 1319	baccJKh39lWI2L	2022-09-20 08:39:11.191804+00	2022-09-20 08:39:11.191833+00	1	\N	{"cardholder_name": null}	f	f
 2676	CORPORATE_CARD	Corporate Card	BANK OF INDIA - 219874	baccxoXQr0p2kj	2022-09-20 08:39:11.191899+00	2022-09-20 08:39:11.191927+00	1	\N	{"cardholder_name": null}	f	f
-2677	CORPORATE_CARD	Corporate Card	BANK OF INDIA - 219876	baccfiqYgkE8Db	2022-09-20 08:39:11.191992+00	2022-09-20 08:39:11.19202+00	1	\N	{"cardholder_name": null}	f	f
 2678	CORPORATE_CARD	Corporate Card	American Express - 71149	baccaQY7KB7ogS	2022-09-20 08:39:11.192085+00	2022-09-20 08:39:11.192113+00	1	\N	{"cardholder_name": "Joseph Francis Tribbiani, Jr's account"}	f	f
 2679	CORPORATE_CARD	Corporate Card	Bank of America - 8084	baccMCkKmsHV9X	2022-09-20 08:39:11.192178+00	2022-09-20 08:39:11.192205+00	1	\N	{"cardholder_name": null}	f	f
 2731	TAX_GROUP	Tax Group	QZP8MCPJI0	tg7fDMpgFvdu	2022-09-20 08:39:11.591681+00	2022-09-20 08:39:11.591736+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -5024,6 +4831,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 2733	TAX_GROUP	Tax Group	GST-free non-capital - 0%	tg7ig0JL47TA	2022-09-20 08:39:11.591963+00	2022-09-20 08:39:11.591995+00	1	\N	{"tax_rate": 0.28}	f	f
 2734	TAX_GROUP	Tax Group	Pant Tax @0%	tg7JTybZgV72	2022-09-20 08:39:11.592078+00	2022-09-20 08:39:11.592109+00	1	\N	{"tax_rate": 0.0}	f	f
 2735	TAX_GROUP	Tax Group	NVV6A35DEB	tg7MUaF3jn8g	2022-09-20 08:39:11.592181+00	2022-09-20 08:39:11.592204+00	1	\N	{"tax_rate": 0.18}	f	f
+3128	MERCHANT	Merchant	Wal-Mart	852	2022-09-20 08:40:15.993087+00	2022-09-20 08:40:15.993146+00	1	\N	\N	f	f
 2736	TAX_GROUP	Tax Group	ERWLSCCF5Y	tg7nwnwdF4dT	2022-09-20 08:39:11.592283+00	2022-09-20 08:39:11.592313+00	1	\N	{"tax_rate": 0.18}	f	f
 2738	TAX_GROUP	Tax Group	UNDEF-AU @0.0%	tg7TABrTPI9Y	2022-09-20 08:39:11.592493+00	2022-09-20 08:39:11.592522+00	1	\N	{"tax_rate": 0.0}	f	f
 2739	TAX_GROUP	Tax Group	3TBA1Y8XTJ	tg82dF3hhe5n	2022-09-20 08:39:11.592597+00	2022-09-20 08:39:11.592627+00	1	\N	{"tax_rate": 0.18}	f	f
@@ -5385,7 +5193,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3125	MERCHANT	Merchant	Uber	852	2022-09-20 08:40:15.992369+00	2022-09-20 08:40:15.992416+00	1	\N	\N	f	f
 3126	MERCHANT	Merchant	Victor Martinez	852	2022-09-20 08:40:15.99252+00	2022-09-20 08:40:15.992565+00	1	\N	\N	f	f
 3127	MERCHANT	Merchant	Victor Martinez II	852	2022-09-20 08:40:15.992712+00	2022-09-20 08:40:15.992763+00	1	\N	\N	f	f
-3128	MERCHANT	Merchant	Wal-Mart	852	2022-09-20 08:40:15.993087+00	2022-09-20 08:40:15.993146+00	1	\N	\N	f	f
 3129	MERCHANT	Merchant	final staging vandor	852	2022-09-20 08:40:15.993665+00	2022-09-20 08:40:15.993716+00	1	\N	\N	f	f
 3130	MERCHANT	Merchant	Killua	852	2022-09-20 08:40:15.993791+00	2022-09-20 08:40:15.993822+00	1	\N	\N	f	f
 3131	MERCHANT	Merchant	labhvam	852	2022-09-20 08:40:15.993884+00	2022-09-20 08:40:15.993914+00	1	\N	\N	f	f
@@ -5514,6 +5321,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3235	TAX_GROUP	Tax Group	G14 GST Free Non-Capital Purchases	tgemain9bLa7	2022-09-29 12:09:34.562886+00	2022-09-29 12:09:34.562915+00	1	\N	{"tax_rate": 0.0}	t	f
 3236	TAX_GROUP	Tax Group	Other Goods Imported (Not Capital Goods)	tgkxSRv2TaRu	2022-09-29 12:09:34.569172+00	2022-09-29 12:09:34.569223+00	1	\N	{"tax_rate": 0.0}	t	f
 3237	TAX_GROUP	Tax Group	G14 GST Free Capital Purchases	tgl1DZ4CwRD4	2022-09-29 12:09:34.569334+00	2022-09-29 12:09:34.569364+00	1	\N	{"tax_rate": 0.0}	t	f
+45	CATEGORY	Category	General Expenses	135996	2022-09-20 08:39:03.256232+00	2022-09-20 08:39:03.256319+00	1	t	\N	f	f
 3238	TAX_GROUP	Tax Group	UK Import Goods Exempt Rate	tgMiYO0TshL4	2022-09-29 12:09:34.569436+00	2022-09-29 12:09:34.569465+00	1	\N	{"tax_rate": 0.0}	t	f
 3239	TAX_GROUP	Tax Group	UK Purchase Services Exempt Rate	tgmL0gaIk8QA	2022-09-29 12:09:34.569535+00	2022-09-29 12:09:34.569575+00	1	\N	{"tax_rate": 0.0}	t	f
 3240	TAX_GROUP	Tax Group	UK Purchase in Reverse Charge Box 6 Zero Rate UK	tgoP36Onf0Zk	2022-09-29 12:09:34.569787+00	2022-09-29 12:09:34.569824+00	1	\N	{"tax_rate": 0.0}	t	f
@@ -5579,7 +5387,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 42	CATEGORY	Category	Consulting & Accounting	135993	2022-09-20 08:39:03.255064+00	2022-09-20 08:39:03.2551+00	1	t	\N	f	f
 43	CATEGORY	Category	Depreciation	135994	2022-09-20 08:39:03.255232+00	2022-09-20 08:39:03.255675+00	1	t	\N	f	f
 44	CATEGORY	Category	Freight & Courier	135995	2022-09-20 08:39:03.255887+00	2022-09-20 08:39:03.255941+00	1	t	\N	f	f
-45	CATEGORY	Category	General Expenses	135996	2022-09-20 08:39:03.256232+00	2022-09-20 08:39:03.256319+00	1	t	\N	f	f
 20	CATEGORY	Category	Mileage	135452	2022-09-20 08:39:03.250996+00	2022-09-20 08:39:03.251038+00	1	t	\N	t	f
 21	CATEGORY	Category	Per Diem	135454	2022-09-20 08:39:03.251154+00	2022-09-20 08:39:03.251197+00	1	t	\N	t	f
 46	CATEGORY	Category	Legal expenses	135997	2022-09-20 08:39:03.25644+00	2022-09-20 08:39:03.256483+00	1	t	\N	f	f
@@ -5651,6 +5458,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 143	CATEGORY	Category	Other general and administrative expenses	147497	2022-09-20 08:39:03.429163+00	2022-09-20 08:39:03.429192+00	1	t	\N	f	f
 144	CATEGORY	Category	Other selling expenses	147498	2022-09-20 08:39:03.429254+00	2022-09-20 08:39:03.429284+00	1	t	\N	f	f
 145	CATEGORY	Category	Other Types of Expenses-Advertising Expenses	147499	2022-09-20 08:39:03.429344+00	2022-09-20 08:39:03.429374+00	1	t	\N	f	f
+366	CATEGORY	Category	test	137949	2022-09-20 08:39:05.302162+00	2022-09-20 08:39:05.302194+00	1	t	\N	f	f
 146	CATEGORY	Category	Rent or lease payments	147500	2022-09-20 08:39:03.429435+00	2022-09-20 08:39:03.429464+00	1	t	\N	f	f
 147	CATEGORY	Category	Shipping and delivery expense	147501	2022-09-20 08:39:03.429524+00	2022-09-20 08:39:03.429554+00	1	t	\N	f	f
 148	CATEGORY	Category	Stationery and printing	147502	2022-09-20 08:39:03.429614+00	2022-09-20 08:39:03.429643+00	1	t	\N	f	f
@@ -5868,7 +5676,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 363	CATEGORY	Category	Furniture for the department	137945	2022-09-20 08:39:05.296897+00	2022-09-20 08:39:05.296936+00	1	t	\N	f	f
 364	CATEGORY	Category	Equipment	137947	2022-09-20 08:39:05.297658+00	2022-09-20 08:39:05.298733+00	1	t	\N	f	f
 365	CATEGORY	Category	Travel Expenses	137948	2022-09-20 08:39:05.301454+00	2022-09-20 08:39:05.301506+00	1	t	\N	f	f
-366	CATEGORY	Category	test	137949	2022-09-20 08:39:05.302162+00	2022-09-20 08:39:05.302194+00	1	t	\N	f	f
 367	CATEGORY	Category	WIP COGS	135931	2022-09-20 08:39:05.317972+00	2022-09-20 08:39:05.318031+00	1	t	\N	f	f
 368	CATEGORY	Category	Mfg WIP	135932	2022-09-20 08:39:05.383194+00	2022-09-20 08:39:05.383226+00	1	t	\N	f	f
 369	CATEGORY	Category	Purchase Price Variance	135933	2022-09-20 08:39:05.383276+00	2022-09-20 08:39:05.383298+00	1	t	\N	f	f
@@ -6375,6 +6182,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 867	PROJECT	Project	Bolder Construction Inc.	246979	2022-09-20 08:39:07.377986+00	2022-09-20 08:39:07.378015+00	1	t	\N	f	f
 868	PROJECT	Project	Bollman Attorneys Company	246980	2022-09-20 08:39:07.378154+00	2022-09-20 08:39:07.3782+00	1	t	\N	f	f
 869	PROJECT	Project	Bona Source	246981	2022-09-20 08:39:07.378379+00	2022-09-20 08:39:07.378409+00	1	t	\N	f	f
+1585	PROJECT	Project	Sharon Stone	247697	2022-09-20 08:39:08.999158+00	2022-09-20 08:39:08.999186+00	1	t	\N	f	f
 870	PROJECT	Project	Boney Electric Dynamics	246982	2022-09-20 08:39:07.378471+00	2022-09-20 08:39:07.3785+00	1	t	\N	f	f
 871	PROJECT	Project	Borowski Catering Management	246983	2022-09-20 08:39:07.378596+00	2022-09-20 08:39:07.378638+00	1	t	\N	f	f
 872	PROJECT	Project	Botero Electric Co.	246984	2022-09-20 08:39:07.378737+00	2022-09-20 08:39:07.378774+00	1	t	\N	f	f
@@ -7092,7 +6900,6 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 1582	PROJECT	Project	Service Job	247694	2022-09-20 08:39:08.988815+00	2022-09-20 08:39:08.98908+00	1	t	\N	f	f
 1583	PROJECT	Project	Seyler Title Distributors	247695	2022-09-20 08:39:08.989186+00	2022-09-20 08:39:08.989363+00	1	t	\N	f	f
 1584	PROJECT	Project	Shackelton Hospital Sales	247696	2022-09-20 08:39:08.998889+00	2022-09-20 08:39:08.998926+00	1	t	\N	f	f
-1585	PROJECT	Project	Sharon Stone	247697	2022-09-20 08:39:08.999158+00	2022-09-20 08:39:08.999186+00	1	t	\N	f	f
 1586	PROJECT	Project	Sheinbein Construction Fabricators	247698	2022-09-20 08:39:08.999391+00	2022-09-20 08:39:08.999434+00	1	t	\N	f	f
 1587	PROJECT	Project	Shininger Lumber Holding Corp.	247699	2022-09-20 08:39:08.999522+00	2022-09-20 08:39:08.999545+00	1	t	\N	f	f
 1588	PROJECT	Project	Shutter Title Services	247700	2022-09-20 08:39:08.999598+00	2022-09-20 08:39:08.999627+00	1	t	\N	f	f
@@ -7382,6 +7189,203 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 3219	PROJECT	Project	Branding Follow Up	304666	2022-09-20 08:40:25.832021+00	2022-09-20 08:40:25.832103+00	1	t	\N	t	f
 3220	PROJECT	Project	Direct Mail Campaign	304667	2022-09-20 08:40:25.834913+00	2022-09-20 08:40:25.83498+00	1	t	\N	t	f
 3221	PROJECT	Project	Ecommerce Campaign	304668	2022-09-20 08:40:25.835186+00	2022-09-20 08:40:25.835223+00	1	t	\N	t	f
+2440	SYSTEM_OPERATING	System Operating	Support-M	expense_custom_field.system operating.1	2022-09-20 08:39:10.752946+00	2022-09-20 08:39:10.752986+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2441	SYSTEM_OPERATING	System Operating	GB3-White	expense_custom_field.system operating.2	2022-09-20 08:39:10.753043+00	2022-09-20 08:39:10.753065+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2442	SYSTEM_OPERATING	System Operating	TSM - Black	expense_custom_field.system operating.3	2022-09-20 08:39:10.753128+00	2022-09-20 08:39:10.759395+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2443	SYSTEM_OPERATING	System Operating	GB1-White	expense_custom_field.system operating.4	2022-09-20 08:39:10.768644+00	2022-09-20 08:39:10.768789+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2444	SYSTEM_OPERATING	System Operating	DevD	expense_custom_field.system operating.5	2022-09-20 08:39:10.768964+00	2022-09-20 08:39:10.769008+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2445	SYSTEM_OPERATING	System Operating	DevH	expense_custom_field.system operating.6	2022-09-20 08:39:10.769123+00	2022-09-20 08:39:10.769164+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2446	SYSTEM_OPERATING	System Operating	PMBr	expense_custom_field.system operating.7	2022-09-20 08:39:10.769733+00	2022-09-20 08:39:10.769797+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2447	SYSTEM_OPERATING	System Operating	octane squad	expense_custom_field.system operating.8	2022-09-20 08:39:10.769952+00	2022-09-20 08:39:10.769998+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2448	SYSTEM_OPERATING	System Operating	PMD	expense_custom_field.system operating.9	2022-09-20 08:39:10.770144+00	2022-09-20 08:39:10.77035+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2449	SYSTEM_OPERATING	System Operating	wraith squad	expense_custom_field.system operating.10	2022-09-20 08:39:10.770559+00	2022-09-20 08:39:10.770612+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2450	SYSTEM_OPERATING	System Operating	PMDD	expense_custom_field.system operating.11	2022-09-20 08:39:10.770767+00	2022-09-20 08:39:10.771407+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2451	SYSTEM_OPERATING	System Operating	BOOK	expense_custom_field.system operating.12	2022-09-20 08:39:10.771814+00	2022-09-20 08:39:10.77186+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2452	SYSTEM_OPERATING	System Operating	GB9-White	expense_custom_field.system operating.13	2022-09-20 08:39:10.772466+00	2022-09-20 08:39:10.772538+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2453	SYSTEM_OPERATING	System Operating	TSS - Black	expense_custom_field.system operating.14	2022-09-20 08:39:10.772743+00	2022-09-20 08:39:10.7728+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2454	SYSTEM_OPERATING	System Operating	PMWe	expense_custom_field.system operating.15	2022-09-20 08:39:10.773822+00	2022-09-20 08:39:10.773916+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2455	SYSTEM_OPERATING	System Operating	TSL - Black	expense_custom_field.system operating.16	2022-09-20 08:39:10.774574+00	2022-09-20 08:39:10.774624+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2456	SYSTEM_OPERATING	System Operating	Train-MS	expense_custom_field.system operating.17	2022-09-20 08:39:10.774731+00	2022-09-20 08:39:10.774783+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2457	SYSTEM_OPERATING	System Operating	GB6-White	expense_custom_field.system operating.18	2022-09-20 08:39:10.775079+00	2022-09-20 08:39:10.775183+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2458	SYSTEM_OPERATING	System Operating	naruto uzumaki	expense_custom_field.system operating.19	2022-09-20 08:39:10.7759+00	2022-09-20 08:39:10.77663+00	1	\N	{"placeholder": "Select System Operating", "is_dependent": false, "custom_field_id": 174995}	f	f
+2459	TEAM	Team	CCC	expense_custom_field.team.1	2022-09-20 08:39:10.823717+00	2022-09-20 08:39:10.824018+00	1	\N	{"placeholder": "Select Team", "is_dependent": false, "custom_field_id": 174175}	f	f
+2460	TEAM	Team	Integrations	expense_custom_field.team.2	2022-09-20 08:39:10.824396+00	2022-09-20 08:39:10.824443+00	1	\N	{"placeholder": "Select Team", "is_dependent": false, "custom_field_id": 174175}	f	f
+2461	USER_DIMENSION_COPY	User Dimension Copy	Wedding Planning by Whitney	expense_custom_field.user dimension copy.1	2022-09-20 08:39:10.841239+00	2022-09-20 08:39:10.841279+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2462	USER_DIMENSION_COPY	User Dimension Copy	Dylan Sollfrank	expense_custom_field.user dimension copy.2	2022-09-20 08:39:10.841361+00	2022-09-20 08:39:10.841384+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2463	USER_DIMENSION_COPY	User Dimension Copy	Admin	expense_custom_field.user dimension copy.3	2022-09-20 08:39:10.841843+00	2022-09-20 08:39:10.841866+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2464	USER_DIMENSION_COPY	User Dimension Copy	Production	expense_custom_field.user dimension copy.4	2022-09-20 08:39:10.841925+00	2022-09-20 08:39:10.841946+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2465	USER_DIMENSION_COPY	User Dimension Copy	Fyle	expense_custom_field.user dimension copy.5	2022-09-20 08:39:10.842016+00	2022-09-20 08:39:10.842046+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2466	USER_DIMENSION_COPY	User Dimension Copy	Diego Rodriguez	expense_custom_field.user dimension copy.6	2022-09-20 08:39:10.842115+00	2022-09-20 08:39:10.842145+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2467	USER_DIMENSION_COPY	User Dimension Copy	wraith squad	expense_custom_field.user dimension copy.7	2022-09-20 08:39:10.842214+00	2022-09-20 08:39:10.842642+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2468	USER_DIMENSION_COPY	User Dimension Copy	Ashwinn	expense_custom_field.user dimension copy.8	2022-09-20 08:39:10.842746+00	2022-09-20 08:39:10.842769+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2469	USER_DIMENSION_COPY	User Dimension Copy	Geeta Kalapatapu	expense_custom_field.user dimension copy.9	2022-09-20 08:39:10.842833+00	2022-09-20 08:39:10.842862+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2470	USER_DIMENSION_COPY	User Dimension Copy	naruto uzumaki	expense_custom_field.user dimension copy.10	2022-09-20 08:39:10.842931+00	2022-09-20 08:39:10.84296+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2532	DEPARTMENTS	Departments	IT	expense_custom_field.departments.3	2022-09-20 08:39:10.918729+00	2022-09-20 08:39:10.918799+00	1	\N	{"placeholder": "Select Departments", "is_dependent": false, "custom_field_id": 174997}	f	f
+2471	USER_DIMENSION_COPY	User Dimension Copy	Travis Waldron	expense_custom_field.user dimension copy.11	2022-09-20 08:39:10.843123+00	2022-09-20 08:39:10.843157+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2472	USER_DIMENSION_COPY	User Dimension Copy	Weiskopf Consulting	expense_custom_field.user dimension copy.12	2022-09-20 08:39:10.843227+00	2022-09-20 08:39:10.843254+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2473	USER_DIMENSION_COPY	User Dimension Copy	Dukes Basketball Camp	expense_custom_field.user dimension copy.13	2022-09-20 08:39:10.843307+00	2022-09-20 08:39:10.843328+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2474	USER_DIMENSION_COPY	User Dimension Copy	Product	expense_custom_field.user dimension copy.14	2022-09-20 08:39:10.843402+00	2022-09-20 08:39:10.843432+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2475	USER_DIMENSION_COPY	User Dimension Copy	Mark Cho	expense_custom_field.user dimension copy.15	2022-09-20 08:39:10.844001+00	2022-09-20 08:39:10.844035+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2476	USER_DIMENSION_COPY	User Dimension Copy	Sushi by Katsuyuki	expense_custom_field.user dimension copy.16	2022-09-20 08:39:10.84414+00	2022-09-20 08:39:10.844161+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2477	USER_DIMENSION_COPY	User Dimension Copy	Diego Rodriguez:Test Project	expense_custom_field.user dimension copy.17	2022-09-20 08:39:10.844328+00	2022-09-20 08:39:10.844377+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2478	USER_DIMENSION_COPY	User Dimension Copy	Sales	expense_custom_field.user dimension copy.18	2022-09-20 08:39:10.844501+00	2022-09-20 08:39:10.844543+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2479	USER_DIMENSION_COPY	User Dimension Copy	Pye's Cakes	expense_custom_field.user dimension copy.19	2022-09-20 08:39:10.845209+00	2022-09-20 08:39:10.845279+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2480	USER_DIMENSION_COPY	User Dimension Copy	Assembly	expense_custom_field.user dimension copy.20	2022-09-20 08:39:10.845433+00	2022-09-20 08:39:10.84548+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2481	USER_DIMENSION_COPY	User Dimension Copy	Freeman Sporting Goods:55 Twin Lane	expense_custom_field.user dimension copy.21	2022-09-20 08:39:10.845613+00	2022-09-20 08:39:10.845654+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2482	USER_DIMENSION_COPY	User Dimension Copy	Machine Shop	expense_custom_field.user dimension copy.22	2022-09-20 08:39:10.845779+00	2022-09-20 08:39:10.845821+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2483	USER_DIMENSION_COPY	User Dimension Copy	Kookies by Kathy	expense_custom_field.user dimension copy.23	2022-09-20 08:39:10.84595+00	2022-09-20 08:39:10.845992+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2586	CLASS	Class	Dylan Sollfrank	expense_custom_field.class.3	2022-09-20 08:39:10.963386+00	2022-09-20 08:39:10.963414+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2484	USER_DIMENSION_COPY	User Dimension Copy	Shara Barnett:Barnett Design	expense_custom_field.user dimension copy.24	2022-09-20 08:39:10.846113+00	2022-09-20 08:39:10.846162+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2485	USER_DIMENSION_COPY	User Dimension Copy	Amy's Bird Sanctuary	expense_custom_field.user dimension copy.25	2022-09-20 08:39:10.846296+00	2022-09-20 08:39:10.846337+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2517	LOCATION	Location	Australia	expense_custom_field.location.5	2022-09-20 08:39:10.894617+00	2022-09-20 08:39:10.894661+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2486	USER_DIMENSION_COPY	User Dimension Copy	Amy's Bird Sanctuary:Test Project	expense_custom_field.user dimension copy.26	2022-09-20 08:39:10.846451+00	2022-09-20 08:39:10.846497+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2487	USER_DIMENSION_COPY	User Dimension Copy	Gevelber Photography	expense_custom_field.user dimension copy.27	2022-09-20 08:39:10.846918+00	2022-09-20 08:39:10.847145+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2488	USER_DIMENSION_COPY	User Dimension Copy	Red Rock Diner	expense_custom_field.user dimension copy.28	2022-09-20 08:39:10.847412+00	2022-09-20 08:39:10.84782+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2489	USER_DIMENSION_COPY	User Dimension Copy	Fabrication	expense_custom_field.user dimension copy.29	2022-09-20 08:39:10.847937+00	2022-09-20 08:39:10.847967+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2490	USER_DIMENSION_COPY	User Dimension Copy	Cool Cars	expense_custom_field.user dimension copy.30	2022-09-20 08:39:10.848037+00	2022-09-20 08:39:10.848058+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2491	USER_DIMENSION_COPY	User Dimension Copy	octane squad	expense_custom_field.user dimension copy.31	2022-09-20 08:39:10.848126+00	2022-09-20 08:39:10.848146+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2492	USER_DIMENSION_COPY	User Dimension Copy	Sravan BLR Customer	expense_custom_field.user dimension copy.32	2022-09-20 08:39:10.848317+00	2022-09-20 08:39:10.848347+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2493	USER_DIMENSION_COPY	User Dimension Copy	Rago Travel Agency	expense_custom_field.user dimension copy.33	2022-09-20 08:39:10.848425+00	2022-09-20 08:39:10.848466+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2494	USER_DIMENSION_COPY	User Dimension Copy	Marketing	expense_custom_field.user dimension copy.34	2022-09-20 08:39:10.8487+00	2022-09-20 08:39:10.848719+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2495	USER_DIMENSION_COPY	User Dimension Copy	John Melton	expense_custom_field.user dimension copy.35	2022-09-20 08:39:10.848768+00	2022-09-20 08:39:10.848789+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2496	USER_DIMENSION_COPY	User Dimension Copy	Inspection	expense_custom_field.user dimension copy.36	2022-09-20 08:39:10.849628+00	2022-09-20 08:39:10.849676+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2497	USER_DIMENSION_COPY	User Dimension Copy	Bill's Windsurf Shop	expense_custom_field.user dimension copy.37	2022-09-20 08:39:10.849904+00	2022-09-20 08:39:10.849946+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2534	DEPARTMENTS	Departments	Admin	expense_custom_field.departments.5	2022-09-20 08:39:10.919259+00	2022-09-20 08:39:10.919285+00	1	\N	{"placeholder": "Select Departments", "is_dependent": false, "custom_field_id": 174997}	f	f
+2498	USER_DIMENSION_COPY	User Dimension Copy	Paulsen Medical Supplies	expense_custom_field.user dimension copy.38	2022-09-20 08:39:10.850109+00	2022-09-20 08:39:10.850578+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2499	USER_DIMENSION_COPY	User Dimension Copy	Kate Whelan	expense_custom_field.user dimension copy.39	2022-09-20 08:39:10.850781+00	2022-09-20 08:39:10.850809+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2500	USER_DIMENSION_COPY	User Dimension Copy	Freeman Sporting Goods:0969 Ocean View Road	expense_custom_field.user dimension copy.40	2022-09-20 08:39:10.850893+00	2022-09-20 08:39:10.850921+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2501	USER_DIMENSION_COPY	User Dimension Copy	Freeman Sporting Goods	expense_custom_field.user dimension copy.41	2022-09-20 08:39:10.850978+00	2022-09-20 08:39:10.850999+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2502	USER_DIMENSION_COPY	User Dimension Copy	Rondonuwu Fruit and Vegi	expense_custom_field.user dimension copy.42	2022-09-20 08:39:10.851058+00	2022-09-20 08:39:10.851074+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2503	USER_DIMENSION_COPY	User Dimension Copy	Shara Barnett	expense_custom_field.user dimension copy.43	2022-09-20 08:39:10.851145+00	2022-09-20 08:39:10.851351+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2504	USER_DIMENSION_COPY	User Dimension Copy	Video Games by Dan	expense_custom_field.user dimension copy.44	2022-09-20 08:39:10.851575+00	2022-09-20 08:39:10.851654+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2505	USER_DIMENSION_COPY	User Dimension Copy	Service	expense_custom_field.user dimension copy.45	2022-09-20 08:39:10.851748+00	2022-09-20 08:39:10.851781+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2506	USER_DIMENSION_COPY	User Dimension Copy	Engineering	expense_custom_field.user dimension copy.46	2022-09-20 08:39:10.851863+00	2022-09-20 08:39:10.851885+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2507	USER_DIMENSION_COPY	User Dimension Copy	Jeff's Jalopies	expense_custom_field.user dimension copy.47	2022-09-20 08:39:10.851945+00	2022-09-20 08:39:10.851965+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2508	USER_DIMENSION_COPY	User Dimension Copy	Sonnenschein Family Store	expense_custom_field.user dimension copy.48	2022-09-20 08:39:10.852026+00	2022-09-20 08:39:10.852063+00	1	\N	{"placeholder": "Select User Dimension Copy", "is_dependent": false, "custom_field_id": 174991}	f	f
+2509	OPERATING_SYSTEM	Operating System	India	expense_custom_field.operating system.1	2022-09-20 08:39:10.877424+00	2022-09-20 08:39:10.877464+00	1	\N	{"placeholder": "Select Operating System", "is_dependent": false, "custom_field_id": 133433}	f	f
+2510	OPERATING_SYSTEM	Operating System	USA1	expense_custom_field.operating system.2	2022-09-20 08:39:10.877535+00	2022-09-20 08:39:10.877557+00	1	\N	{"placeholder": "Select Operating System", "is_dependent": false, "custom_field_id": 133433}	f	f
+2511	OPERATING_SYSTEM	Operating System	USA2	expense_custom_field.operating system.3	2022-09-20 08:39:10.877626+00	2022-09-20 08:39:10.877646+00	1	\N	{"placeholder": "Select Operating System", "is_dependent": false, "custom_field_id": 133433}	f	f
+2512	OPERATING_SYSTEM	Operating System	USA3	expense_custom_field.operating system.4	2022-09-20 08:39:10.877703+00	2022-09-20 08:39:10.877733+00	1	\N	{"placeholder": "Select Operating System", "is_dependent": false, "custom_field_id": 133433}	f	f
+2513	LOCATION	Location	South Africa	expense_custom_field.location.1	2022-09-20 08:39:10.893887+00	2022-09-20 08:39:10.893935+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2514	LOCATION	Location	Bangalore	expense_custom_field.location.2	2022-09-20 08:39:10.894017+00	2022-09-20 08:39:10.89404+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2515	LOCATION	Location	London	expense_custom_field.location.3	2022-09-20 08:39:10.894328+00	2022-09-20 08:39:10.89437+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2516	LOCATION	Location	New South Wales	expense_custom_field.location.4	2022-09-20 08:39:10.894475+00	2022-09-20 08:39:10.894508+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2518	LOCATION	Location	naruto uzumaki	expense_custom_field.location.6	2022-09-20 08:39:10.894748+00	2022-09-20 08:39:10.894776+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2519	LOCATION	Location	octane squad	expense_custom_field.location.7	2022-09-20 08:39:10.894841+00	2022-09-20 08:39:10.89487+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2520	LOCATION	Location	Holding Company	expense_custom_field.location.8	2022-09-20 08:39:10.894965+00	2022-09-20 08:39:10.895295+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2521	LOCATION	Location	USA 1	expense_custom_field.location.9	2022-09-20 08:39:10.895395+00	2022-09-20 08:39:10.895418+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2522	LOCATION	Location	Elimination - Sub	expense_custom_field.location.10	2022-09-20 08:39:10.89549+00	2022-09-20 08:39:10.895927+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2523	LOCATION	Location	wraith squad	expense_custom_field.location.11	2022-09-20 08:39:10.896367+00	2022-09-20 08:39:10.896398+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2524	LOCATION	Location	USA 2	expense_custom_field.location.12	2022-09-20 08:39:10.896587+00	2022-09-20 08:39:10.896709+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2525	LOCATION	Location	Elimination - Global	expense_custom_field.location.13	2022-09-20 08:39:10.896802+00	2022-09-20 08:39:10.896834+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2526	LOCATION	Location	India	expense_custom_field.location.14	2022-09-20 08:39:10.896903+00	2022-09-20 08:39:10.896922+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2527	LOCATION	Location	Elimination - NA	expense_custom_field.location.15	2022-09-20 08:39:10.896969+00	2022-09-20 08:39:10.896981+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2528	LOCATION	Location	Canada	expense_custom_field.location.16	2022-09-20 08:39:10.897037+00	2022-09-20 08:39:10.897058+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2529	LOCATION	Location	United Kingdom	expense_custom_field.location.17	2022-09-20 08:39:10.897135+00	2022-09-20 08:39:10.89716+00	1	\N	{"placeholder": "Select Location", "is_dependent": false, "custom_field_id": 845}	f	f
+2530	DEPARTMENTS	Departments	Services	expense_custom_field.departments.1	2022-09-20 08:39:10.918377+00	2022-09-20 08:39:10.918564+00	1	\N	{"placeholder": "Select Departments", "is_dependent": false, "custom_field_id": 174997}	f	f
+2531	DEPARTMENTS	Departments	Sales	expense_custom_field.departments.2	2022-09-20 08:39:10.918639+00	2022-09-20 08:39:10.918662+00	1	\N	{"placeholder": "Select Departments", "is_dependent": false, "custom_field_id": 174997}	f	f
+2533	DEPARTMENTS	Departments	Marketing	expense_custom_field.departments.4	2022-09-20 08:39:10.918962+00	2022-09-20 08:39:10.91917+00	1	\N	{"placeholder": "Select Departments", "is_dependent": false, "custom_field_id": 174997}	f	f
+2535	TEAM_COPY	Team Copy	General Overhead-Current	expense_custom_field.team copy.1	2022-09-20 08:39:10.933098+00	2022-09-20 08:39:10.933126+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2536	TEAM_COPY	Team Copy	General Overhead	expense_custom_field.team copy.2	2022-09-20 08:39:10.933178+00	2022-09-20 08:39:10.933201+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2537	TEAM_COPY	Team Copy	Fyle Sage Intacct Integration	expense_custom_field.team copy.3	2022-09-20 08:39:10.933343+00	2022-09-20 08:39:10.933366+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2538	TEAM_COPY	Team Copy	Integrations	expense_custom_field.team copy.4	2022-09-20 08:39:10.933425+00	2022-09-20 08:39:10.933446+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2539	TEAM_COPY	Team Copy	Fyle Engineering	expense_custom_field.team copy.5	2022-09-20 08:39:10.933516+00	2022-09-20 08:39:10.933545+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2540	TEAM_COPY	Team Copy	Platform APIs	expense_custom_field.team copy.6	2022-09-20 08:39:10.933614+00	2022-09-20 08:39:10.933643+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2541	TEAM_COPY	Team Copy	Support Taxes	expense_custom_field.team copy.7	2022-09-20 08:39:10.933712+00	2022-09-20 08:39:10.933737+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2542	TEAM_COPY	Team Copy	labhvam	expense_custom_field.team copy.8	2022-09-20 08:39:10.933797+00	2022-09-20 08:39:10.933827+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2543	TEAM_COPY	Team Copy	Fyle NetSuite Integration	expense_custom_field.team copy.9	2022-09-20 08:39:10.933895+00	2022-09-20 08:39:10.933924+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2544	TEAM_COPY	Team Copy	T&M Project with Five Tasks	expense_custom_field.team copy.10	2022-09-20 08:39:10.933982+00	2022-09-20 08:39:10.933993+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2545	TEAM_COPY	Team Copy	Fixed Fee Project with Five Tasks	expense_custom_field.team copy.11	2022-09-20 08:39:10.934048+00	2022-09-20 08:39:10.934078+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2546	TEAM_COPY	Team Copy	Mobile App Redesign	expense_custom_field.team copy.12	2022-09-20 08:39:10.934146+00	2022-09-20 08:39:10.934176+00	1	\N	{"placeholder": "Select Team Copy", "is_dependent": false, "custom_field_id": 174993}	f	f
+2584	CLASS	Class	goat	expense_custom_field.class.1	2022-09-20 08:39:10.963066+00	2022-09-20 08:39:10.963106+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2585	CLASS	Class	Diego Rodriguez	expense_custom_field.class.2	2022-09-20 08:39:10.963175+00	2022-09-20 08:39:10.963203+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2587	CLASS	Class	Rondonuwu Fruit and Vegi	expense_custom_field.class.4	2022-09-20 08:39:10.963476+00	2022-09-20 08:39:10.963515+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2588	CLASS	Class	Bill's Windsurf Shop	expense_custom_field.class.5	2022-09-20 08:39:10.963601+00	2022-09-20 08:39:10.963639+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2589	CLASS	Class	Kate Whelan	expense_custom_field.class.6	2022-09-20 08:39:10.964058+00	2022-09-20 08:39:10.964089+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2590	CLASS	Class	Mark Cho	expense_custom_field.class.7	2022-09-20 08:39:10.96443+00	2022-09-20 08:39:10.96458+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2591	CLASS	Class	Shara Barnett	expense_custom_field.class.8	2022-09-20 08:39:10.964777+00	2022-09-20 08:39:10.964799+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2592	CLASS	Class	Shara Barnett:Barnett Design	expense_custom_field.class.9	2022-09-20 08:39:10.964976+00	2022-09-20 08:39:10.965004+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2593	CLASS	Class	Kookies by Kathy	expense_custom_field.class.10	2022-09-20 08:39:10.965069+00	2022-09-20 08:39:10.965096+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2594	CLASS	Class	Weiskopf Consulting	expense_custom_field.class.11	2022-09-20 08:39:10.965161+00	2022-09-20 08:39:10.965188+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2595	CLASS	Class	Red Rock Diner	expense_custom_field.class.12	2022-09-20 08:39:10.965264+00	2022-09-20 08:39:10.965399+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2596	CLASS	Class	Freeman Sporting Goods:0969 Ocean View Road	expense_custom_field.class.13	2022-09-20 08:39:10.965475+00	2022-09-20 08:39:10.965502+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2597	CLASS	Class	John Melton	expense_custom_field.class.14	2022-09-20 08:39:10.965567+00	2022-09-20 08:39:10.965594+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2598	CLASS	Class	Dukes Basketball Camp	expense_custom_field.class.15	2022-09-20 08:39:10.965658+00	2022-09-20 08:39:10.965685+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2599	CLASS	Class	Sonnenschein Family Store	expense_custom_field.class.16	2022-09-20 08:39:10.965749+00	2022-09-20 08:39:10.965776+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2600	CLASS	Class	octane squad	expense_custom_field.class.17	2022-09-20 08:39:10.96584+00	2022-09-20 08:39:10.965867+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2601	CLASS	Class	Video Games by Dan	expense_custom_field.class.18	2022-09-20 08:39:10.965931+00	2022-09-20 08:39:10.965959+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2602	CLASS	Class	Jeff's Jalopies	expense_custom_field.class.19	2022-09-20 08:39:10.966023+00	2022-09-20 08:39:10.96605+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2603	CLASS	Class	Wedding Planning by Whitney	expense_custom_field.class.20	2022-09-20 08:39:10.966114+00	2022-09-20 08:39:10.966142+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2604	CLASS	Class	Pye's Cakes	expense_custom_field.class.21	2022-09-20 08:39:10.966206+00	2022-09-20 08:39:10.966233+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2605	CLASS	Class	Freeman Sporting Goods	expense_custom_field.class.22	2022-09-20 08:39:10.966298+00	2022-09-20 08:39:10.966325+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2606	CLASS	Class	wraith squad	expense_custom_field.class.23	2022-09-20 08:39:10.966513+00	2022-09-20 08:39:10.966544+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2607	CLASS	Class	Rago Travel Agency	expense_custom_field.class.24	2022-09-20 08:39:10.966621+00	2022-09-20 08:39:10.966649+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2608	CLASS	Class	Geeta Kalapatapu	expense_custom_field.class.25	2022-09-20 08:39:10.966714+00	2022-09-20 08:39:10.966741+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2609	CLASS	Class	Freeman Sporting Goods:55 Twin Lane	expense_custom_field.class.26	2022-09-20 08:39:10.966805+00	2022-09-20 08:39:10.966832+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2610	CLASS	Class	Travis Waldron	expense_custom_field.class.27	2022-09-20 08:39:10.966896+00	2022-09-20 08:39:10.966937+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2611	CLASS	Class	Amy's Bird Sanctuary	expense_custom_field.class.28	2022-09-20 08:39:10.967006+00	2022-09-20 08:39:10.967035+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2612	CLASS	Class	Sushi by Katsuyuki	expense_custom_field.class.29	2022-09-20 08:39:10.967104+00	2022-09-20 08:39:10.967133+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2613	CLASS	Class	Cool Cars	expense_custom_field.class.30	2022-09-20 08:39:10.967202+00	2022-09-20 08:39:10.967231+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2614	CLASS	Class	naruto uzumaki	expense_custom_field.class.31	2022-09-20 08:39:10.967404+00	2022-09-20 08:39:10.967445+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2615	CLASS	Class	Paulsen Medical Supplies	expense_custom_field.class.32	2022-09-20 08:39:10.967513+00	2022-09-20 08:39:10.967541+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2616	CLASS	Class	Gevelber Photography	expense_custom_field.class.33	2022-09-20 08:39:10.967605+00	2022-09-20 08:39:10.967633+00	1	\N	{"placeholder": "Select Class", "is_dependent": false, "custom_field_id": 190717}	f	f
+2617	USER_DIMENSION	User Dimension	Services	expense_custom_field.user dimension.1	2022-09-20 08:39:10.980758+00	2022-09-20 08:39:10.980797+00	1	\N	{"placeholder": "Select User Dimension", "is_dependent": false, "custom_field_id": 174176}	f	f
+2618	USER_DIMENSION	User Dimension	Sales	expense_custom_field.user dimension.2	2022-09-20 08:39:10.980866+00	2022-09-20 08:39:10.980894+00	1	\N	{"placeholder": "Select User Dimension", "is_dependent": false, "custom_field_id": 174176}	f	f
+2619	USER_DIMENSION	User Dimension	Marketing	expense_custom_field.user dimension.3	2022-09-20 08:39:10.98096+00	2022-09-20 08:39:10.980988+00	1	\N	{"placeholder": "Select User Dimension", "is_dependent": false, "custom_field_id": 174176}	f	f
+2620	USER_DIMENSION	User Dimension	Admin	expense_custom_field.user dimension.4	2022-09-20 08:39:10.981052+00	2022-09-20 08:39:10.98108+00	1	\N	{"placeholder": "Select User Dimension", "is_dependent": false, "custom_field_id": 174176}	f	f
+2621	USER_DIMENSION	User Dimension	IT	expense_custom_field.user dimension.5	2022-09-20 08:39:10.981144+00	2022-09-20 08:39:10.981171+00	1	\N	{"placeholder": "Select User Dimension", "is_dependent": false, "custom_field_id": 174176}	f	f
+2660	TAX_GROUPS	Tax Groups	Exempt Sales @0.0%	expense_custom_field.tax groups.1	2022-09-20 08:39:11.012135+00	2022-09-20 08:39:11.012188+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2661	TAX_GROUPS	Tax Groups	MB - GST/RST on Purchases @12.0%	expense_custom_field.tax groups.2	2022-09-20 08:39:11.012267+00	2022-09-20 08:39:11.012297+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2662	TAX_GROUPS	Tax Groups	MB - GST/RST on Sales @12.0%	expense_custom_field.tax groups.3	2022-09-20 08:39:11.012367+00	2022-09-20 08:39:11.012398+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2663	TAX_GROUPS	Tax Groups	Oakdale Sales Tax @8.125%	expense_custom_field.tax groups.4	2022-09-20 08:39:11.012589+00	2022-09-20 08:39:11.012619+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2664	TAX_GROUPS	Tax Groups	Sales Tax on Imports @0.0%	expense_custom_field.tax groups.5	2022-09-20 08:39:11.012691+00	2022-09-20 08:39:11.01272+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2665	TAX_GROUPS	Tax Groups	Tax Exempt @0.0%	expense_custom_field.tax groups.6	2022-09-20 08:39:11.012792+00	2022-09-20 08:39:11.012822+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2666	TAX_GROUPS	Tax Groups	Tax on Consulting @8.25%	expense_custom_field.tax groups.7	2022-09-20 08:39:11.012892+00	2022-09-20 08:39:11.012921+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2667	TAX_GROUPS	Tax Groups	Tax on Goods @8.75%	expense_custom_field.tax groups.8	2022-09-20 08:39:11.012991+00	2022-09-20 08:39:11.013047+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2668	TAX_GROUPS	Tax Groups	Tax on Goodss @8.125%	expense_custom_field.tax groups.9	2022-09-20 08:39:11.013119+00	2022-09-20 08:39:11.013158+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2669	TAX_GROUPS	Tax Groups	Tax on Purchases @8.25%	expense_custom_field.tax groups.10	2022-09-20 08:39:11.013351+00	2022-09-20 08:39:11.013383+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2670	TAX_GROUPS	Tax Groups	tax for working @8.125%	expense_custom_field.tax groups.11	2022-09-20 08:39:11.013446+00	2022-09-20 08:39:11.013525+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2671	TAX_GROUPS	Tax Groups	tax for usa @8.125%	expense_custom_field.tax groups.12	2022-09-20 08:39:11.013631+00	2022-09-20 08:39:11.013678+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2672	TAX_GROUPS	Tax Groups	tax for usass @8.125%	expense_custom_field.tax groups.13	2022-09-20 08:39:11.014332+00	2022-09-20 08:39:11.014452+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2673	TAX_GROUPS	Tax Groups	tax for ussr @8.125%	expense_custom_field.tax groups.14	2022-09-20 08:39:11.014851+00	2022-09-20 08:39:11.014906+00	1	\N	{"placeholder": "Select Tax Groups", "is_dependent": false, "custom_field_id": 195201}	f	f
+2622	TEAM_2_POSTMAN	Team 2 Postman	Dukes Basketball Camp	expense_custom_field.team 2 postman.1	2022-09-20 08:39:10.992147+00	2022-09-20 08:39:10.992414+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2623	TEAM_2_POSTMAN	Team 2 Postman	Gevelber Photography	expense_custom_field.team 2 postman.2	2022-09-20 08:39:10.993352+00	2022-09-20 08:39:10.993408+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2624	TEAM_2_POSTMAN	Team 2 Postman	Geeta Kalapatapu	expense_custom_field.team 2 postman.3	2022-09-20 08:39:10.993564+00	2022-09-20 08:39:10.993635+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2625	TEAM_2_POSTMAN	Team 2 Postman	Bill's Windsurf Shop	expense_custom_field.team 2 postman.4	2022-09-20 08:39:10.993761+00	2022-09-20 08:39:10.993806+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2626	TEAM_2_POSTMAN	Team 2 Postman	Diego Rodriguez	expense_custom_field.team 2 postman.5	2022-09-20 08:39:10.993903+00	2022-09-20 08:39:10.993941+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2627	TEAM_2_POSTMAN	Team 2 Postman	Amy's Bird Sanctuary:Test Project	expense_custom_field.team 2 postman.6	2022-09-20 08:39:10.994057+00	2022-09-20 08:39:10.994101+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2628	TEAM_2_POSTMAN	Team 2 Postman	Dylan Sollfrank	expense_custom_field.team 2 postman.7	2022-09-20 08:39:10.994406+00	2022-09-20 08:39:10.994458+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2629	TEAM_2_POSTMAN	Team 2 Postman	Sravan BLR Customer	expense_custom_field.team 2 postman.8	2022-09-20 08:39:10.994547+00	2022-09-20 08:39:10.994577+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2630	TEAM_2_POSTMAN	Team 2 Postman	Kate Whelan	expense_custom_field.team 2 postman.9	2022-09-20 08:39:10.994662+00	2022-09-20 08:39:10.99471+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2631	TEAM_2_POSTMAN	Team 2 Postman	Coffee	expense_custom_field.team 2 postman.10	2022-09-20 08:39:10.994792+00	2022-09-20 08:39:10.994821+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2632	TEAM_2_POSTMAN	Team 2 Postman	Sushi by Katsuyuki	expense_custom_field.team 2 postman.11	2022-09-20 08:39:10.99489+00	2022-09-20 08:39:10.994919+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2633	TEAM_2_POSTMAN	Team 2 Postman	Freeman Sporting Goods:55 Twin Lane	expense_custom_field.team 2 postman.12	2022-09-20 08:39:10.99499+00	2022-09-20 08:39:10.995021+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2634	TEAM_2_POSTMAN	Team 2 Postman	Diego Rodriguez:Test Project	expense_custom_field.team 2 postman.13	2022-09-20 08:39:10.995543+00	2022-09-20 08:39:10.995585+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2635	TEAM_2_POSTMAN	Team 2 Postman	Chai	expense_custom_field.team 2 postman.14	2022-09-20 08:39:10.995665+00	2022-09-20 08:39:10.995692+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2636	TEAM_2_POSTMAN	Team 2 Postman	Cool Cars	expense_custom_field.team 2 postman.15	2022-09-20 08:39:10.995758+00	2022-09-20 08:39:10.995785+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2637	TEAM_2_POSTMAN	Team 2 Postman	Amy's Bird Sanctuary	expense_custom_field.team 2 postman.16	2022-09-20 08:39:10.99585+00	2022-09-20 08:39:10.995877+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2638	TEAM_2_POSTMAN	Team 2 Postman	Freeman Sporting Goods	expense_custom_field.team 2 postman.17	2022-09-20 08:39:10.995942+00	2022-09-20 08:39:10.995969+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2639	TEAM_2_POSTMAN	Team 2 Postman	Shara Barnett	expense_custom_field.team 2 postman.18	2022-09-20 08:39:10.996035+00	2022-09-20 08:39:10.996062+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2640	TEAM_2_POSTMAN	Team 2 Postman	Kookies by Kathy	expense_custom_field.team 2 postman.19	2022-09-20 08:39:10.996126+00	2022-09-20 08:39:10.996153+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2641	TEAM_2_POSTMAN	Team 2 Postman	Jeff's Jalopies	expense_custom_field.team 2 postman.20	2022-09-20 08:39:10.996217+00	2022-09-20 08:39:10.996244+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2642	TEAM_2_POSTMAN	Team 2 Postman	Red Rock Diner	expense_custom_field.team 2 postman.21	2022-09-20 08:39:10.996309+00	2022-09-20 08:39:10.996336+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2643	TEAM_2_POSTMAN	Team 2 Postman	Wedding Planning by Whitney	expense_custom_field.team 2 postman.22	2022-09-20 08:39:10.996537+00	2022-09-20 08:39:10.996566+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2644	TEAM_2_POSTMAN	Team 2 Postman	Sonnenschein Family Store	expense_custom_field.team 2 postman.23	2022-09-20 08:39:10.996631+00	2022-09-20 08:39:10.996658+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2645	TEAM_2_POSTMAN	Team 2 Postman	Shara Barnett:Barnett Design	expense_custom_field.team 2 postman.24	2022-09-20 08:39:10.996722+00	2022-09-20 08:39:10.99675+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2646	TEAM_2_POSTMAN	Team 2 Postman	Travis Waldron	expense_custom_field.team 2 postman.25	2022-09-20 08:39:10.996815+00	2022-09-20 08:39:10.996842+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2647	TEAM_2_POSTMAN	Team 2 Postman	Rondonuwu Fruit and Vegi	expense_custom_field.team 2 postman.26	2022-09-20 08:39:10.996907+00	2022-09-20 08:39:10.996934+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2648	TEAM_2_POSTMAN	Team 2 Postman	Ashwinn	expense_custom_field.team 2 postman.27	2022-09-20 08:39:10.996999+00	2022-09-20 08:39:10.997026+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2649	TEAM_2_POSTMAN	Team 2 Postman	Paulsen Medical Supplies	expense_custom_field.team 2 postman.28	2022-09-20 08:39:10.997091+00	2022-09-20 08:39:10.997118+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2650	TEAM_2_POSTMAN	Team 2 Postman	wraith squad	expense_custom_field.team 2 postman.29	2022-09-20 08:39:10.997183+00	2022-09-20 08:39:10.99721+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2651	TEAM_2_POSTMAN	Team 2 Postman	Weiskopf Consulting	expense_custom_field.team 2 postman.30	2022-09-20 08:39:10.997275+00	2022-09-20 08:39:10.997302+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2652	TEAM_2_POSTMAN	Team 2 Postman	octane squad	expense_custom_field.team 2 postman.31	2022-09-20 08:39:10.997483+00	2022-09-20 08:39:10.997513+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2653	TEAM_2_POSTMAN	Team 2 Postman	naruto uzumaki	expense_custom_field.team 2 postman.32	2022-09-20 08:39:10.997589+00	2022-09-20 08:39:10.997616+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2654	TEAM_2_POSTMAN	Team 2 Postman	Rago Travel Agency	expense_custom_field.team 2 postman.33	2022-09-20 08:39:10.997681+00	2022-09-20 08:39:10.997708+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2655	TEAM_2_POSTMAN	Team 2 Postman	Mark Cho	expense_custom_field.team 2 postman.34	2022-09-20 08:39:10.997773+00	2022-09-20 08:39:10.9978+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2656	TEAM_2_POSTMAN	Team 2 Postman	Freeman Sporting Goods:0969 Ocean View Road	expense_custom_field.team 2 postman.35	2022-09-20 08:39:10.997865+00	2022-09-20 08:39:10.997892+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2657	TEAM_2_POSTMAN	Team 2 Postman	Pye's Cakes	expense_custom_field.team 2 postman.36	2022-09-20 08:39:10.997957+00	2022-09-20 08:39:10.998009+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2658	TEAM_2_POSTMAN	Team 2 Postman	John Melton	expense_custom_field.team 2 postman.37	2022-09-20 08:39:10.998079+00	2022-09-20 08:39:10.998108+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
+2659	TEAM_2_POSTMAN	Team 2 Postman	Video Games by Dan	expense_custom_field.team 2 postman.38	2022-09-20 08:39:10.998183+00	2022-09-20 08:39:10.998211+00	1	\N	{"placeholder": "Select Team 2 Postman", "is_dependent": true, "custom_field_id": 174994}	f	f
 \.
 
 
@@ -8023,7 +8027,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 49, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 165, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 169, true);
 
 
 --
@@ -8378,14 +8382,6 @@ ALTER TABLE ONLY public.auth_permission
 
 ALTER TABLE ONLY public.category_mappings
     ADD CONSTRAINT category_mappings_pkey PRIMARY KEY (id);
-
-
---
--- Name: category_mappings category_mappings_source_category_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.category_mappings
-    ADD CONSTRAINT category_mappings_source_category_id_key UNIQUE (source_category_id);
 
 
 --
@@ -9092,6 +9088,13 @@ CREATE INDEX category_mappings_destination_expense_head_id_0ed87fbd ON public.ca
 
 
 --
+-- Name: category_mappings_source_category_id_46f19d95; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX category_mappings_source_category_id_46f19d95 ON public.category_mappings USING btree (source_category_id);
+
+
+--
 -- Name: category_mappings_workspace_id_222ea301; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9695,14 +9698,6 @@ ALTER TABLE ONLY public.expense_reports
 
 
 --
--- Name: mappings fyle_accounting_mapp_destination_id_79497f6e_fk_fyle_acco; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.mappings
-    ADD CONSTRAINT fyle_accounting_mapp_destination_id_79497f6e_fk_fyle_acco FOREIGN KEY (destination_id) REFERENCES public.destination_attributes(id) DEFERRABLE INITIALLY DEFERRED;
-
-
---
 -- Name: mappings fyle_accounting_mapp_workspace_id_10d6edd3_fk_workspace; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9812,6 +9807,14 @@ ALTER TABLE ONLY public.mapping_settings
 
 ALTER TABLE ONLY public.mapping_settings
     ADD CONSTRAINT mapping_settings_workspace_id_590f14f3_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: mappings mappings_destination_id_0c60b033_fk_destination_attributes_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.mappings
+    ADD CONSTRAINT mappings_destination_id_0c60b033_fk_destination_attributes_id FOREIGN KEY (destination_id) REFERENCES public.destination_attributes(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
