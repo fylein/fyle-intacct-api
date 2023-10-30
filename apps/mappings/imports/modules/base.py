@@ -117,7 +117,7 @@ class Base:
             ).values_list('source_category_id', flat=True)
 
         return mapped_attribute_ids
-    
+
     def resolve_expense_attribute_errors(self):
         """
         Resolve Expense Attribute Errors
