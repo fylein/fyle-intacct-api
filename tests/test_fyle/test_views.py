@@ -145,7 +145,7 @@ def test_fyle_fields_view(api_client, test_connection):
     assert response.status_code == 200
 
     response = json.loads(response.content)
-    assert response[0] == {'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center'}
+    assert response[0] == {'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center', 'is_dependent': False}
 
 
 def test_expense_group_schedule_view(api_client, test_connection):
