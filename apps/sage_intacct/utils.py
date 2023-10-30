@@ -721,7 +721,14 @@ class SageIntacctConnector:
         """
         Get vendors
         """
+        print("""
+
+            Sync vendors 
+
+        """)
         vendors = self.connection.vendors.get_all()
+
+        print(vendors)
 
         vendor_attributes = []
 
