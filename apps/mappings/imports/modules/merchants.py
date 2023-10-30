@@ -41,14 +41,22 @@ class Merchant(Base):
         :return: Fyle payload
         """
         payload = []
+        print("""
+
+
+            Construct fyle payload
+        """)
 
         for attribute in paginated_destination_attributes:
             # Create a new merchant if it does not exist in Fyle
             if attribute.value.lower() not in existing_fyle_attributes_map:
                 payload.append(attribute.value)
 
+        print(payload)
+
         return payload
 
+    # import_destination_attribute_to_fyle method is overridden 
     @handle_import_exceptions
     def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
