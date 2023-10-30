@@ -9,7 +9,8 @@ from fyle_accounting_mappings.models import (
 from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import (
     FyleCredential,
-    Configuration
+    Configuration,
+    Workspace
 )
 from .fixtures import category_data
 
@@ -50,6 +51,8 @@ def test_sync_destination_attributes_categories(mocker, db):
 def test_sync_expense_atrributes(mocker, db):
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_credentials.workspace.fyle_org_id = 'orwimNcVyYsp'
+    fyle_credentials.workspace.save()
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     mocker.patch(
@@ -80,6 +83,8 @@ def test_sync_expense_atrributes(mocker, db):
 def test_auto_create_destination_attributes_categories(mocker, db):
     category = Category(1, 'EXPENSE_TYPE', None)
     category.sync_after = None
+
+    Workspace.objects.filter(id=1).update(fyle_org_id='orwimNcVyYsp')
 
     # delete all destination attributes, expense attributes and mappings
     CategoryMapping.objects.filter(workspace_id=1).delete()
