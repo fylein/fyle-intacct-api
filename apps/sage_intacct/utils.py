@@ -716,7 +716,6 @@ class SageIntacctConnector:
         Get vendors
         """
         vendors = self.connection.vendors.get_all()
-
         vendor_attributes = []
 
         for vendor in vendors:

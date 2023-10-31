@@ -49,6 +49,7 @@ class Merchant(Base):
 
         return payload
 
+    # import_destination_attribute_to_fyle method is overridden 
     @handle_import_exceptions
     def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
