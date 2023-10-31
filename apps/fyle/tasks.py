@@ -5,7 +5,6 @@ from datetime import datetime
 
 from django.db import transaction
 from django_q.tasks import async_task
-from fyle_rest_auth.helpers import get_fyle_admin
 
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import NoPrivilegeError
@@ -169,11 +168,3 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
         task_log.status = 'FATAL'
         task_log.save()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
-
-
-def async_update_workspace_name(workspace: Workspace, access_token: str):
-    fyle_user = get_fyle_admin(access_token.split(' ')[1], None)
-    org_name = fyle_user['data']['org']['name']
-
-    workspace.name = org_name
-    workspace.save()

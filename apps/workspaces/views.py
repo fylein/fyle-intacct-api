@@ -93,7 +93,7 @@ class WorkspaceView(viewsets.ViewSet):
 
         if workspaces:
             async_task(
-                'apps.fyle.tasks.async_update_workspace_name',
+                'apps.workspaces.tasks.async_update_workspace_name',
                 workspaces[0],
                 request.META.get('HTTP_AUTHORIZATION')
             )
