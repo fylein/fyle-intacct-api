@@ -9,6 +9,7 @@ from tests.helper import dict_compare_keys
 from apps.tasks.models import TaskLog
 from django.urls import reverse
 from unittest import mock
+from apps.fyle.helpers import sync_dimensions
 
 
 def test_exportable_expense_group_view(api_client, test_connection):
@@ -398,8 +399,8 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
     )
 
     mocker.patch(
-        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
-        return_value=[]
+        'apps.mappings.signals.upload_attributes_to_fyle',
+        return_value = []
     )
 
     workspace_id = 1

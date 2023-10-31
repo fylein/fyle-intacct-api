@@ -3,6 +3,7 @@ from django_q.models import Schedule
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     Mapping,
+    MappingSetting,
     EmployeeMapping,
     ExpenseAttribute
 )
@@ -215,7 +216,73 @@ def test_schedule_auto_map_employees(db):
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule == None   
+    assert schedule == None
+
+
+def test_schedule_fyle_attributes_creation(db, mocker):
+    workspace_id = 1
+
+    mapping_setting = MappingSetting.objects.last()
+    mapping_setting.is_custom=True
+    mapping_setting.import_to_fyle=True
+    mapping_setting.save()
+    
+    schedule_fyle_attributes_creation(workspace_id)
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
+        return_value=[]
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Dimensions.get_all',
+        return_value=intacct_data['get_dimensions']
+    )
+
+    schedule = Schedule.objects.filter(
+        func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
+        args='{}'.format(workspace_id),
+    ).first()
+
+    assert schedule.func == 'apps.mappings.tasks.async_auto_create_custom_field_mappings'
+
+    async_auto_create_custom_field_mappings(workspace_id)
+
+    schedule_fyle_attributes_creation(2)
+    schedule = Schedule.objects.filter(
+        func='apps.mappings.tasks.async_auto_create_custom_field_mappings',
+        args='{}'.format(workspace_id),
+    ).first()
+
+    assert schedule.func == 'apps.mappings.tasks.async_auto_create_custom_field_mappings'
+
+    with mock.patch('apps.mappings.tasks.async_auto_create_custom_field_mappings') as mock_call:
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        async_auto_create_custom_field_mappings(workspace_id=workspace_id)
+
+
+def test_auto_create_expense_fields_mappings(db, mocker, create_mapping_setting):
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
+        return_value=[]
+    )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
+        return_value=[]
+    )
+    workspace_id = 1
+    
+    auto_create_expense_fields_mappings(workspace_id, 'TASK', 'COST_CODES', None)
+    mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='TASK').count()
+    assert mappings == 0
+
+    auto_create_expense_fields_mappings(workspace_id, 'COST_CENTER', 'COST_CENTER', 'Select Cost Center')
+
+    cost_center = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CENTER').count()
+    mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='COST_CENTER').count()
+
+    assert cost_center == 1
+    assert mappings == 0    
 
 
 def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting, create_cost_type):
