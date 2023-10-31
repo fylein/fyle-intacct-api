@@ -1,26 +1,19 @@
 import logging
-import traceback
-from datetime import datetime, timedelta
-from dateutil import parser
+from datetime import datetime
 
-from typing import List, Dict
+from typing import List
 
 from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle.platform.exceptions import (
-    WrongParamsError,
     InvalidTokenError as FyleInvalidTokenError,
-    InternalServerError
 )
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import (
-    Mapping,
     MappingSetting,
-    ExpenseAttribute,
-    DestinationAttribute,
     EmployeeMapping
 )
 from sageintacctsdk.exceptions import (
@@ -36,7 +29,7 @@ from apps.workspaces.models import (
     Configuration
 )
 from apps.fyle.models import DependentFieldSetting
-from .constants import FYLE_EXPENSE_SYSTEM_FIELDS
+
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -46,12 +39,7 @@ def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_
 
     mapped_attribute_ids = []
 
-    if source_attribute_type == "TAX_GROUP":
-        mapped_attribute_ids: List[int] = Mapping.objects.filter(
-            source_id__in=errored_attribute_ids
-        ).values_list('source_id', flat=True)
-
-    elif source_attribute_type == "EMPLOYEE":
+    if source_attribute_type == "EMPLOYEE":
         params = {
             'source_employee_id__in': errored_attribute_ids,
         }
@@ -84,26 +72,6 @@ def resolve_expense_attribute_errors(
 
         if mapped_attribute_ids:
             Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
-
-
-def remove_duplicates(si_attributes: List[DestinationAttribute], is_dependent: bool = False):
-    unique_attributes = []
-    attribute_values = []
-
-    if is_dependent:
-        for attribute in si_attributes:
-            # when we allow it for other types, we should explicitly fix all these
-            if {attribute.detail['project_name']: attribute.value.lower()} not in attribute_values:
-                unique_attributes.append(attribute)
-                attribute_values.append({attribute.detail['project_name']: attribute.value.lower()})
-
-    else:
-        for attribute in si_attributes:
-            if attribute.value.lower() not in attribute_values:
-                unique_attributes.append(attribute)
-                attribute_values.append(attribute.value.lower())
-
-    return unique_attributes
 
 
 def async_auto_map_employees(workspace_id: int):
@@ -248,214 +216,10 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
         sage_intacct_connection.sync_user_defined_dimensions()
 
 
-def construct_filter_based_on_destination(reimbursable_destination_type: str):
-    """
-    Construct Filter Based on Destination
-    :param reimbursable_destination_type: Reimbursable Destination Type
-    :return: Filter
-    """
-    filters = {}
-    if reimbursable_destination_type == 'EXPENSE_TYPE':
-        filters['destination_expense_head__isnull'] = True
-    elif reimbursable_destination_type == 'ACCOUNT':
-        filters['destination_account__isnull'] = True
-
-    return filters
-
-
-def upload_tax_groups_to_fyle(platform_connection: PlatformConnector, workspace_id: int):
-    existing_tax_codes_name = ExpenseAttribute.objects.filter(
-        attribute_type='TAX_GROUP', workspace_id=workspace_id).values_list('value', flat=True)
-
-    si_attributes = DestinationAttribute.objects.filter(
-        attribute_type='TAX_DETAIL', workspace_id=workspace_id).order_by('value', 'id')
-
-    si_attributes = remove_duplicates(si_attributes)
-
-    fyle_payload: List[Dict] = create_fyle_tax_group_payload(si_attributes, existing_tax_codes_name)
-
-    if fyle_payload:
-        platform_connection.tax_groups.post_bulk(fyle_payload)
-
-    platform_connection.tax_groups.sync()
-    Mapping.bulk_create_mappings(si_attributes, 'TAX_GROUP', 'TAX_DETAIL', workspace_id)
-    resolve_expense_attribute_errors(
-        source_attribute_type="TAX_GROUP", workspace_id=workspace_id
-    )
-
-
-def create_fyle_tax_group_payload(si_attributes: List[DestinationAttribute], existing_fyle_tax_groups: list):
-    """
-    Create Fyle Cost Centers Payload from Sage Intacct Objects
-    :param existing_fyle_tax_groups: Existing cost center names
-    :param si_attributes: Sage Intacct Objects
-    :return: Fyle Cost Centers Payload
-    """
-
-    fyle_tax_group_payload = []
-    for si_attribute in si_attributes:
-        if si_attribute.value not in existing_fyle_tax_groups:
-            fyle_tax_group_payload.append(
-                {
-                    'name': si_attribute.value,
-                    'is_enabled': True,
-                    'percentage': round((si_attribute.detail['tax_rate']/100), 2)
-                }
-            )
-
-    return fyle_tax_group_payload
-
-
-def auto_create_tax_codes_mappings(workspace_id: int):
-    """
-    Create Tax Codes Mappings
-    :return: None
-    """
-    try:
-        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-
-        platform = PlatformConnector(fyle_credentials=fyle_credentials)
-        platform.tax_groups.sync()
-
-        mapping_setting = MappingSetting.objects.get(
-            source_field='TAX_GROUP', workspace_id=workspace_id
-        )
-
-        sync_sage_intacct_attributes(mapping_setting.destination_field, workspace_id)
-
-        upload_tax_groups_to_fyle(platform, workspace_id)
-
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
-    
-    except FyleInvalidTokenError:
-        logger.info('Invalid Token for Fyle')
-
-    except InternalServerError:
-        logger.error('Internal server error while importing to Fyle')
-
-    except WrongParamsError as exception:
-        logger.error(
-            'Error while creating tax groups workspace_id - %s in Fyle %s %s',
-            workspace_id, exception.message, {'error': exception.response}
-        )
-
-    except NoPrivilegeError:
-        logger.info('Insufficient permission to access the requested module')
-
-    except Exception:
-        error = traceback.format_exc()
-        error = {
-            'error': error
-        }
-        logger.exception(
-            'Error while creating tax groups workspace_id - %s error: %s',
-            workspace_id, error
-        )
-
-
-def schedule_tax_groups_creation(import_tax_codes, workspace_id):
-    if import_tax_codes:
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.auto_create_tax_codes_mappings',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': datetime.now()
-            }
-        )
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.auto_create_tax_codes_mappings',
-            args='{}'.format(workspace_id),
-        ).first()
-
-        if schedule:
-            schedule.delete()
-
-
-def create_fyle_merchants_payload(vendors, existing_merchants_name):
-    payload: List[str] = []
-    for vendor in vendors:
-        if vendor.value not in existing_merchants_name:
-            payload.append(vendor.value)
-    return payload
-
-
-def post_merchants(platform_connection: PlatformConnector, workspace_id: int, first_run: bool):
-    existing_merchants_name = ExpenseAttribute.objects.filter(
-        attribute_type='MERCHANT', workspace_id=workspace_id).values_list('value', flat=True)
-
-    if first_run:
-        sage_intacct_attributes = DestinationAttribute.objects.filter(
-            attribute_type='VENDOR', workspace_id=workspace_id).order_by('value', 'id')
-    else:
-        merchant = platform_connection.merchants.get()
-        merchant_updated_at = parser.isoparse(merchant['updated_at']).strftime('%Y-%m-%d')
-        sage_intacct_attributes = DestinationAttribute.objects.filter(
-            attribute_type='VENDOR',
-            workspace_id=workspace_id,
-            updated_at__gte=merchant_updated_at
-        ).order_by('value', 'id')
-
-    sage_intacct_attributes = remove_duplicates(sage_intacct_attributes)
-
-    fyle_payload: List[str] = create_fyle_merchants_payload(sage_intacct_attributes, existing_merchants_name)
-
-    if fyle_payload:
-        platform_connection.merchants.post(fyle_payload)
-
-    platform_connection.merchants.sync()
-
-
-def auto_create_vendors_as_merchants(workspace_id):
-    try:
-        fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
-
-        fyle_connection = PlatformConnector(fyle_credentials)
-
-        existing_merchants_name = ExpenseAttribute.objects.filter(attribute_type='MERCHANT', workspace_id=workspace_id)
-        first_run = False if existing_merchants_name else True
-
-        fyle_connection.merchants.sync()
-
-        sync_sage_intacct_attributes('VENDOR', workspace_id)
-        post_merchants(fyle_connection, workspace_id, first_run)
-
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
-    
-    except FyleInvalidTokenError:
-        logger.info('Invalid Token for fyle - %s', workspace_id)
-    
-    except InternalServerError:
-        logger.error('Internal server error while importing to Fyle')
-
-    except NoPrivilegeError:
-        logger.info('Insufficient permission to access the requested module')
-
-    except WrongParamsError as exception:
-        logger.error(
-            'Error while posting vendors as merchants to fyle for workspace_id - %s in Fyle %s %s',
-            workspace_id, exception.message, {'error': exception.response}
-        )
-
-    except Exception:
-        error = traceback.format_exc()
-        error = {
-            'error': error
-        }
-        logger.exception(
-            'Error while posting vendors as merchants to fyle for workspace_id - %s error: %s',
-            workspace_id, error)
-
-
 def auto_import_and_map_fyle_fields(workspace_id):
     """
     Auto import and map fyle fields
     """
-    configuration: Configuration = Configuration.objects.get(workspace_id=workspace_id)
     project_mapping = MappingSetting.objects.filter(
         source_field='PROJECT',
         workspace_id=workspace_id,
@@ -464,9 +228,6 @@ def auto_import_and_map_fyle_fields(workspace_id):
     dependent_fields = DependentFieldSetting.objects.filter(workspace_id=workspace_id, is_import_enabled=True).first()
 
     chain = Chain()
-
-    if configuration.import_vendors_as_merchants:
-        chain.append('apps.mappings.tasks.auto_create_vendors_as_merchants', workspace_id)
 
     if project_mapping and dependent_fields:
         chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id)

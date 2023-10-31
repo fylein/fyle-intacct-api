@@ -1,7 +1,6 @@
 from asyncio.log import logger
 from datetime import datetime, timedelta, timezone
 import pytest
-import json
 from unittest import mock
 from django.db import transaction
 from django_q.models import Schedule
@@ -10,8 +9,7 @@ from fyle_accounting_mappings.models import (
     Mapping,
     ExpenseAttribute,
     EmployeeMapping,
-    CategoryMapping,
-    DestinationAttribute
+    CategoryMapping
 )
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, Workspace
@@ -43,38 +41,6 @@ def test_pre_save_category_mappings(test_connection, mocker, db):
     
     assert category_mapping.destination_account_id == 796
     assert category_mapping.destination_expense_head_id == None
-    
-
-def test_resolve_post_mapping_errors(test_connection, mocker, db):
-    tax_group = ExpenseAttribute.objects.filter(
-        value='GST on capital @0%',
-        workspace_id=1,
-        attribute_type='TAX_GROUP'
-    ).first()
-
-    Error.objects.update_or_create(
-        workspace_id=1,
-        expense_attribute=tax_group,
-        defaults={
-            'type': 'TAX_GROUP_MAPPING',
-            'error_title': tax_group.value,
-            'error_detail': 'Tax group mapping is missing',
-            'is_resolved': False
-        }
-    )
-
-    mapping = Mapping(
-        source_type='TAX_GROUP',
-        destination_type='TAX_DETAIL',
-        # source__value=source_value,
-        source_id=2775,
-        destination_id=544,
-        workspace_id=1
-    )
-    mapping.save()
-    error = Error.objects.filter(expense_attribute_id=mapping.source_id).first()
-
-    assert error.is_resolved == True
 
 
 @pytest.mark.django_db()

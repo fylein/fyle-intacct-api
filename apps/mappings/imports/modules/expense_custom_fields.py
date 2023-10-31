@@ -111,6 +111,7 @@ class ExpenseCustomField(Base):
 
         return expense_custom_field_payload
 
+    # construct_payload_and_import_to_fyle method is overridden 
     def construct_payload_and_import_to_fyle(
         self,
         platform: PlatformConnector,
@@ -154,6 +155,7 @@ class ExpenseCustomField(Base):
                 import_log=import_log
             )
 
+   # import_destination_attribute_to_fyle method is overridden 
     @handle_import_exceptions
     def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
