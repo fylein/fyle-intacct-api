@@ -158,7 +158,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
             if configurations['import_tax_codes']:
                 mapping_settings.append({
                     'source_field': 'TAX_GROUP',
-                    'destination_field': 'TAX_CODE',
+                    'destination_field': 'TAX_DETAIL',
                     'import_to_fyle': True,
                     'is_custom': False
                 })
