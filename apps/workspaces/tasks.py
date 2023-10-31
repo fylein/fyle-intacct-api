@@ -10,6 +10,7 @@ from django.template.loader import render_to_string
 from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_rest_auth.helpers import get_fyle_admin
 
 from apps.fyle.models import ExpenseGroup
 from apps.fyle.tasks import create_expense_groups
@@ -261,8 +262,17 @@ def run_email_notification(workspace_id):
         ws_schedule.error_count = len(task_logs)
         ws_schedule.save()
 
+
 def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str):
     fyle_credentials = FyleCredential.objects.filter(workspace__fyle_org_id=fyle_org_id).first()
     if fyle_credentials:
         fyle_credentials.refresh_token = refresh_token
         fyle_credentials.save()
+
+
+def async_update_workspace_name(workspace: Workspace, access_token: str):
+    fyle_user = get_fyle_admin(access_token.split(' ')[1], None)
+    org_name = fyle_user['data']['org']['name']
+
+    workspace.name = org_name
+    workspace.save()
