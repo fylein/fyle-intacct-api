@@ -2,8 +2,6 @@
 Mappings Signal
 """
 import logging
-import json
-import traceback
 from django.db.models import Q
 from datetime import datetime, timedelta, timezone
 
@@ -11,7 +9,6 @@ from rest_framework.exceptions import ValidationError
 
 from django.db.models.signals import post_save, pre_save, post_delete
 from django.dispatch import receiver
-from django_q.tasks import async_task
 
 from fyle_accounting_mappings.models import (
     MappingSetting,
@@ -52,17 +49,6 @@ def pre_save_category_mappings(sender, instance: CategoryMapping, **kwargs):
             ).first()
 
             instance.destination_account_id = destination_attribute.id
-
-
-@receiver(post_save, sender=Mapping)
-def resolve_post_mapping_errors(sender, instance: Mapping, **kwargs):
-    """
-    Resolve errors after mapping is created
-    """
-    if instance.source_type == 'TAX_GROUP':
-        Error.objects.filter(expense_attribute_id=instance.source_id).update(
-            is_resolved=True
-        )
          
 
 @receiver(post_save, sender=CategoryMapping)
