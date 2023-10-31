@@ -1,4 +1,4 @@
-from apps.fyle.tasks import async_update_workspace_name
+from apps.workspaces.tasks import async_update_workspace_name
 from apps.tasks.models import TaskLog
 from apps.workspaces.tasks import (
     run_sync_schedule,
