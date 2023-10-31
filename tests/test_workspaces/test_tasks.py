@@ -1,3 +1,4 @@
+from apps.workspaces.tasks import async_update_workspace_name
 from apps.tasks.models import TaskLog
 from apps.workspaces.tasks import (
     run_sync_schedule,
@@ -5,7 +6,7 @@ from apps.workspaces.tasks import (
     run_email_notification,
     async_update_fyle_credentials
 )
-from apps.workspaces.models import WorkspaceSchedule, Configuration, FyleCredential
+from apps.workspaces.models import Workspace, WorkspaceSchedule, Configuration, FyleCredential
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from .fixtures import data
 
@@ -152,3 +153,15 @@ def test_async_update_fyle_credentials(db):
     fyle_credentials = FyleCredential.objects.filter(workspace_id=workspace_id).first()
 
     assert fyle_credentials.refresh_token == refresh_token
+
+
+def test_async_update_workspace_name(db, mocker):
+    mocker.patch(
+        'apps.workspaces.tasks.get_fyle_admin',
+        return_value={'data': {'org': {'name': 'Test Org'}}}
+    )
+    workspace = Workspace.objects.get(id=1)
+    async_update_workspace_name(workspace, 'Bearer access_token')
+
+    workspace = Workspace.objects.get(id=1)
+    assert workspace.name == 'Test Org'
