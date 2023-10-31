@@ -40,7 +40,7 @@ class Base:
         self.sync_after = sync_after
 
 
-    def __get_platform_class(self, platform: PlatformConnector):
+    def get_platform_class(self, platform: PlatformConnector):
         """
         Get the platform class
         :param platform: PlatformConnector object
@@ -48,7 +48,7 @@ class Base:
         """
         return getattr(platform, self.platform_class_name)
     
-    def __get_auto_sync_permission(self):
+    def get_auto_sync_permission(self):
         """
         Get the auto sync permission
         :return: bool
@@ -59,7 +59,7 @@ class Base:
 
         return is_auto_sync_status_allowed
     
-    def __construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: List[str] = []):
+    def construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: List[str] = []):
         """
         Construct the attributes filter
         :param attribute_type: attribute type
@@ -71,7 +71,7 @@ class Base:
             'workspace_id': self.workspace_id
         }
 
-        if self.sync_after:
+        if self.sync_after and self.platform_class_name != 'expense_custom_fields':
             filters['updated_at__gte'] = self.sync_after
 
         if paginated_destination_attribute_values:
@@ -193,8 +193,11 @@ class Base:
         Sync expense attributes
         :param platform: PlatformConnector object
         """
-        platform_class = self.__get_platform_class(platform)
-        platform_class.sync(sync_after=self.sync_after if self.sync_after else None)
+        platform_class = self.get_platform_class(platform)
+        if self.platform_class_name == 'expense_custom_fields':
+            platform_class.sync()
+        else:
+            platform_class.sync(sync_after=self.sync_after if self.sync_after else None)
 
     def sync_destination_attributes(self, sageintacct_attribute_type: str):
         """
@@ -229,9 +232,9 @@ class Base:
         """
         Construct Payload and Import to fyle in Batches
         """
-        is_auto_sync_status_allowed = self.__get_auto_sync_permission()
+        is_auto_sync_status_allowed = self.get_auto_sync_permission()
 
-        filters = self.__construct_attributes_filter(self.destination_field)
+        filters = self.construct_attributes_filter(self.destination_field)
 
         destination_attributes_count = DestinationAttribute.objects.filter(**filters).count()
 
@@ -249,7 +252,7 @@ class Base:
             import_log.save()
 
         destination_attributes_generator = self.get_destination_attributes_generator(destination_attributes_count, filters)
-        platform_class = self.__get_platform_class(platform)
+        platform_class = self.get_platform_class(platform)
 
         for paginated_destination_attributes, is_last_batch in destination_attributes_generator:
             fyle_payload = self.setup_fyle_payload_creation(
@@ -301,7 +304,7 @@ class Base:
         :param paginated_destination_attribute_values: List of DestinationAttribute values
         :return: Map of attribute value to attribute source_id
         """
-        filters = self.__construct_attributes_filter(self.source_field, paginated_destination_attribute_values)
+        filters = self.construct_attributes_filter(self.source_field, paginated_destination_attribute_values)
         existing_expense_attributes_values = ExpenseAttribute.objects.filter(**filters).values('value', 'source_id')
         # This is a map of attribute name to attribute source_id
         return {attribute['value'].lower(): attribute['source_id'] for attribute in existing_expense_attributes_values}
@@ -314,7 +317,9 @@ class Base:
         :param is_last_batch: bool
         :param import_log: ImportLog object
         """
-        if fyle_payload:
+        if fyle_payload and self.platform_class_name == 'expense_custom_fields':
+            resource_class.post(fyle_payload)
+        elif fyle_payload:
             resource_class.post_bulk(fyle_payload)
 
         self.update_import_log_post_import(is_last_batch, import_log)

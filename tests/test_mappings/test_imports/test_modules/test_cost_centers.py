@@ -136,7 +136,7 @@ def test_construct_fyle_payload(db):
     # create new case
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CLASS')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = cost_center._Base__get_auto_sync_permission()
+    is_auto_sync_status_allowed = cost_center.get_auto_sync_permission()
 
     fyle_payload = cost_center.construct_fyle_payload(
         paginated_destination_attributes,
