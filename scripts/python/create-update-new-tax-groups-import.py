@@ -9,7 +9,13 @@ existing_import_enabled_schedules = Schedule.objects.filter(
 try:
     with transaction.atomic():
         for schedule in existing_import_enabled_schedules:
-            mapping_setting = MappingSetting.objects.filter(workspace_id=schedule['args'], import_to_fyle=True).first()
+            mapping_setting = MappingSetting.objects.filter(
+                workspace_id=schedule['args'],
+                import_to_fyle=True,
+                source_field='TAX_GROUP',
+                destination_field='TAX_DETAIL'
+            ).first()
+
             if mapping_setting:
                 Schedule.objects.update_or_create(
                     func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
