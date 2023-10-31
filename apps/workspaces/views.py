@@ -3,6 +3,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 
+from django_q.tasks import async_task
+
 from cryptography.fernet import Fernet
 
 from sageintacctsdk import SageIntacctSDK, exceptions as sage_intacct_exc
@@ -56,6 +58,8 @@ class WorkspaceView(viewsets.ViewSet):
 
         if workspace:
             workspace.user.add(User.objects.get(user_id=request.user))
+            workspace.name = org_name
+            workspace.save()
             cache.delete(str(workspace.id))
         else:
             auth_tokens = AuthToken.objects.get(user__user_id=request.user)
@@ -85,10 +89,16 @@ class WorkspaceView(viewsets.ViewSet):
         """
         user = User.objects.get(user_id=request.user)
         org_id = request.query_params.get('org_id')
-        workspace = Workspace.objects.filter(user__in=[user], fyle_org_id=org_id).all()
+        workspaces = Workspace.objects.filter(user__in=[user], fyle_org_id=org_id).all()
 
+        if workspaces:
+            async_task(
+                'apps.workspaces.tasks.async_update_workspace_name',
+                workspaces[0],
+                request.META.get('HTTP_AUTHORIZATION')
+            )
         return Response(
-            data=WorkspaceSerializer(workspace, many=True).data,
+            data=WorkspaceSerializer(workspaces, many=True).data,
             status=status.HTTP_200_OK
         )
 
