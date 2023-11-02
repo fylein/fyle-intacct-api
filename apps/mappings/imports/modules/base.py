@@ -32,12 +32,17 @@ class Base:
             destination_field: str,
             platform_class_name: str,
             sync_after:datetime,
+            sdk_connection,
+            destination_sync_method: str
         ):
         self.workspace_id = workspace_id
         self.source_field = source_field
         self.destination_field = destination_field
         self.platform_class_name = platform_class_name
         self.sync_after = sync_after
+        # TODO: what will be the type of sdk_connection
+        self.sdk_connection = sdk_connection
+        self.destination_sync_method = destination_sync_method
 
 
     def get_platform_class(self, platform: PlatformConnector):
@@ -204,25 +209,23 @@ class Base:
         Sync destination attributes
         :param sageintacct_attribute_type: Sage Intacct attribute type
         """
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=self.workspace_id)
-        sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=self.workspace_id)
 
-        sync_methods = {
-            'LOCATION': sage_intacct_connection.sync_locations,
-            'PROJECT': sage_intacct_connection.sync_projects,
-            'DEPARTMENT': sage_intacct_connection.sync_departments,
-            'VENDOR': sage_intacct_connection.sync_vendors,
-            'CLASS': sage_intacct_connection.sync_classes,
-            'TAX_DETAIL': sage_intacct_connection.sync_tax_details,
-            'ITEM': sage_intacct_connection.sync_items,
-            'CUSTOMER': sage_intacct_connection.sync_customers,
-            'COST_TYPE': sage_intacct_connection.sync_cost_types,
-            'EXPENSE_TYPE': sage_intacct_connection.sync_expense_types,
-            'ACCOUNT': sage_intacct_connection.sync_accounts,
-        }
-        
-        sync_method = sync_methods.get(sageintacct_attribute_type, sage_intacct_connection.sync_user_defined_dimensions)
-        sync_method()
+        # sync_methods = {
+        #     'LOCATION': sage_intacct_connection.sync_locations,
+        #     'PROJECT': sage_intacct_connection.sync_projects,
+        #     'DEPARTMENT': sage_intacct_connection.sync_departments,
+        #     'VENDOR': sage_intacct_connection.sync_vendors,
+        #     'CLASS': sage_intacct_connection.sync_classes,
+        #     'TAX_DETAIL': sage_intacct_connection.sync_tax_details,
+        #     'ITEM': sage_intacct_connection.sync_items,
+        #     'CUSTOMER': sage_intacct_connection.sync_customers,
+        #     'COST_TYPE': sage_intacct_connection.sync_cost_types,
+        #     'EXPENSE_TYPE': sage_intacct_connection.sync_expense_types,
+        #     'ACCOUNT': sage_intacct_connection.sync_accounts,
+        # }
+
+        sync = getattr(self.sdk_connection, 'sync_{}'.format(self.destination_sync_method))
+        sync()
 
     def construct_payload_and_import_to_fyle(
         self,

@@ -8,13 +8,15 @@ class Project(Base):
     """
     Class for Projects module
     """
-    def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime):
+    def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime, sdk_connection, destination_sync_method: str = None):
         super().__init__(
             workspace_id=workspace_id,
             source_field='PROJECT',
             destination_field=destination_field,
             platform_class_name='projects',
-            sync_after=sync_after
+            sync_after=sync_after,
+            sdk_connection=sdk_connection,
+            destination_sync_method=destination_sync_method
         )
 
     def trigger_import(self):

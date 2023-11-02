@@ -62,3 +62,30 @@ def chain_import_fields_to_fyle(workspace_id):
 
     if chain.length() > 0:
         chain.run()
+
+def new_chain_import_fields_to_fyle(tasks_settings: dict):
+    pass
+    
+
+def construct_settings_and_schedule_tasks(workspace_id):
+    mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
+    custom_field_mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, is_custom=True, import_to_fyle=True)
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+
+    tasks_settings = {
+        'import_tax_codes': True,
+        'import_vendors_as_merchants': True,
+        'import_categories': True,
+        'import_projects': False,
+        'reimbursable_expenses_object': 'EXPENSE_REPORT',
+        'corporate_credit_card_expenses_object': 'EXPENSE_REPORT',
+        'tax_destination_field': 'TAX_GROUP',
+        'category_destination_field': 'EXPENSE_TYPE',
+    }
+
+    for mapping_setting in mapping_settings:
+        if mapping_setting.source_field == 'PROJECT':
+           tasks_settings['import_projects'] = True
+
+    new_chain_import_fields_to_fyle(tasks_settings)
+    
