@@ -139,10 +139,11 @@ class ExpenseCustomField(Base):
             import_log.save()
 
         destination_attributes = DestinationAttribute.objects.filter(**filters)
+        destination_attributes_without_duplicates = self.remove_duplicate_attributes(destination_attributes)
         platform_class = self.get_platform_class(platform)
 
         fyle_payload = self.construct_fyle_expense_custom_field_payload(
-            destination_attributes,
+            destination_attributes_without_duplicates,
             platform,
             source_placeholder
         )
