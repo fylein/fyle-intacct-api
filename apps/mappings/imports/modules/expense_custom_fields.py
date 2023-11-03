@@ -138,11 +138,9 @@ class ExpenseCustomField(Base):
             import_log.total_batches_count = 1
             import_log.save()
 
-        # destination_attributes_generator = self.get_destination_attributes_generator(destination_attributes_count, filters)
         destination_attributes = DestinationAttribute.objects.filter(**filters)
         platform_class = self.get_platform_class(platform)
 
-        # for paginated_destination_attributes, is_last_batch in destination_attributes_generator:
         fyle_payload = self.construct_fyle_expense_custom_field_payload(
             destination_attributes,
             platform,
