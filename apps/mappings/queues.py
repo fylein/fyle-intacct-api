@@ -5,36 +5,6 @@ from apps.mappings.imports.queues import chain_import_fields_to_fyle
 from apps.workspaces.models import SageIntacctCredential
 from django.utils.module_loading import import_string
 
-# task_settings = {
-#   'import_tax_codes': {
-#       'destination_field': 'TAX_DETAIL/TAX_CODE',
-#       'import': True,
-#   }
-#   'import_vendors_as_merchants': True,
-#   'import_categories': {
-#       'import': True,
-#       'destination_field': 'ACCOUNT/EXPENSE_TYPE' 
-#   },
-#   'mapping_settings': [
-#       {
-#           'source_field': 'PROJECT',
-#           'destination_field': 'PROJECT',
-#           'is_custom': False,
-#       },
-#       {
-#           'source_field': 'COST_CENTER',
-#           'destination_field': 'DEPARTMENT',
-#           'is_custom': False,
-#       },
-#       {
-#           'source_field': 'KLASS',
-#           'destination_field': 'CLASS',
-#           'is_custom': True,
-#       },
-#   ],
-#   'custom_field_mapping_settings': []
-# }
-
 SYNC_METHODS = {
     'LOCATION': 'locations',
     'PROJECT': 'projects',
@@ -49,7 +19,7 @@ SYNC_METHODS = {
     'ACCOUNT': 'accounts',
 }
 
-def chain_import_fields_to_fyle(workspace_id):
+def construct_task_settings_payload(workspace_id):
     """
     Chain import fields to Fyle
     :param workspace_id: Workspace Id
@@ -78,7 +48,6 @@ def chain_import_fields_to_fyle(workspace_id):
         },
         'mapping_settings': [],
         'sdk_connection': sdk_connection,
-        'destination_sync_method' : ''
     }
 
     if configuration.import_tax_codes:
@@ -90,7 +59,9 @@ def chain_import_fields_to_fyle(workspace_id):
 
     if configuration.import_vendors_as_merchants:
         task_settings['import_vendors_as_merchants'] = {
-            
+            'destination_field': 'VENDOR',
+            'destination_sync_method': SYNC_METHODS['VENDOR'],
+            'import': True,
         }
 
     if configuration.import_categories:
@@ -102,6 +73,7 @@ def chain_import_fields_to_fyle(workspace_id):
         
         task_settings['import_categories'] = {
             'destination_field': destination_field,
+            'destination_sync_method': SYNC_METHODS[destination_field],
             'import': True,
         }
 
@@ -110,6 +82,7 @@ def chain_import_fields_to_fyle(workspace_id):
             task_settings['mapping_settings'].append({
                 'source_field': mapping_setting.source_field,
                 'destination_field': mapping_setting.destination_field,
+                'destination_sync_method': SYNC_METHODS[mapping_setting.destination_field],
                 'is_custom': False,
             })
 
@@ -117,8 +90,8 @@ def chain_import_fields_to_fyle(workspace_id):
         task_settings['mapping_settings'].append({
             'source_field': custom_fields_mapping_setting.source_field,
             'destination_field': custom_fields_mapping_setting.destination_field,
+            'destination_sync_method': SYNC_METHODS[mapping_setting.destination_field],
             'is_custom': True,
         })
-
 
     chain_import_fields_to_fyle(workspace_id, task_settings)

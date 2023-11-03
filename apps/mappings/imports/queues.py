@@ -4,32 +4,36 @@ from apps.workspaces.models import Configuration
 
 
 # task_settings = {
-#   'import_tax_codes': {
-#       'destination_field': 'TAX_DETAIL/TAX_CODE',
-#       'import': True,
-#   }
-#   'import_vendors_as_merchants': True,
-#   'import_categories': {
-#       'import': True,
-#       'destination_field': 'ACCOUNT/EXPENSE_TYPE' 
-#   },
-#   'mapping_settings': [
-#       {
-#           'source_field': 'PROJECT',
-#           'destination_field': 'PROJECT',
-#           'is_custom': False,
-#       },
-#       {
-#           'source_field': 'COST_CENTER',
-#           'destination_field': 'DEPARTMENT',
-#           'is_custom': False,
-#       },
-#       {
-#           'source_field': 'KLASS',
-#           'destination_field': 'CLASS',
-#           'is_custom': True,
-#       },
-#   ],
+#     'import_tax_codes': {
+#         'destination_field': '',
+#         'destination_sync_method': '',
+#         'import': False,
+#     },
+#     'import_vendors_as_merchants': {
+#         'destination_field': '',
+#         'destination_sync_method': '',
+#         'import': False,
+#     },
+#     'import_categories': {
+#         'destination_field': '',
+#         'destination_sync_method': '',
+#         'import': False,
+#     },
+#     'mapping_settings': [
+#         {
+#             'source_field': 'PROJECT',
+#             'destination_field': 'CUSTOMER',
+#             'destination_sync_method': 'customers',
+#             'is_custom': False,
+#         },
+#         {
+#             'source_field': 'KLASS',
+#             'destination_field': 'CLASS',
+#             'destination_sync_method': 'classes',
+#             'is_custom': True,
+#         },
+#     ],
+#     'sdk_connection': sdk_connection,
 # }
 
 def chain_import_fields_to_fyle(workspace_id, tasks_settings: dict):
@@ -46,15 +50,17 @@ def chain_import_fields_to_fyle(workspace_id, tasks_settings: dict):
             tasks_settings['import_tax_codes']['destination_field'],
             'TAX_GROUP',
             tasks_settings['sdk_connection'],
-            
+            tasks_settings['import_tax_codes']['destination_sync_method']
         )
 
-    if tasks_settings['import_vendors_as_merchants']:
+    if tasks_settings['import_vendors_as_merchants']['import']:
         chain.append(
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
             'VENDOR',
-            'MERCHANT'
+            'MERCHANT',
+            tasks_settings['sdk_connection'],
+            tasks_settings['import_vendors_as_merchants']['destination_sync_method']
         )
 
     if tasks_settings['import_categories']['import']:
@@ -62,7 +68,9 @@ def chain_import_fields_to_fyle(workspace_id, tasks_settings: dict):
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
             tasks_settings['import_categories']['destination_field'],
-            'CATEGORY'
+            'CATEGORY',
+            tasks_settings['sdk_connection'],
+            tasks_settings['import_categories']['destination_sync_method']
         )
 
     if tasks_settings['mapping_settings']:
@@ -73,6 +81,8 @@ def chain_import_fields_to_fyle(workspace_id, tasks_settings: dict):
                     workspace_id,
                     mapping_setting['destination_field'],
                     mapping_setting['source_field'],
+                    tasks_settings['sdk_connection'],
+                    mapping_setting['destination_sync_method'],
                     mapping_setting['is_custom']
                 )
 
