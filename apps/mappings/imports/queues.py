@@ -2,25 +2,54 @@ from django_q.tasks import Chain
 from fyle_accounting_mappings.models import MappingSetting
 from apps.workspaces.models import Configuration
 
-def chain_import_fields_to_fyle(workspace_id):
+
+# task_settings = {
+#   'import_tax_codes': {
+#       'destination_field': 'TAX_DETAIL/TAX_CODE',
+#       'import': True,
+#   }
+#   'import_vendors_as_merchants': True,
+#   'import_categories': {
+#       'import': True,
+#       'destination_field': 'ACCOUNT/EXPENSE_TYPE' 
+#   },
+#   'mapping_settings': [
+#       {
+#           'source_field': 'PROJECT',
+#           'destination_field': 'PROJECT',
+#           'is_custom': False,
+#       },
+#       {
+#           'source_field': 'COST_CENTER',
+#           'destination_field': 'DEPARTMENT',
+#           'is_custom': False,
+#       },
+#       {
+#           'source_field': 'KLASS',
+#           'destination_field': 'CLASS',
+#           'is_custom': True,
+#       },
+#   ],
+# }
+
+def chain_import_fields_to_fyle(workspace_id, tasks_settings: dict):
     """
     Chain import fields to Fyle
     :param workspace_id: Workspace Id
     """
-    mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
-    custom_field_mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, is_custom=True, import_to_fyle=True)
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
     chain = Chain()
 
-    if configuration.import_tax_codes:
+    if tasks_settings['import_tax_codes']['import']:
         chain.append(
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
-            'TAX_DETAIL',
-            'TAX_GROUP'
+            tasks_settings['import_tax_codes']['destination_field'],
+            'TAX_GROUP',
+            tasks_settings['sdk_connection'],
+            
         )
 
-    if configuration.import_vendors_as_merchants:
+    if tasks_settings['import_vendors_as_merchants']:
         chain.append(
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
@@ -28,64 +57,24 @@ def chain_import_fields_to_fyle(workspace_id):
             'MERCHANT'
         )
 
-    if configuration.import_categories:
-        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' or \
-            configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-            destination_field = 'EXPENSE_TYPE'
-        else:
-            destination_field = 'ACCOUNT'
-
+    if tasks_settings['import_categories']['import']:
         chain.append(
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
-            destination_field,
+            tasks_settings['import_categories']['destination_field'],
             'CATEGORY'
         )
 
-    for mapping_setting in mapping_settings:
-        if mapping_setting.source_field in ['PROJECT', 'COST_CENTER']:
-            chain.append(
-               'apps.mappings.imports.tasks.trigger_import_via_schedule',
-                workspace_id,
-                mapping_setting.destination_field,
-                mapping_setting.source_field
-            )
-
-    for custom_fields_mapping_setting in custom_field_mapping_settings:
-        chain.append(
-            'apps.mappings.imports.tasks.trigger_import_via_schedule',
-            workspace_id,
-            custom_fields_mapping_setting.destination_field,
-            custom_fields_mapping_setting.source_field,
-            True
-        )
+    if tasks_settings['mapping_settings']:
+        for mapping_setting in tasks_settings['mapping_settings']:
+            if mapping_setting.source_field in ['PROJECT', 'COST_CENTER']:
+                chain.append(
+                    'apps.mappings.imports.tasks.trigger_import_via_schedule',
+                    workspace_id,
+                    mapping_setting['destination_field'],
+                    mapping_setting['source_field'],
+                    mapping_setting['is_custom']
+                )
 
     if chain.length() > 0:
         chain.run()
-
-def new_chain_import_fields_to_fyle(tasks_settings: dict):
-    pass
-    
-
-def construct_settings_and_schedule_tasks(workspace_id):
-    mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
-    custom_field_mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, is_custom=True, import_to_fyle=True)
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
-
-    tasks_settings = {
-        'import_tax_codes': True,
-        'import_vendors_as_merchants': True,
-        'import_categories': True,
-        'import_projects': False,
-        'reimbursable_expenses_object': 'EXPENSE_REPORT',
-        'corporate_credit_card_expenses_object': 'EXPENSE_REPORT',
-        'tax_destination_field': 'TAX_GROUP',
-        'category_destination_field': 'EXPENSE_TYPE',
-    }
-
-    for mapping_setting in mapping_settings:
-        if mapping_setting.source_field == 'PROJECT':
-           tasks_settings['import_projects'] = True
-
-    new_chain_import_fields_to_fyle(tasks_settings)
-    

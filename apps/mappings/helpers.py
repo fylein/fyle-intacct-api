@@ -9,7 +9,7 @@ from apps.mappings.tasks import (
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting
 from apps.fyle.models import DependentFieldSetting
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
+from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 
 
 def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):

@@ -292,6 +292,7 @@ class SageIntacctConnector:
         Get projects
         """
         projects_count = self.connection.projects.count()
+        print("this is being called")
         if projects_count < SYNC_UPPER_LIMIT['projects']:
             projects = self.connection.projects.get_all()
 

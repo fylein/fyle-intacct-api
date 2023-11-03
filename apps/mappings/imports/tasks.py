@@ -5,8 +5,6 @@ from apps.mappings.imports.modules.cost_centers import CostCenter
 from apps.mappings.imports.modules.tax_groups import TaxGroup
 from apps.mappings.imports.modules.merchants import Merchant
 from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
-from django.utils.module_loading import import_string
-from apps.workspaces.models import SageIntacctCredential
 
 SOURCE_FIELD_CLASS_MAP = {
     'PROJECT': Project,
@@ -16,7 +14,7 @@ SOURCE_FIELD_CLASS_MAP = {
     'MERCHANT': Merchant
 }
 
-def trigger_import_via_schedule(workspace_id: int, destination_field: str, source_field: str, sdk_connection_string: str, destination_sync_method: str = None, is_custom: bool = False):
+def trigger_import_via_schedule(workspace_id: int, destination_field: str, source_field: str, sdk_connection, destination_sync_method: str = None, is_custom: bool = False):
     """
     Trigger import via schedule
     :param workspace_id: Workspace id
@@ -25,9 +23,6 @@ def trigger_import_via_schedule(workspace_id: int, destination_field: str, sourc
     """
     import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=source_field).first()
     sync_after = import_log.last_successful_run_at if import_log else None
-
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sdk_connection = import_string(sdk_connection_string)(sage_intacct_credentials, workspace_id)
 
     if is_custom:
         item = ExpenseCustomField(workspace_id, source_field, destination_field, sync_after)

@@ -14,8 +14,6 @@ from fyle_accounting_mappings.models import (
 )
 from apps.workspaces.models import FyleCredential
 from apps.mappings.models import ImportLog
-from apps.workspaces.models import SageIntacctCredential
-from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.exceptions import handle_import_exceptions
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration

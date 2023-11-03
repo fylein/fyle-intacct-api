@@ -21,7 +21,7 @@ from fyle.platform.exceptions import WrongParamsError
 
 from apps.workspaces.models import Configuration
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
+from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 from apps.tasks.models import Error
 from apps.mappings.models import LocationEntityMapping
 from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
