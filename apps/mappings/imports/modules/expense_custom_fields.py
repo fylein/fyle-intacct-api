@@ -135,25 +135,24 @@ class ExpenseCustomField(Base):
             import_log.save()
             return
         else:
-            import_log.total_batches_count = math.ceil(destination_attributes_count/200)
+            import_log.total_batches_count = 1
             import_log.save()
 
-        destination_attributes_generator = self.get_destination_attributes_generator(destination_attributes_count, filters)
+        destination_attributes = DestinationAttribute.objects.filter(**filters)
         platform_class = self.get_platform_class(platform)
 
-        for paginated_destination_attributes, is_last_batch in destination_attributes_generator:
-            fyle_payload = self.construct_fyle_expense_custom_field_payload(
-                paginated_destination_attributes,
-                platform,
-                source_placeholder
-            )
+        fyle_payload = self.construct_fyle_expense_custom_field_payload(
+            destination_attributes,
+            platform,
+            source_placeholder
+        )
 
-            self.post_to_fyle_and_sync(
-                fyle_payload=fyle_payload,
-                resource_class=platform_class,
-                is_last_batch=is_last_batch,
-                import_log=import_log
-            )
+        self.post_to_fyle_and_sync(
+            fyle_payload=fyle_payload,
+            resource_class=platform_class,
+            is_last_batch=True,
+            import_log=import_log
+        )
 
    # import_destination_attribute_to_fyle method is overridden 
     @handle_import_exceptions
