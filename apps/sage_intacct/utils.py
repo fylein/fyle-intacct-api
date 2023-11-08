@@ -98,7 +98,7 @@ class SageIntacctConnector:
         """
         Get accounts
         """
-        accounts = self.connection.accounts.get_all()
+        accounts = self.connection.accounts.get_all_generator()
 
         account_attributes = {
             'account': [],
@@ -715,27 +715,32 @@ class SageIntacctConnector:
         """
         Get vendors
         """
-        vendors = self.connection.vendors.get_all()
-        vendor_attributes = []
+        args = {
+            'field': 'STATUS',
+            'value': 'active'
+        }
+        vendors_generator = self.connection.vendors.get_all_generator(**args)
 
-        for vendor in vendors:
-            if vendor['STATUS'] == 'active':
-                detail = {
-                    'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
-                }
-                vendor_attributes.append({
-                    'attribute_type': 'VENDOR',
-                    'display_name': 'vendor',
-                    'value': vendor['NAME'],
-                    'destination_id': vendor['VENDORID'],
-                    'detail': detail,
-                    'active': True
-                })
+        for vendors in vendors_generator:
+            vendor_attributes = []
+            for vendor in vendors:
+                if vendor['STATUS'] == 'active':
+                    detail = {
+                        'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
+                    }
+                    vendor_attributes.append({
+                        'attribute_type': 'VENDOR',
+                        'display_name': 'vendor',
+                        'value': vendor['NAME'],
+                        'destination_id': vendor['VENDORID'],
+                        'detail': detail,
+                        'active': True
+                    })
 
-        if vendor_attributes:
-            DestinationAttribute.bulk_create_or_update_destination_attributes(
-                vendor_attributes, 'VENDOR', self.workspace_id, True
-            )
+            if vendor_attributes:
+                DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    vendor_attributes, 'VENDOR', self.workspace_id, True
+                )
 
         return []
 
