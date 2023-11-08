@@ -723,6 +723,7 @@ class SageIntacctConnector:
 
         for vendors in vendors_generator:
             vendor_attributes = []
+
             for vendor in vendors:
                 detail = {
                     'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
