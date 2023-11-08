@@ -82,7 +82,7 @@ def test_async_auto_map_employees(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Vendors.get_all',
+        'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=intacct_data['get_vendors']
     )
 
@@ -156,7 +156,7 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=intacct_data['get_departments']
     )
     mocker.patch(
-        'sageintacctsdk.apis.Vendors.get_all',
+        'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=intacct_data['get_vendors']
     )
 
