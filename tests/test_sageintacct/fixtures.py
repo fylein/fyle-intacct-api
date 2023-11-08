@@ -490,7 +490,7 @@ data = {
             'CUSTOMERID':'10001'
         }
     ],
-    'get_vendors':[
+    'get_vendors':[[
         {
             'RECORDNO':'51',
             'NAME':'Ashwin',
@@ -515,7 +515,7 @@ data = {
             'APACCOUNTTITLE':'None',
             'STATUS':'active'
         }
-    ],
+    ]],
     'post_vendors': {
         'data': {
             'vendor': {
