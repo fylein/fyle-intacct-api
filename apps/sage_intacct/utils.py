@@ -715,11 +715,16 @@ class SageIntacctConnector:
         """
         Get vendors
         """
-        vendors = self.connection.vendors.get_all()
-        vendor_attributes = []
+        args = {
+            'field': 'STATUS',
+            'value': 'active'
+        }
+        vendors_generator = self.connection.vendors.get_all_generator(**args)
 
-        for vendor in vendors:
-            if vendor['STATUS'] == 'active':
+        for vendors in vendors_generator:
+            vendor_attributes = []
+
+            for vendor in vendors:
                 detail = {
                     'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
                 }
@@ -732,10 +737,10 @@ class SageIntacctConnector:
                     'active': True
                 })
 
-        if vendor_attributes:
-            DestinationAttribute.bulk_create_or_update_destination_attributes(
-                vendor_attributes, 'VENDOR', self.workspace_id, True
-            )
+            if vendor_attributes:
+                DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    vendor_attributes, 'VENDOR', self.workspace_id, True
+                )
 
         return []
 
