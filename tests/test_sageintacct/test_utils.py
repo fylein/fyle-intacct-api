@@ -59,7 +59,7 @@ def test_sync_vendors(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Vendors.get_all_generator',
+        'sageintacctsdk.apis.Vendors.get_all',
         return_value=data['get_vendors']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -696,7 +696,7 @@ def test_get_or_create_vendor(mocker, db):
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Vendors.get',
-        return_value={'vendor': data['get_vendors'][0], '@totalcount': 2}
+        return_value={'vendor': data['get_vendors'], '@totalcount': 2}
     )
     mocker.patch(
         'sageintacctsdk.apis.Vendors.post',
