@@ -98,7 +98,7 @@ class SageIntacctConnector:
         """
         Get accounts
         """
-        accounts = self.connection.accounts.get_all_generator()
+        accounts = self.connection.accounts.get_all()
 
         account_attributes = {
             'account': [],
