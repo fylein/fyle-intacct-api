@@ -52,6 +52,26 @@ def test_destination_attributes(api_client, test_connection):
     response = json.loads(response.content)
     assert len(response) == 170
 
+def test_paginated_destination_attributes(api_client, test_connection):
+    workspace_id = 1
+
+    access_token = test_connection.access_token
+    url = '/api/workspaces/{}/sage_intacct/paginated_destination_attributes/'.format(workspace_id)
+
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+    response = api_client.get(
+        url,
+        data={
+            'attribute_type': 'EMPLOYEE',
+            'value': 'ash'
+        })
+    assert response.status_code == 200
+
+    results = json.loads(response.content)['results']
+    for result in results:
+        assert 'ash' in result['value'].lower()
+
 
 def test_destination_attributes_count(api_client, test_connection):
     workspace_id = 1
