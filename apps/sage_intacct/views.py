@@ -64,6 +64,26 @@ class DestinationAttributesView(generics.ListAPIView):
         return destination_attributes
 
 
+class PaginatedDestinationAttributesView(generics.ListAPIView):
+    """
+    Paginated Destination Attributes view
+    """
+    serializer_class = DestinationAttributeSerializer
+
+    def get_queryset(self):
+        value = self.request.query_params.get('value')
+        params = {
+            'attribute_type': self.request.query_params.get('attribute_type'),
+            'workspace_id': self.kwargs['workspace_id'],
+            'active': True
+        }
+
+        if value:
+            params['value__icontains'] = value
+
+        return DestinationAttribute.objects.filter(**params).order_by('value')
+
+
 class DestinationAttributesCountView(generics.RetrieveAPIView):
     """
     Destination Attributes Count view

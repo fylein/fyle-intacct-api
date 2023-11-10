@@ -17,12 +17,13 @@ import itertools
 
 from .views import  SageIntacctFieldsView, DestinationAttributesView, SyncSageIntacctDimensionView, \
     RefreshSageIntacctDimensionView, DestinationAttributesCountView, \
-    TriggerExportsView, TriggerPaymentsView
+    TriggerExportsView, TriggerPaymentsView, PaginatedDestinationAttributesView
 
 
 sage_intacct_app_path = [
     path('sage_intacct_fields/', SageIntacctFieldsView.as_view()),
     path('destination_attributes/', DestinationAttributesView.as_view()),
+    path('paginated_destination_attributes/', PaginatedDestinationAttributesView.as_view()),
     path('destination_attributes/count/', DestinationAttributesCountView.as_view()),
     path('exports/trigger/', TriggerExportsView.as_view()),
     path('payments/trigger/', TriggerPaymentsView.as_view()),

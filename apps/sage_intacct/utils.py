@@ -163,7 +163,8 @@ class SageIntacctConnector:
                 'attribute_type': 'DEPARTMENT',
                 'display_name': 'department',
                 'value': department['TITLE'],
-                'destination_id': department['DEPARTMENTID']
+                'destination_id': department['DEPARTMENTID'],
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -236,7 +237,8 @@ class SageIntacctConnector:
                 'attribute_type': 'CHARGE_CARD_NUMBER',
                 'display_name': 'Charge Card Account',
                 'value': charge_card_account['CARDID'],
-                'destination_id': charge_card_account['CARDID']
+                'destination_id': charge_card_account['CARDID'],
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -257,7 +259,8 @@ class SageIntacctConnector:
                 'attribute_type': 'PAYMENT_ACCOUNT',
                 'display_name': 'Payment Account',
                 'value': '{} - {}'.format(payment_account['BANKNAME'], payment_account['BANKACCOUNTID']),
-                'destination_id': payment_account['BANKACCOUNTID']
+                'destination_id': payment_account['BANKACCOUNTID'],
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -361,7 +364,8 @@ class SageIntacctConnector:
                         'attribute_type': 'ITEM',
                         'display_name': 'item',
                         'value': item['NAME'],
-                        'destination_id': item['ITEMID']
+                        'destination_id': item['ITEMID'],
+                        'active': True
                     })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -382,7 +386,8 @@ class SageIntacctConnector:
                 'attribute_type': 'LOCATION',
                 'display_name': 'location',
                 'value': location['NAME'],
-                'destination_id': location['LOCATIONID']
+                'destination_id': location['LOCATIONID'],
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -407,7 +412,8 @@ class SageIntacctConnector:
                 'destination_id': location_entity['LOCATIONID'],
                 'detail': {
                     'country': location_entity['OPCOUNTRY']
-                }
+                },
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -431,7 +437,8 @@ class SageIntacctConnector:
                 'destination_id': expense_payment_type['RECORDNO'],
                 'detail': {
                     'is_reimbursable': True if expense_payment_type['NONREIMBURSABLE'] == 'false' else False
-                }
+                },
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -460,7 +467,8 @@ class SageIntacctConnector:
                 'display_name': 'employee',
                 'value': employee['CONTACT.CONTACTNAME'],
                 'destination_id': employee['EMPLOYEEID'],
-                'detail': detail
+                'detail': detail,
+                'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -486,7 +494,8 @@ class SageIntacctConnector:
                         'attribute_type': dimension_name,
                         'display_name': dimension_name.lower().replace('_', ' '),
                         'value': value['name'],
-                        'destination_id': value['id']
+                        'destination_id': value['id'],
+                        'active': True
                     })
 
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -509,7 +518,8 @@ class SageIntacctConnector:
                     'attribute_type': 'CLASS',
                     'display_name': 'class',
                     'value': _class['NAME'],
-                    'destination_id': _class['CLASSID']
+                    'destination_id': _class['CLASSID'],
+                    'active': True
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -532,7 +542,8 @@ class SageIntacctConnector:
                     'attribute_type': 'CUSTOMER',
                     'display_name': 'customer',
                     'value': customer['NAME'],
-                    'destination_id': customer['CUSTOMERID']
+                    'destination_id': customer['CUSTOMERID'],
+                    'active': True
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -571,6 +582,7 @@ class SageIntacctConnector:
             'display_name': attribute,
             'value': name,
             'destination_id': destination_id,
+            'active': True,
             'detail': {
                 'email': email
             }
