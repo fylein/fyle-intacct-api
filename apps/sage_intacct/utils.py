@@ -26,6 +26,7 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 SYNC_UPPER_LIMIT = {

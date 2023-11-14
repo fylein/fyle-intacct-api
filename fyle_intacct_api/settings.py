@@ -165,6 +165,11 @@ LOGGING = {
             'handlers': ['debug_logs'],
             'propagate': True,
         },
+         'django_q': {
+            'handlers': ['debug_logs'],
+            'level': 'INFO',
+            'propagate': True,
+        },
         'fyle_integrations_platform_connector': {
             'handlers': ['debug_logs'],
             'propagate': True,
