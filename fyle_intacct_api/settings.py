@@ -145,14 +145,6 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['request_logs'],
-            'propagate': True,
-        },
-        'django.request': {
-            'handlers': ['request_logs'],
-            'propagate': False
-        },
-        'django': {
-            'handlers': ['request_logs'],
             'level': 'INFO',
             'propagate': True,
         },
@@ -163,27 +155,13 @@ LOGGING = {
         },
         'fyle_intacct_api': {
             'handlers': ['debug_logs'],
-            'level': 'ERROR',
-            'propagate': False
-        },
-        'fyle_intacct_api': {
-            'handlers': ['debug_logs'],
             'level': 'INFO',
-            'propagate': False
-        },
-        'apps': {
-            'handlers': ['debug_logs'],
-            'level': 'ERROR',
             'propagate': False
         },
         'apps': {
             'handlers': ['debug_logs'],
             'level': 'INFO',
             'propagate': False
-        },
-         'django_q': {
-            'handlers': ['debug_logs'],
-            'propagate': True,
         },
          'django_q': {
             'handlers': ['debug_logs'],
