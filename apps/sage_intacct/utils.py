@@ -1009,7 +1009,7 @@ class SageIntacctConnector:
                 'ccpayitem': charge_card_transaction_lineitem_payload
             }
         }
-
+        logger.info("Charge Card Transaction", charge_card_transaction_payload)
         return charge_card_transaction_payload
 
     def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
