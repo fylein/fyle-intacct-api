@@ -1009,7 +1009,7 @@ class SageIntacctConnector:
                 'ccpayitem': charge_card_transaction_lineitem_payload
             }
         }
-        logger.info("workspace_id = {}, expense_group_id = {}, charge_card_transaction_payload = {}, ".format(self.workspace_id, charge_card_transaction.expense_group.id, charge_card_transaction_payload))
+        logger.info("WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, CHARGE_CARD_TRANSACTION_PAYLOAD = {}, ".format(self.workspace_id, charge_card_transaction.expense_group.id, charge_card_transaction_payload))
         return charge_card_transaction_payload
 
     def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
