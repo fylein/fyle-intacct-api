@@ -45,7 +45,7 @@ class Category(Base):
             category = {
                 'name': attribute.value,
                 'code': attribute.destination_id,
-                'is_enabled': attribute.active
+                'is_enabled': attribute.active if attribute.value == 'Unspecified' else True,
             }
 
             # Create a new category if it does not exist in Fyle
