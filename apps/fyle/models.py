@@ -4,6 +4,7 @@ Fyle Models
 from dateutil import parser
 from datetime import datetime
 from typing import List, Dict
+from collections import defaultdict
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
@@ -13,7 +14,7 @@ from django.db.models import Count, Q, JSONField
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.workspaces.models import Workspace
+from apps.workspaces.models import Workspace, Configuration
 
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
@@ -359,7 +360,7 @@ class ExpenseGroup(models.Model):
         db_table = 'expense_groups'
 
     @staticmethod
-    def create_expense_groups_by_report_id_fund_source(expense_objects: List[Expense], workspace_id):
+    def create_expense_groups_by_report_id_fund_source(expense_objects: List[Expense], configuration: Configuration, workspace_id):
         """
         Group expense by and fund_source
         """
@@ -367,6 +368,31 @@ class ExpenseGroup(models.Model):
 
         reimbursable_expense_group_fields = expense_group_settings.reimbursable_expense_group_fields
         reimbursable_expenses = list(filter(lambda expense: expense.fund_source == 'PERSONAL', expense_objects))
+
+        if configuration.reimbursable_expenses_object == 'EXPENSE REPORT' and 'expense_id' not in reimbursable_expense_group_fields:
+            total_amount = 0
+            if 'spent_at' in reimbursable_expense_group_fields:
+                grouped_data = defaultdict(list)
+                for expense in reimbursable_expenses:
+                    spent_at = expense.spent_at
+                    grouped_data[spent_at].append(expense)
+                grouped_expenses = list(grouped_data.values())
+                reimbursable_expenses = []
+                for expense_group in grouped_expenses:
+                    total_amount=0
+                    for expense in expense_group:
+                        total_amount += expense.amount
+                    if total_amount < 0:
+                        expense_group = list(filter(lambda expense: expense.amount > 0, expense_group))
+                    reimbursable_expenses.extend(expense_group)
+            else:
+                for expense in reimbursable_expenses:
+                    total_amount += expense.amount
+                
+                if total_amount < 0:
+                    reimbursable_expenses = list(filter(lambda expense: expense.amount > 0, reimbursable_expenses))
+        elif configuration.reimbursable_expenses_object  != 'JOURNAL ENTRY':
+            reimbursable_expenses = list(filter(lambda expense: expense.amount > 0, reimbursable_expenses))
 
         expense_groups = _group_expenses(reimbursable_expenses, reimbursable_expense_group_fields, workspace_id)
 
