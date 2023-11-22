@@ -369,7 +369,7 @@ class ExpenseGroup(models.Model):
         reimbursable_expense_group_fields = expense_group_settings.reimbursable_expense_group_fields
         reimbursable_expenses = list(filter(lambda expense: expense.fund_source == 'PERSONAL', expense_objects))
 
-        if configuration.reimbursable_expenses_object == 'EXPENSE REPORT' and 'expense_id' not in reimbursable_expense_group_fields:
+        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and 'expense_id' not in reimbursable_expense_group_fields:
             total_amount = 0
             if 'spent_at' in reimbursable_expense_group_fields:
                 grouped_data = defaultdict(list)
