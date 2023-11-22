@@ -68,6 +68,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
     :param workspace_id: workspace id
     :param fund_source: expense fund source
     """
+    configuration : Configuration = Configuration.objects.get(workspace_id=workspace_id)
     try:
         with transaction.atomic():
             workspace = Workspace.objects.get(pk=workspace_id)
@@ -138,7 +139,9 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
                     org_id=workspace.fyle_org_id)   
 
             ExpenseGroup.create_expense_groups_by_report_id_fund_source(
-                filtered_expenses, workspace_id
+                filtered_expenses, 
+                configuration,
+                workspace_id
             )
 
             task_log.status = 'COMPLETE'

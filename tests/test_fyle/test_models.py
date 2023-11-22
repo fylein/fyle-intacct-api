@@ -1,5 +1,6 @@
 from apps.fyle.models import get_default_expense_state, get_default_expense_group_fields, ExpenseGroupSettings, Expense, Reimbursement, \
     ExpenseGroup, _group_expenses, _format_date, get_default_ccc_expense_state
+from apps.workspaces.models import Configuration
 from .fixtures import data
 from dateutil import parser
 from apps.tasks.models import TaskLog
@@ -76,6 +77,7 @@ def test_create_expense_groups_by_report_id_fund_source(db):
     workspace_id = 1
     payload = data['expenses']
 
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
     Expense.create_expense_objects(payload, workspace_id)
     expense_objects = Expense.objects.last()
 
@@ -87,7 +89,7 @@ def test_create_expense_groups_by_report_id_fund_source(db):
     expense_groups = _group_expenses([], ['claim_number', 'fund_source', 'projects', 'employee_email', 'report_id'], 4)
     assert expense_groups == []
 
-    ExpenseGroup.create_expense_groups_by_report_id_fund_source([expense_objects], workspace_id)
+    ExpenseGroup.create_expense_groups_by_report_id_fund_source([expense_objects], configuration, workspace_id)
 
     expense_groups = ExpenseGroup.objects.last()
     assert expense_groups.exported_at == None
