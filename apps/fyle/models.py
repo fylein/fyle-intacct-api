@@ -339,6 +339,37 @@ def _group_expenses(expenses, group_fields, workspace_id):
     return expense_groups
 
 
+def filter_expenses(expense_groups, expenses: Expense, expenses_object, expense_group_fields):
+    filtered_expense_groups = []
+
+    for expense_group in expense_groups:
+        expense_group_expenses_ids = expense_group['expense_ids']
+
+        filtered_expenses = [item for item in expenses if item.id in expense_group_expenses_ids]
+
+        # Export type => Expense Report and Group By => Report
+        if (
+            expenses_object == 'EXPENSE_REPORT'
+            and 'expense_id' not in expense_group_fields
+        ):
+            total_amount = sum(expense.amount for expense in filtered_expenses)
+
+            if total_amount < 0:
+                filtered_expenses = list(filter(lambda expense: expense.amount > 0, filtered_expenses))
+        
+        # Export type => Journal Entry, Expense Report and Group By => Expense
+        elif (expenses_object in ('JOURNAL_ENTRY', 'EXPENSE_REPORT') and 'expense_id' in expense_group_fields) or expenses_object == 'JOURNAL_ENTRY':
+            filtered_expenses = list(filter(lambda expense: expense.amount > 0, filtered_expenses))
+
+        filtered_expense_ids = [item.id for item in filtered_expenses]
+
+        if len(filtered_expense_ids) != 0:
+            expense_group['expense_ids'] = filtered_expense_ids
+            filtered_expense_groups.append(expense_group)
+
+    return filtered_expense_groups
+
+
 class ExpenseGroup(models.Model):
     """
     Expense Group
@@ -372,48 +403,22 @@ class ExpenseGroup(models.Model):
 
         reimbursable_expense_groups = _group_expenses(reimbursable_expenses, reimbursable_expense_group_fields, workspace_id)
 
-        for reimbursable_expense_group in reimbursable_expense_groups:
-            expense_group_expenses = reimbursable_expense_group['expense_ids']
+        filtered_reimbursable_expense_groups = filter_expenses(
+            reimbursable_expense_groups, reimbursable_expenses, configuration.reimbursable_expenses_object, reimbursable_expense_group_fields
+        )
 
-            filtered_expenses = [item for item in reimbursable_expenses if item.id in expense_group_expenses]
-
-            if configuration.reimbursable_expenses_object in ('EXPENSE_REPORT', 'BILL') and 'expense_id' not in reimbursable_expense_group_fields:
-                total_amount = 0
-                if 'spent_at' in reimbursable_expense_group_fields:
-                    grouped_data = defaultdict(list)
-                    for expense in filtered_expenses:
-                        spent_at = expense.spent_at
-                        grouped_data[spent_at].append(expense)
-                    grouped_expenses = list(grouped_data.values())
-                    filtered_expenses = []
-                    for expense_group in grouped_expenses:
-                        total_amount=0
-                        for expense in expense_group:
-                            total_amount += expense.amount
-                        if total_amount < 0:
-                            expense_group = list(filter(lambda expense: expense.amount > 0, expense_group))
-                        filtered_expenses.extend(expense_group)
-                else:
-                    for expense in filtered_expenses:
-                        total_amount += expense.amount
-                    
-                    if total_amount < 0:
-                        filtered_expenses = list(filter(lambda expense: expense.amount > 0, filtered_expenses))
-            elif configuration.reimbursable_expenses_object  == 'JOURNAL_ENTRY' or 'expense_id' in reimbursable_expense_group_fields:
-                filtered_expenses = list(filter(lambda expense: expense.amount > 0, filtered_expenses))
-
-            filtered_expense_ids = [item.id for item in filtered_expenses]
-
-            if len(filtered_expense_ids) != 0:
-                reimbursable_expense_group['expense_ids'] = filtered_expense_ids
-                expense_groups.append(reimbursable_expense_group)
+        expense_groups.extend(filtered_reimbursable_expense_groups)
 
         corporate_credit_card_expense_group_field = expense_group_settings.corporate_credit_card_expense_group_fields
         corporate_credit_card_expenses = list(filter(lambda expense: expense.fund_source == 'CCC', expense_objects))
         corporate_credit_card_expense_groups = _group_expenses(
             corporate_credit_card_expenses, corporate_credit_card_expense_group_field, workspace_id)
 
-        expense_groups.extend(corporate_credit_card_expense_groups)
+        filtered_corporate_credit_card_expense_groups = filter_expenses(
+            corporate_credit_card_expense_groups, corporate_credit_card_expenses, configuration.corporate_credit_card_expenses_object, corporate_credit_card_expense_group_field
+        )
+
+        expense_groups.extend(filtered_corporate_credit_card_expense_groups)
 
         for expense_group in expense_groups:
             if expense_group_settings.reimbursable_export_date_type == 'last_spent_at':
