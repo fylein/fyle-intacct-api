@@ -339,7 +339,11 @@ def _group_expenses(expenses, group_fields, workspace_id):
     return expense_groups
 
 
-def filter_expenses(expense_groups, expenses: Expense, expenses_object, expense_group_fields):
+def filter_nagative_expenses(filtered_expenses):
+    return list(filter(lambda expense: expense.amount > 0, filtered_expenses))
+
+
+def filter_expense_groups(expense_groups, expenses: Expense, expenses_object, expense_group_fields):
     filtered_expense_groups = []
 
     for expense_group in expense_groups:
@@ -348,18 +352,15 @@ def filter_expenses(expense_groups, expenses: Expense, expenses_object, expense_
         filtered_expenses = [item for item in expenses if item.id in expense_group_expenses_ids]
 
         # Export type => Expense Report and Group By => Report
-        if (
-            expenses_object == 'EXPENSE_REPORT'
-            and 'expense_id' not in expense_group_fields
-        ):
+        if expenses_object == 'EXPENSE_REPORT' and 'expense_id' not in expense_group_fields:
             total_amount = sum(expense.amount for expense in filtered_expenses)
 
             if total_amount < 0:
-                filtered_expenses = list(filter(lambda expense: expense.amount > 0, filtered_expenses))
+                filtered_expenses = filter_nagative_expenses(filtered_expenses)
         
         # Export type => Journal Entry, Expense Report and Group By => Expense
-        elif (expenses_object in ('JOURNAL_ENTRY', 'EXPENSE_REPORT') and 'expense_id' in expense_group_fields) or expenses_object == 'JOURNAL_ENTRY':
-            filtered_expenses = list(filter(lambda expense: expense.amount > 0, filtered_expenses))
+        elif (expenses_object == 'EXPENSE_REPORT' and 'expense_id' in expense_group_fields) or expenses_object == 'JOURNAL_ENTRY':
+            filtered_expenses = filter_nagative_expenses(filtered_expenses)
 
         filtered_expense_ids = [item.id for item in filtered_expenses]
 
@@ -403,7 +404,7 @@ class ExpenseGroup(models.Model):
 
         reimbursable_expense_groups = _group_expenses(reimbursable_expenses, reimbursable_expense_group_fields, workspace_id)
 
-        filtered_reimbursable_expense_groups = filter_expenses(
+        filtered_reimbursable_expense_groups = filter_expense_groups(
             reimbursable_expense_groups, reimbursable_expenses, configuration.reimbursable_expenses_object, reimbursable_expense_group_fields
         )
 
@@ -414,7 +415,7 @@ class ExpenseGroup(models.Model):
         corporate_credit_card_expense_groups = _group_expenses(
             corporate_credit_card_expenses, corporate_credit_card_expense_group_field, workspace_id)
 
-        filtered_corporate_credit_card_expense_groups = filter_expenses(
+        filtered_corporate_credit_card_expense_groups = filter_expense_groups(
             corporate_credit_card_expense_groups, corporate_credit_card_expenses, configuration.corporate_credit_card_expenses_object, corporate_credit_card_expense_group_field
         )
 
