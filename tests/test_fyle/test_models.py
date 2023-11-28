@@ -95,6 +95,27 @@ def test_create_expense_groups_by_report_id_fund_source(db):
     assert expense_groups.exported_at == None
 
 
+def test_create_expense_groups_by_report_id_fund_source_negative_expenses(db):
+    workspace_id = 1
+    payload = data['negative_expenses']
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    expense_objects = Expense.create_expense_objects(payload, workspace_id)
+    
+
+    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+    expense_group_settings.reimbursable_export_date_type = 'spent_at'
+    expense_group_settings.save()
+
+    expense_groups = _group_expenses(expense_objects, ['employee_email','claim_number','fund_source','spent_at'], 1)
+    assert expense_groups[0]['total'] == 1
+    assert expense_groups[1]['total'] == 1
+    
+    ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, workspace_id)
+    expense_groups = ExpenseGroup.objects.filter(description__contains={'claim_number': 'C/2021/12/R/23'}).count()
+    assert expense_groups == 1
+
+
 def test_format_date():
     date_string = _format_date('2022-05-13T09:32:06.643941Z')
 
