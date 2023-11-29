@@ -202,6 +202,7 @@ def test_create_expense_groups_by_report_id_fund_source_test_4(db):
     
     ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, workspace_id)
     expense_groups = ExpenseGroup.objects.filter(description__contains={'claim_number': 'C/2021/12/R/23'})
+    assert len(expense_groups) == 1
     assert len(expense_groups[0].expenses.values_list('id', flat=True)) == 1
     
 
