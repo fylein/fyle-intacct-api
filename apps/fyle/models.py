@@ -339,7 +339,7 @@ def _group_expenses(expenses, group_fields, workspace_id):
     return expense_groups
 
 
-def filter_nagative_expenses(filtered_expenses):
+def filter_negative_expenses(filtered_expenses):
     return list(filter(lambda expense: expense.amount > 0, filtered_expenses))
 
 
@@ -356,11 +356,11 @@ def filter_expense_groups(expense_groups, expenses: Expense, expenses_object, ex
             total_amount = sum(expense.amount for expense in filtered_expenses)
 
             if total_amount < 0:
-                filtered_expenses = filter_nagative_expenses(filtered_expenses)
+                filtered_expenses = filter_negative_expenses(filtered_expenses)
         
         # Export type => Journal Entry, Expense Report and Group By => Expense
         elif (expenses_object == 'EXPENSE_REPORT' and 'expense_id' in expense_group_fields) or expenses_object == 'JOURNAL_ENTRY':
-            filtered_expenses = filter_nagative_expenses(filtered_expenses)
+            filtered_expenses = filter_negative_expenses(filtered_expenses)
 
         filtered_expense_ids = [item.id for item in filtered_expenses]
 
