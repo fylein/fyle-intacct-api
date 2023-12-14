@@ -359,7 +359,7 @@ def filter_expense_groups(expense_groups, expenses: Expense, expenses_object, ex
                 filtered_expenses = filter_negative_expenses(filtered_expenses)
         
         # Export type => Journal Entry, Expense Report and Group By => Expense
-        elif (expenses_object == 'EXPENSE_REPORT' and 'expense_id' in expense_group_fields) or expenses_object == 'JOURNAL_ENTRY':
+        elif (expenses_object == 'EXPENSE_REPORT' and 'expense_id' in expense_group_fields):
             filtered_expenses = filter_negative_expenses(filtered_expenses)
 
         filtered_expense_ids = [item.id for item in filtered_expenses]

@@ -294,6 +294,35 @@ def test_create_expense_groups_by_report_id_fund_source_test_7(db):
     expense_groups = ExpenseGroup.objects.filter(description__contains={'expense_id': 'tx4ziVSAyIst'}).count()
     assert expense_groups == 1
 
+def test_create_expense_groups_by_report_id_fund_source_test_8(db):
+    """
+    Group by expense
+    1 negative expenses
+    """
+    workspace_id = 1
+    payload = data['positive_expenses']
+    payload[0]['amount'] = -50
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.reimbursable_expenses_object = 'JOURNAL_ENTRY'
+    configuration.save()
+    expense_objects = Expense.create_expense_objects(payload, workspace_id)
+    
+    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+    expense_group_settings.reimbursable_export_date_type = 'spent_at'
+    expense_group_settings.reimbursable_expense_group_fields = ["employee_email", "expense_id", "fund_source", "spent_at" ]
+    expense_group_settings.save()
+
+    
+    expense_groups = _group_expenses(expense_objects, ['employee_email','expense_id','fund_source','spent_at'], 1)
+    assert expense_groups[0]['total'] == 1
+    
+    ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, workspace_id)
+    expense_groups = ExpenseGroup.objects.filter(description__contains={'expense_id': 'tx4ziVSAyIsy'}).count()
+    assert expense_groups == 1
+    expense_groups = ExpenseGroup.objects.filter(description__contains={'expense_id': 'tx4ziVSAyIst'}).count()
+    assert expense_groups == 1
+
 
 def test_format_date():
     date_string = _format_date('2022-05-13T09:32:06.643941Z')
