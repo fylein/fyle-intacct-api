@@ -860,6 +860,7 @@ class SageIntacctConnector:
                 'taxsolutionid': self.get_tax_solution_id_or_none(expense_report_lineitems),
             })
 
+        logger.info("WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, EXPENSE_REPORT_PAYLOAD = {}, ".format(self.workspace_id, expense_report.expense_group.id, expense_report_payload))
         return expense_report_payload
 
     def __construct_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]) -> Dict:
@@ -938,7 +939,7 @@ class SageIntacctConnector:
                 'INCLUSIVETAX': True,
                 'TAXSOLUTIONID': self.get_tax_solution_id_or_none(bill_lineitems)
             })
-
+        logger.info("WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, BILL_PAYLOAD = {}, ".format(self.workspace_id, bill.expense_group.id, bill_payload))
         return bill_payload
 
     def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
@@ -1129,6 +1130,7 @@ class SageIntacctConnector:
                 'taxsolutionid': self.get_tax_solution_id_or_none(journal_entry_lineitems),
             })
 
+        logger.info("WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}, ".format(self.workspace_id, journal_entry.expense_group.id, journal_entry_payload))
         return journal_entry_payload
 
     def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: List[ExpenseReportLineitem]):
@@ -1398,6 +1400,7 @@ class SageIntacctConnector:
             }
         }
 
+        logger.info("WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, AP_PAYMENT_PAYLOAD = {}, ".format(ap_payment.expense_group.workspace.id, ap_payment.expense_group.id, ap_payment_payload))
         return ap_payment_payload
 
     def post_ap_payment(self, ap_payment: APPayment, ap_payment_lineitems: List[APPaymentLineitem]):
@@ -1444,6 +1447,7 @@ class SageIntacctConnector:
             'paymentdescription': reimbursement.payment_description
         }
 
+        logger.info("WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, REIMBURSEMENT_PAYLOAD = {}, ".format(reimbursement.expense_group.workspace.id, reimbursement.expense_group.id, reimbursement_payload))
         return reimbursement_payload
 
     def post_sage_intacct_reimbursement(self, reimbursement: SageIntacctReimbursement,
