@@ -68,7 +68,7 @@ def test_expense_report(db):
 
     for expense_report_lineitem in expense_report_lineitems:
         assert expense_report_lineitem.amount == 11.0
-        assert expense_report_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+        assert expense_report_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
         assert expense_report_lineitem.billable == True
 
     assert expense_report.currency == 'USD'
@@ -97,7 +97,7 @@ def test_create_journal_entry(db, create_expense_group_expense, create_cost_type
 
     for journal_entry_lineitem in journal_entry_lineitems:
         assert journal_entry_lineitem.amount == 11.0
-        assert journal_entry_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+        assert journal_entry_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
     assert journal_entry.currency == 'USD'
     assert journal_entry.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
@@ -487,7 +487,7 @@ def test_get_expense_purpose(db):
     
         expense_purpose = get_expense_purpose(workspace_id, lineitem, category, workspace_general_settings)
 
-        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
     workspace = Workspace.objects.get(id=workspace_id)
     workspace.cluster_domain = ''
@@ -498,7 +498,7 @@ def test_get_expense_purpose(db):
             lineitem.category, lineitem.sub_category)
     
         expense_purpose = get_expense_purpose(workspace_id, lineitem, category, workspace_general_settings)
-        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/main/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
 
 def test_get_transaction_date(db):
