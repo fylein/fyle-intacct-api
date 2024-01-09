@@ -1351,28 +1351,15 @@ class SageIntacctConnector:
                 attachments_list.append(attachment_to_append)
                 attachment_number = attachment_number + 1
 
-            first_attachment = [attachments_list[0]]
-
             data = {
                 'supdocid': supdoc_id,
                 'supdocfoldername': 'FyleAttachments',
                 'attachments': {
-                    'attachment': first_attachment
+                    'attachment': attachments_list
                 }
             }
 
             created_attachment = self.connection.attachments.post(data)
-
-            if len(attachments_list) > 1:
-                for attachment in attachments_list[1:]:
-                    attachment_data = {
-                        'supdocid': supdoc_id,
-                        'supdocfoldername': 'FyleAttachments',
-                        'attachments': {
-                            'attachment': [attachment]
-                        }
-                    }
-                    self.connection.attachments.update(attachment_data)
 
             if created_attachment['status'] == 'success' and created_attachment['key']:
                 return supdoc_id
