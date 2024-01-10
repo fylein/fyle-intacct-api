@@ -73,9 +73,10 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
                     'expense_field_value': task,
                     'is_enabled': True
                 })
-                sleep(0.2)
-                platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
-                posted_cost_types.append(task)
+        if payload:
+            sleep(0.2)
+            platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
+            posted_cost_types.append(task)
 
     return posted_cost_types
 

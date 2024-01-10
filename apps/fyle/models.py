@@ -4,6 +4,7 @@ Fyle Models
 from dateutil import parser
 from datetime import datetime
 from typing import List, Dict
+from collections import defaultdict
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
@@ -13,7 +14,7 @@ from django.db.models import Count, Q, JSONField
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.workspaces.models import Workspace
+from apps.workspaces.models import Workspace, Configuration
 
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
@@ -338,6 +339,38 @@ def _group_expenses(expenses, group_fields, workspace_id):
     return expense_groups
 
 
+def filter_negative_expenses(filtered_expenses):
+    return list(filter(lambda expense: expense.amount > 0, filtered_expenses))
+
+
+def filter_expense_groups(expense_groups, expenses: Expense, expenses_object, expense_group_fields):
+    filtered_expense_groups = []
+
+    for expense_group in expense_groups:
+        expense_group_expenses_ids = expense_group['expense_ids']
+
+        filtered_expenses = [item for item in expenses if item.id in expense_group_expenses_ids]
+
+        # Export type => Expense Report and Group By => Report
+        if expenses_object == 'EXPENSE_REPORT' and 'expense_id' not in expense_group_fields:
+            total_amount = sum(expense.amount for expense in filtered_expenses)
+
+            if total_amount < 0:
+                filtered_expenses = filter_negative_expenses(filtered_expenses)
+        
+        # Export type => Journal Entry, Expense Report and Group By => Expense
+        elif (expenses_object == 'EXPENSE_REPORT' and 'expense_id' in expense_group_fields):
+            filtered_expenses = filter_negative_expenses(filtered_expenses)
+
+        filtered_expense_ids = [item.id for item in filtered_expenses]
+
+        if len(filtered_expense_ids) != 0:
+            expense_group['expense_ids'] = filtered_expense_ids
+            filtered_expense_groups.append(expense_group)
+
+    return filtered_expense_groups
+
+
 class ExpenseGroup(models.Model):
     """
     Expense Group
@@ -359,23 +392,34 @@ class ExpenseGroup(models.Model):
         db_table = 'expense_groups'
 
     @staticmethod
-    def create_expense_groups_by_report_id_fund_source(expense_objects: List[Expense], workspace_id):
+    def create_expense_groups_by_report_id_fund_source(expense_objects: List[Expense], configuration: Configuration, workspace_id):
         """
         Group expense by and fund_source
         """
+        expense_groups = []
         expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
 
         reimbursable_expense_group_fields = expense_group_settings.reimbursable_expense_group_fields
         reimbursable_expenses = list(filter(lambda expense: expense.fund_source == 'PERSONAL', expense_objects))
 
-        expense_groups = _group_expenses(reimbursable_expenses, reimbursable_expense_group_fields, workspace_id)
+        reimbursable_expense_groups = _group_expenses(reimbursable_expenses, reimbursable_expense_group_fields, workspace_id)
+
+        filtered_reimbursable_expense_groups = filter_expense_groups(
+            reimbursable_expense_groups, reimbursable_expenses, configuration.reimbursable_expenses_object, reimbursable_expense_group_fields
+        )
+
+        expense_groups.extend(filtered_reimbursable_expense_groups)
 
         corporate_credit_card_expense_group_field = expense_group_settings.corporate_credit_card_expense_group_fields
         corporate_credit_card_expenses = list(filter(lambda expense: expense.fund_source == 'CCC', expense_objects))
         corporate_credit_card_expense_groups = _group_expenses(
             corporate_credit_card_expenses, corporate_credit_card_expense_group_field, workspace_id)
 
-        expense_groups.extend(corporate_credit_card_expense_groups)
+        filtered_corporate_credit_card_expense_groups = filter_expense_groups(
+            corporate_credit_card_expense_groups, corporate_credit_card_expenses, configuration.corporate_credit_card_expenses_object, corporate_credit_card_expense_group_field
+        )
+
+        expense_groups.extend(filtered_corporate_credit_card_expense_groups)
 
         for expense_group in expense_groups:
             if expense_group_settings.reimbursable_export_date_type == 'last_spent_at':

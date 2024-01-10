@@ -330,9 +330,13 @@ def get_memo(expense_group: ExpenseGroup,
         return memo.replace('\'', '')
     else:
         # Safety addition
-        return 'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email')) \
+        memo = 'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email')) \
         if expense_group.fund_source == 'PERSONAL' \
             else 'Credit card expenses by {0}'.format(expense_group.description.get('employee_email'))
+        count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
+        if count > 0:
+            memo = '{} - {}'.format(memo, count)  
+        return memo
 
 
 def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configuration: Configuration) -> str:
@@ -347,7 +351,7 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configur
         workspace.cluster_domain = cluster_domain
         workspace.save()
 
-    expense_link = '{0}/app/main/#/enterprise/view_expense/{1}?org_id={2}'.format(
+    expense_link = '{0}/app/admin/#/enterprise/view_expense/{1}?org_id={2}'.format(
         cluster_domain, lineitem.expense_id, org_id
     )
 

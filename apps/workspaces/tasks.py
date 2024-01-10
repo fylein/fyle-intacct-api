@@ -47,7 +47,7 @@ def export_to_intacct(workspace_id, export_mode=None):
 
     if configuration.reimbursable_expenses_object:
         expense_group_ids = ExpenseGroup.objects.filter(
-            fund_source='PERSONAL', exported_at__isnull=True).values_list('id', flat=True)
+            fund_source='PERSONAL', exported_at__isnull=True, workspace_id=workspace_id).values_list('id', flat=True)
 
         if len(expense_group_ids):
             is_expenses_exported = True
@@ -69,7 +69,7 @@ def export_to_intacct(workspace_id, export_mode=None):
 
     if configuration.corporate_credit_card_expenses_object:
         expense_group_ids = ExpenseGroup.objects.filter(
-            fund_source='CCC', exported_at__isnull=True).values_list('id', flat=True)
+            fund_source='CCC', exported_at__isnull=True, workspace_id=workspace_id).values_list('id', flat=True)
 
         if len(expense_group_ids):
             is_expenses_exported = True
@@ -104,14 +104,14 @@ def export_to_intacct(workspace_id, export_mode=None):
         last_export_detail.save()
 
 
-def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours: int):
+def schedule_email_notification(workspace_id: int, schedule_enabled: bool):
     if schedule_enabled:
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.workspaces.tasks.run_email_notification',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
-                'minutes': hours * 60,
+                'minutes': 24 * 60,
                 'next_run': datetime.now() + timedelta(minutes=10)
             }
         )
@@ -130,7 +130,7 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
         workspace_id=workspace_id
     )
 
-    schedule_email_notification(workspace_id=workspace_id, schedule_enabled=schedule_enabled, hours=hours)
+    schedule_email_notification(workspace_id=workspace_id, schedule_enabled=schedule_enabled)
 
     if schedule_enabled:
         ws_schedule.enabled = schedule_enabled
@@ -221,7 +221,7 @@ def run_email_notification(workspace_id):
 
     if ws_schedule.enabled:
         for admin_email in admin_data.emails_selected:
-            attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value=admin_email).first()
+            attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value=admin_email, attribute_type='EMPLOYEE').first()
             
             admin_name = 'Admin'
             if attribute:
@@ -245,7 +245,7 @@ def run_email_notification(workspace_id):
                     'workspace_id': workspace_id,
                     'export_time': export_time.date() if export_time else datetime.now(),
                     'year': date.today().year,
-                    'app_url': "{0}/workspaces/{1}/expense_groups".format(settings.FYLE_APP_URL, workspace_id)
+                    'app_url': "{0}/app/settings/#/integrations/native_apps".format(settings.FYLE_APP_URL)
                     }
                 message = render_to_string("mail_template.html", context)
 

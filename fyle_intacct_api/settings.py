@@ -192,7 +192,7 @@ Q_CLUSTER = {
     'name': 'fyle_intacct_api',
     'save_limit': 0,
     'retry': 14400,
-    'timeout': 3600,
+    'timeout': 900, # 15 mins
     'catch_up': False,
     'workers': 4,
     # How many tasks are kept in memory by a single cluster.
