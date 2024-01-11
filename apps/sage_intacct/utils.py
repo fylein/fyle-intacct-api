@@ -1361,7 +1361,6 @@ class SageIntacctConnector:
                 }
             }
 
-            print('Creating new attachment', data)
             created_attachment = self.connection.attachments.post(data)
 
             if len(attachments_list) > 1:
@@ -1373,7 +1372,6 @@ class SageIntacctConnector:
                             'attachment': [attachment]
                         }
                     }
-                    print('Updating attachment', attachment_data)
                     self.connection.attachments.update(attachment_data)
 
             if created_attachment['status'] == 'success' and created_attachment['key']:
