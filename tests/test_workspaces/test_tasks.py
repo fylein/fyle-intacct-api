@@ -4,7 +4,8 @@ from apps.workspaces.tasks import (
     run_sync_schedule,
     schedule_sync,
     run_email_notification,
-    async_update_fyle_credentials
+    async_update_fyle_credentials,
+    async_create_admin_subcriptions
 )
 from apps.workspaces.models import Workspace, WorkspaceSchedule, Configuration, FyleCredential
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
@@ -154,6 +155,12 @@ def test_async_update_fyle_credentials(db):
 
     assert fyle_credentials.refresh_token == refresh_token
 
+def test_async_create_admin_subcriptions(db, mocker):
+    mocker.patch(
+        'fyle.platform.apis.v1beta.admin.Subscriptions.post',
+        return_value={}
+    )
+    async_create_admin_subcriptions(1)
 
 def test_async_update_workspace_name(db, mocker):
     mocker.patch(
