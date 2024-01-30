@@ -4,12 +4,13 @@ import requests
 from datetime import datetime, timezone
 from fyle_integrations_platform_connector import PlatformConnector
 import logging
+from typing import List, Union
 
 from django.utils.module_loading import import_string
 from django.conf import settings
 from django.db.models import Q
 
-from apps.fyle.models import ExpenseFilter, ExpenseGroupSettings
+from apps.fyle.models import ExpenseFilter, ExpenseGroupSettings, Expense
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 
@@ -235,6 +236,35 @@ def connect_to_platform(workspace_id: int) -> PlatformConnector:
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
 
     return PlatformConnector(fyle_credentials=fyle_credentials)
+
+def get_updated_accounting_export_summary(
+        expense_id: str, state: str, error_type: Union[str, None], url: Union[str, None], is_synced: bool) -> dict:
+    """
+    Get updated accounting export summary
+    :param expense_id: expense id
+    :param state: state
+    :param error_type: error type
+    :param url: url
+    :param is_synced: is synced
+    :return: updated accounting export summary
+    """
+    return {
+        'id': expense_id,
+        'state': state,
+        'error_type': error_type,
+        'url': url,
+        'synced': is_synced
+    }
+
+def get_batched_expenses(batched_payload: List[dict], workspace_id: int) -> List[Expense]:
+    """
+    Get batched expenses
+    :param batched_payload: batched payload
+    :param workspace_id: workspace id
+    :return: batched expenses
+    """
+    expense_ids = [expense['id'] for expense in batched_payload]
+    return Expense.objects.filter(expense_id__in=expense_ids, workspace_id=workspace_id)
 
 
 def get_source_account_type(fund_source: List[str]) -> List[str]:

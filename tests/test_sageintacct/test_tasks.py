@@ -925,7 +925,7 @@ def test_post_ap_payment_exceptions(mocker, db):
             mock_call.side_effect = SageIntacctCredential.DoesNotExist()
             create_ap_payment(workspace_id)
         except:
-            logger.info('QBO credentials not found')
+            logger.info('Intacct credentials not found')
 
 
 def test_schedule_ap_payment_creation(db):

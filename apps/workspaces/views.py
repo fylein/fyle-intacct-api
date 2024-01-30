@@ -526,7 +526,7 @@ class LastExportDetailView(generics.RetrieveAPIView):
 
 class ExportToIntacctView(viewsets.ViewSet):
     """
-    Export Expenses to QBO
+    Export Expenses to Intacct
     """
 
     def post(self, request, *args, **kwargs):
