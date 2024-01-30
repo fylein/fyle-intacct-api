@@ -31,6 +31,31 @@ def __bulk_update_expenses(expense_to_be_updated: List[Expense]) -> None:
         Expense.objects.bulk_update(expense_to_be_updated, ['is_skipped', 'accounting_export_summary'], batch_size=50)
 
 
+def update_expenses_in_progress(in_progress_expenses: List[Expense]) -> None:
+    """
+    Update expenses in progress in bulk
+    :param in_progress_expenses: in progress expenses
+    :return: None
+    """
+    expense_to_be_updated = []
+    for expense in in_progress_expenses:
+        expense_to_be_updated.append(
+            Expense(
+                id=expense.id,
+                accounting_export_summary=get_updated_accounting_export_summary(
+                    expense.expense_id,
+                    'IN_PROGRESS',
+                    None,
+                    '{}/workspaces/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
+                    False
+                )
+            )
+        )
+    print("expense updated", expense_to_be_updated)
+
+    __bulk_update_expenses(expense_to_be_updated)
+
+
 def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: List, workspace: Workspace) -> None:
     """
     Mark expenses as skipped in bulk

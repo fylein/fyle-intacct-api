@@ -8,7 +8,7 @@ from django_q.tasks import async_task
 from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 
-from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
+from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
     schedule_sage_intacct_reimbursement_creation, schedule_fyle_reimbursements_sync
 
 logger = logging.getLogger(__name__)

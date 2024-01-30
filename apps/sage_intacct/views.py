@@ -16,15 +16,12 @@ from apps.workspaces.models import SageIntacctCredential, Workspace, Configurati
 from .helpers import sync_dimensions, check_interval_and_sync_dimension
 
 from .tasks import (
-    schedule_expense_reports_creation,
-    schedule_journal_entries_creation,
-    schedule_bills_creation,
-    schedule_charge_card_transaction_creation,
     create_ap_payment,
     create_sage_intacct_reimbursement,
     check_sage_intacct_object_status,
     process_fyle_reimbursements
 )
+from apps.workspaces.actions import export_to_intacct
 
 from .serializers import SageIntacctFieldSerializer
 
@@ -107,16 +104,7 @@ class TriggerExportsView(generics.GenericAPIView):
     Trigger exports creation
     """
     def post(self, request, *args, **kwargs):
-        expense_group_ids = request.data.get('expense_group_ids', [])
-        export_type = request.data.get('export_type')
-        if export_type == 'BILL':
-            schedule_bills_creation(kwargs['workspace_id'], expense_group_ids)
-        elif export_type == 'CHARGE_CARD_TRANSACTION':
-            schedule_charge_card_transaction_creation(kwargs['workspace_id'], expense_group_ids)
-        elif export_type == 'EXPENSE_REPORT':
-            schedule_expense_reports_creation(kwargs['workspace_id'], expense_group_ids)
-        elif export_type == 'JOURNAL_ENTRY':
-            schedule_journal_entries_creation(kwargs['workspace_id'], expense_group_ids)
+        export_to_intacct(workspace_id=self.kwargs['workspace_id'])
 
         return Response(
             status=status.HTTP_200_OK
