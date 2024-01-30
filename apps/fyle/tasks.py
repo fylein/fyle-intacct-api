@@ -259,7 +259,6 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
     """
     workspace = Workspace.objects.get(fyle_org_id=org_id)
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
-    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace.id)
 
     try:
         with transaction.atomic():
@@ -282,7 +281,8 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
         expense_groups = ExpenseGroup.objects.filter(expenses__id__in=[expense_ids], workspace_id=workspace.id).distinct('id').values('id')
         expense_group_ids = [expense_group['id'] for expense_group in expense_groups]
 
-        export_to_intacct(workspace.id, None, expense_group_ids)
+        if len(expense_group_ids):
+            export_to_intacct(workspace.id, None, expense_group_ids)
 
     except Exception:
         handle_import_exception(task_log)
