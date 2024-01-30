@@ -133,6 +133,11 @@ class Expense(models.Model):
     corporate_card_id = models.CharField(max_length=255, null=True, blank=True, help_text='Corporate Card ID')
     is_skipped = models.BooleanField(null=True, default=False, help_text='Expense is skipped or not')
     report_title = models.TextField(null=True, blank=True, help_text='Report title')
+    accounting_export_summary = JSONField(default=dict)
+    previous_export_state = models.CharField(max_length=255, help_text='Previous export state', null=True)
+    workspace = models.ForeignKey(
+            Workspace, on_delete=models.PROTECT, help_text='To which workspace this expense belongs to', null=True
+        )
 
     class Meta:
         db_table = 'expenses'
