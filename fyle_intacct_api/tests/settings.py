@@ -270,6 +270,7 @@ FYLE_REFRESH_TOKEN = os.environ.get('FYLE_REFRESH_TOKEN')
 FYLE_SERVER_URL = os.environ.get('FYLE_SERVER_URL')
 SI_SENDER_ID = os.environ.get('SI_SENDER_ID')
 SI_SENDER_PASSWORD = os.environ.get('SI_SENDER_PASSWORD')
+INTEGRATIONS_SETTINGS_API = os.environ.get('INTEGRATIONS_SETTINGS_API')
 
 # Sage Intacct Settings
 SENDGRID_API_KEY = os.environ.get('SENDGRID_KEY')

@@ -1,5 +1,6 @@
 from apps.workspaces.models import Configuration, WorkspaceSchedule
 from apps.workspaces.tasks import schedule_sync
+from apps.workspaces.tasks import post_to_integration_settings
 
 
 class AdvancedConfigurationsTriggers:
@@ -19,3 +20,10 @@ class AdvancedConfigurationsTriggers:
             email_added=workspace_schedule.get('additional_email_options'),
             emails_selected=workspace_schedule.get('emails_selected')
         )
+
+    @staticmethod
+    def post_to_integration_settings(workspace_id: int, active: bool):
+        """
+        Post to integration settings
+        """
+        post_to_integration_settings(workspace_id, active)

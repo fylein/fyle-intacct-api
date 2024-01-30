@@ -1,11 +1,13 @@
 import logging
 from datetime import datetime, timedelta, date
 from typing import List
+import json
 
 from django.conf import settings
 from django.db.models import Q
 
 from django.core.mail import EmailMessage
+from apps.fyle.helpers import post_request
 from django.template.loader import render_to_string
 from django_q.models import Schedule
 
@@ -269,6 +271,26 @@ def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str):
     if fyle_credentials:
         fyle_credentials.refresh_token = refresh_token
         fyle_credentials.save()
+
+
+def post_to_integration_settings(workspace_id: int, active: bool):
+    """
+    Post to integration settings
+    """
+    refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token
+    url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
+    payload = {
+        'tpa_id': settings.FYLE_CLIENT_ID,
+        'tpa_name': 'Fyle Intacct Integration',
+        'type': 'ACCOUNTING',
+        'is_active': active,
+        'connected_at': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    }
+
+    try:
+        post_request(url, json.dumps(payload), refresh_token)
+    except Exception as error:
+        logger.error(error)
 
 
 def async_create_admin_subcriptions(workspace_id: int) -> None:
