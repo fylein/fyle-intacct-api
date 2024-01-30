@@ -14,7 +14,7 @@ from apps.tasks.models import TaskLog
 
 from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
 
-from .helpers import construct_expense_filter_query, get_filter_credit_expenses, get_source_account_type, get_fund_source, handle_import_exception
+from .helpers import construct_expense_filter_query, get_source_account_type, get_fund_source, handle_import_exception
 from apps.workspaces.actions import export_to_intacct
 
 logger = logging.getLogger(__name__)
@@ -177,6 +177,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
 def group_expenses_and_save(expenses: List[Dict], task_log: TaskLog, workspace: Workspace):
     expense_objects = Expense.create_expense_objects(expenses, workspace.id)
     expense_filters = ExpenseFilter.objects.filter(workspace_id=workspace.id).order_by('rank')
+    configuration : Configuration = Configuration.objects.get(workspace_id=workspace.id)
     filtered_expenses = expense_objects
     if expense_filters:
         expenses_object_ids = [expense_object.id for expense_object in expense_objects]
@@ -189,7 +190,7 @@ def group_expenses_and_save(expenses: List[Dict], task_log: TaskLog, workspace: 
         )
 
     ExpenseGroup.create_expense_groups_by_report_id_fund_source(
-        filtered_expenses, workspace.id
+        filtered_expenses, configuration, workspace.id
     )
 
     task_log.status = 'COMPLETE'
@@ -213,12 +214,11 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
 
             fund_source = get_fund_source(workspace.id)
             source_account_type = get_source_account_type(fund_source)
-            filter_credit_expenses = get_filter_credit_expenses(expense_group_settings)
 
             platform = PlatformConnector(fyle_credentials)
             expenses = platform.expenses.get(
                 source_account_type,
-                filter_credit_expenses=filter_credit_expenses,
+                filter_credit_expenses=True,
                 report_id=report_id
             )
 

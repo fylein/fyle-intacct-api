@@ -250,18 +250,6 @@ def get_source_account_type(fund_source: List[str]) -> List[str]:
     return source_account_type
 
 
-def get_filter_credit_expenses(expense_group_settings: ExpenseGroupSettings) -> bool:
-    """
-    Get filter credit expenses
-    :param expense_group_settings: expense group settings
-    :return: filter credit expenses
-    """
-    filter_credit_expenses = True
-    if expense_group_settings.import_card_credits:
-        filter_credit_expenses = False
-
-    return filter_credit_expenses
-
 
 def get_fund_source(workspace_id: int) -> List[str]:
     """
