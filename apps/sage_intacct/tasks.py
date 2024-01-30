@@ -23,7 +23,7 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
-from apps.fyle.actions import update_expenses_in_progress
+from apps.fyle.actions import update_expenses_in_progress, update_failed_expenses
 from apps.fyle.tasks import post_accounting_export_summary
 from apps.workspaces.models import (
         SageIntacctCredential, 
@@ -317,6 +317,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     task_log.sage_intacct_errors = errors
     task_log.save()
 
+    update_failed_expenses(expense_group.expenses.all(), True)
+
 
 def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration):
     bulk_errors = []
@@ -591,6 +593,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
@@ -696,6 +699,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.detail = detail
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except BulkError as exception:
         logger.info(exception.response)
@@ -705,6 +709,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
@@ -801,6 +806,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.detail = detail
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
     
     except BulkError as exception:
         logger.info(exception.response)
@@ -810,6 +816,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
@@ -902,6 +909,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.detail = detail
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except BulkError as exception:
         logger.info(exception.response)
@@ -911,6 +919,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')

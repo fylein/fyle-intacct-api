@@ -51,7 +51,6 @@ def update_expenses_in_progress(in_progress_expenses: List[Expense]) -> None:
                 )
             )
         )
-    print("expense updated", expense_to_be_updated)
 
     __bulk_update_expenses(expense_to_be_updated)
 
@@ -111,6 +110,34 @@ def mark_accounting_export_summary_as_synced(expenses: List[Expense]) -> None:
         )
 
     Expense.objects.bulk_update(expense_to_be_updated, ['accounting_export_summary', 'previous_export_state'], batch_size=50)
+
+
+def update_failed_expenses(failed_expenses: List[Expense], is_mapping_error: bool) -> None:
+    """
+    Update failed expenses
+    :param failed_expenses: Failed expenses
+    """
+    expense_to_be_updated = []
+    for expense in failed_expenses:
+        error_type = 'MAPPING' if is_mapping_error else 'ACCOUNTING_INTEGRATION_ERROR'
+
+        # Skip dummy updates (if it is already in error state with the same error type)
+        if not (expense.accounting_export_summary.get('state') == 'ERROR' and \
+            expense.accounting_export_summary.get('error_type') == error_type):
+            expense_to_be_updated.append(
+                Expense(
+                    id=expense.id,
+                    accounting_export_summary=get_updated_accounting_export_summary(
+                        expense.expense_id,
+                        'ERROR',
+                        error_type,
+                        '{}/workspaces/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
+                        False
+                    )
+                )
+            )
+
+    __bulk_update_expenses(expense_to_be_updated)
 
 
 def __handle_post_accounting_export_summary_exception(exception: Exception, workspace_id: int) -> None:
