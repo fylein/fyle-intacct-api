@@ -31,7 +31,8 @@ from apps.fyle.helpers import get_cluster_domain
 from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule, LastExportDetail
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
     ConfigurationSerializer, WorkspaceScheduleSerializer, LastExportDetailSerializer
-from .tasks import schedule_sync, export_to_intacct
+from .actions import export_to_intacct
+from .tasks import schedule_sync
 
 User = get_user_model()
 auth_utils = AuthUtils()

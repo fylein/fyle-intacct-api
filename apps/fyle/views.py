@@ -25,6 +25,7 @@ from .serializers import (
     ExpenseSerializer, ExpenseFieldSerializer, ExpenseGroupSettingsSerializer,
     DependentFieldSettingSerializer
 )
+from .queue import async_import_and_export_expenses
 
 
 class ExpenseGroupView(generics.ListCreateAPIView):
@@ -525,3 +526,16 @@ class ExpenseGroupSyncView(generics.CreateAPIView):
         return Response(
             status=status.HTTP_200_OK
         )
+
+
+class ExportView(generics.CreateAPIView):
+    """
+    Export View
+    """
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request, *args, **kwargs):
+        async_import_and_export_expenses(request.data)
+
+        return Response(data={}, status=status.HTTP_200_OK)
