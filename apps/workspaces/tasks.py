@@ -281,7 +281,7 @@ def post_to_integration_settings(workspace_id: int, active: bool):
     url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
     payload = {
         'tpa_id': settings.FYLE_CLIENT_ID,
-        'tpa_name': 'Fyle Intacct Integration',
+        'tpa_name': 'Fyle Sage Intacct Integration',
         'type': 'ACCOUNTING',
         'is_active': active,
         'connected_at': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
