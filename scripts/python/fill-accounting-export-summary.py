@@ -49,12 +49,11 @@ for workspace in workspaces:
             error_type = None
             url = None
             if task_log.status == 'FAILED' or task_log.status == 'FATAL':
-                error_type = 'ACCOUNTING_INTEGRATION_ERROR' if task_log.quickbooks_errors else 'MAPPING'
+                error_type = 'ACCOUNTING_INTEGRATION_ERROR' if task_log.sage_intacct_errors else 'MAPPING'
                 url = '{}/workspaces/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL)
             else:
-                export_id = expense_group.response_logs['data']['url_id']
-                url = '{intacct_app_url}/ia/acct/ur.phtml?.r={export_id}'.format(
-                    intacct_app_url=settings.INTACCT_APP_URL,
+                export_id = expense_group.response_logs['url_id']
+                url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
                     export_id=export_id
                 )
             for expense in expense_group.expenses.filter(accounting_export_summary__state__isnull=True):
