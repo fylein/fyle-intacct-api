@@ -1325,14 +1325,13 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
     :return: None
     """
     try:
-        export_id = expense_group.response_logs['data']['url_id']
-        url = '{intacct_app_url}/ia/acct/ur.phtml?.r={export_id}'.format(
-            intacct_app_url=settings.INTACCT_APP_URL,
+        export_id = expense_group.response_logs['url_id']
+        url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
             export_id=export_id
         )
     except Exception as error:
         # Defaulting it to Intacct app url, worst case scenario if we're not able to parse it properly
-        url = settings.INTACCT_APP_URL
+        url = 'https://www-p02.intacct.com'
         logger.error('Error while generating export url %s', error)
 
     update_complete_expenses(expense_group.expenses.all(), url)
