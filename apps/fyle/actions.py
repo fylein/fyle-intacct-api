@@ -51,7 +51,6 @@ def update_expenses_in_progress(in_progress_expenses: List[Expense]) -> None:
                 )
             )
         )
-    print("expense updated", expense_to_be_updated)
 
     __bulk_update_expenses(expense_to_be_updated)
 
