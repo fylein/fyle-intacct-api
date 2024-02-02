@@ -16,6 +16,11 @@ from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
 
 from .helpers import construct_expense_filter_query, get_source_account_type, get_fund_source, handle_import_exception
 from apps.workspaces.actions import export_to_intacct
+from .queue import async_post_accounting_export_summary
+from .actions import (
+    mark_expenses_as_skipped,
+    create_generator_and_post_in_batches
+)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -181,6 +186,10 @@ def group_expenses_and_save(expenses: List[Dict], task_log: TaskLog, workspace: 
     filtered_expenses = expense_objects
     if expense_filters:
         expenses_object_ids = [expense_object.id for expense_object in expense_objects]
+        final_query = construct_expense_filter_query(expense_filters)
+
+        mark_expenses_as_skipped(final_query, expenses_object_ids, workspace)
+        async_post_accounting_export_summary(workspace.fyle_org_id, workspace.id)
 
         filtered_expenses = Expense.objects.filter(
             is_skipped=False,
@@ -197,6 +206,50 @@ def group_expenses_and_save(expenses: List[Dict], task_log: TaskLog, workspace: 
     task_log.save()
 
 
+def post_accounting_export_summary(org_id: str, workspace_id: int, fund_source: str = None) -> None:
+    """
+    Post accounting export summary to Fyle
+    :param org_id: org id
+    :param workspace_id: workspace id
+    :param fund_source: fund source
+    :return: None
+    """
+    # Iterate through all expenses which are not synced and post accounting export summary to Fyle in batches
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    platform = PlatformConnector(fyle_credentials)
+    filters = {
+        'org_id': org_id,
+        'accounting_export_summary__synced': False
+    }
+
+    if fund_source:
+        filters['fund_source'] = fund_source
+
+    expenses_count = Expense.objects.filter(**filters).count()
+
+    accounting_export_summary_batches = []
+    page_size = 200
+    for offset in range(0, expenses_count, page_size):
+        limit = offset + page_size
+        paginated_expenses = Expense.objects.filter(**filters).order_by('id')[offset:limit]
+
+        payload = []
+
+        for expense in paginated_expenses:
+            accounting_export_summary = expense.accounting_export_summary
+            accounting_export_summary.pop('synced')
+            payload.append(expense.accounting_export_summary)
+
+        accounting_export_summary_batches.append(payload)
+
+    logger.info(
+        'Posting accounting export summary to Fyle workspace_id: %s, payload: %s',
+        workspace_id,
+        accounting_export_summary_batches
+    )
+    create_generator_and_post_in_batches(accounting_export_summary_batches, platform, workspace_id)
+
+
 def import_and_export_expenses(report_id: str, org_id: str) -> None:
     """
     Import and export expenses
@@ -206,7 +259,6 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
     """
     workspace = Workspace.objects.get(fyle_org_id=org_id)
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
-    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace.id)
 
     try:
         with transaction.atomic():
@@ -229,7 +281,8 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
         expense_groups = ExpenseGroup.objects.filter(expenses__id__in=[expense_ids], workspace_id=workspace.id).distinct('id').values('id')
         expense_group_ids = [expense_group['id'] for expense_group in expense_groups]
 
-        export_to_intacct(workspace.id, None, expense_group_ids)
+        if len(expense_group_ids):
+            export_to_intacct(workspace.id, None, expense_group_ids)
 
     except Exception:
         handle_import_exception(task_log)
