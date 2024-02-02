@@ -140,6 +140,31 @@ def update_failed_expenses(failed_expenses: List[Expense], is_mapping_error: boo
     __bulk_update_expenses(expense_to_be_updated)
 
 
+def update_complete_expenses(exported_expenses: List[Expense], url: str) -> None:
+    """
+    Update complete expenses
+    :param exported_expenses: Exported expenses
+    :param url: Export url
+    :return: None
+    """
+    expense_to_be_updated = []
+    for expense in exported_expenses:
+        expense_to_be_updated.append(
+            Expense(
+                id=expense.id,
+                accounting_export_summary=get_updated_accounting_export_summary(
+                    expense.expense_id,
+                    'COMPLETE',
+                    None,
+                    url,
+                    False
+                )
+            )
+        )
+
+    __bulk_update_expenses(expense_to_be_updated)
+
+
 def __handle_post_accounting_export_summary_exception(exception: Exception, workspace_id: int) -> None:
     """
     Handle post accounting export summary exception
