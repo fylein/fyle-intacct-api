@@ -12,7 +12,9 @@ from apps.fyle.actions import (
     mark_expenses_as_skipped,
     create_generator_and_post_in_batches,
     mark_accounting_export_summary_as_synced,
-    bulk_post_accounting_export_summary
+    update_complete_expenses,
+    bulk_post_accounting_export_summary,
+    update_failed_expenses
 )
 from apps.fyle.helpers import get_updated_accounting_export_summary
 
@@ -32,6 +34,34 @@ def test_update_expenses_in_progress(db):
         assert expense.accounting_export_summary['error_type'] == None
         assert expense.accounting_export_summary['id'] == expense.expense_id
 
+def test_update_failed_expenses(db):
+    expenses = Expense.objects.filter(org_id='or79Cob97KSh')
+    update_failed_expenses(expenses, True)
+
+    expenses = Expense.objects.filter(org_id='or79Cob97KSh')
+
+    for expense in expenses:
+        assert expense.accounting_export_summary['synced'] == False
+        assert expense.accounting_export_summary['state'] == 'ERROR'
+        assert expense.accounting_export_summary['error_type'] == 'MAPPING'
+        assert expense.accounting_export_summary['url'] == '{}/workspaces/main/dashboard'.format(
+            settings.INTACCT_INTEGRATION_APP_URL
+        )
+        assert expense.accounting_export_summary['id'] == expense.expense_id
+
+def test_update_complete_expenses(db):
+    expenses = Expense.objects.filter(org_id='or79Cob97KSh')
+
+    update_complete_expenses(expenses, 'https://intacct.google.com')
+
+    expenses = Expense.objects.filter(org_id='or79Cob97KSh')
+
+    for expense in expenses:
+        assert expense.accounting_export_summary['synced'] == False
+        assert expense.accounting_export_summary['state'] == 'COMPLETE'
+        assert expense.accounting_export_summary['error_type'] == None
+        assert expense.accounting_export_summary['url'] == 'https://intacct.google.com'
+        assert expense.accounting_export_summary['id'] == expense.expense_id
 
 def test_mark_expenses_as_skipped(db):
     expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()

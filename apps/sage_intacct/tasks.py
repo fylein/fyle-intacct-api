@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from django.db import transaction
 from django.db.models import Q
+from django.conf import settings
 from django_q.models import Schedule
 from django_q.tasks import Chain
 
@@ -23,7 +24,7 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
-from apps.fyle.actions import update_expenses_in_progress
+from apps.fyle.actions import update_expenses_in_progress, update_failed_expenses, update_complete_expenses
 from apps.fyle.tasks import post_accounting_export_summary
 from apps.workspaces.models import (
         SageIntacctCredential, 
@@ -317,6 +318,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     task_log.sage_intacct_errors = errors
     task_log.save()
 
+    update_failed_expenses(expense_group.expenses.all(), False)
+
 
 def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration):
     bulk_errors = []
@@ -553,6 +556,8 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
+        
+        generate_export_url_and_update_expense(expense_group)
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_journal_entry['data']['glbatch']['RECORDNO'], expense_group)
 
@@ -591,6 +596,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
@@ -605,6 +611,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         }
         task_log.status = 'FATAL'
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -670,6 +677,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
 
+        generate_export_url_and_update_expense(expense_group)
+
         created_attachment_id = load_attachments(sage_intacct_connection, record_no, expense_group)
         if created_attachment_id:
             try:
@@ -696,6 +705,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.detail = detail
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except BulkError as exception:
         logger.info(exception.response)
@@ -705,6 +715,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
@@ -719,6 +730,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         }
         task_log.status = 'FATAL'
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -773,6 +785,8 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             expense_group.export_type = 'BILL'
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
+        
+        generate_export_url_and_update_expense(expense_group)
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_bill['data']['apbill']['RECORDNO'], expense_group)
         if created_attachment_id:
@@ -801,6 +815,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.detail = detail
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
     
     except BulkError as exception:
         logger.info(exception.response)
@@ -810,6 +825,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
@@ -824,6 +840,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         }
         task_log.status = 'FATAL'
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
     
     if last_export:
@@ -875,6 +892,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
 
+        generate_export_url_and_update_expense(expense_group)
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_charge_card_transaction['key'], expense_group)
         if created_attachment_id:
@@ -902,6 +920,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.detail = detail
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except BulkError as exception:
         logger.info(exception.response)
@@ -911,6 +930,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.sage_intacct_errors = None
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
@@ -925,6 +945,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         }
         task_log.status = 'FATAL'
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -1299,3 +1320,22 @@ def update_expense_and_post_summary(in_progress_expenses: List[Expense], workspa
     fyle_org_id = Workspace.objects.get(pk=workspace_id).fyle_org_id
     update_expenses_in_progress(in_progress_expenses)
     post_accounting_export_summary(fyle_org_id, workspace_id, fund_source)
+
+
+def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
+    """
+    Generate export url and update expense
+    :param expense_group: Expense Group
+    :return: None
+    """
+    try:
+        export_id = expense_group.response_logs['url_id']
+        url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
+            export_id=export_id
+        )
+    except Exception as error:
+        # Defaulting it to Intacct app url, worst case scenario if we're not able to parse it properly
+        url = 'https://www-p02.intacct.com'
+        logger.error('Error while generating export url %s', error)
+
+    update_complete_expenses(expense_group.expenses.all(), url)

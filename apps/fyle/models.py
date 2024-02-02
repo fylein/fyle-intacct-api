@@ -190,6 +190,7 @@ class Expense(models.Model):
                     'payment_number': expense['payment_number'],
                     'file_ids': expense['file_ids'],
                     'corporate_card_id': expense['corporate_card_id'],
+                    'workspace_id': workspace_id
                 }
             )
 
