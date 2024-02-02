@@ -1,6 +1,6 @@
 from typing import Dict
 
-from apps.sage_intacct.tasks import schedule_ap_payment_creation, schedule_sage_intacct_reimbursement_creation
+from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_intacct_reimbursement_creation
 from apps.workspaces.models import Configuration
 from fyle_intacct_api.utils import assert_valid
 from fyle_accounting_mappings.models import MappingSetting

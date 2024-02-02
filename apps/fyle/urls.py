@@ -22,7 +22,8 @@ from .views import (
     ExpenseView, EmployeeView, CategoryView, ProjectView, CostCenterView,
     FyleFieldsView, ExpenseAttributesView, ExpenseGroupSettingsView,
     RefreshFyleDimensionView, SyncFyleDimensionView, ExpenseGroupCountView,
-    DependentFieldSettingView, ExportableExpenseGroupsView, ExpenseGroupSyncView
+    DependentFieldSettingView, ExportableExpenseGroupsView, ExpenseGroupSyncView,
+    ExportView
 )
 
 expense_groups_paths = [
@@ -37,7 +38,8 @@ expense_groups_paths = [
     path('categories/', CategoryView.as_view()),
     path('projects/', ProjectView.as_view()),
     path('cost_centers/', CostCenterView.as_view()),
-    path('expense_group_settings/', ExpenseGroupSettingsView.as_view())
+    path('expense_group_settings/', ExpenseGroupSettingsView.as_view()),
+    path('exports/', ExportView.as_view(), name='exports')
 ]
 
 fyle_dimension_paths = [

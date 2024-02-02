@@ -4,6 +4,7 @@ from asyncio.log import logger
 from rest_framework.response import Response
 from rest_framework.views import status
 from apps.fyle.helpers import *
+from apps.fyle.actions import __bulk_update_expenses
 
 from apps.fyle.models import ExpenseFilter
 
@@ -668,3 +669,29 @@ def test_multiple_construct_expense_filter():
     response = (Q(**filter_1)) & Q(**filter_2)
 
     assert final_filter == response
+
+
+def test_bulk_update_expenses(db):
+    expenses = Expense.objects.filter(org_id='or79Cob97KSh')
+    for expense in expenses:
+        expense.accounting_export_summary = get_updated_accounting_export_summary(
+            expense.expense_id,
+            'SKIPPED',
+            None,
+            '{}/workspaces/main/export_log'.format(settings.INTACCT_INTEGRATION_APP_URL),
+            True
+        )
+        expense.save()
+
+    __bulk_update_expenses(expenses)
+
+    expenses = Expense.objects.filter(org_id='or79Cob97KSh')
+
+    for expense in expenses:
+        assert expense.accounting_export_summary['synced'] == True
+        assert expense.accounting_export_summary['state'] == 'SKIPPED'
+        assert expense.accounting_export_summary['error_type'] == None
+        assert expense.accounting_export_summary['url'] == '{}/workspaces/main/export_log'.format(
+            settings.INTACCT_INTEGRATION_APP_URL
+        )
+        assert expense.accounting_export_summary['id'] == expense.expense_id
