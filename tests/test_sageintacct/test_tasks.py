@@ -6,6 +6,7 @@ from apps.tasks.models import TaskLog
 from apps.sage_intacct.models import *
 from apps.sage_intacct.tasks import __validate_expense_group
 from apps.sage_intacct.tasks import *
+from apps.sage_intacct.queue import *
 from fyle_intacct_api.exceptions import BulkError
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 from fyle_accounting_mappings.models import EmployeeMapping
@@ -925,7 +926,7 @@ def test_post_ap_payment_exceptions(mocker, db):
             mock_call.side_effect = SageIntacctCredential.DoesNotExist()
             create_ap_payment(workspace_id)
         except:
-            logger.info('QBO credentials not found')
+            logger.info('Intacct credentials not found')
 
 
 def test_schedule_ap_payment_creation(db):
@@ -1059,7 +1060,7 @@ def test_schedule_sage_intacct_objects_status_sync(db):
 def test_schedule_journal_entries_creation(mocker, db):
     workspace_id = 1
 
-    schedule_journal_entries_creation(workspace_id, [1])
+    schedule_journal_entries_creation(workspace_id, [1], False, 'PERSONAL')
 
     TaskLog.objects.filter(type='CREATING_JOURNAL_ENTRIES').count() != 0
 
@@ -1067,7 +1068,7 @@ def test_schedule_journal_entries_creation(mocker, db):
 def test_schedule_expense_reports_creation(mocker, db):
     workspace_id = 1
 
-    schedule_expense_reports_creation(workspace_id, [1])
+    schedule_expense_reports_creation(workspace_id, [1], False, 'PERSONAL')
 
     TaskLog.objects.filter(type='CREATING_EXPENSE_REPORTS').count() != 0
 
@@ -1075,7 +1076,7 @@ def test_schedule_expense_reports_creation(mocker, db):
 def test_schedule_bills_creation(mocker, db):
     workspace_id = 1
 
-    schedule_bills_creation(workspace_id, [1])
+    schedule_bills_creation(workspace_id, [1], False, 'PERSONAL')
 
     TaskLog.objects.filter(type='CREATING_BILLS').count() != 0
 
@@ -1083,7 +1084,7 @@ def test_schedule_bills_creation(mocker, db):
 def test_schedule_charge_card_transaction_creation(mocker, db):
     workspace_id = 1
 
-    schedule_charge_card_transaction_creation(workspace_id, [1])
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 'CCC')
 
     TaskLog.objects.filter(type='CREATING_CHARGE_CARD_TRANSACTIONS').count() != 0
 
