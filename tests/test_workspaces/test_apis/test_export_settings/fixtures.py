@@ -5,7 +5,8 @@ data = {
             'corporate_credit_card_expenses_object': 'CHARGE_CARD_TRANSACTION',
             'auto_map_employees': 'NAME',
             'is_simplify_report_closure_enabled': False,
-            'employee_field_mapping': 'EMPLOYEE'
+            'employee_field_mapping': 'EMPLOYEE',
+            'use_merchant_in_journal_line': False
         },
         'expense_group_settings': {
             'reimbursable_expense_group_fields': [
@@ -60,7 +61,8 @@ data = {
             'corporate_credit_card_expenses_object': 'CHARGE_CARD_TRANSACTION',
             'auto_map_employees': 'NAME',
             'is_simplify_report_closure_enabled': False,
-            'employee_field_mapping': 'EMPLOYEE'
+            'employee_field_mapping': 'EMPLOYEE',
+            'use_merchant_in_journal_line': False
         },
         'expense_group_settings': {
             'reimbursable_expense_group_fields': [
