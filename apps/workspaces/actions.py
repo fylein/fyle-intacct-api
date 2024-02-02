@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from apps.fyle.models import ExpenseGroup
 
-from apps.sage_intacct.tasks import (
+from apps.sage_intacct.queue import (
     schedule_expense_reports_creation,
     schedule_bills_creation,
     schedule_charge_card_transaction_creation,
@@ -45,17 +45,26 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                workspace_id=workspace_id, 
+                expense_group_ids=expense_group_ids,
+                is_auto_export=export_mode == 'AUTO',
+                fund_source='PERSONAL'
             )
 
         elif configuration.reimbursable_expenses_object == 'BILL':
             schedule_bills_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                workspace_id=workspace_id, 
+                expense_group_ids=expense_group_ids,
+                is_auto_export=export_mode == 'AUTO',
+                fund_source='PERSONAL'
             )
 
         elif configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
             schedule_journal_entries_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                workspace_id=workspace_id, 
+                expense_group_ids=expense_group_ids,
+                is_auto_export=export_mode == 'AUTO',
+                fund_source='PERSONAL'
             )
 
     if configuration.corporate_credit_card_expenses_object:
@@ -67,22 +76,34 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
             schedule_charge_card_transaction_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                workspace_id=workspace_id, 
+                expense_group_ids=expense_group_ids,
+                is_auto_export=export_mode == 'AUTO',
+                fund_source='CCC'
             )
 
         elif configuration.corporate_credit_card_expenses_object == 'BILL':
             schedule_bills_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                workspace_id=workspace_id, 
+                expense_group_ids=expense_group_ids,
+                is_auto_export=export_mode == 'AUTO',
+                fund_source='CCC'
             )
 
         elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                workspace_id=workspace_id, 
+                expense_group_ids=expense_group_ids,
+                is_auto_export=export_mode == 'AUTO',
+                fund_source='CCC'
             )
 
         elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
             schedule_journal_entries_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
+                workspace_id=workspace_id, 
+                expense_group_ids=expense_group_ids,
+                is_auto_export=export_mode == 'AUTO',
+                fund_source='CCC'
             )
 
     if is_expenses_exported:
