@@ -279,6 +279,8 @@ FYLE_BASE_URL = os.environ.get('FYLE_BASE_URL')
 FYLE_JOBS_URL = os.environ.get('FYLE_JOBS_URL')
 FYLE_APP_URL = os.environ.get('APP_URL')
 FYLE_EXPENSE_URL = os.environ.get('FYLE_APP_URL')
+INTEGRATIONS_SETTINGS_API = os.environ.get('INTEGRATIONS_SETTINGS_API')
+INTACCT_INTEGRATION_APP_URL = os.environ.get('INTACCT_INTEGRATION_APP_URL')
 
 
 # Sage Intacct Settings
