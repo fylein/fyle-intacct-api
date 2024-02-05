@@ -150,7 +150,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
                 'reimbursable_expenses_object': configurations['reimbursable_expenses_object'], 
                 'corporate_credit_card_expenses_object': configurations['corporate_credit_card_expenses_object'],
                 'employee_field_mapping': configurations['employee_field_mapping'],
-                'use_merchant_in_journal_line': configurations['use_merchant_in_journal_line']
+                'use_merchant_in_journal_line': configurations['use_merchant_in_journal_line'] if 'use_merchant_in_journal_line' in configurations else False
             }
         )
 
