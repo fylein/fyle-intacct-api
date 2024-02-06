@@ -805,22 +805,8 @@ class SageIntacctConnector:
                     'day': transaction_date.day
                 },
                 'memo': lineitem.memo,
-                'totaltrxamount': lineitem.amount,
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
-                'projectid': lineitem.project_id,
-                'customerid': lineitem.customer_id,
-                'itemid': lineitem.item_id,
-                'classid': lineitem.class_id,
-                'taskid': lineitem.task_id,
-                'costtypeid': lineitem.cost_type_id,
-                'billable': lineitem.billable,
-                'exppmttype': lineitem.expense_payment_type,
-                'taxentries': {
-                    'taxentry': {
-                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
-                    }
-                },
                 'customfields': {
                    'customfield': [
                     {
@@ -828,6 +814,20 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
+                },
+                'projectid': lineitem.project_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
+                'customerid': lineitem.customer_id,
+                'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
+                'billable': lineitem.billable,
+                'exppmttype': lineitem.expense_payment_type,
+                'totaltrxamount': lineitem.amount,
+                'taxentries': {
+                    'taxentry': {
+                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
+                    }
                 }
             }
 
@@ -849,8 +849,8 @@ class SageIntacctConnector:
             'description': expense_report.memo,
             'basecurr': expense_report.currency,
             'currency': expense_report.currency,
-            'eexpensesitems': {
-                'eexpensesitem': expsense_payload
+            'expenses': {
+                'expense': expsense_payload
             }
         }
 
