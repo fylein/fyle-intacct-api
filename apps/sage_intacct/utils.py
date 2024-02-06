@@ -831,10 +831,6 @@ class SageIntacctConnector:
                 }
             }
 
-            for dimension in lineitem.user_defined_dimensions:
-                for name, value in dimension.items():
-                    expense[name] = value
-
             expense_payload.append(expense)
 
         transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
