@@ -788,7 +788,7 @@ class SageIntacctConnector:
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
 
-        expsense_payload = []
+        expense_payload = []
         for lineitem in expense_report_lineitems:
             transaction_date = lineitem.transaction_date
             expense_link = self.get_expense_link(lineitem)
@@ -835,7 +835,7 @@ class SageIntacctConnector:
                 for name, value in dimension.items():
                     expense[name] = value
 
-            expsense_payload.append(expense)
+            expense_payload.append(expense)
 
         transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
         expense_report_payload = {
@@ -850,7 +850,7 @@ class SageIntacctConnector:
             'basecurr': expense_report.currency,
             'currency': expense_report.currency,
             'expenses': {
-                'expense': expsense_payload
+                'expense': expense_payload
             }
         }
 
