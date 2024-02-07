@@ -159,7 +159,7 @@ class Expense(models.Model):
                     'expense_number': expense['expense_number'],
                     'org_id': expense['org_id'],
                     'claim_number': expense['claim_number'],
-                    'amount': round(expense['amount'], 2),
+                    'amount': round(expense['amount'], 3),
                     'currency': expense['currency'],
                     'foreign_amount': expense['foreign_amount'],
                     'foreign_currency': expense['foreign_currency'],
