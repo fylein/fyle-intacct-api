@@ -52,23 +52,25 @@ for workspace in workspaces:
                 error_type = 'ACCOUNTING_INTEGRATION_ERROR' if task_log.sage_intacct_errors else 'MAPPING'
                 url = '{}/workspaces/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL)
             else:
-                export_id = expense_group.response_logs['url_id']
-                url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
-                    export_id=export_id
-                )
+                if expense_group.response_logs and 'url_id' in expense_group.response_logs:
+                    export_id = expense_group.response_logs['url_id']
+                    url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
+                        export_id=export_id
+                    )
             for expense in expense_group.expenses.filter(accounting_export_summary__state__isnull=True):
-                expense_to_be_updated.append(
-                    Expense(
-                        id=expense.id,
-                        accounting_export_summary=get_updated_accounting_export_summary(
-                            expense.expense_id,
-                            state,
-                            error_type,
-                            url,
-                            False
+                if url:
+                    expense_to_be_updated.append(
+                        Expense(
+                            id=expense.id,
+                            accounting_export_summary=get_updated_accounting_export_summary(
+                                expense.expense_id,
+                                state,
+                                error_type,
+                                url,
+                                False
+                            )
                         )
                     )
-                )
         print('Updating {} expenses in batches of 50'.format(len(expense_to_be_updated)))
         __bulk_update_expenses(expense_to_be_updated)
 
