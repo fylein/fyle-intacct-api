@@ -1,3 +1,4 @@
+import logging
 import math
 from typing import List
 from datetime import (
@@ -19,6 +20,9 @@ from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.exceptions import handle_import_exceptions
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration
+
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 class Base:
@@ -317,11 +321,13 @@ class Base:
         :param is_last_batch: bool
         :param import_log: ImportLog object
         """
+        logger.info("| Importing {} to Fyle | Content : {{Fyle Payload count: {} is_last_batch: {}}}".format(self.source_field, len(fyle_payload), is_last_batch))
+        
         if fyle_payload and self.platform_class_name in ['expense_custom_fields', 'merchants']:
             resource_class.post(fyle_payload)
         elif fyle_payload:
             resource_class.post_bulk(fyle_payload)
-
+        
         self.update_import_log_post_import(is_last_batch, import_log)
 
     def update_import_log_post_import(self, is_last_batch: bool, import_log: ImportLog):
