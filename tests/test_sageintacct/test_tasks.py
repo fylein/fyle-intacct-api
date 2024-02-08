@@ -689,7 +689,7 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
 def test_post_expense_report_success(mocker, create_task_logs, db):
     mocker.patch(
         'sageintacctsdk.apis.ExpenseReports.post',
-        return_value=data['expense_report_response']
+        return_value=data['expense_report_post_response']
     )
     mocker.patch(
         'sageintacctsdk.apis.ExpenseReports.update_attachment',

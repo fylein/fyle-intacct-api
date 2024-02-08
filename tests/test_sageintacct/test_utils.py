@@ -559,7 +559,7 @@ def test_post_sage_intacct_reimbursement_exception(mocker, db, create_sage_intac
 def test_post_expense_report_exception(mocker, db, create_expense_report):
     mocker.patch(
         'sageintacctsdk.apis.ExpenseReports.post',
-        return_value=data['expense_report_response']
+        return_value=data['expense_report_post_response']
     )
     workspace_id = 1
 

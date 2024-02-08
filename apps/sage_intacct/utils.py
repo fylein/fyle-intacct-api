@@ -788,7 +788,7 @@ class SageIntacctConnector:
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
 
-        expsense_payload = []
+        expense_payload = []
         for lineitem in expense_report_lineitems:
             transaction_date = lineitem.transaction_date
             expense_link = self.get_expense_link(lineitem)
@@ -805,22 +805,8 @@ class SageIntacctConnector:
                     'day': transaction_date.day
                 },
                 'memo': lineitem.memo,
-                'totaltrxamount': lineitem.amount,
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
-                'projectid': lineitem.project_id,
-                'customerid': lineitem.customer_id,
-                'itemid': lineitem.item_id,
-                'classid': lineitem.class_id,
-                'taskid': lineitem.task_id,
-                'costtypeid': lineitem.cost_type_id,
-                'billable': lineitem.billable,
-                'exppmttype': lineitem.expense_payment_type,
-                'taxentries': {
-                    'taxentry': {
-                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
-                    }
-                },
                 'customfields': {
                    'customfield': [
                     {
@@ -828,14 +814,24 @@ class SageIntacctConnector:
                         'customfieldvalue': expense_link
                     },
                    ]
+                },
+                'projectid': lineitem.project_id,
+                'taskid': lineitem.task_id,
+                'costtypeid': lineitem.cost_type_id,
+                'customerid': lineitem.customer_id,
+                'itemid': lineitem.item_id,
+                'classid': lineitem.class_id,
+                'billable': lineitem.billable,
+                'exppmttype': lineitem.expense_payment_type,
+                'totaltrxamount': lineitem.amount,
+                'taxentries': {
+                    'taxentry': {
+                        'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
+                    }
                 }
             }
 
-            for dimension in lineitem.user_defined_dimensions:
-                for name, value in dimension.items():
-                    expense[name] = value
-
-            expsense_payload.append(expense)
+            expense_payload.append(expense)
 
         transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
         expense_report_payload = {
@@ -849,8 +845,8 @@ class SageIntacctConnector:
             'description': expense_report.memo,
             'basecurr': expense_report.currency,
             'currency': expense_report.currency,
-            'eexpensesitems': {
-                'eexpensesitem': expsense_payload
+            'expenses': {
+                'expense': expense_payload
             }
         }
 
