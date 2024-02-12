@@ -367,7 +367,8 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
                         int(kwargs['workspace_id']),
                         mapping_setting.destination_field,
                         mapping_setting.source_field,
-                        mapping_setting.is_custom
+                        mapping_setting.is_custom,
+                        q_options={'cluster': 'import'}
                     )
 
             if chain.length() > 0:

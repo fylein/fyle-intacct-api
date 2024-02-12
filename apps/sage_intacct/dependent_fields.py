@@ -165,6 +165,7 @@ def schedule_dependent_field_imports(workspace_id: int, is_import_enabled: bool)
     if is_import_enabled:
         Schedule.objects.update_or_create(
             func='apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle',
+            cluster='import',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,

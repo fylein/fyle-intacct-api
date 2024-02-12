@@ -118,6 +118,7 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
 
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.async_auto_map_employees',
+            cluster='import',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -159,6 +160,7 @@ def schedule_auto_map_charge_card_employees(workspace_id: int):
 
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.mappings.tasks.async_auto_map_charge_card_account',
+            cluster='import',
             args='{0}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -230,7 +232,7 @@ def auto_import_and_map_fyle_fields(workspace_id):
     chain = Chain()
 
     if project_mapping and dependent_fields:
-        chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id)
+        chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id, q_options={'cluster': 'import'})
 
     if chain.length() > 0:
         chain.run()
