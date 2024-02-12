@@ -106,7 +106,7 @@ def test_run_sync_schedule_je(mocker,db):
     assert task_log.status == 'ENQUEUED'
 
 
-def test_email_notification(db):
+def test_email_notification(mocker,db):
     workspace_id = 1
 
     schedule_sync(
@@ -119,12 +119,16 @@ def test_email_notification(db):
             workspace_id=workspace_id
         )
 
-    ws_schedule = WorkspaceSchedule.objects.filter( 
+    ws_schedule = WorkspaceSchedule.objects.filter(
         workspace_id=workspace_id 
     ).first()
+
+    mocker.patch('apps.workspaces.tasks.send_email',
+                 return_value=None)
+
     run_email_notification(workspace_id=workspace_id)
 
-    updated_ws_schedule = WorkspaceSchedule.objects.filter( 
+    updated_ws_schedule = WorkspaceSchedule.objects.filter(
         workspace_id=workspace_id, id=ws_schedule.id
     ).first()
 
