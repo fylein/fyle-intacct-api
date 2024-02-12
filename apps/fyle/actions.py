@@ -81,7 +81,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: List, workspac
                     expense.expense_id,
                     'SKIPPED',
                     None,
-                    '{}/workspaces/main/export_log'.format(settings.INTACCT_INTEGRATION_APP_URL),
+                    '{}/main/export_log'.format(settings.INTACCT_INTEGRATION_APP_URL),
                     False
                 )
             )
