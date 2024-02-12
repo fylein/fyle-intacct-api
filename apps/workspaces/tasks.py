@@ -6,8 +6,6 @@ import json
 from django.conf import settings
 from django.db.models import Q
 
-from django.core.mail import EmailMessage
-from apps.fyle.helpers import post_request
 from django.template.loader import render_to_string
 from django_q.models import Schedule
 
@@ -28,6 +26,7 @@ from apps.workspaces.models import (
     FyleCredential
 )
 
+from .utils import send_email
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -148,48 +147,49 @@ def run_email_notification(workspace_id):
         logger.info('SageIntacct Credentials does not exist - %s', workspace_id)
         return
 
-    if ws_schedule.enabled:
-        for admin_email in admin_data.emails_selected:
-            attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value=admin_email, attribute_type='EMPLOYEE').first()
-            
-            admin_name = 'Admin'
-            if attribute:
-                admin_name = attribute.detail['full_name']
-            else:
-                for data in admin_data.additional_email_options:
-                    if data['email'] == admin_email:
-                        admin_name = data['name']
+    try:
+        if ws_schedule.enabled:
+            for admin_email in admin_data.emails_selected:
+                attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value=admin_email, attribute_type='EMPLOYEE').first()
+                
+                admin_name = 'Admin'
+                if attribute:
+                    admin_name = attribute.detail['full_name']
+                else:
+                    for data in admin_data.additional_email_options:
+                        if data['email'] == admin_email:
+                            admin_name = data['name']
 
-            if workspace.last_synced_at and workspace.ccc_last_synced_at:
-                export_time = max(workspace.last_synced_at, workspace.ccc_last_synced_at)
-            else:
-                export_time =  workspace.last_synced_at or workspace.ccc_last_synced_at
+                if workspace.last_synced_at and workspace.ccc_last_synced_at:
+                    export_time = max(workspace.last_synced_at, workspace.ccc_last_synced_at)
+                else:
+                    export_time = workspace.last_synced_at or workspace.ccc_last_synced_at
 
-            if task_logs and (ws_schedule.error_count is None or len(task_logs) > ws_schedule.error_count):
-                context = {
-                    'name': admin_name,
-                    'errors': len(task_logs),
-                    'fyle_company': workspace.name,
-                    'intacct_company': intacct.si_company_name,
-                    'workspace_id': workspace_id,
-                    'export_time': export_time.date() if export_time else datetime.now(),
-                    'year': date.today().year,
-                    'app_url': "{0}/app/settings/#/integrations/native_apps?integrationIframeTarget=integrations/intacct".format(settings.FYLE_APP_URL)
-                    }
-                message = render_to_string("mail_template.html", context)
+                if task_logs and (ws_schedule.error_count is None or len(task_logs) > ws_schedule.error_count):
+                    context = {
+                        'name': admin_name,
+                        'errors': len(task_logs),
+                        'fyle_company': workspace.name,
+                        'intacct_company': intacct.si_company_name,
+                        'workspace_id': workspace_id,
+                        'export_time': export_time.date() if export_time else datetime.now(),
+                        'year': date.today().year,
+                        'app_url': "{0}/app/settings/#/integrations/native_apps?integrationIframeTarget=integrations/intacct".format(settings.FYLE_APP_URL)
+                        }
+                    message = render_to_string("mail_template.html", context)
 
-                mail = EmailMessage(
-                    subject="Export To Sage Intacct Failed",
-                    body=message,
-                    from_email=settings.EMAIL,
-                    to=[admin_email],
-                )
+                    send_email(
+                        recipient_email=[admin_email],
+                        subject="Export To Sage Intacct Failed",
+                        message=message,
+                        sender_email=settings.EMAIL
+                    )
 
-                mail.content_subtype = "html"
-                mail.send()
+            ws_schedule.error_count = len(task_logs)
+            ws_schedule.save()
 
-        ws_schedule.error_count = len(task_logs)
-        ws_schedule.save()
+    except Exception as e:
+        logger.info('Error in sending email notification - %s', e)
 
 
 def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str):
