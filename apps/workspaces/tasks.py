@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta, date
 from typing import List
+import json
 
 from django.conf import settings
 from django.db.models import Q
@@ -9,21 +10,15 @@ from django.template.loader import render_to_string
 from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle_rest_auth.helpers import get_fyle_admin
 
-from apps.fyle.models import ExpenseGroup
 from apps.fyle.tasks import create_expense_groups
+from .actions import export_to_intacct
 
-from apps.sage_intacct.tasks import (
-    schedule_expense_reports_creation,
-    schedule_bills_creation,
-    schedule_charge_card_transaction_creation,
-    schedule_journal_entries_creation
-)
 from apps.tasks.models import TaskLog
 
 from apps.workspaces.models import (
-    LastExportDetail,
     Workspace,
     WorkspaceSchedule,
     Configuration,
@@ -35,73 +30,6 @@ from .utils import send_email
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
-
-
-def export_to_intacct(workspace_id, export_mode=None):
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
-    last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
-    workspace_schedule = WorkspaceSchedule.objects.filter(workspace_id=workspace_id, interval_hours__gt=0, enabled=True).first()
-
-    last_exported_at = datetime.now()
-    is_expenses_exported = False
-
-    if configuration.reimbursable_expenses_object:
-        expense_group_ids = ExpenseGroup.objects.filter(
-            fund_source='PERSONAL', exported_at__isnull=True, workspace_id=workspace_id).values_list('id', flat=True)
-
-        if len(expense_group_ids):
-            is_expenses_exported = True
-
-        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
-            schedule_expense_reports_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
-            )
-
-        elif configuration.reimbursable_expenses_object == 'BILL':
-            schedule_bills_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
-            )
-
-        elif configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
-            schedule_journal_entries_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
-            )
-
-    if configuration.corporate_credit_card_expenses_object:
-        expense_group_ids = ExpenseGroup.objects.filter(
-            fund_source='CCC', exported_at__isnull=True, workspace_id=workspace_id).values_list('id', flat=True)
-
-        if len(expense_group_ids):
-            is_expenses_exported = True
-
-        if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
-            schedule_charge_card_transaction_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
-            )
-
-        elif configuration.corporate_credit_card_expenses_object == 'BILL':
-            schedule_bills_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
-            )
-
-        elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-            schedule_expense_reports_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
-            )
-
-        elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
-            schedule_journal_entries_creation(
-                workspace_id=workspace_id, expense_group_ids=expense_group_ids
-            )
-
-    if is_expenses_exported:
-        last_export_detail.last_exported_at = last_exported_at
-        last_export_detail.export_mode = export_mode or 'MANUAL'
-
-        if workspace_schedule:
-            last_export_detail.next_export_at = last_exported_at + timedelta(hours=workspace_schedule.interval_hours)
-
-        last_export_detail.save()
 
 
 def schedule_email_notification(workspace_id: int, schedule_enabled: bool):
@@ -269,6 +197,41 @@ def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str):
     if fyle_credentials:
         fyle_credentials.refresh_token = refresh_token
         fyle_credentials.save()
+
+
+def post_to_integration_settings(workspace_id: int, active: bool):
+    """
+    Post to integration settings
+    """
+    refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token
+    url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
+    payload = {
+        'tpa_id': settings.FYLE_CLIENT_ID,
+        'tpa_name': 'Fyle Sage Intacct Integration',
+        'type': 'ACCOUNTING',
+        'is_active': active,
+        'connected_at': datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    }
+
+    try:
+        post_request(url, json.dumps(payload), refresh_token)
+    except Exception as error:
+        logger.error(error)
+
+
+def async_create_admin_subcriptions(workspace_id: int) -> None:
+    """
+    Create admin subscriptions
+    :param workspace_id: workspace id
+    :return: None
+    """
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    platform = PlatformConnector(fyle_credentials)
+    payload = {
+        'is_enabled': True,
+        'webhook_url': '{}/workspaces/{}/fyle/exports/'.format(settings.API_URL, workspace_id)
+    }
+    platform.subscriptions.post(payload)
 
 
 def async_update_workspace_name(workspace: Workspace, access_token: str):

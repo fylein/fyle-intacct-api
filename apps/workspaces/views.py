@@ -31,7 +31,8 @@ from apps.fyle.helpers import get_cluster_domain
 from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule, LastExportDetail
 from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
     ConfigurationSerializer, WorkspaceScheduleSerializer, LastExportDetailSerializer
-from .tasks import schedule_sync, export_to_intacct
+from .actions import export_to_intacct
+from .tasks import schedule_sync
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -77,6 +78,7 @@ class WorkspaceView(viewsets.ViewSet):
                 workspace_id=workspace.id,
                 cluster_domain=cluster_domain
             )
+            async_task('apps.workspaces.tasks.async_create_admin_subcriptions', workspace.id)
 
         return Response(
             data=WorkspaceSerializer(workspace).data,
@@ -524,7 +526,7 @@ class LastExportDetailView(generics.RetrieveAPIView):
 
 class ExportToIntacctView(viewsets.ViewSet):
     """
-    Export Expenses to QBO
+    Export Expenses to Intacct
     """
 
     def post(self, request, *args, **kwargs):

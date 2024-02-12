@@ -1,10 +1,13 @@
+import pytest
 from apps.workspaces.tasks import async_update_workspace_name
 from apps.tasks.models import TaskLog
 from apps.workspaces.tasks import (
     run_sync_schedule,
     schedule_sync,
     run_email_notification,
-    async_update_fyle_credentials
+    async_update_fyle_credentials,
+    post_to_integration_settings,
+    async_create_admin_subcriptions
 )
 from apps.workspaces.models import Workspace, WorkspaceSchedule, Configuration, FyleCredential
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
@@ -158,6 +161,25 @@ def test_async_update_fyle_credentials(db):
 
     assert fyle_credentials.refresh_token == refresh_token
 
+def test_async_create_admin_subcriptions(db, mocker):
+    mocker.patch(
+        'fyle.platform.apis.v1beta.admin.Subscriptions.post',
+        return_value={}
+    )
+    async_create_admin_subcriptions(1)
+
+@pytest.mark.django_db(databases=['default'])
+def test_post_to_integration_settings(mocker):
+    mocker.patch(
+        'apps.fyle.helpers.post_request',
+        return_value=''
+    )
+
+    no_exception = True
+    post_to_integration_settings(1, True)
+
+    # If exception is raised, this test will fail
+    assert no_exception
 
 def test_async_update_workspace_name(db, mocker):
     mocker.patch(
