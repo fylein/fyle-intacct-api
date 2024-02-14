@@ -7,7 +7,7 @@ from django.db import transaction
 from django_q.tasks import async_task
 
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import NoPrivilegeError
+from fyle.platform.exceptions import NoPrivilegeError, RetryException
 
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
@@ -167,6 +167,14 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
             'message': 'Fyle credentials do not exist in workspace'
         }
         task_log.status = 'FAILED'
+        task_log.save()
+
+    except RetryException:
+        logger.info('Fyle Retry Exception occured in workspace_id: %s', workspace_id)
+        task_log.detail = {
+            'message': 'Fyle Retry Exception occured'
+        }
+        task_log.status = 'FATAL'
         task_log.save()
 
     except Exception:

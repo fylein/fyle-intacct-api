@@ -7,7 +7,8 @@ from sageintacctsdk.exceptions import (
 from fyle.platform.exceptions import (
     WrongParamsError,
     InvalidTokenError as FyleInvalidTokenError,
-    InternalServerError
+    InternalServerError,
+    RetryException as FyleRetryException
 )
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
@@ -46,6 +47,11 @@ def handle_import_exceptions(func):
             error['alert'] = False
             import_log.status = 'FAILED'
         
+        except FyleRetryException:
+            error['message'] = 'Fyle Retry Exception occured'
+            error['alert'] = False
+            import_log.status = 'FAILED'
+
         except InternalServerError:
             error['message'] = 'Internal server error while importing to Fyle'
             error['alert'] = True
