@@ -8,6 +8,7 @@ from rest_framework import generics
 
 from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
+from fyle.platform.exceptions import RetryException
 
 from sageintacctsdk.exceptions import InvalidTokenError
 
@@ -177,6 +178,15 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
             return Response(
                 data={
                     'message': 'Sage Intacct credentials not found / invalid in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        except RetryException as e:
+            logger.info('Retry Exception occured in workspace', e.__dict__)
+            return Response(
+                data={
+                    'message': 'Retry Exception occured in workspace'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )

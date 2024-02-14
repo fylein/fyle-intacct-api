@@ -17,7 +17,7 @@ from fyle_accounting_mappings.models import (
     CategoryMapping,
     DestinationAttribute
 )
-from fyle.platform.exceptions import WrongParamsError
+from fyle.platform.exceptions import WrongParamsError, RetryException
 
 from apps.workspaces.models import Configuration
 from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
@@ -180,6 +180,9 @@ def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs
                     'message': error.response['message'],
                     'field_name': instance.source_field
                 })
+
+        except RetryException:
+            logger.info('Retry Exception in workspace_id - %s', instance.workspace_id)
 
         # setting the import_log.last_successful_run_at to -30mins for the post_save_trigger
         import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=instance.source_field).first()

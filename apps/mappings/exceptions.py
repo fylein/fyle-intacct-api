@@ -7,7 +7,8 @@ from sageintacctsdk.exceptions import (
 from fyle.platform.exceptions import (
     WrongParamsError,
     InvalidTokenError as FyleInvalidTokenError,
-    InternalServerError
+    InternalServerError,
+    RetryException
 )
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
@@ -53,6 +54,11 @@ def handle_import_exceptions(func):
         
         except NoPrivilegeError:
             error['message'] = 'Insufficient permission to access the requested module'
+            error['alert'] = False
+            import_log.status = 'FAILED'
+        
+        except RetryException:
+            error['message'] = 'Retry Exception'
             error['alert'] = False
             import_log.status = 'FAILED'
 

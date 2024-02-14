@@ -9,6 +9,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
+    RetryException
 )
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
@@ -111,6 +112,8 @@ def async_auto_map_employees(workspace_id: int):
     except NoPrivilegeError:
         logger.info('Insufficient permission to access the requested module')
 
+    except RetryException:
+        logger.info('Retry Exception in workspace_id - %s', workspace_id)
 
 def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
     if employee_mapping_preference:
@@ -136,17 +139,20 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
 
 
 def async_auto_map_charge_card_account(workspace_id: int):
-    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
-    default_charge_card_id = general_mappings.default_charge_card_id
+    try:
+        general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+        default_charge_card_id = general_mappings.default_charge_card_id
 
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    platform.employees.sync()
-    EmployeesAutoMappingHelper(workspace_id, 'CHARGE_CARD_NUMBER').ccc_mapping(
-        default_charge_card_id, attribute_type='CHARGE_CARD_NUMBER'
-    )
+        platform.employees.sync()
+        EmployeesAutoMappingHelper(workspace_id, 'CHARGE_CARD_NUMBER').ccc_mapping(
+            default_charge_card_id, attribute_type='CHARGE_CARD_NUMBER'
+        )
+    except RetryException:
+        logger.info('Retry Exception in workspace_id - %s', workspace_id)
 
 
 def schedule_auto_map_charge_card_employees(workspace_id: int):

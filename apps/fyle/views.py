@@ -1,3 +1,5 @@
+import logging
+
 from django.db.models import Q
 from datetime import datetime
 
@@ -9,7 +11,7 @@ from django_q.tasks import Chain
 
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
-from fyle.platform.exceptions import PlatformError
+from fyle.platform.exceptions import PlatformError, RetryException
 from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
 
 from fyle_integrations_platform_connector import PlatformConnector
@@ -26,6 +28,9 @@ from .serializers import (
     DependentFieldSettingSerializer
 )
 from .queue import async_import_and_export_expenses
+
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 class ExpenseGroupView(generics.ListCreateAPIView):
@@ -340,6 +345,14 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
             return Response(
                 data={
                     'message': 'Something wrong with PlatformConnector'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except RetryException:
+            logger.info('RetryException occurred in Platform')
+            return Response(
+                data={
+                    'message': 'RetryException occurred in Platform'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )

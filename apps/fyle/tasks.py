@@ -7,7 +7,7 @@ from django.db import transaction
 from django_q.tasks import async_task
 
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import NoPrivilegeError
+from fyle.platform.exceptions import NoPrivilegeError, RetryException
 
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
@@ -33,8 +33,11 @@ SOURCE_ACCOUNT_MAP = {
 
 
 def sync_reimbursements(fyle_credentials, workspace_id: int):
-    platform = PlatformConnector(fyle_credentials)
-    platform.reimbursements.sync()
+    try:
+        platform = PlatformConnector(fyle_credentials)
+        platform.reimbursements.sync()
+    except RetryException:
+        logger.info('RetryException occured in the workspace_id: %s', workspace_id)
 
 
 def get_task_log_and_fund_source(workspace_id: int):
@@ -169,6 +172,14 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
         task_log.status = 'FAILED'
         task_log.save()
 
+    except RetryException:
+        logger.info('RetryException occured in the workspace_id: %s', workspace_id)
+        task_log.detail = {
+            'message': 'Retry Exception'
+        }
+        task_log.status = 'FAILED'
+        task_log.save()
+
     except Exception:
         error = traceback.format_exc()
         task_log.detail = {
@@ -283,6 +294,9 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
 
         if len(expense_group_ids):
             export_to_intacct(workspace.id, None, expense_group_ids)
+
+    except RetryException:
+        logger.info('RetryException occured in the workspace_id: %s', workspace.id)
 
     except Exception:
         handle_import_exception(task_log)

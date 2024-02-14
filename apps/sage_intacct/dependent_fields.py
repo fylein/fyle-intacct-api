@@ -11,6 +11,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
+from fyle.platform.exceptions import RetryException
 
 from apps.fyle.helpers import connect_to_platform
 from apps.fyle.models import DependentFieldSetting
@@ -133,6 +134,8 @@ def import_dependent_fields_to_fyle(workspace_id: str):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
     except NoPrivilegeError:
         logger.info('Insufficient permission to access the requested module')
+    except RetryException:
+        logger.info('Retry Exception in workspace_id - %s', workspace_id)
     except Exception as exception:
         logger.error('Exception while importing dependent fields to fyle - %s', exception)
 

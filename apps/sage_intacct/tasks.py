@@ -9,7 +9,11 @@ from django.conf import settings
 from django_q.models import Schedule
 from django_q.tasks import Chain
 
-from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
+from sageintacctsdk.exceptions import (
+    WrongParamsError,
+    InvalidTokenError,
+    NoPrivilegeError
+)
 
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
@@ -19,6 +23,9 @@ from fyle_accounting_mappings.models import (
         CategoryMapping, 
         EmployeeMapping
     )
+from fyle.platform.exceptions import (
+    RetryException
+)
 
 from fyle_intacct_api.exceptions import BulkError
 from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
@@ -99,6 +106,9 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
 
         supdoc_id = key
         return sage_intacct_connection.post_attachments(attachments, supdoc_id)
+
+    except RetryException:
+        logger.info('Retry Exception in workspace_id - %s', expense_group.workspace_id)
 
     except Exception:
         error = traceback.format_exc()
@@ -965,57 +975,182 @@ def check_expenses_reimbursement_status(expenses):
 
 
 def create_ap_payment(workspace_id):
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    try:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
-    platform.reimbursements.sync()
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
+        platform.reimbursements.sync()
 
-    bills: List[Bill] = Bill.objects.filter(
-        payment_synced=False, expense_group__workspace_id=workspace_id,
-        expense_group__fund_source='PERSONAL'
-    ).all()
+        bills: List[Bill] = Bill.objects.filter(
+            payment_synced=False, expense_group__workspace_id=workspace_id,
+            expense_group__fund_source='PERSONAL'
+        ).all()
 
-    if bills:
-        for bill in bills:
+        if bills:
+            for bill in bills:
+                expense_group_reimbursement_status = check_expenses_reimbursement_status(
+                    bill.expense_group.expenses.all())
+                if expense_group_reimbursement_status:
+                    task_log, _ = TaskLog.objects.update_or_create(
+                        workspace_id=workspace_id,
+                        task_id='PAYMENT_{}'.format(bill.expense_group.id),
+                        defaults={
+                            'status': 'IN_PROGRESS',
+                            'type': 'CREATING_AP_PAYMENT'
+                        }
+                    )
+
+                    try:
+                        with transaction.atomic():
+
+                            ap_payment_object = APPayment.create_ap_payment(bill.expense_group)
+
+                            bill_task_log = TaskLog.objects.get(expense_group=bill.expense_group)
+
+                            record_key = bill_task_log.detail['data']['apbill']['RECORDNO']
+
+                            ap_payment_lineitems_objects = APPaymentLineitem.create_ap_payment_lineitems(
+                                ap_payment_object.expense_group, record_key
+                            )
+
+                            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+                            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+
+                            created_ap_payment = sage_intacct_connection.post_ap_payment(
+                                ap_payment_object, ap_payment_lineitems_objects
+                            )
+
+                            bill.payment_synced = True
+                            bill.paid_on_sage_intacct = True
+                            bill.save()
+
+                            task_log.detail = created_ap_payment
+                            task_log.ap_payment = ap_payment_object
+                            task_log.sage_intacct_errors = None
+                            task_log.status = 'COMPLETE'
+
+                            task_log.save()
+
+                    except SageIntacctCredential.DoesNotExist:
+                        logger.info(
+                            'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
+                            workspace_id,
+                            bill.expense_group
+                        )
+                        detail = {
+                            'expense_group_id': bill.expense_group,
+                            'message': 'Sage-Intacct Account not connected'
+                        }
+                        task_log.status = 'FAILED'
+                        task_log.detail = detail
+
+                        task_log.save()
+
+                    except BulkError as exception:
+                        logger.info(exception.response)
+                        detail = exception.response
+                        task_log.status = 'FAILED'
+                        task_log.detail = detail
+                        task_log.sage_intacct_errors = None
+
+                        task_log.save()
+
+                    except WrongParamsError as exception:
+                        logger.info(exception.response)
+                        task_log.status = 'FAILED'
+                        task_log.detail = exception.response
+
+                        task_log.save()
+
+                    except InvalidTokenError as exception:
+                        logger.info(exception.response)
+                        task_log.status = 'FAILED'
+                        task_log.detail = exception.response
+
+                        task_log.save()
+
+                    except NoPrivilegeError as exception:
+                        logger.info(exception.response)
+                        task_log.status = 'FAILED'
+                        task_log.detail = exception.response
+
+                        task_log.save()
+
+                    except Exception:
+                        error = traceback.format_exc()
+                        task_log.detail = {
+                            'error': error
+                        }
+                        task_log.status = 'FATAL'
+                        task_log.save()
+                        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
+                                    task_log.detail)
+                        
+    except RetryException as exception:
+        logger.info(exception.response)
+        detail = exception.response
+        task_log.status = 'FAILED'
+        task_log.detail = detail
+        task_log.sage_intacct_errors = None
+
+        task_log.save()
+        update_failed_expenses(bills.expense_group.expenses.all(), False)
+
+
+def create_sage_intacct_reimbursement(workspace_id):
+    try:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
+        platform.reimbursements.sync()
+
+        expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
+            payment_synced=False, expense_group__workspace_id=workspace_id,
+            expense_group__fund_source='PERSONAL'
+        ).all()
+
+        for expense_report in expense_reports:
             expense_group_reimbursement_status = check_expenses_reimbursement_status(
-                bill.expense_group.expenses.all())
+                expense_report.expense_group.expenses.all())
             if expense_group_reimbursement_status:
                 task_log, _ = TaskLog.objects.update_or_create(
                     workspace_id=workspace_id,
-                    task_id='PAYMENT_{}'.format(bill.expense_group.id),
+                    task_id='PAYMENT_{}'.format(expense_report.expense_group.id),
                     defaults={
                         'status': 'IN_PROGRESS',
-                        'type': 'CREATING_AP_PAYMENT'
+                        'type': 'CREATING_REIMBURSEMENT'
                     }
                 )
 
                 try:
                     with transaction.atomic():
 
-                        ap_payment_object = APPayment.create_ap_payment(bill.expense_group)
+                        sage_intacct_reimbursement_object = SageIntacctReimbursement.\
+                            create_sage_intacct_reimbursement(expense_report.expense_group)
 
-                        bill_task_log = TaskLog.objects.get(expense_group=bill.expense_group)
+                        expense_report_task_log = TaskLog.objects.get(expense_group=expense_report.expense_group)
 
-                        record_key = bill_task_log.detail['data']['apbill']['RECORDNO']
+                        record_key = expense_report_task_log.detail['key']
 
-                        ap_payment_lineitems_objects = APPaymentLineitem.create_ap_payment_lineitems(
-                            ap_payment_object.expense_group, record_key
-                        )
+                        sage_intacct_reimbursement_lineitems_objects = SageIntacctReimbursementLineitem.\
+                            create_sage_intacct_reimbursement_lineitems(sage_intacct_reimbursement_object.expense_group,
+                                                                        record_key)
 
                         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
                         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
 
-                        created_ap_payment = sage_intacct_connection.post_ap_payment(
-                            ap_payment_object, ap_payment_lineitems_objects
+                        created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
+                            sage_intacct_reimbursement_object, sage_intacct_reimbursement_lineitems_objects
                         )
 
-                        bill.payment_synced = True
-                        bill.paid_on_sage_intacct = True
-                        bill.save()
+                        expense_report.payment_synced = True
+                        expense_report.paid_on_sage_intacct = True
+                        expense_report.save()
 
-                        task_log.detail = created_ap_payment
-                        task_log.ap_payment = ap_payment_object
+                        task_log.detail = created__sage_intacct_reimbursement
+                        task_log.sage_intacct_reimbursement = sage_intacct_reimbursement_object
                         task_log.sage_intacct_errors = None
                         task_log.status = 'COMPLETE'
 
@@ -1025,10 +1160,10 @@ def create_ap_payment(workspace_id):
                     logger.info(
                         'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
                         workspace_id,
-                        bill.expense_group
+                        expense_report.expense_group
                     )
                     detail = {
-                        'expense_group_id': bill.expense_group,
+                        'expense_group_id': expense_report.expense_group.id,
                         'message': 'Sage-Intacct Account not connected'
                     }
                     task_log.status = 'FAILED'
@@ -1051,14 +1186,14 @@ def create_ap_payment(workspace_id):
                     task_log.detail = exception.response
 
                     task_log.save()
-
+                
                 except InvalidTokenError as exception:
                     logger.info(exception.response)
                     task_log.status = 'FAILED'
                     task_log.detail = exception.response
 
                     task_log.save()
-
+                
                 except NoPrivilegeError as exception:
                     logger.info(exception.response)
                     task_log.status = 'FAILED'
@@ -1074,120 +1209,17 @@ def create_ap_payment(workspace_id):
                     task_log.status = 'FATAL'
                     task_log.save()
                     logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
-                                 task_log.detail)
+                                    task_log.detail)
 
+    except RetryException as exception:
+        logger.info(exception.response)
+        detail = exception.response
+        task_log.status = 'FAILED'
+        task_log.detail = detail
+        task_log.sage_intacct_errors = None
 
-def create_sage_intacct_reimbursement(workspace_id):
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
-    platform.reimbursements.sync()
-
-    expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
-        payment_synced=False, expense_group__workspace_id=workspace_id,
-        expense_group__fund_source='PERSONAL'
-    ).all()
-
-    for expense_report in expense_reports:
-        expense_group_reimbursement_status = check_expenses_reimbursement_status(
-            expense_report.expense_group.expenses.all())
-        if expense_group_reimbursement_status:
-            task_log, _ = TaskLog.objects.update_or_create(
-                workspace_id=workspace_id,
-                task_id='PAYMENT_{}'.format(expense_report.expense_group.id),
-                defaults={
-                    'status': 'IN_PROGRESS',
-                    'type': 'CREATING_REIMBURSEMENT'
-                }
-            )
-
-            try:
-                with transaction.atomic():
-
-                    sage_intacct_reimbursement_object = SageIntacctReimbursement.\
-                        create_sage_intacct_reimbursement(expense_report.expense_group)
-
-                    expense_report_task_log = TaskLog.objects.get(expense_group=expense_report.expense_group)
-
-                    record_key = expense_report_task_log.detail['key']
-
-                    sage_intacct_reimbursement_lineitems_objects = SageIntacctReimbursementLineitem.\
-                        create_sage_intacct_reimbursement_lineitems(sage_intacct_reimbursement_object.expense_group,
-                                                                    record_key)
-
-                    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-
-                    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-
-                    created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
-                        sage_intacct_reimbursement_object, sage_intacct_reimbursement_lineitems_objects
-                    )
-
-                    expense_report.payment_synced = True
-                    expense_report.paid_on_sage_intacct = True
-                    expense_report.save()
-
-                    task_log.detail = created__sage_intacct_reimbursement
-                    task_log.sage_intacct_reimbursement = sage_intacct_reimbursement_object
-                    task_log.sage_intacct_errors = None
-                    task_log.status = 'COMPLETE'
-
-                    task_log.save()
-
-            except SageIntacctCredential.DoesNotExist:
-                logger.info(
-                    'Sage-Intacct Credentials not found for workspace_id %s / expense group %s',
-                    workspace_id,
-                    expense_report.expense_group
-                )
-                detail = {
-                    'expense_group_id': expense_report.expense_group.id,
-                    'message': 'Sage-Intacct Account not connected'
-                }
-                task_log.status = 'FAILED'
-                task_log.detail = detail
-
-                task_log.save()
-
-            except BulkError as exception:
-                logger.info(exception.response)
-                detail = exception.response
-                task_log.status = 'FAILED'
-                task_log.detail = detail
-                task_log.sage_intacct_errors = None
-
-                task_log.save()
-
-            except WrongParamsError as exception:
-                logger.info(exception.response)
-                task_log.status = 'FAILED'
-                task_log.detail = exception.response
-
-                task_log.save()
-            
-            except InvalidTokenError as exception:
-                logger.info(exception.response)
-                task_log.status = 'FAILED'
-                task_log.detail = exception.response
-
-                task_log.save()
-            
-            except NoPrivilegeError as exception:
-                logger.info(exception.response)
-                task_log.status = 'FAILED'
-                task_log.detail = exception.response
-
-                task_log.save()
-
-            except Exception:
-                error = traceback.format_exc()
-                task_log.detail = {
-                    'error': error
-                }
-                task_log.status = 'FATAL'
-                task_log.save()
-                logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
-                                task_log.detail)
+        task_log.save()
+        update_failed_expenses(expense_report.expense_group.expenses.all(), False)
 
 
 def get_all_sage_intacct_bill_ids(sage_objects: Bill):
@@ -1277,36 +1309,40 @@ def check_sage_intacct_object_status(workspace_id):
 
 
 def process_fyle_reimbursements(workspace_id):
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    try:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    platform.reimbursements.sync()
-
-    reimbursements = Reimbursement.objects.filter(state='PENDING', workspace_id=workspace_id).all()
-
-    reimbursement_ids = []
-
-    if reimbursements:
-        for reimbursement in reimbursements:
-            expenses = Expense.objects.filter(settlement_id=reimbursement.settlement_id, fund_source='PERSONAL').all()
-            paid_expenses = expenses.filter(paid_on_sage_intacct=True)
-
-            all_expense_paid = False
-            if len(expenses):
-                all_expense_paid = len(expenses) == len(paid_expenses)
-
-            if all_expense_paid:
-                reimbursement_ids.append(reimbursement.reimbursement_id)
-
-    if reimbursement_ids:
-        reimbursements_list = []
-        for reimbursement_id in reimbursement_ids:
-            reimbursement_object = {'id': reimbursement_id}
-            reimbursements_list.append(reimbursement_object)
-
-        platform.reimbursements.bulk_post_reimbursements(reimbursements_list)
         platform.reimbursements.sync()
+
+        reimbursements = Reimbursement.objects.filter(state='PENDING', workspace_id=workspace_id).all()
+
+        reimbursement_ids = []
+
+        if reimbursements:
+            for reimbursement in reimbursements:
+                expenses = Expense.objects.filter(settlement_id=reimbursement.settlement_id, fund_source='PERSONAL').all()
+                paid_expenses = expenses.filter(paid_on_sage_intacct=True)
+
+                all_expense_paid = False
+                if len(expenses):
+                    all_expense_paid = len(expenses) == len(paid_expenses)
+
+                if all_expense_paid:
+                    reimbursement_ids.append(reimbursement.reimbursement_id)
+
+        if reimbursement_ids:
+            reimbursements_list = []
+            for reimbursement_id in reimbursement_ids:
+                reimbursement_object = {'id': reimbursement_id}
+                reimbursements_list.append(reimbursement_object)
+
+            platform.reimbursements.bulk_post_reimbursements(reimbursements_list)
+            platform.reimbursements.sync()
+
+    except RetryException:
+        logger.info('Retry Exception occured in workspace_id - %s', workspace_id)
 
 
 def update_expense_and_post_summary(in_progress_expenses: List[Expense], workspace_id: int, fund_source: str) -> None:
