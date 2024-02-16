@@ -210,6 +210,11 @@ def test_post_bill_success(mocker, create_task_logs, db):
         'sageintacctsdk.apis.Bills.update_attachment',
         return_value=data['bill_response']
     )
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_ap_payment',
+    )
+
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -247,7 +252,7 @@ def test_post_bill_success(mocker, create_task_logs, db):
         create_bill(expense_group, task_log.id, True)
 
 
-def test_create_bill_exceptions(db, create_task_logs):
+def test_create_bill_exceptions(mocker, db, create_task_logs):
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -266,7 +271,11 @@ def test_create_bill_exceptions(db, create_task_logs):
         expense.save()
 
     expense_group.expenses.set(expenses)
-    
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_ap_payment',
+    )
+
     with mock.patch('apps.sage_intacct.models.Bill.create_bill') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
         create_bill(expense_group, task_log.id, True)
@@ -323,6 +332,11 @@ def test_post_sage_intacct_reimbursements_success(mocker, create_task_logs, db, 
         'fyle_integrations_platform_connector.apis.Reimbursements.sync',
         return_value=None
     )
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
+    )
+
     workspace_id = 1
 
     expense_report, expense_report_lineitems = create_expense_report
@@ -361,6 +375,11 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         'fyle_integrations_platform_connector.apis.Reimbursements.sync',
         return_value=None
     )
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
+    )
+
     workspace_id = 1
 
     expense_report, expense_report_lineitems = create_expense_report
@@ -703,6 +722,11 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
         'apps.sage_intacct.tasks.load_attachments',
         return_value=['sdfgh']
     )
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
+    )
+
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -729,7 +753,7 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
         create_expense_report(expense_group, task_log.id, True)
 
 
-def test_post_create_expense_report_exceptions(create_task_logs, db):
+def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -752,6 +776,10 @@ def test_post_create_expense_report_exceptions(create_task_logs, db):
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'
     configuration.save()
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
+    )
 
     with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
