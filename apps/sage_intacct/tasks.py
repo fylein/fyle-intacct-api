@@ -734,8 +734,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
-        create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
         update_last_export_details(expense_group.workspace_id)
+        create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
 
 def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
@@ -845,8 +845,8 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
-        create_ap_payment(workspace_id=expense_group.workspace.id)
         update_last_export_details(expense_group.workspace_id)
+        create_ap_payment(workspace_id=expense_group.workspace.id)
 
 
 def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
