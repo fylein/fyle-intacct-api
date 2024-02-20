@@ -736,7 +736,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
     if last_export:
         update_last_export_details(expense_group.workspace_id)
 
-        if configuration.sync_sage_intacct_to_fyle_payments:
+        if configuration.sync_fyle_to_sage_intacct_payments:
             create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
 
