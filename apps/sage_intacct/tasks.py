@@ -735,7 +735,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
     if last_export:
         update_last_export_details(expense_group.workspace_id)
-        create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
+
+        if configuration.sync_sage_intacct_to_fyle_payments:
+            create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
 
 def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
@@ -846,7 +848,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
     if last_export:
         update_last_export_details(expense_group.workspace_id)
-        create_ap_payment(workspace_id=expense_group.workspace.id)
+        
+        if configuration.sync_fyle_to_sage_intacct_payments:
+            create_ap_payment(workspace_id=expense_group.workspace.id)
 
 
 def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
