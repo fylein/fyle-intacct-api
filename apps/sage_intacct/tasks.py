@@ -303,7 +303,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
         error_msg = errors[0]['long_description']
     else:
         errors.append(exception.response)
-    error_msg = '''The account number '16200' requires a Class '''
+
     values_list = extract_destination_ids_from_error(error_msg)
     if values_list:
         destination_attribute_list = get_entity_values(values_list, expense_group.workspace_id)
