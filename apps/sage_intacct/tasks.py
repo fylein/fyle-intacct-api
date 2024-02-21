@@ -1,5 +1,6 @@
 import logging
 import traceback
+import re
 from typing import List
 from datetime import datetime, timedelta
 
@@ -48,6 +49,7 @@ from apps.sage_intacct.models import (
         SageIntacctReimbursementLineitem
     )
 from .utils import SageIntacctConnector
+from .errors.helpers import get_entity_values, extract_destination_ids_from_error, replace_destination_id_with_values
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -301,6 +303,12 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
         error_msg = errors[0]['long_description']
     else:
         errors.append(exception.response)
+    error_msg = '''The account number '16200' requires a Class '''
+    values_list = extract_destination_ids_from_error(error_msg)
+    if values_list:
+        destination_attribute_list = get_entity_values(values_list, expense_group.workspace_id)
+        replaced_string = replace_destination_id_with_values(error_msg, destination_attribute_list)
+        print(replaced_string)
 
     Error.objects.update_or_create(
             workspace_id=expense_group.workspace_id,
@@ -308,7 +316,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
             defaults={
                 'type': 'INTACCT_ERROR',
                 'error_title': error_title,
-                'error_detail': error_msg,
+                'error_detail': replaced_string,
                 'is_resolved': False
             }
         )
