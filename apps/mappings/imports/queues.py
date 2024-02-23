@@ -17,7 +17,8 @@ def chain_import_fields_to_fyle(workspace_id):
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
             'TAX_DETAIL',
-            'TAX_GROUP'
+            'TAX_GROUP',
+            q_options={'cluster': 'import'}
         )
 
     if configuration.import_vendors_as_merchants:
@@ -25,7 +26,8 @@ def chain_import_fields_to_fyle(workspace_id):
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
             'VENDOR',
-            'MERCHANT'
+            'MERCHANT',
+            q_options={'cluster': 'import'}
         )
 
     if configuration.import_categories:
@@ -39,7 +41,8 @@ def chain_import_fields_to_fyle(workspace_id):
             'apps.mappings.imports.tasks.trigger_import_via_schedule',
             workspace_id,
             destination_field,
-            'CATEGORY'
+            'CATEGORY',
+            q_options={'cluster': 'import'}
         )
 
     for mapping_setting in mapping_settings:
@@ -48,7 +51,8 @@ def chain_import_fields_to_fyle(workspace_id):
                'apps.mappings.imports.tasks.trigger_import_via_schedule',
                 workspace_id,
                 mapping_setting.destination_field,
-                mapping_setting.source_field
+                mapping_setting.source_field,
+                q_options={'cluster': 'import'}
             )
 
     for custom_fields_mapping_setting in custom_field_mapping_settings:
@@ -57,7 +61,8 @@ def chain_import_fields_to_fyle(workspace_id):
             workspace_id,
             custom_fields_mapping_setting.destination_field,
             custom_fields_mapping_setting.source_field,
-            True
+            True,
+            q_options={'cluster': 'import'}
         )
 
     if chain.length() > 0:

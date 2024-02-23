@@ -42,6 +42,7 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration):
         start_datetime = datetime.now()
         Schedule.objects.update_or_create(
             func='apps.mappings.tasks.auto_import_and_map_fyle_fields',
+            cluster='import',
             args='{}'.format(configuration.workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
