@@ -736,6 +736,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
     if last_export:
         update_last_export_details(expense_group.workspace_id)
 
+        if configuration.sync_fyle_to_sage_intacct_payments:
+            create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
+
 
 def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
@@ -842,9 +845,12 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
-    
+
     if last_export:
         update_last_export_details(expense_group.workspace_id)
+        
+        if configuration.sync_fyle_to_sage_intacct_payments:
+            create_ap_payment(workspace_id=expense_group.workspace.id)
 
 
 def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):

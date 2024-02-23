@@ -14,6 +14,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 from fyle_rest_auth.helpers import get_fyle_admin
 
 from apps.fyle.tasks import create_expense_groups
+from apps.fyle.helpers import post_request
 from .actions import export_to_intacct
 
 from apps.tasks.models import TaskLog
