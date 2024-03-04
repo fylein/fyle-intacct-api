@@ -190,7 +190,8 @@ CACHES = {
 
 Q_CLUSTER = {
     'name': 'fyle_intacct_api',
-    'save_limit': 0,
+    # The number of tasks will be stored in django q tasks
+    "save_limit": 100000,
     'retry': 14400,
     'timeout': 900, # 15 mins
     'catch_up': False,
@@ -213,7 +214,7 @@ Q_CLUSTER = {
     'ALT_CLUSTERS': {
         'import': {
             'retry': 14400,
-            'timeout': 3600
+            'timeout': 900
         },
     }
 }
