@@ -1111,7 +1111,7 @@ class SageIntacctConnector:
         
         journal_entry_payload = {
             'recordno': recordno if recordno else None,
-            'journal': 'FYLE_JE',
+            'journal': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
             'batch_date': transaction_date,
             'batch_title': journal_entry.memo,
             'supdocid': supdocid if supdocid else None,
