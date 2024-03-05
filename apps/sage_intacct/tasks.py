@@ -685,9 +685,6 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         if last_export:
             update_last_export_details(expense_group.workspace_id)
 
-            if configuration.sync_fyle_to_sage_intacct_payments:
-                create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
-
         created_attachment_id = load_attachments(sage_intacct_connection, record_no, expense_group)
         if created_attachment_id:
             try:
@@ -800,9 +797,6 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
-            
-            if configuration.sync_fyle_to_sage_intacct_payments:
-                create_ap_payment(workspace_id=expense_group.workspace.id)
 
         created_attachment_id = load_attachments(sage_intacct_connection, created_bill['data']['apbill']['RECORDNO'], expense_group)
         if created_attachment_id:
