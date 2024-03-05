@@ -911,25 +911,27 @@ class JournalEntryLineitem(models.Model):
 
             employee_mapping_setting = configuration.employee_field_mapping
 
-            entity = EmployeeMapping.objects.get(
-                source_employee__value=description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            )
-
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_department_id is None else None
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_location_id is None else None
-            employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
 
-            vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
+            employee_id = None
 
             if settings.BRAND_ID == 'fyle':
+                entity = EmployeeMapping.objects.get(
+                    source_employee__value=description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                )
                 if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
                     vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).first()
                     if vendor:
                         vendor_id = vendor.destination_id
+
+                employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
+
+                vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
             else:
                 vendor = None
