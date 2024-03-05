@@ -1,13 +1,11 @@
 import logging
 import traceback
 from typing import List
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from django.db import transaction
 from django.db.models import Q
 from django.conf import settings
-from django_q.models import Schedule
-from django_q.tasks import Chain
 
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
@@ -390,18 +388,19 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                         'type': 'General Mapping',
                         'message': 'Default Credit Card not found'
                     })
-                error_message = 'Employee Mapping not found'
-                entity = EmployeeMapping.objects.get(
-                    source_employee__value=expense_group.description.get('employee_email'),
-                    workspace_id=expense_group.workspace_id
-                )
-                if configuration.employee_field_mapping == 'EMPLOYEE':
-                    entity = entity.destination_employee
-                else:
-                    entity = entity.destination_vendor
+                if settings.BRAND_ID == 'fyle':
+                    error_message = 'Employee Mapping not found'
+                    entity = EmployeeMapping.objects.get(
+                        source_employee__value=expense_group.description.get('employee_email'),
+                        workspace_id=expense_group.workspace_id
+                    )
+                    if configuration.employee_field_mapping == 'EMPLOYEE':
+                        entity = entity.destination_employee
+                    else:
+                        entity = entity.destination_vendor
 
-                if not entity:
-                    raise EmployeeMapping.DoesNotExist
+                    if not entity:
+                        raise EmployeeMapping.DoesNotExist
 
             elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
                 error_message = 'Employee Mapping not found'
@@ -515,12 +514,16 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
-        if configuration.auto_map_employees and configuration.auto_create_destination_entity \
-            and configuration.auto_map_employees != 'EMPLOYEE_CODE':
-            create_or_update_employee_mapping(
-                expense_group, sage_intacct_connection, configuration.auto_map_employees,
-                configuration.employee_field_mapping
-            )
+        if settings.BRAND_ID == 'fyle':
+            if configuration.auto_map_employees and configuration.auto_create_destination_entity \
+                and configuration.auto_map_employees != 'EMPLOYEE_CODE':
+                create_or_update_employee_mapping(
+                    expense_group, sage_intacct_connection, configuration.auto_map_employees,
+                    configuration.employee_field_mapping
+                )
+        else:
+            merchant = expense_group.expenses.first().vendor
+            get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
         __validate_expense_group(expense_group, configuration)
 
