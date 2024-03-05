@@ -1025,9 +1025,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
-    if last_export:
-        if last_export_failed:
-            update_last_export_details(expense_group.workspace_id)
+    if last_export and last_export_failed:
+        update_last_export_details(expense_group.workspace_id)
 
 
 def check_expenses_reimbursement_status(expenses):
