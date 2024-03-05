@@ -1,12 +1,12 @@
 errors_ref = {
     "EMPLOYEE": {
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "The employee '([^']+)' is invalid."
         ]
     },
     "VENDOR": {
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "The vendor '([^']+)' is invalid.",
             "Vendor '([^']+)' specified is not valid.",
@@ -16,20 +16,20 @@ errors_ref = {
         ]
     },
     "CUSTOMER": {
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "Customer '([^']+)' specified is not valid."
         ]
     },
     "JOB":{
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "Job '([^']+)' specified is not valid.",
             "Invalid Job '([^']+)' specified."
         ]
     },
     "ACCOUNT": {
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "The account number '([^']+)' requires a",
             "Account ([A-Z0-9-]+) is not valid",
@@ -47,7 +47,7 @@ errors_ref = {
         ]
     },
     "DEPARTMENT": {
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "Department '([^']+)': '([^']+)' specified is not valid. Department is restricted by GL account.",
             "Invalid Department ([A-Z0-9-]+) selected ",
@@ -57,7 +57,7 @@ errors_ref = {
         ]
     },
     "PROJECT": {
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "The employee isn’t a resource of the project '([^']+)'.",
             "The Project '([^']+)' has a project status that prevents expense submittal.",
@@ -66,7 +66,7 @@ errors_ref = {
         ]
     },
     "LOCATION": {
-        "article_link" : "",
+        "article_link" : None,
         "patterns" : [
             "The location '([^']+)' is invalid.",
             "Location '([^']+)' is not valid",
