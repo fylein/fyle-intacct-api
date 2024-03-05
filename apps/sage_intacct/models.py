@@ -922,11 +922,33 @@ class JournalEntryLineitem(models.Model):
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
                 default_employee_location_id is None else None
             employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
+
             vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
-            if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
-                vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).first()
+
+            if settings.BRAND_ID == 'fyle':
+                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
+                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).first()
+                    if vendor:
+                        vendor_id = vendor.destination_id
+
+            else:
+                vendor = None
+                merchant = lineitem.vendor if lineitem.vendor else None
+
+                if merchant:
+                    vendor = DestinationAttribute.objects.filter(
+                        value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
+                    ).first()
+
                 if vendor:
-                    vendor_id = vendor.destination_id
+                    vendor = vendor.destination_id
+                else:
+                    vendor = DestinationAttribute.objects.filter(
+                        value='Credit Card Misc',
+                        workspace_id=expense_group.workspace_id
+                    ).first()
+
+                vendor_id = vendor.destination_id
             
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
 
