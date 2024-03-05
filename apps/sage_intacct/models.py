@@ -2,6 +2,7 @@
 Sage Intacct models
 """
 from datetime import datetime
+from django.conf import settings
 from django.db.models import Q,JSONField
 from django.db import models
 
@@ -351,8 +352,10 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configur
         workspace.cluster_domain = cluster_domain
         workspace.save()
 
+    fyle_url = cluster_domain if settings.BRAND_ID == 'fyle' else settings.FYLE_APP_URL
+
     expense_link = '{0}/app/admin/#/enterprise/view_expense/{1}?org_id={2}'.format(
-        cluster_domain, lineitem.expense_id, org_id
+        fyle_url, lineitem.expense_id, org_id
     )
 
     memo_structure = configuration.memo_structure
