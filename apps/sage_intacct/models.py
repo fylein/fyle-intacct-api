@@ -942,9 +942,7 @@ class JournalEntryLineitem(models.Model):
                         value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
                     ).first()
 
-                if vendor:
-                    vendor = vendor.destination_id
-                else:
+                if not vendor:
                     vendor = DestinationAttribute.objects.filter(
                         value='Credit Card Misc',
                         workspace_id=expense_group.workspace_id
