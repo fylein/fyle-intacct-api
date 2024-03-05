@@ -246,10 +246,6 @@ def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
     return vendor
 
 
-
-
-
-
 def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup):
     """
     Resolve errors for exported expense group
@@ -510,6 +506,8 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
+    last_export_failed = False
+
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
@@ -594,6 +592,9 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         task_log.save()
 
+        if last_export:
+            last_export_failed = True
+
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -604,11 +605,20 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
 
+        if last_export:
+            last_export_failed = True
+
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
+
+        if last_export:
+            last_export_failed = True
     
     except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
+
+        if last_export:
+            last_export_failed = True
 
     except Exception:
         error = traceback.format_exc()
@@ -620,6 +630,9 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
+    if last_export and last_export_failed:
+        update_last_export_details(expense_group.workspace_id)
+
 
 def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
@@ -630,6 +643,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         return
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+
+    last_export_failed = False
 
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
@@ -713,6 +728,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
 
+        if last_export:
+            last_export_failed = True
+
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -723,11 +741,20 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
 
+        if last_export:
+            last_export_failed = True
+
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
+        if last_export:
+            last_export_failed = True
+
     except (InvalidTokenError, NoPrivilegeError) as exception:
-        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')   
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
+
+        if last_export:
+            last_export_failed = True
 
     except Exception:
         error = traceback.format_exc()
@@ -740,6 +767,9 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
     
     if last_export:
+        if last_export_failed:
+            update_last_export_details(expense_group.workspace_id)
+
         if configuration.sync_fyle_to_sage_intacct_payments:
             create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
@@ -753,6 +783,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         return
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+    last_export_failed = False
 
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
@@ -826,6 +857,9 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+
+        if last_export:
+            last_export_failed = True
     
     except BulkError as exception:
         logger.info(exception.response)
@@ -837,11 +871,20 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
 
+        if last_export:
+            last_export_failed = True
+
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
+
+        if last_export:
+            last_export_failed = True
     
     except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
+
+        if last_export:
+            last_export_failed = True
 
     except Exception:
         error = traceback.format_exc()
@@ -853,7 +896,10 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
-    if last_export:            
+    if last_export:
+        if last_export_failed:
+            update_last_export_details(expense_group.workspace_id)
+
         if configuration.sync_fyle_to_sage_intacct_payments:
             create_ap_payment(workspace_id=expense_group.workspace.id)
 
@@ -867,10 +913,15 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         return
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+
+    last_export_failed = False
+
     try:
         merchant = expense_group.expenses.first().vendor
         get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+
         __validate_expense_group(expense_group, configuration)
+
         with transaction.atomic():
 
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group)
@@ -936,6 +987,9 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
 
+        if last_export:
+            last_export_failed = True
+
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -946,11 +1000,20 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
 
+        if last_export:
+            last_export_failed = True
+
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+
+        if last_export:
+            last_export_failed = True
     
     except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+
+        if last_export:
+            last_export_failed = True
 
     except Exception:
         error = traceback.format_exc()
@@ -961,6 +1024,10 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+
+    if last_export:
+        if last_export_failed:
+            update_last_export_details(expense_group.workspace_id)
 
 
 def check_expenses_reimbursement_status(expenses):
