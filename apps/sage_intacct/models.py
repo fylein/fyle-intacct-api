@@ -352,7 +352,7 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configur
         workspace.cluster_domain = cluster_domain
         workspace.save()
 
-    fyle_url = cluster_domain if settings.BRAND_ID == 'fyle' else settings.FYLE_APP_URL
+    fyle_url = cluster_domain if settings.BRAND_ID == 'fyle' else settings.FYLE_EXPENSE_URL
 
     expense_link = '{0}/app/admin/#/enterprise/view_expense/{1}?org_id={2}'.format(
         fyle_url, lineitem.expense_id, org_id
