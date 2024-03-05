@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from apps.workspaces.models import Configuration, Workspace, WorkspaceSchedule
@@ -172,8 +173,10 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
         if instance.onboarding_state == 'ADVANCED_CONFIGURATION':
             instance.onboarding_state = 'COMPLETE'
             instance.save()
-            # Commenting this for now, will uncomment once we expose to UI
-            # AdvancedConfigurationsTriggers.post_to_integration_settings(instance.id, True)
+
+            # To Do: Fix Later for BRAND_ID 'fyle'
+            if settings.BRAND_ID != 'fyle':
+                AdvancedConfigurationsTriggers.post_to_integration_settings(instance.id, True)
 
         return instance
 

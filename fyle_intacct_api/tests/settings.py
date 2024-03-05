@@ -272,6 +272,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Fyle Settings
+BRAND_ID = os.environ.get('BRAND_ID', 'fyle')
 API_URL = os.environ.get('API_URL')
 FYLE_TOKEN_URI = os.environ.get('FYLE_TOKEN_URI')
 FYLE_BASE_URL = os.environ.get('FYLE_BASE_URL')
