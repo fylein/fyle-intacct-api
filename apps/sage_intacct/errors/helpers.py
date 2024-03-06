@@ -44,24 +44,18 @@ def get_entity_values(error_dict, workspace_id):
     :param workspace_id: ID of the workspace
     :return: Dictionary with 'destination_id' and 'value' if found, otherwise an empty dictionary
     """
+    # Fetch the destination attribute based on destination ID and attribute type
+    destination_attribute = DestinationAttribute.objects.filter(
+        destination_id=error_dict['destination_id'],
+        attribute_type=error_dict['attribute_type'].upper()
+    ).first()
 
-    # Here, we are getting all the distinct attribute types for the workspace
-    distinct_destination_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id).distinct('attribute_type').values_list('attribute_type', flat=True)
-
-    # Check if the attribute type from the error dictionary is present in destination attributes
-    if error_dict['attribute_type'].upper() in distinct_destination_attributes:
-        # Fetch the destination attribute based on destination ID and attribute type
-        destination_attribute = DestinationAttribute.objects.filter(
-            destination_id=error_dict['destination_id'],
-            attribute_type=error_dict['attribute_type'].upper()
-        ).first()
-
-        # If the destination attribute is found, return a dictionary with 'destination_id' and 'value'
-        if destination_attribute:
-            return {
-                'destination_id': error_dict['destination_id'],
-                'value': destination_attribute.value
-            }
+    # If the destination attribute is found, return a dictionary with 'destination_id' and 'value'
+    if destination_attribute:
+        return {
+            'destination_id': error_dict['destination_id'],
+            'value': destination_attribute.value
+        }
 
     # If no match is found or destination attribute is not active, return an empty dictionary
     return {}
