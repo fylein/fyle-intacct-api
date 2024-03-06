@@ -7,10 +7,12 @@ from rest_framework.response import Response
 
 from django_q.tasks import Chain
 
+from django_filters.rest_framework import DjangoFilterBackend
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
 from fyle.platform.exceptions import PlatformError
 from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
+from fyle_intacct_api.utils import LookupFieldMixin
 
 from fyle_integrations_platform_connector import PlatformConnector
 
@@ -18,7 +20,7 @@ from apps.workspaces.models import FyleCredential, Configuration, Workspace
 from apps.tasks.models import TaskLog
 
 from .tasks import create_expense_groups, schedule_expense_group_creation, get_task_log_and_fund_source
-from .helpers import check_interval_and_sync_dimension, sync_dimensions
+from .helpers import check_interval_and_sync_dimension, sync_dimensions, ExpenseSearchFilter, ExpenseGroupSearchFilter
 from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
 from .serializers import (
     ExpenseFilterSerializer, ExpenseGroupExpenseSerializer, ExpenseGroupSerializer,
@@ -28,53 +30,14 @@ from .serializers import (
 from .queue import async_import_and_export_expenses
 
 
-class ExpenseGroupView(generics.ListCreateAPIView):
+class ExpenseGroupView(LookupFieldMixin, generics.ListCreateAPIView):
     """
     List Fyle Expenses
     """
+    queryset = ExpenseGroup.objects.all().order_by("-updated_at").distinct()
     serializer_class = ExpenseGroupSerializer
-
-    def get_queryset(self):
-        state = self.request.query_params.get('state', 'ALL')
-        start_date = self.request.query_params.get('start_date', None)
-        end_date = self.request.query_params.get('end_date', None)
-        expense_group_ids = self.request.query_params.get('expense_group_ids', None)
-        exported_at = self.request.query_params.get('exported_at', None)
-
-        if expense_group_ids:
-            return ExpenseGroup.objects.filter(
-                workspace_id=self.kwargs['workspace_id'],
-                id__in=expense_group_ids.split(',')
-            )
-
-        if state == 'ALL':
-            return ExpenseGroup.objects.filter(workspace_id=self.kwargs['workspace_id']).order_by('-updated_at')
-
-        if state == 'FAILED':
-            return ExpenseGroup.objects.filter(tasklog__status='FAILED',
-                                               workspace_id=self.kwargs['workspace_id']).order_by('-updated_at')
-
-        elif state == 'COMPLETE':
-            filters = {
-                'workspace_id': self.kwargs['workspace_id'],
-                'tasklog__status': 'COMPLETE'
-            }
-
-            if start_date and end_date:
-                filters['exported_at__range'] = [start_date, end_date]
-
-            if exported_at:
-                filters['exported_at__gte'] = exported_at
-            return ExpenseGroup.objects.filter(**filters).order_by('-exported_at')
-
-        elif state == 'READY':
-            return ExpenseGroup.objects.filter(
-                bill__id__isnull=True,
-                journalentry__id__isnull=True,
-                expensereport__id__isnull=True,
-                chargecardtransaction__id__isnull=True,
-                workspace_id=self.kwargs['workspace_id']
-            ).order_by('-updated_at')
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = ExpenseGroupSearchFilter
 
     def post(self, request, *args, **kwargs):
         """
@@ -421,29 +384,16 @@ class ExpenseFilterView(generics.ListCreateAPIView, generics.DestroyAPIView):
         })
 
 
-class ExpenseView(generics.ListAPIView):
+class ExpenseView(LookupFieldMixin, generics.ListAPIView):
     """
     Expense view
     """
 
+    queryset = Expense.objects.all().order_by("-updated_at").distinct()
     serializer_class = ExpenseSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = ExpenseSearchFilter
 
-    def get_queryset(self):
-        start_date = self.request.query_params.get('start_date', None)
-        end_date = self.request.query_params.get('end_date', None)
-        org_id = Workspace.objects.get(id=self.kwargs['workspace_id']).fyle_org_id
-
-        filters = {
-            'org_id': org_id,
-            'is_skipped': True
-        }
-
-        if start_date and end_date:
-            filters['updated_at__range'] = [start_date, end_date]
-
-        queryset = Expense.objects.filter(**filters).order_by('-updated_at')
-
-        return queryset
 
 
 class CustomFieldView(generics.RetrieveAPIView):
