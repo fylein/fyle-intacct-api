@@ -105,7 +105,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
                     last_paid_at=last_synced_at if expense_group_settings.expense_state == 'PAID' else None
                 ))
 
-            if expenses:
+            if workspace.last_synced_at or expenses:
                 workspace.last_synced_at = datetime.now()
                 reimbursable_expense_count += len(expenses)
 
@@ -119,7 +119,7 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
                     last_paid_at=ccc_last_synced_at if expense_group_settings.ccc_expense_state == 'PAID' else None
                 ))
 
-            if len(expenses) != reimbursable_expense_count:
+            if workspace.ccc_last_synced_at or len(expenses) != reimbursable_expense_count:
                 workspace.ccc_last_synced_at = datetime.now()
 
             workspace.save()
