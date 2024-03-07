@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.5 (Debian 15.5-1.pgdg120+1)
--- Dumped by pg_dump version 15.6 (Debian 15.6-1.pgdg120+1)
+-- Dumped from database version 15.6 (Debian 15.6-1.pgdg120+2)
+-- Dumped by pg_dump version 15.6 (Debian 15.6-1.pgdg120+2)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -800,7 +800,10 @@ CREATE TABLE public.errors (
     updated_at timestamp with time zone NOT NULL,
     expense_attribute_id integer,
     expense_group_id integer,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    article_link text,
+    attribute_type character varying(255),
+    is_parsed boolean NOT NULL
 );
 
 
@@ -4041,6 +4044,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 173	django_q	0015_alter_schedule_schedule_type	2024-02-12 12:17:55.497816+00
 174	django_q	0016_schedule_intended_date_kwarg	2024-02-12 12:17:55.501763+00
 175	django_q	0017_task_cluster_alter	2024-02-12 12:17:55.51124+00
+176	tasks	0007_auto_20240305_0840	2024-03-05 08:41:17.389832+00
 \.
 
 
@@ -4135,7 +4139,7 @@ COPY public.employee_mappings (id, created_at, updated_at, destination_card_acco
 -- Data for Name: errors; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id) FROM stdin;
+COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed) FROM stdin;
 \.
 
 
@@ -8040,7 +8044,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 49, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 175, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 176, true);
 
 
 --
