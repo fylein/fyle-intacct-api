@@ -46,7 +46,6 @@ from apps.sage_intacct.models import (
         SageIntacctReimbursementLineitem
     )
 from .utils import SageIntacctConnector
-from .errors.helpers import error_matcher, get_entity_values, replace_destination_id_with_values, remove_support_id
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -259,9 +258,6 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     logger.info(exception.response)
     
     errors = []
-    is_parsed = False
-    article_link = None
-    attribute_type = None
     error_title = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
     error_msg = 'Something unexpected happened with the workspace'
     if 'error' in exception.response:
@@ -300,17 +296,6 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     else:
         errors.append(exception.response)
 
-    error_msg = remove_support_id(error_msg)
-    error_dict = error_matcher(error_msg)
-    if error_dict:
-        error_entity_values = get_entity_values(error_dict, expense_group.workspace_id)
-        if error_entity_values:
-            error_msg = replace_destination_id_with_values(error_msg, error_entity_values)
-            is_parsed = True
-            article_link = error_dict['article_link']
-            attribute_type = error_dict['attribute_type']
-
-
     Error.objects.update_or_create(
             workspace_id=expense_group.workspace_id,
             expense_group=expense_group,
@@ -318,10 +303,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
                 'type': 'INTACCT_ERROR',
                 'error_title': error_title,
                 'error_detail': error_msg,
-                'is_resolved': False,
-                'is_parsed': is_parsed,
-                'attribute_type': attribute_type,
-                'article_link': article_link
+                'is_resolved': False
             }
         )
 

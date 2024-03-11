@@ -67,9 +67,6 @@ class Error(models.Model):
         null=True, help_text='Reference to Expense Attribute'
     )
     is_resolved = models.BooleanField(default=False, help_text='Is resolved')
-    is_parsed = models.BooleanField(default=False, help_text='Is parsed')
-    attribute_type = models.CharField(max_length=255, null=True, blank=True, help_text='Error Attribute type')
-    article_link = models.TextField(null=True, blank=True, help_text='Article link')
     error_title = models.CharField(max_length=255, help_text='Error title')
     error_detail = models.TextField(help_text='Error detail')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
