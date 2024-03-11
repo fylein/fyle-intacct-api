@@ -83,7 +83,7 @@ def test_handle_intacct_errors(db):
                     {
                         'errorno': 'BL01001973', 
                         'description': None, 
-                        'description2': "Invalid Project '1' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]", 
+                        'description2': "Invalid Project '10064' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]", 
                         'correction': None
                     }, 
                     {
@@ -105,10 +105,16 @@ def test_handle_intacct_errors(db):
         task_log=task_log,
         export_type='Bill'
     )
+    error: Error = Error.objects.filter(workspace_id=1).first()
+
+    assert error.error_detail == "Invalid Project '10064 => Direct Mail Campaign' specified."
+    assert error.is_parsed == True
+    assert error.attribute_type == 'PROJECT'
+    assert error.article_link == None
     
     assert len(task_log.sage_intacct_errors) == 3
     assert task_log.sage_intacct_errors[0]['short_description'] == 'Bill error'
-    assert task_log.sage_intacct_errors[0]['long_description'] == 'Invalid Project \'1\' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]'
+    assert task_log.sage_intacct_errors[0]['long_description'] == 'Invalid Project \'10064\' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]'
 
     handle_sage_intacct_errors(
         exception=WrongParamsError(
