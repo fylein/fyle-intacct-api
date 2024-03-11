@@ -67,9 +67,9 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
         ws_schedule.start_datetime = datetime.now()
         ws_schedule.interval_hours = hours
         ws_schedule.emails_selected = emails_selected
-        
+
         if email_added:
-            ws_schedule.additional_email_options = email_added
+            ws_schedule.additional_email_options.append(email_added)
 
         # create next run by adding hours to current time
         next_run = datetime.now() + timedelta(hours=hours)
@@ -144,7 +144,7 @@ def run_email_notification(workspace_id):
     workspace = Workspace.objects.get(id=workspace_id)
     admin_data = WorkspaceSchedule.objects.get(workspace_id=workspace_id)
     try:
-        intacct = SageIntacctCredential.objects.get(workspace=workspace)
+        SageIntacctCredential.objects.get(workspace=workspace)
     except SageIntacctCredential.DoesNotExist:
         logger.info('SageIntacct Credentials does not exist - %s', workspace_id)
         return
@@ -153,7 +153,7 @@ def run_email_notification(workspace_id):
         if ws_schedule.enabled:
             for admin_email in admin_data.emails_selected:
                 attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value=admin_email, attribute_type='EMPLOYEE').first()
-                
+
                 admin_name = 'Admin'
                 if attribute:
                     admin_name = attribute.detail['full_name']
@@ -172,7 +172,6 @@ def run_email_notification(workspace_id):
                         'name': admin_name,
                         'errors': len(task_logs),
                         'fyle_company': workspace.name,
-                        'intacct_company': intacct.si_company_name,
                         'workspace_id': workspace_id,
                         'export_time': export_time.date() if export_time else datetime.now(),
                         'year': date.today().year,
