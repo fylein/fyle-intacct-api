@@ -131,7 +131,7 @@ def update_failed_expenses(failed_expenses: List[Expense], is_mapping_error: boo
                         expense.expense_id,
                         'ERROR',
                         error_type,
-                        '{}/workspaces/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
+                        '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
                         False
                     )
                 )
