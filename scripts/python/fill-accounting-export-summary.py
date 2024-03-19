@@ -50,7 +50,7 @@ for workspace in workspaces:
             url = None
             if task_log.status == 'FAILED' or task_log.status == 'FATAL':
                 error_type = 'ACCOUNTING_INTEGRATION_ERROR' if task_log.sage_intacct_errors else 'MAPPING'
-                url = '{}/workspaces/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL)
+                url = '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL)
             else:
                 if expense_group.response_logs and 'url_id' in expense_group.response_logs:
                     export_id = expense_group.response_logs['url_id']
