@@ -256,8 +256,8 @@ def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup):
 
 
 def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
-    logger.info(exception.response)
-    
+    logger.info(exception.__dict__)
+
     errors = []
     is_parsed = False
     article_link = None
