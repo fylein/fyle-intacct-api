@@ -178,7 +178,8 @@ def run_email_notification(workspace_id):
                         'year': date.today().year,
                         'app_url': "{0}/app/settings/#/integrations/native_apps?integrationIframeTarget=integrations/intacct".format(settings.FYLE_APP_URL),
                         'fyle_url': settings.FYLE_EXPENSE_URL,
-                        'fyle_integration_url': settings.FYLE_INTEGRATION_URL
+                        'fyle_integration_url': settings.FYLE_INTEGRATION_URL,
+                        'sage_intacct_company_id': intacct.si_company_id
                     }
                     message = render_to_string("mail_template.html", context)
 
