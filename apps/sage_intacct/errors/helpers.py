@@ -47,7 +47,8 @@ def get_entity_values(error_dict, workspace_id):
     # Fetch the destination attribute based on destination ID and attribute type
     destination_attribute = DestinationAttribute.objects.filter(
         destination_id=error_dict['destination_id'],
-        attribute_type=error_dict['attribute_type'].upper()
+        attribute_type=error_dict['attribute_type'].upper(),
+        workspace_id=workspace_id
     ).first()
 
     # If the destination attribute is found, return a dictionary with 'destination_id' and 'value'
