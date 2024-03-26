@@ -143,7 +143,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         general_mappings = validated.pop('general_mappings')
         workspace_id = instance.id
 
-        Configuration.objects.update_or_create(
+        configuration_instance, _ = Configuration.objects.update_or_create(
             workspace_id=workspace_id,
             defaults={
                 'auto_map_employees': configurations['auto_map_employees'],
@@ -156,9 +156,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
 
         export_trigger = ExportSettingsTrigger(
             workspace_id=workspace_id,
-            configuration=Configuration.objects.filter(
-                workspace_id=workspace_id
-            ).first()
+            configuration=configuration_instance
         )
 
         export_trigger.post_save_configurations()
