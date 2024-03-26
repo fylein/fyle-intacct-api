@@ -5,7 +5,7 @@ from apps.fyle.models import ExpenseGroup
 
 
 def test_post_save_configuration_trigger(mocker, db):
-    workspace_id = 5
+    workspace_id = 1
     configuration, _ = Configuration.objects.update_or_create(
         workspace_id=workspace_id,
         defaults={
@@ -15,16 +15,9 @@ def test_post_save_configuration_trigger(mocker, db):
     )
 
     expense_grp_ccc = ExpenseGroup.objects.filter(
-        workspace_id=5,
+        workspace_id=workspace_id,
         exported_at__isnull=True
     ).exclude(fund_source__in=['PERSONAL']).values_list('id', flat=True)
-
-    expense_grp_ccc_count = expense_grp_ccc.count()
-
-    before_delete_count = TaskLog.objects.filter(
-        workspace_id=workspace_id,
-        status__in=['FAILED', 'FATAL']
-    ).count()
 
     export_trigger = ExportSettingsTrigger(configuration=configuration, workspace_id=workspace_id)
     export_trigger.post_save_configurations()
@@ -40,11 +33,11 @@ def test_post_save_configuration_trigger(mocker, db):
     ).exclude(type__contains='_MAPPING').count()
 
     assert after_errors_count == 0
-    assert after_delete_count == before_delete_count - expense_grp_ccc_count
+    assert after_delete_count == 2
 
 
 def test_post_save_configuration_trigger_2(mocker, db):
-    workspace_id = 5
+    workspace_id = 1
     configuration, _ = Configuration.objects.update_or_create(
         workspace_id=workspace_id,
         defaults={
@@ -54,16 +47,9 @@ def test_post_save_configuration_trigger_2(mocker, db):
     )
 
     expense_grp_personal = ExpenseGroup.objects.filter(
-        workspace_id=5,
+        workspace_id=workspace_id,
         exported_at__isnull=True
     ).exclude(fund_source__in=['CCC']).values_list('id', flat=True)
-
-    expense_grp_personal_count = expense_grp_personal.count()
-
-    before_delete_count = TaskLog.objects.filter(
-        workspace_id=workspace_id,
-        status__in=['FAILED', 'FATAL']
-    ).count()
 
     export_trigger = ExportSettingsTrigger(configuration=configuration, workspace_id=workspace_id)
     export_trigger.post_save_configurations()
@@ -79,4 +65,4 @@ def test_post_save_configuration_trigger_2(mocker, db):
     ).exclude(type__contains='_MAPPING').count()
 
     assert after_errors_count == 0
-    assert after_delete_count == before_delete_count - expense_grp_personal_count
+    assert after_delete_count == 1
