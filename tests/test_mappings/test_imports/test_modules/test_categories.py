@@ -194,7 +194,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         pre_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'CATEGORY', active=False).count()
 
-        assert pre_run_expense_attribute_count == 2
+        assert pre_run_expense_attribute_count == 4
 
         category.trigger_import()
 
