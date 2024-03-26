@@ -170,7 +170,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         post_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='CATEGORY').count()
 
-        assert post_run_expense_attribute_disabled_count ==  pre_run_expense_attribute_disabled_count + category_data['create_new_auto_create_categories_expense_attributes_3'][0]['count']
+        assert post_run_expense_attribute_disabled_count ==  pre_run_expense_attribute_disabled_count + 4
 
 
     #not re-enable case for project import

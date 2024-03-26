@@ -9395,7 +9395,7 @@ category_data = {
     ],
     "create_new_auto_create_categories_expense_attributes_3" : [
         {
-            'count':2,
+            'count':30,
             'data':[
                 {
                     'code':'labhvam',
@@ -9429,6 +9429,528 @@ category_data = {
                     'system_category':None,
                     'updated_at':'2023-09-04T17:58:21.568622+00:00'
                 },
+                {
+                    'code':'Airfare',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Airfare',
+                    'id':269476,
+                    'is_enabled':True,
+                    'name':'Airfare',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'Cell Phone',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Cell Phone',
+                    'id':269477,
+                    'is_enabled':True,
+                    'name':'Cell Phone',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'Ground Transportation/Parking',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Ground Transportation-Parking',
+                    'id':269478,
+                    'is_enabled':True,
+                    'name':'Ground Transportation-Parking',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'Hotel/Lodging',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Hotel-Lodging',
+                    'id':269479,
+                    'is_enabled':True,
+                    'name':'Hotel-Lodging',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'Internet',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Internet',
+                    'id':269480,
+                    'is_enabled':True,
+                    'name':'Internet',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'labhvam',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'labhvam',
+                    'id':269481,
+                    'is_enabled':True,
+                    'name':'labhvam',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'Meals',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Meals',
+                    'id':269482,
+                    'is_enabled':True,
+                    'name':'Meals',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'Naruto',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Naruto',
+                    'id':269483,
+                    'is_enabled':True,
+                    'name':'Naruto',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'Sasuke',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'Sasuke',
+                    'id':269484,
+                    'is_enabled':True,
+                    'name':'Sasuke',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':'subham',
+                    'created_at':'2023-09-04T10:17:24.971507+00:00',
+                    'display_name':'subham',
+                    'id':269485,
+                    'is_enabled':True,
+                    'name':'subham',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':None,
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':None,
+                    'updated_at':'2023-09-04T10:17:24.971507+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Train',
+                    'id':268774,
+                    'is_enabled':True,
+                    'name':'Train',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323490,
+                        323492,
+                        323493,
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Train',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Fuel',
+                    'id':268775,
+                    'is_enabled':True,
+                    'name':'Fuel',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323486,
+                        323489,
+                        323491,
+                        323492
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Fuel',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Office Supplies',
+                    'id':268776,
+                    'is_enabled':True,
+                    'name':'Office Supplies',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323487,
+                        323488,
+                        323490,
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Office Supplies',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Utility',
+                    'id':268777,
+                    'is_enabled':True,
+                    'name':'Utility',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323490,
+                        323491
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Utility',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Entertainment',
+                    'id':268778,
+                    'is_enabled':True,
+                    'name':'Entertainment',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323486,
+                        323488,
+                        323490
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Entertainment',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Others',
+                    'id':268779,
+                    'is_enabled':True,
+                    'name':'Others',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323490,
+                        323493,
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Others',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Mileage',
+                    'id':268780,
+                    'is_enabled':True,
+                    'name':'Mileage',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323485,
+                        323490,
+                        323491
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Mileage',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Food',
+                    'id':268781,
+                    'is_enabled':True,
+                    'name':'Food',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323486,
+                        323489,
+                        323492
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Food',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Bus',
+                    'id':268782,
+                    'is_enabled':True,
+                    'name':'Bus',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323486,
+                        323490,
+                        323492,
+                        323493
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Bus',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Taxi',
+                    'id':268783,
+                    'is_enabled':True,
+                    'name':'Taxi',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323488,
+                        323490,
+                        323491
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Taxi',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Mail',
+                    'id':268784,
+                    'is_enabled':True,
+                    'name':'Mail',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323488,
+                        323490,
+                        323492,
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Mail',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Lodging',
+                    'id':268785,
+                    'is_enabled':True,
+                    'name':'Lodging',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323488,
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Lodging',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Airlines',
+                    'id':268786,
+                    'is_enabled':True,
+                    'name':'Airlines',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323488,
+                        323490,
+                        323491,
+                        323492
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Airlines',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Software',
+                    'id':268787,
+                    'is_enabled':True,
+                    'name':'Software',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323486,
+                        323488,
+                        323489,
+                        323493
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Software',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Parking',
+                    'id':268788,
+                    'is_enabled':True,
+                    'name':'Parking',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323488,
+                        323491,
+                        323493
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Parking',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Unspecified',
+                    'id':268789,
+                    'is_enabled':True,
+                    'name':'Unspecified',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323486,
+                        323489,
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Unspecified',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Per Diem',
+                    'id':268790,
+                    'is_enabled':True,
+                    'name':'Per Diem',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Per Diem',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                },
+                {
+                    'code':None,
+                    'created_at':'2023-08-30T18:58:09.203161+00:00',
+                    'display_name':'Professional Services',
+                    'id':268791,
+                    'is_enabled':True,
+                    'name':'Professional Services',
+                    'org_id':'orwimNcVyYsp',
+                    'restricted_project_ids':[
+                        323488,
+                        323494
+                    ],
+                    'restricted_spender_user_ids':[
+                        
+                    ],
+                    'sub_category':None,
+                    'system_category':'Professional Services',
+                    'updated_at':'2023-08-30T18:58:09.203161+00:00'
+                }
             ],
             'offset':0
         }

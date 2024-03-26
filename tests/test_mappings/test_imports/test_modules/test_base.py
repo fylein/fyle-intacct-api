@@ -220,7 +220,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         pre_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='PROJECT').count()
 
-        assert pre_run_expense_attribute_disabled_count == 2
+        assert pre_run_expense_attribute_disabled_count == 4
 
         # This confirms that mapping is present and both expense_attribute and destination_attribute are active
         assert mapping.source_id == expense_attribute.id
