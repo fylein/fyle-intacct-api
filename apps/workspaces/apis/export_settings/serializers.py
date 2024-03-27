@@ -5,7 +5,7 @@ from rest_framework import serializers
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroupSettings
-
+from apps.workspaces.apis.export_settings.triggers import ExportSettingsTrigger
 
 class ReadWriteSerializerMethodField(serializers.SerializerMethodField):
     """
@@ -143,7 +143,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         general_mappings = validated.pop('general_mappings')
         workspace_id = instance.id
 
-        Configuration.objects.update_or_create(
+        configuration_instance, _ = Configuration.objects.update_or_create(
             workspace_id=workspace_id,
             defaults={
                 'auto_map_employees': configurations['auto_map_employees'],
@@ -153,6 +153,13 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
                 'use_merchant_in_journal_line': configurations['use_merchant_in_journal_line'] if 'use_merchant_in_journal_line' in configurations else False
             }
         )
+
+        export_trigger = ExportSettingsTrigger(
+            workspace_id=workspace_id,
+            configuration=configuration_instance
+        )
+
+        export_trigger.post_save_configurations()
 
         if not expense_group_settings['reimbursable_expense_group_fields']:
             expense_group_settings['reimbursable_expense_group_fields'] = ['employee_email', 'report_id', 'fund_source', 'claim_number']
@@ -165,7 +172,6 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
 
         if not expense_group_settings['ccc_export_date_type']:
             expense_group_settings['ccc_export_date_type'] = 'current_date'
-
 
         ExpenseGroupSettings.update_expense_group_settings(expense_group_settings, workspace_id=workspace_id)
 
