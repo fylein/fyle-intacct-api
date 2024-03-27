@@ -338,7 +338,7 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
                 chain.run()
 
 
-            sync_dimensions(fyle_credentials, workspace.id)
+            sync_dimensions(fyle_credentials)
 
             workspace.source_synced_at = datetime.now()
             workspace.save(update_fields=['source_synced_at'])
