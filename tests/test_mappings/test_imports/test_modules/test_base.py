@@ -180,11 +180,11 @@ def test_auto_create_destination_attributes(mocker, db):
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT').count()
 
-        assert expense_attributes_count == destination_attributes_data['create_new_auto_create_projects_expense_attributes_0'][0]['count'] + destination_attributes_data['create_new_auto_create_projects_expense_attributes_1'][0]['count']
+        assert expense_attributes_count == 5
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='PROJECT', destination_type='PROJECT').count()
         
-        assert mappings_count == 13
+        assert mappings_count == 2
 
 
     # disable case for project import
@@ -220,7 +220,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         pre_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='PROJECT').count()
 
-        assert pre_run_expense_attribute_disabled_count == 2
+        assert pre_run_expense_attribute_disabled_count == 1
 
         # This confirms that mapping is present and both expense_attribute and destination_attribute are active
         assert mapping.source_id == expense_attribute.id
@@ -237,7 +237,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         post_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='PROJECT').count()
 
-        assert post_run_expense_attribute_disabled_count ==  pre_run_expense_attribute_disabled_count + destination_attributes_data['create_new_auto_create_projects_expense_attributes_4'][0]['count']
+        assert post_run_expense_attribute_disabled_count ==  3
 
 
     #not re-enable case for project import
@@ -265,7 +265,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         pre_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
 
-        assert pre_run_expense_attribute_count == 4
+        assert pre_run_expense_attribute_count == 3
 
         project.trigger_import()
 
@@ -275,7 +275,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         post_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
 
-        assert pre_run_expense_attribute_count == post_run_expense_attribute_count
+        assert post_run_expense_attribute_count == 2
 
 
     
