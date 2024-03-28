@@ -11,8 +11,8 @@ djangorestframework==3.11.2
 django-sendgrid-v5==1.2.0
 future==0.18.2
 fyle==0.36.1
-fyle_accounting_mappings==1.31.5
-fyle-integrations-platform-connector==1.36.3
+fyle-accounting-mappings==1.32.1
+fyle-integrations-platform-connector==1.37.1
 fyle-rest-auth==1.7.1
 gevent==23.9.1
 gunicorn==20.1.0
