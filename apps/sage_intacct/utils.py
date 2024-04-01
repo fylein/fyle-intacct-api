@@ -987,7 +987,11 @@ class SageIntacctConnector:
                 },
             }
 
-            charge_card_transaction_lineitem_payload.append(expense)
+            for dimension in lineitem.user_defined_dimensions:
+                for name, value in dimension.items():
+                    expense[name] = value
+
+            charge_card_transaction_payload.append(expense)
 
         transaction_date = datetime.strptime(charge_card_transaction.transaction_date, '%Y-%m-%dT%H:%M:%S')
         charge_card_transaction_payload = {
