@@ -1110,8 +1110,6 @@ class ChargeCardTransactionLineitem(models.Model):
         except GeneralMapping.DoesNotExist:
             general_mappings = None
 
-        user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
-
         charge_card_transaction_lineitem_objects = []
 
         for lineitem in expenses:
@@ -1137,6 +1135,8 @@ class ChargeCardTransactionLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+
+            user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             if dependent_field_setting:
                 task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
