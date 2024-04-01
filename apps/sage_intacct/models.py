@@ -1077,6 +1077,7 @@ class ChargeCardTransactionLineitem(models.Model):
     task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
     cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type Id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
+    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Charge Card Transaction amount')
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
@@ -1135,6 +1136,8 @@ class ChargeCardTransactionLineitem(models.Model):
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
+            user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
+
             if dependent_field_setting:
                 task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
                 cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id)
@@ -1157,7 +1160,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'user_defined_dimensions': user_defined_dimensions
                 }
             )
 
