@@ -957,7 +957,10 @@ class SageIntacctConnector:
             expense_link = self.get_expense_link(lineitem)
 
             tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
-
+            customfield = {
+                'customfieldname': 'FYLE_EXPENSE_URL',
+                'customfieldvalue': expense_link
+            }
             expense = {
                 'glaccountno': lineitem.gl_account_number,
                 'description': lineitem.memo,
@@ -987,6 +990,14 @@ class SageIntacctConnector:
                 },
             }
 
+            for dimension in lineitem.user_defined_dimensions:
+                for name, value in dimension.items():
+                    customfield['customfieldname'] = name
+                    customfield['customfieldvalue'] = value
+                    expense['customfields'].append(customfield)
+
+            charge_card_transaction_lineitem_payload.append(expense)
+
         transaction_date = datetime.strptime(charge_card_transaction.transaction_date, '%Y-%m-%dT%H:%M:%S')
         charge_card_transaction_payload = {
             'chargecardid': charge_card_transaction.charge_card_id,
@@ -1005,12 +1016,6 @@ class SageIntacctConnector:
                 'ccpayitem': charge_card_transaction_lineitem_payload
             }
         }
-
-        for dimension in lineitem.user_defined_dimensions:
-            for name, value in dimension.items():
-                expense[name] = value
-
-        charge_card_transaction_payload['ccpayitems'].append(expense)
 
         logger.info("| Payload for the charge card transaction creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, CHARGE_CARD_TRANSACTION_PAYLOAD = {}}}".format(self.workspace_id, charge_card_transaction.expense_group.id, charge_card_transaction_payload))
         return charge_card_transaction_payload
