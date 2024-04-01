@@ -831,6 +831,13 @@ class SageIntacctConnector:
                 }
             }
 
+            for dimension in lineitem.user_defined_dimensions:
+                customfield = {
+                    'customfieldname': list(dimension.keys())[0],
+                    'customfieldvalue': list(dimension.values())[0]
+                }
+                expense['customfields']['customfield'].append(customfield)
+
             expense_payload.append(expense)
 
         transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
