@@ -1077,6 +1077,7 @@ class ChargeCardTransactionLineitem(models.Model):
     task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
     cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type Id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
+    user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
     amount = models.FloatField(help_text='Charge Card Transaction amount')
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
@@ -1108,6 +1109,8 @@ class ChargeCardTransactionLineitem(models.Model):
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
             general_mappings = None
+
+        user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
         charge_card_transaction_lineitem_objects = []
 
@@ -1157,7 +1160,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'user_defined_dimensions': user_defined_dimensions
                 }
             )
 
