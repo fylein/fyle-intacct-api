@@ -318,7 +318,7 @@ def test_construct_charge_card_transaction(create_charge_card_transaction, db):
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
     charge_card_transaction,charge_card_transaction_lineitems = create_charge_card_transaction
-    charge_card_transaction_lineitems[0].user_defined_dimensions = [{'CLASS': 'sample'}]
+    charge_card_transaction_lineitems[0].user_defined_dimensions = [{'USERDIM1': 'C000013'}]
     charge_card_transaction_object = sage_intacct_connection._SageIntacctConnector__construct_charge_card_transaction(charge_card_transaction=charge_card_transaction, charge_card_transaction_lineitems=charge_card_transaction_lineitems)
 
     assert dict_compare_keys(charge_card_transaction_object, data['charge_card_transaction_payload']) == [], 'construct credit_card_purchase_payload entry api return diffs in keys'
