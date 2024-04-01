@@ -957,10 +957,6 @@ class SageIntacctConnector:
             expense_link = self.get_expense_link(lineitem)
 
             tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
-            customfield = {
-                'customfieldname': 'FYLE_EXPENSE_URL',
-                'customfieldvalue': expense_link
-            }
             expense = {
                 'glaccountno': lineitem.gl_account_number,
                 'description': lineitem.memo,
@@ -991,10 +987,11 @@ class SageIntacctConnector:
             }
 
             for dimension in lineitem.user_defined_dimensions:
-                for name, value in dimension.items():
-                    customfield[name] = 'FYLE_EXPENSE_URL'
-                    customfield[value] = expense_link
-                    expense['customfields'].append(customfield)
+                customfield = {
+                    'customfieldname': list(dimension.keys())[0],
+                    'customfieldvalue': list(dimension.values())[0]
+                }
+                expense['customfields']['customfield'].append(customfield)
 
             charge_card_transaction_lineitem_payload.append(expense)
 
