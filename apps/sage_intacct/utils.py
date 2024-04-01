@@ -992,8 +992,8 @@ class SageIntacctConnector:
 
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
-                    customfield['customfieldname'] = name
-                    customfield['customfieldvalue'] = value
+                    customfield[name] = 'FYLE_EXPENSE_URL'
+                    customfield[value] = expense_link
                     expense['customfields'].append(customfield)
 
             charge_card_transaction_lineitem_payload.append(expense)
