@@ -232,7 +232,7 @@ def auto_import_and_map_fyle_fields(workspace_id):
     chain = Chain()
 
     if project_mapping and dependent_fields:
-        chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id, q_options={'cluster': 'import', 'timeout': 45000})
+        chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id, q_options={'cluster': 'import', 'timeout': 27000})
 
     if chain.length() > 0:
         chain.run()
