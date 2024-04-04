@@ -831,6 +831,13 @@ class SageIntacctConnector:
                 }
             }
 
+            for dimension in lineitem.user_defined_dimensions:
+                customfield = {
+                    'customfieldname': list(dimension.keys())[0],
+                    'customfieldvalue': list(dimension.values())[0]
+                }
+                expense['customfields']['customfield'].append(customfield)
+
             expense_payload.append(expense)
 
         transaction_date = datetime.strptime(expense_report.transaction_date, '%Y-%m-%dT%H:%M:%S')
@@ -957,7 +964,6 @@ class SageIntacctConnector:
             expense_link = self.get_expense_link(lineitem)
 
             tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
-
             expense = {
                 'glaccountno': lineitem.gl_account_number,
                 'description': lineitem.memo,
@@ -986,6 +992,13 @@ class SageIntacctConnector:
                     }
                 },
             }
+
+            for dimension in lineitem.user_defined_dimensions:
+                customfield = {
+                    'customfieldname': list(dimension.keys())[0],
+                    'customfieldvalue': list(dimension.values())[0]
+                }
+                expense['customfields']['customfield'].append(customfield)
 
             charge_card_transaction_lineitem_payload.append(expense)
 
