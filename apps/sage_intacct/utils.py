@@ -277,17 +277,17 @@ class SageIntacctConnector:
             'value': 'active'
         }
 
-        dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id, last_successful_import_at__isnull=False).first()
+        dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id).first()
 
-        if dependent_field_setting:
-            # subtracting 1 day from the last_successful_import_at since time is not involved
-            latest_synced_timestamp = dependent_field_setting.last_successful_import_at - timedelta(days=1)
+        if dependent_field_setting and dependent_field_setting.last_synced_at:
+            # subtracting 1 day from the last_synced_at since time is not involved
+            latest_synced_timestamp = dependent_field_setting.last_synced_at - timedelta(days=1)
             args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
 
         cost_types_generator = self.connection.cost_types.get_all_generator(**args)
 
         for cost_types in cost_types_generator:
-            CostType.bulk_create_or_update(cost_types, self.workspace_id)
+            CostType.bulk_create_or_update(cost_types, self.workspace_id, dependent_field_setting)
 
 
     def sync_projects(self):

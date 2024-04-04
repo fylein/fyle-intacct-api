@@ -84,7 +84,7 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
 
 
 def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
-    tasks = CostType.objects.filter(**filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
+    tasks = CostType.objects.filter(is_imported=False, **filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
 
     for task in tasks:
         payload = [
@@ -100,6 +100,7 @@ def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, pla
         if payload:
             sleep(0.2)
             platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
+            CostType.objects.filter(task_name=task['task_name'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True)
 
 
 def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None):
