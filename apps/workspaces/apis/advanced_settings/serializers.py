@@ -174,9 +174,7 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
             instance.onboarding_state = 'COMPLETE'
             instance.save()
 
-            # To Do: Fix Later for BRAND_ID 'fyle'
-            if settings.BRAND_ID != 'fyle':
-                AdvancedConfigurationsTriggers.post_to_integration_settings(instance.id, True)
+            AdvancedConfigurationsTriggers.post_to_integration_settings(instance.id, True)
 
         return instance
 
