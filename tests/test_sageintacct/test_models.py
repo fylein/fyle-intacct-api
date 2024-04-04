@@ -810,7 +810,7 @@ def test_get_task_id_or_none(db, create_expense_group_expense, create_cost_type,
     assert task_id == 'task1'
 
 
-def test_cost_type_bulk_create_or_update(db, create_cost_type):
+def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_field_setting):
     cost_types = [
         {
             'RECORDNO': '2342341',
@@ -837,7 +837,7 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type):
             'TASKID': 'task1'
         }
     ]
-    CostType.bulk_create_or_update(cost_types, 1)
+    CostType.bulk_create_or_update(cost_types, 1, create_dependent_field_setting)
 
     assert CostType.objects.filter(record_number='2342341').exists()
     assert CostType.objects.get(record_number='34234').name == 'costUpdated'
