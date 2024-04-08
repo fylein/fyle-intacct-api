@@ -924,14 +924,15 @@ class JournalEntryLineitem(models.Model):
                     source_employee__value=description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
                 )
-                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
-                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).first()
-                    if vendor:
-                        vendor_id = vendor.destination_id
 
                 employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
 
                 vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
+
+                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
+                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).first()
+                    if vendor:
+                        vendor_id = vendor.destination_id
 
             else:
                 vendor = None
