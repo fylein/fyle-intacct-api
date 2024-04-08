@@ -1373,6 +1373,7 @@ class CostType(models.Model):
     name = models.CharField(max_length=255, help_text='Sage Intacct Cost Type Name')
     when_created = models.CharField(max_length=255, help_text='Sage Intacct When Created', null=True)
     when_modified = models.CharField(max_length=255, help_text='Sage Intacct When Modified', null=True)
+    is_imported = models.BooleanField(default=False, help_text='Is Imported')
     workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
@@ -1382,7 +1383,7 @@ class CostType(models.Model):
         db_table = 'cost_types'
 
     @staticmethod
-    def bulk_create_or_update(cost_types: List[Dict], workspace_id: int):
+    def bulk_create_or_update(cost_types: List[Dict], workspace_id: int, dependent_field_setting: DependentFieldSetting):
         """
         Bulk create or update cost types
         """
@@ -1453,3 +1454,6 @@ class CostType(models.Model):
                 ],
                 batch_size=2000
             )
+
+        dependent_field_setting.last_synced_at = datetime.now()
+        dependent_field_setting.save()

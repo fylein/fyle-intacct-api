@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.6 (Debian 15.6-1.pgdg120+2)
+-- Dumped from database version 15.4 (Debian 15.4-2.pgdg120+1)
 -- Dumped by pg_dump version 15.6 (Debian 15.6-1.pgdg120+2)
 
 SET statement_timeout = 0;
@@ -422,7 +422,8 @@ CREATE TABLE public.cost_types (
     when_modified character varying(255),
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    is_imported boolean NOT NULL
 );
 
 
@@ -467,7 +468,8 @@ CREATE TABLE public.dependent_field_settings (
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     cost_code_placeholder text,
-    cost_type_placeholder text
+    cost_type_placeholder text,
+    last_synced_at timestamp with time zone
 );
 
 
@@ -2883,7 +2885,7 @@ COPY public.configurations (id, reimbursable_expenses_object, created_at, update
 -- Data for Name: cost_types; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.cost_types (id, record_number, project_key, project_id, project_name, task_key, task_id, status, task_name, cost_type_id, name, when_created, when_modified, created_at, updated_at, workspace_id) FROM stdin;
+COPY public.cost_types (id, record_number, project_key, project_id, project_name, task_key, task_id, status, task_name, cost_type_id, name, when_created, when_modified, created_at, updated_at, workspace_id, is_imported) FROM stdin;
 \.
 
 
@@ -2891,7 +2893,7 @@ COPY public.cost_types (id, record_number, project_key, project_id, project_name
 -- Data for Name: dependent_field_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder) FROM stdin;
+COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder, last_synced_at) FROM stdin;
 \.
 
 
@@ -4096,6 +4098,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 176	tasks	0007_auto_20240305_0840	2024-03-05 08:41:17.389832+00
 177	fyle_accounting_mappings	0025_expenseattributesdeletioncache	2024-04-01 07:56:25.110447+00
 178	sage_intacct	0024_chargecardtransactionlineitem_user_defined_dimensions	2024-04-01 07:56:25.131511+00
+179	fyle	0030_dependentfieldsetting_last_synced_at	2024-04-04 12:56:33.059637+00
+180	sage_intacct	0025_costtype_is_imported	2024-04-04 12:56:33.07806+00
 \.
 
 
@@ -8103,7 +8107,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 178, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 180, true);
 
 
 --
