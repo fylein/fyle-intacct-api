@@ -287,7 +287,10 @@ class SageIntacctConnector:
         cost_types_generator = self.connection.cost_types.get_all_generator(**args)
 
         for cost_types in cost_types_generator:
-            CostType.bulk_create_or_update(cost_types, self.workspace_id, dependent_field_setting)
+            CostType.bulk_create_or_update(cost_types, self.workspace_id)
+
+        dependent_field_setting.last_synced_at = datetime.now()
+        dependent_field_setting.save()
 
 
     def sync_projects(self):

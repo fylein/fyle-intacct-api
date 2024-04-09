@@ -1383,7 +1383,7 @@ class CostType(models.Model):
         db_table = 'cost_types'
 
     @staticmethod
-    def bulk_create_or_update(cost_types: List[Dict], workspace_id: int, dependent_field_setting: DependentFieldSetting):
+    def bulk_create_or_update(cost_types: List[Dict], workspace_id: int):
         """
         Bulk create or update cost types
         """
@@ -1454,6 +1454,3 @@ class CostType(models.Model):
                 ],
                 batch_size=2000
             )
-
-        dependent_field_setting.last_synced_at = datetime.now()
-        dependent_field_setting.save()
