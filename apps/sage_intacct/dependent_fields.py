@@ -61,12 +61,13 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
         attribute_type='PROJECT',
         value__in=projects_from_cost_types
     ).values_list('value', flat=True)
+    existing_projects_in_fyle = [project.lower() for project in existing_projects_in_fyle]
 
     for project in projects:
         payload = []
         task_names = []
         for task in project['tasks']:
-            if project['project_name'] in existing_projects_in_fyle:
+            if project['project_name'].lower() in existing_projects_in_fyle:
                 payload.append({
                     'parent_expense_field_id': dependent_field_setting.project_field_id,
                     'parent_expense_field_value': project['project_name'],

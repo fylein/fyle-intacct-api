@@ -837,7 +837,7 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_
             'TASKID': 'task1'
         }
     ]
-    CostType.bulk_create_or_update(cost_types, 1, create_dependent_field_setting)
+    CostType.bulk_create_or_update(cost_types, 1)
 
     assert CostType.objects.filter(record_number='2342341').exists()
     assert CostType.objects.get(record_number='34234').name == 'costUpdated'
