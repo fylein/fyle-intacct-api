@@ -930,7 +930,7 @@ class JournalEntryLineitem(models.Model):
                 vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
                 if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
-                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).first()
+                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).order_by('-id').first()
                     if vendor:
                         vendor_id = vendor.destination_id
 
@@ -941,7 +941,7 @@ class JournalEntryLineitem(models.Model):
                 if merchant:
                     vendor = DestinationAttribute.objects.filter(
                         value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
-                    ).first()
+                    ).order_by('-id').first()
 
                 if not vendor:
                     vendor = DestinationAttribute.objects.filter(
@@ -1035,7 +1035,7 @@ class ChargeCardTransaction(models.Model):
         if merchant:
             vendor = DestinationAttribute.objects.filter(
                 value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
-            ).first()
+            ).order_by('-id').first()
 
         if vendor:
             vendor = vendor.destination_id
