@@ -629,7 +629,11 @@ class SageIntacctConnector:
         vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
 
         if 'vendor' in vendor:
-            vendor = vendor['vendor'][0] if int(vendor['@totalcount']) > 1 else vendor['vendor']
+            if int(vendor['@totalcount']) > 1:
+                sorted_vendor_data = sorted(vendor['vendor'], key=lambda x: datetime.strptime(x["WHENMODIFIED"], "%m/%d/%Y %H:%M:%S"), reverse=True)
+                vendor = sorted_vendor_data[0]
+            else:
+                vendor = vendor['vendor']
             
             vendor = vendor if vendor['STATUS'] == 'active' else None
         else:
