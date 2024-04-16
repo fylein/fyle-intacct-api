@@ -633,7 +633,7 @@ class SageIntacctConnector:
                 sorted_vendor_data = sorted(vendor['VENDOR'], key=lambda x: datetime.strptime(x["WHENMODIFIED"], "%m/%d/%Y %H:%M:%S"), reverse=True)
                 vendor = sorted_vendor_data[0]
             else:
-                vendor = vendor['VENDOR']
+                vendor = vendor['VENDOR'][0]
             
             vendor = vendor if vendor['STATUS'] == 'active' else None
         else:
