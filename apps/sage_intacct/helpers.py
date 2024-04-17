@@ -14,7 +14,6 @@ from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
-
 def schedule_payment_sync(configuration: Configuration):
     """
     :param configuration: Workspace Configuration Instance
