@@ -15,6 +15,7 @@ from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMappin
 from apps.fyle.models import ExpenseGroup, Reimbursement
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.helpers import get_or_create_credit_card_vendor
 from .fixtures import data
 
 logger = logging.getLogger(__name__)

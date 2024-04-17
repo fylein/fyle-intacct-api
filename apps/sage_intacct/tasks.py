@@ -43,11 +43,11 @@ from apps.sage_intacct.models import (
         JournalEntry, 
         JournalEntryLineitem, 
         SageIntacctReimbursement,
-        SageIntacctReimbursementLineitem,
-        get_or_create_credit_card_vendor,
-        SageIntacctConnector
+        SageIntacctReimbursementLineitem
     )
+from .utils import SageIntacctConnector
 from .errors.helpers import error_matcher, get_entity_values, replace_destination_id_with_values, remove_support_id
+from apps.sage_intacct.helpers import get_or_create_credit_card_vendor
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO

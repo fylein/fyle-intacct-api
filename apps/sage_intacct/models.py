@@ -1,13 +1,10 @@
 """
 Sage Intacct models
 """
-import logging
 from datetime import datetime
 from django.conf import settings
 from django.db.models import Q,JSONField
 from django.db import models
-from sageintacctsdk.exceptions import WrongParamsError
-
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
     EmployeeMapping
@@ -17,34 +14,7 @@ from apps.mappings.models import GeneralMapping
 
 from apps.workspaces.models import Configuration, Workspace, FyleCredential, SageIntacctCredential
 from typing import Dict, List, Union
-from .utils import SageIntacctConnector
-
-
-logger = logging.getLogger(__name__)
-logger.level = logging.INFO
-
-
-def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
-    """
-    Get or create default vendor
-    :param merchant: Fyle Expense Merchant
-    :param workspace_id: Workspace Id
-    :return:
-    """
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-    vendor = None
-
-    if merchant:
-        try:
-            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=False)
-        except WrongParamsError as bad_request:
-            logger.info(bad_request.response)
-
-    if not vendor:
-        vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
-
-    return vendor
+from apps.sage_intacct.helpers import get_or_create_credit_card_vendor
 
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
