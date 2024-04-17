@@ -43,7 +43,8 @@ from apps.sage_intacct.models import (
         JournalEntry, 
         JournalEntryLineitem, 
         SageIntacctReimbursement,
-        SageIntacctReimbursementLineitem
+        SageIntacctReimbursementLineitem,
+        get_or_create_credit_card_vendor
     )
 from .utils import SageIntacctConnector
 from .errors.helpers import error_matcher, get_entity_values, replace_destination_id_with_values, remove_support_id
@@ -222,29 +223,6 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         source_employee.detail['full_name'],
                         expense_group.workspace_id
                     )
-
-
-def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
-    """
-    Get or create default vendor
-    :param merchant: Fyle Expense Merchant
-    :param workspace_id: Workspace Id
-    :return:
-    """
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-    vendor = None
-
-    if merchant:
-        try:
-            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=False)
-        except WrongParamsError as bad_request:
-            logger.info(bad_request.response)
-
-    if not vendor:
-        vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
-
-    return vendor
 
 
 def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup):
