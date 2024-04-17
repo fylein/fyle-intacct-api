@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db.models import Q,JSONField
 from django.db import models
 
+
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
     EmployeeMapping
 
