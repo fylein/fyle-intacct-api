@@ -1031,7 +1031,7 @@ class ChargeCardTransaction(models.Model):
         expense_group.save()
 
         vendor = None
-        merchant = expense_group.expenses.first().vendor
+        merchant = expense.vendor if expense.vendor else None
         vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
         vendor = vendor.destination_id
