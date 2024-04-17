@@ -12,7 +12,7 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, Destination
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings, DependentFieldSetting
 from apps.mappings.models import GeneralMapping
 
-from apps.workspaces.models import Configuration, Workspace, FyleCredential, SageIntacctCredential
+from apps.workspaces.models import Configuration, Workspace, FyleCredential
 from typing import Dict, List, Union
 
 
