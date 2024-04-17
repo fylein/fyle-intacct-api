@@ -1030,6 +1030,8 @@ class ChargeCardTransaction(models.Model):
         expense_group.save()
 
         merchant = expense.vendor if expense.vendor else None
+        if not vendor_id: 
+            DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
