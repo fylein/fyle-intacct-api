@@ -14,7 +14,6 @@ from apps.mappings.models import GeneralMapping
 
 from apps.workspaces.models import Configuration, Workspace, FyleCredential, SageIntacctCredential
 from typing import Dict, List, Union
-from apps.sage_intacct.helpers import get_or_create_credit_card_vendor
 
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
@@ -1013,7 +1012,7 @@ class ChargeCardTransaction(models.Model):
         db_table = 'charge_card_transactions'
 
     @staticmethod
-    def create_charge_card_transaction(expense_group: ExpenseGroup):
+    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None):
         """
         Create create charge card transaction
         :param expense_group: ExpenseGroup
@@ -1029,17 +1028,13 @@ class ChargeCardTransaction(models.Model):
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
 
-        vendor = None
         merchant = expense.vendor if expense.vendor else None
-        vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
-
-        vendor = vendor.destination_id
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
             defaults={
                 'charge_card_id': charge_card_id,
-                'vendor_id': vendor,
+                'vendor_id': vendor_id,
                 'payee': merchant,
                 'description': description,
                 'memo': memo,

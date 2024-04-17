@@ -2,7 +2,6 @@ from datetime import  datetime, timezone
 import logging
 
 from django.utils.module_loading import import_string
-from sageintacctsdk.exceptions import WrongParamsError
 
 from django_q.tasks import async_task
 
@@ -11,33 +10,10 @@ from apps.workspaces.models import Configuration, Workspace, SageIntacctCredenti
 
 from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
     schedule_sage_intacct_reimbursement_creation, schedule_fyle_reimbursements_sync
-from .utils import SageIntacctConnector
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
-
-def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
-    """
-    Get or create default vendor
-    :param merchant: Fyle Expense Merchant
-    :param workspace_id: Workspace Id
-    :return:
-    """
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-    vendor = None
-
-    if merchant:
-        try:
-            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=False)
-        except WrongParamsError as bad_request:
-            logger.info(bad_request.response)
-
-    if not vendor:
-        vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
-
-    return vendor
 
 def schedule_payment_sync(configuration: Configuration):
     """
