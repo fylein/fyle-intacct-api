@@ -12,6 +12,7 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, Destination
 
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings, DependentFieldSetting
 from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
 
 from apps.workspaces.models import Configuration, Workspace, FyleCredential
 from typing import Dict, List, Union
@@ -1030,18 +1031,10 @@ class ChargeCardTransaction(models.Model):
         expense_group.save()
 
         vendor = None
-        merchant = expense.vendor if expense.vendor else None
+        merchant = expense_group.expenses.first().vendor
+        vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
-        if merchant:
-            vendor = DestinationAttribute.objects.filter(
-                value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
-            ).order_by('-updated_at').first()
-
-        if vendor:
-            vendor = vendor.destination_id
-        else:
-            vendor = DestinationAttribute.objects.filter(
-                value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
+        vendor = vendor.destination_id
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,

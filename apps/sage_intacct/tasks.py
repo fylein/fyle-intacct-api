@@ -935,9 +935,6 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
     last_export_failed = False
 
     try:
-        merchant = expense_group.expenses.first().vendor
-        get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
-
         __validate_expense_group(expense_group, configuration)
 
         with transaction.atomic():
