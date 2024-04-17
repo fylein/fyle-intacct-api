@@ -466,7 +466,7 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
     )
     mocker.patch(
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
-        return_value=[]
+        return_value=DestinationAttribute.objects.get(id=633)
     )
     mocker.patch(
         'apps.sage_intacct.tasks.load_attachments',
@@ -505,7 +505,7 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
 def test_post_credit_card_exceptions(mocker, create_task_logs, db):
     mocker.patch(
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
-        return_value=[]
+        return_value=DestinationAttribute.objects.get(id=633)
     )
 
     workspace_id = 1

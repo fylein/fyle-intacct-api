@@ -77,7 +77,7 @@ def create_charge_card_transaction(db):
     general_mappings.save()
 
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
-    charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group)
+    charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
     charge_card_transaction_lineitems  = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
 
     return charge_card_transaction,charge_card_transaction_lineitems

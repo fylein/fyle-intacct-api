@@ -1013,7 +1013,7 @@ class ChargeCardTransaction(models.Model):
         db_table = 'charge_card_transactions'
 
     @staticmethod
-    def create_charge_card_transaction(expense_group: ExpenseGroup):
+    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None):
         """
         Create create charge card transaction
         :param expense_group: ExpenseGroup
@@ -1029,25 +1029,15 @@ class ChargeCardTransaction(models.Model):
         expense_group.description['spent_at'] = expense.spent_at.strftime('%Y-%m-%dT%H:%M:%S')
         expense_group.save()
 
-        vendor = None
         merchant = expense.vendor if expense.vendor else None
-
-        if merchant:
-            vendor = DestinationAttribute.objects.filter(
-                value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
-            ).order_by('-updated_at').first()
-
-        if vendor:
-            vendor = vendor.destination_id
-        else:
-            vendor = DestinationAttribute.objects.filter(
-                value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
+        if not vendor_id: 
+            vendor_id = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
             defaults={
                 'charge_card_id': charge_card_id,
-                'vendor_id': vendor,
+                'vendor_id': vendor_id,
                 'payee': merchant,
                 'description': description,
                 'memo': memo,

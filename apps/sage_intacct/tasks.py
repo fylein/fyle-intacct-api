@@ -936,13 +936,14 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
     try:
         merchant = expense_group.expenses.first().vendor
-        get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+        vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
+        vendor_id = vendor.destination_id if vendor else None
         __validate_expense_group(expense_group, configuration)
 
         with transaction.atomic():
 
-            charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group)
+            charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id)
 
             charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
                 create_charge_card_transaction_lineitems(expense_group, configuration)

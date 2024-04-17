@@ -3,6 +3,7 @@ from datetime import datetime
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import Bill,BillLineitem
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings, ExpenseAttribute
+from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
 from apps.workspaces.models import Configuration, Workspace
 from fyle_accounting_mappings.models import MappingSetting
 from apps.sage_intacct.models import *
@@ -124,7 +125,11 @@ def test_create_ap_payment(db):
     assert ap_payment.vendor_id == 'Ashwin'
 
 
-def test_create_charge_card_transaction(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+def test_create_charge_card_transaction(mocker, db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    mocker.patch(
+        'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
+        return_value=DestinationAttribute.objects.get(id=633)
+    )
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -137,7 +142,10 @@ def test_create_charge_card_transaction(db, create_expense_group_expense, create
     general_mappings.use_intacct_employee_departments = True
     general_mappings.save()
 
-    charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group)
+    merchant = expense_group.expenses.first().vendor
+    vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+
+    charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor.destination_id)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
     charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
 
@@ -164,7 +172,7 @@ def test_create_charge_card_transaction(db, create_expense_group_expense, create
     mapping.destination_card_account = None
     mapping.save()
 
-    charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group)
+    charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor.destination_id)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
     charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
 
