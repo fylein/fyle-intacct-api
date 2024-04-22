@@ -7,7 +7,12 @@ from django.db import transaction
 from django_q.tasks import async_task
 
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import NoPrivilegeError, RetryException
+from fyle.platform.exceptions import (
+    NoPrivilegeError,
+    RetryException,
+    InternalServerError,
+    InvalidTokenError
+)
 
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
@@ -177,6 +182,22 @@ def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: T
         task_log.status = 'FATAL'
         task_log.save()
 
+    except InvalidTokenError:
+        logger.info('Invalid Token for Fyle')
+        task_log.detail = {
+            'message': 'Invalid Token for Fyle'
+        }
+        task_log.status = 'FAILED'
+        task_log.save()
+
+    except InternalServerError:
+        logger.info('Fyle Internal Server Error occured in workspace_id: %s', workspace_id)
+        task_log.detail = {
+            'message': 'Fyle Internal Server Error occured'
+        }
+        task_log.status = 'FAILED'
+        task_log.save()
+
     except Exception:
         error = traceback.format_exc()
         task_log.detail = {
@@ -291,6 +312,9 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
 
         if len(expense_group_ids):
             export_to_intacct(workspace.id, None, expense_group_ids)
+
+    except Configuration.DoesNotExist:
+        logger.info('Configuration does not exist for workspace_id: %s', workspace.id)
 
     except Exception:
         handle_import_exception(task_log)

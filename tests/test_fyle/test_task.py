@@ -10,6 +10,7 @@ from tests.helper import dict_compare_keys
 from .fixtures import data
 from django.urls import reverse
 from apps.fyle.actions import mark_expenses_as_skipped
+from fyle.platform.exceptions import InvalidTokenError, InternalServerError
 
 
 def test_schedule_expense_group_creation(api_client, test_connection):
@@ -27,7 +28,7 @@ def test_schedule_expense_group_creation(api_client, test_connection):
 def test_create_expense_groups(mocker, db):
     workspace_id = 1
     
-    mocker.patch(
+    mock_call = mocker.patch(
         'fyle_integrations_platform_connector.apis.Expenses.get',
         return_value=data['expenses']
     )
@@ -73,6 +74,14 @@ def test_create_expense_groups(mocker, db):
 
     task_log = TaskLog.objects.get(id=task_log.id)
     assert task_log.status == 'FAILED'
+
+    mock_call.side_effect = InternalServerError('Error')
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+
+    mock_call.side_effect = InvalidTokenError('Invalid Token')
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+
+    assert mock_call.call_count == 2
 
 
 def test_sync_reimbursements(mocker, db):
