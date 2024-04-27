@@ -9,7 +9,8 @@ from fyle.platform.exceptions import (
 )
 from sageintacctsdk.exceptions import (
     InvalidTokenError,
-    NoPrivilegeError
+    NoPrivilegeError,
+    SageIntacctSDKError
 )
 from apps.workspaces.models import SageIntacctCredential
 
@@ -25,13 +26,12 @@ def test_handle_import_exceptions(db):
     )
     import_log = ImportLog.objects.get(workspace_id=1, attribute_type='PROJECT')
     project = Project(1, 'PROJECT', None)
-    
 
-    # WrongParamsError 
+    # WrongParamsError
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise WrongParamsError('This is WrongParamsError')
-    
+
     to_be_decoreated(project, import_log)
 
     assert import_log.status == 'FAILED'
@@ -43,7 +43,7 @@ def test_handle_import_exceptions(db):
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise FyleInvalidTokenError('This is FyleInvalidTokenError')
-    
+
     to_be_decoreated(project, import_log)
 
     assert import_log.status == 'FAILED'
@@ -55,7 +55,7 @@ def test_handle_import_exceptions(db):
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InternalServerError('This is InternalServerError')
-    
+
     to_be_decoreated(project, import_log)
 
     assert import_log.status == 'FAILED'
@@ -67,7 +67,7 @@ def test_handle_import_exceptions(db):
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InvalidTokenError('This is InvalidTokenError')
-    
+
     to_be_decoreated(project, import_log)
 
     assert import_log.status == 'FAILED'
@@ -79,7 +79,7 @@ def test_handle_import_exceptions(db):
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise SageIntacctCredential.DoesNotExist('This is SageIntacctCredential.DoesNotExist')
-    
+
     to_be_decoreated(project, import_log)
 
     assert import_log.status == 'FAILED'
@@ -91,7 +91,7 @@ def test_handle_import_exceptions(db):
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise NoPrivilegeError('This is NoPrivilegeError')
-    
+
     to_be_decoreated(project, import_log)
 
     assert import_log.status == 'FAILED'
@@ -99,11 +99,23 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['message'] == 'Insufficient permission to access the requested module'
     assert import_log.error_log['alert'] == False
 
+    # SageIntacctSDKError
+    @handle_import_exceptions
+    def to_be_decoreated(expense_attribute_instance, import_log):
+        raise SageIntacctSDKError('This is a sage intacct sdk error')
+
+    to_be_decoreated(project, import_log)
+
+    assert import_log.status == 'FAILED'
+    assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
+    assert import_log.error_log['message'] == 'This is a sage intacct sdk error'
+    assert import_log.error_log['alert'] == False
+
     # Exception
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise Exception('This is a general Exception')
-    
+
     to_be_decoreated(project, import_log)
 
     assert import_log.status == 'FATAL'
