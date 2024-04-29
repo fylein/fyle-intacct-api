@@ -2,7 +2,8 @@ import logging
 import traceback
 from sageintacctsdk.exceptions import (
     InvalidTokenError,
-    NoPrivilegeError
+    NoPrivilegeError,
+    SageIntacctSDKError
 )
 from fyle.platform.exceptions import (
     WrongParamsError,
@@ -56,9 +57,14 @@ def handle_import_exceptions(func):
             error['message'] = 'Internal server error while importing to Fyle'
             error['alert'] = True
             import_log.status = 'FAILED'
-        
+
         except NoPrivilegeError:
             error['message'] = 'Insufficient permission to access the requested module'
+            error['alert'] = False
+            import_log.status = 'FAILED'
+
+        except SageIntacctSDKError as exception:
+            error['message'] = exception.message
             error['alert'] = False
             import_log.status = 'FAILED'
 
@@ -73,7 +79,7 @@ def handle_import_exceptions(func):
             logger.error(error)
         else:
             logger.info(error)
-        
+
         import_log.error_log = error
         import_log.save()
 
