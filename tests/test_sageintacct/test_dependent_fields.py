@@ -7,7 +7,8 @@ from django_q.models import Schedule
 
 from fyle_integrations_platform_connector import PlatformConnector
 
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.dependent_fields import (
@@ -114,6 +115,12 @@ def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_de
         import_dependent_fields_to_fyle(workspace_id)
 
         mock_call.side_effect = None
+        import_dependent_fields_to_fyle(workspace_id)
+
+        mock_call.side_effect = FyleInvalidTokenError('Invalid Token')
+        import_dependent_fields_to_fyle(workspace_id)
+
+        mock_call.side_effect = SageIntacctSDKError('something went wrong')
         import_dependent_fields_to_fyle(workspace_id)
 
         assert mock_call.call_count == 0
