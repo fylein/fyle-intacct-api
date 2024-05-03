@@ -299,7 +299,7 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
             platform = PlatformConnector(fyle_credentials)
             expenses = platform.expenses.get(
                 source_account_type,
-                filter_credit_expenses=True,
+                filter_credit_expenses=False,
                 report_id=report_id
             )
 
