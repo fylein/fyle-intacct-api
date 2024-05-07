@@ -58,6 +58,7 @@ class Error(models.Model):
     id = models.AutoField(primary_key=True)
     workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     type = models.CharField(max_length=50, choices=ERROR_TYPE_CHOICES, help_text='Error type')
+    repetition_count = models.IntegerField(help_text='repetition count for the error', default=0)
     expense_group = models.ForeignKey(
         ExpenseGroup, on_delete=models.PROTECT, 
         null=True, help_text='Reference to Expense group'
@@ -77,3 +78,11 @@ class Error(models.Model):
 
     class Meta:
         db_table = 'errors'
+
+    def increase_repetition_count_by_one(self, is_created: bool):
+        """
+        Increase the repetition count by 1.
+        """
+        if not is_created:
+            self.repetition_count += 1
+            self.save()
