@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.4 (Debian 15.4-2.pgdg120+1)
+-- Dumped from database version 15.6 (Debian 15.6-1.pgdg120+2)
 -- Dumped by pg_dump version 15.6 (Debian 15.6-1.pgdg120+2)
 
 SET statement_timeout = 0;
@@ -806,7 +806,8 @@ CREATE TABLE public.errors (
     workspace_id integer NOT NULL,
     article_link text,
     attribute_type character varying(255),
-    is_parsed boolean NOT NULL
+    is_parsed boolean NOT NULL,
+    repetition_count integer NOT NULL
 );
 
 
@@ -4100,6 +4101,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 178	sage_intacct	0024_chargecardtransactionlineitem_user_defined_dimensions	2024-04-01 07:56:25.131511+00
 179	fyle	0030_dependentfieldsetting_last_synced_at	2024-04-04 12:56:33.059637+00
 180	sage_intacct	0025_costtype_is_imported	2024-04-04 12:56:33.07806+00
+181	tasks	0008_error_repetition_count	2024-05-07 07:57:24.953894+00
 \.
 
 
@@ -4194,7 +4196,7 @@ COPY public.employee_mappings (id, created_at, updated_at, destination_card_acco
 -- Data for Name: errors; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed) FROM stdin;
+COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed, repetition_count) FROM stdin;
 \.
 
 
@@ -8107,7 +8109,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 180, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 181, true);
 
 
 --
