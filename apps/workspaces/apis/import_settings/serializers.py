@@ -155,6 +155,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                 workspace_id=instance.id
             )
 
+            trigger.pre_save_mapping_settings()
+
             if configurations['import_tax_codes']:
                 mapping_settings.append({
                     'source_field': 'TAX_GROUP',
