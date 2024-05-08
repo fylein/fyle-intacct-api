@@ -4,7 +4,7 @@ from typing import List
 from datetime import datetime
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, F
 from django.conf import settings
 
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
@@ -311,7 +311,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
             attribute_type = error_dict['attribute_type']
 
 
-    Error.objects.update_or_create(
+    error, created = Error.objects.update_or_create(
             workspace_id=expense_group.workspace_id,
             expense_group=expense_group,
             defaults={
@@ -324,6 +324,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
                 'article_link': article_link
             }
         )
+
+    error.increase_repetition_count_by_one(created)
 
     task_log.status = 'FAILED'
     task_log.detail = None
@@ -436,7 +438,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         })
 
         if employee_attribute:
-            Error.objects.update_or_create(
+            error, created = Error.objects.update_or_create(
                 workspace_id=expense_group.workspace_id,
                 expense_attribute=employee_attribute,
                 defaults={
@@ -446,6 +448,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                     'is_resolved': False
                 }
             )
+            error.increase_repetition_count_by_one(created)
 
     expenses = expense_group.expenses.all()
 
@@ -486,7 +489,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             })
 
             if category_attribute:
-                Error.objects.update_or_create(
+                error, created = Error.objects.update_or_create(
                     workspace_id=expense_group.workspace_id,
                     expense_attribute=category_attribute,
                     defaults={
@@ -496,7 +499,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                         'is_resolved': False
                     }
                 )
-
+                error.increase_repetition_count_by_one(created)
 
         if configuration.import_tax_codes:
             if general_mapping and not (general_mapping.default_tax_code_id or general_mapping.default_tax_code_name):
