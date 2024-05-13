@@ -425,7 +425,7 @@ class CustomFieldView(generics.RetrieveAPIView):
         response.append({
                 'field_name': 'CATEGORY', 
                 'type': 'SELECT', 
-                'is_custom': 'false'
+                'is_custom': 'true'
             })
             
         return Response(
