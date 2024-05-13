@@ -9,6 +9,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
+    InternalServerError
 )
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
@@ -141,13 +142,17 @@ def async_auto_map_charge_card_account(workspace_id: int):
     default_charge_card_id = general_mappings.default_charge_card_id
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    try:
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
-
-    platform.employees.sync()
-    EmployeesAutoMappingHelper(workspace_id, 'CHARGE_CARD_NUMBER').ccc_mapping(
-        default_charge_card_id, attribute_type='CHARGE_CARD_NUMBER'
-    )
+        platform.employees.sync()
+        EmployeesAutoMappingHelper(workspace_id, 'CHARGE_CARD_NUMBER').ccc_mapping(
+            default_charge_card_id, attribute_type='CHARGE_CARD_NUMBER'
+        )
+    except FyleInvalidTokenError:
+        logger.info('Invalid Token for fyle in workspace - %s', workspace_id)
+    except InternalServerError:
+        logger.info('Fyle Internal Server Error in workspace - %s', workspace_id)
 
 
 def schedule_auto_map_charge_card_employees(workspace_id: int):

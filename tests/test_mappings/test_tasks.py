@@ -7,16 +7,14 @@ from fyle_accounting_mappings.models import (
     ExpenseAttribute
 )
 from apps.mappings.tasks import *
-from fyle_integrations_platform_connector import PlatformConnector
 from ..test_sageintacct.fixtures import data as intacct_data
 from ..test_fyle.fixtures import data as fyle_data
-from apps.workspaces.models import FyleCredential, Configuration
+from apps.workspaces.models import Configuration
 from apps.fyle.models import ExpenseGroup
 from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
     InternalServerError
 )
-from sageintacctsdk.exceptions import NoPrivilegeError
 
 
 def test_resolve_expense_attribute_errors(db):
@@ -180,7 +178,7 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
 def test_async_auto_map_charge_card_account(mocker, db):
     workspace_id = 1
     
-    mocker.patch(
+    mock_call = mocker.patch(
         'fyle_integrations_platform_connector.apis.Employees.sync',
         return_value=[]
     )
@@ -190,6 +188,14 @@ def test_async_auto_map_charge_card_account(mocker, db):
     )
 
     async_auto_map_charge_card_account(workspace_id)
+
+    mock_call.side_effect = FyleInvalidTokenError('Invalid Token')
+    async_auto_map_charge_card_account(workspace_id)
+
+    mock_call.side_effect = InternalServerError('Internal Server Error')
+    async_auto_map_charge_card_account(workspace_id)
+
+    assert mock_call.call_count == 3
 
 
 def test_schedule_auto_map_charge_card_employees(db):
