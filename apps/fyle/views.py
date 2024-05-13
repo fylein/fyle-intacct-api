@@ -422,11 +422,11 @@ class CustomFieldView(generics.RetrieveAPIView):
                     'is_custom': custom_field['is_custom']
                 })
 
-            response.append({
-                    'field_name': 'CATEGORY', 
-                    'type': custom_field['type'], 
-                    'is_custom': custom_field['is_custom']
-                })
+        response.append({
+                'field_name': 'CATEGORY', 
+                'type': custom_field['type'], 
+                'is_custom': custom_field['is_custom']
+            })
             
         return Response(
             data=response,
