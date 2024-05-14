@@ -398,31 +398,54 @@ class SageIntacctConnector:
 
         return []
 
+    def __get_entity_slide_preference(self):
+        entity_slide_disabled = False
+
+        # Check if entity slide is disabled or enabled
+        try:
+            company_prefs = self.connection.api_base.format_and_send_request({
+                'get_companyprefs': {
+                    '@application': 'ME'
+                }
+            })['data']['companypref']
+
+            entity_slide_info = list(filter(
+                lambda item: item['preference'] == 'DISABLEENTITYSLIDEIN', company_prefs
+            ))[0]
+
+            entity_slide_disabled = entity_slide_info['prefvalue'] == 'true'
+        except Exception as e:
+            logger.info(e.__dict__)
+
+        return entity_slide_disabled
+
 
     def sync_location_entities(self):
         """
         Get location entities
         """
-        location_entities = self.connection.location_entities.get_all(field='STATUS', value='active')
+        if not self.__get_entity_slide_preference():
+            location_entities = self.connection.location_entities.get_all(field='STATUS', value='active')
 
-        location_entities_attributes = []
+            location_entities_attributes = []
 
-        for location_entity in location_entities:
-            location_entities_attributes.append({
-                'attribute_type': 'LOCATION_ENTITY',
-                'display_name': 'location entity',
-                'value': location_entity['NAME'],
-                'destination_id': location_entity['LOCATIONID'],
-                'detail': {
-                    'country': location_entity['OPCOUNTRY']
-                },
-                'active': True
-            })
+            for location_entity in location_entities:
+                location_entities_attributes.append({
+                    'attribute_type': 'LOCATION_ENTITY',
+                    'display_name': 'location entity',
+                    'value': location_entity['NAME'],
+                    'destination_id': location_entity['LOCATIONID'],
+                    'detail': {
+                        'country': location_entity['OPCOUNTRY']
+                    },
+                    'active': True
+                })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            location_entities_attributes, 'LOCATION_ENTITY', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                location_entities_attributes, 'LOCATION_ENTITY', self.workspace_id, True)
 
         return []
+
 
     def sync_expense_payment_types(self):
         """
