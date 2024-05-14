@@ -218,7 +218,7 @@ def construct_expense_filter(expense_filter):
                 # If the isnull filter value is False, invert the exact filter using the ~Q operator and assign it to the constructed expense filter
                 constructed_expense_filter = ~Q(**filter2)
     # for category non-custom field with not_in as operator, to check this later on
-    elif expense_filter.field_name == 'category' and expense_filter.operator == 'not_in' and expense_filter.is_custom == False:
+    elif expense_filter.condition == 'category' and expense_filter.operator == 'not_in' and expense_filter.is_custom == False:
         # construct the filter
         filter1 = {
             f'custom_properties__{expense_filter.condition}__in': expense_filter.values
