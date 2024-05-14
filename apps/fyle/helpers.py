@@ -220,16 +220,13 @@ def construct_expense_filter(expense_filter):
     # for category non-custom field with not_in as operator, to check this later on
     elif expense_filter.condition == 'category' and expense_filter.operator == 'not_in' and not expense_filter.is_custom:
         # construct the filter
-        print('anish2688', expense_filter.condition, expense_filter.operator, not expense_filter.is_custom)
         filter1 = {
             f'{expense_filter.condition}__in': expense_filter.values
         }
         # Invert the filter using the ~Q operator and assign it to the constructed expense filter
         constructed_expense_filter = ~Q(**filter1)
-        print(filter1, constructed_expense_filter)
     # For all non-custom fields
     else:
-        print('2688', expense_filter.condition, expense_filter.operator, not expense_filter.is_custom)
         # Construct the filter for the non-custom field
         filter1 = {
             f'{expense_filter.condition}__{expense_filter.operator}':
