@@ -415,7 +415,7 @@ class SageIntacctConnector:
 
             entity_slide_disabled = entity_slide_info['prefvalue'] == 'true'
         except Exception as e:
-            logger.info(e.__dict__)
+            logger.error(e.__dict__)
 
         return entity_slide_disabled
 
