@@ -333,6 +333,7 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     task_log.save()
 
     update_failed_expenses(expense_group.expenses.all(), False)
+    post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
 
 def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration):
@@ -630,6 +631,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             last_export_failed = True
@@ -654,6 +656,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
@@ -758,6 +761,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             last_export_failed = True
@@ -771,6 +775,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             last_export_failed = True
@@ -796,6 +801,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
     
     if last_export:
         if last_export_failed:
@@ -860,8 +866,6 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             resolve_errors_for_exported_expense_group(expense_group)
         
         generate_export_url_and_update_expense(expense_group)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
-
         if last_export:
             update_last_export_details(expense_group.workspace_id)
 
@@ -893,6 +897,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             last_export_failed = True
@@ -906,6 +911,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             last_export_failed = True
@@ -930,6 +936,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -996,7 +1003,6 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
             resolve_errors_for_exported_expense_group(expense_group)
 
         generate_export_url_and_update_expense(expense_group)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
@@ -1028,6 +1034,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             last_export_failed = True
@@ -1041,6 +1048,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             last_export_failed = True
@@ -1065,6 +1073,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
