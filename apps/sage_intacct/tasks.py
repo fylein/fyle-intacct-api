@@ -519,6 +519,8 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
 
 def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
+    logger.info('Creating Journal Entry for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
         task_log.save()
@@ -545,6 +547,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
         __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         created_attachment_id = None
         with transaction.atomic():
@@ -554,6 +557,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
 
             created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object,journal_entry_lineitem_object)
+            logger.info('Created Journal Entry with Expense Group %s successfully', expense_group.id)
 
             task_log.journal_entry = journal_entry_object
             task_log.sage_intacct_errors = None
@@ -580,6 +584,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             resolve_errors_for_exported_expense_group(expense_group)
         
         generate_export_url_and_update_expense(expense_group)
+        logger.info('Updated Expense Group %s successfully', expense_group.id)
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
@@ -657,6 +662,8 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
 def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
+    logger.info('Creating Expense Report for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
         task_log.save()
@@ -679,6 +686,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             )
 
         __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         with transaction.atomic():
 
@@ -694,6 +702,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
             created_expense_report = sage_intacct_connection.post_expense_report(
                 expense_report_object, expense_report_lineitems_objects)
+            logger.info('Created Expense Report with Expense Group %s successfully', expense_group.id)
 
             record_no = created_expense_report['key']
             expense_report = sage_intacct_connection.get_expense_report(record_no, ['RECORD_URL'])
@@ -717,6 +726,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             resolve_errors_for_exported_expense_group(expense_group)
 
         generate_export_url_and_update_expense(expense_group)
+        logger.info('Updated Expense Group %s successfully', expense_group.id)
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
@@ -797,6 +807,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
 def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
+    logger.info('Creating Bill for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
         task_log.save()
@@ -819,6 +831,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             )
 
         __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         with transaction.atomic():
             bill_object = Bill.create_bill(expense_group)
@@ -827,6 +840,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
             created_bill = sage_intacct_connection.post_bill(bill_object, \
                                                              bill_lineitems_objects)
+            logger.info('Created Bill with Expense Group %s successfully', expense_group.id)
 
             bill = sage_intacct_connection.get_bill(created_bill['data']['apbill']['RECORDNO'], ['RECORD_URL'])
             url_id = bill['apbill']['RECORD_URL'].split('?.r=', 1)[1]
@@ -846,6 +860,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             resolve_errors_for_exported_expense_group(expense_group)
         
         generate_export_url_and_update_expense(expense_group)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
@@ -927,6 +942,8 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
 def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     task_log = TaskLog.objects.get(id=task_log_id)
+    logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
         task_log.status = 'IN_PROGRESS'
         task_log.save()
@@ -943,6 +960,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         vendor_id = vendor.destination_id if vendor else None
         __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         with transaction.atomic():
 
@@ -957,6 +975,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
+            logger.info('Created Charge Card Transaction with Expense Group %s successfully', expense_group.id)
 
             charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(
                 created_charge_card_transaction['key'], ['RECORD_URL'])
@@ -977,6 +996,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
             resolve_errors_for_exported_expense_group(expense_group)
 
         generate_export_url_and_update_expense(expense_group)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
@@ -1438,3 +1458,4 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
         logger.error('Error while generating export url %s', error)
 
     update_complete_expenses(expense_group.expenses.all(), url)
+    post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
