@@ -31,6 +31,7 @@ services:
       FYLE_TOKEN_URI: 'https://sample.fyle.tech'
       FYLE_SERVER_URL: 'https://sample.fyle.tech'
       FYLE_JOBS_URL: 'https://sample.fyle.tech'
+      HELP_ARTICLE_DOMAIN: 'https://help.fylehq.com'
   db:
     image: "postgres:15"
     environment: 

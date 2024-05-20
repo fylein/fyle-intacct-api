@@ -1,12 +1,14 @@
+from django.conf import settings
+
 errors_ref = {
     "EMPLOYEE": {
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317015-employee-related-sage-intacct-errors',
         "patterns" : [
             "The employee '([^']+)' is invalid."
         ]
     },
     "VENDOR": {
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317003-vendor-related-sage-intacct-errors',
         "patterns" : [
             "The vendor '([^']+)' is invalid.",
             "Vendor '([^']+)' specified is not valid.",
@@ -16,20 +18,20 @@ errors_ref = {
         ]
     },
     "CUSTOMER": {
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317011-customer-related-sage-intacct-errors',
         "patterns" : [
             "Customer '([^']+)' specified is not valid."
         ]
     },
     "JOB":{
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317014-job-related-sage-intacct-errors',
         "patterns" : [
             "Job '([^']+)' specified is not valid.",
             "Invalid Job '([^']+)' specified."
         ]
     },
     "ACCOUNT": {
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors',
         "patterns" : [
             "The account number '([^']+)' requires a",
             "Account ([A-Z0-9-]+) is not valid",
@@ -47,7 +49,7 @@ errors_ref = {
         ]
     },
     "DEPARTMENT": {
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317032-department-related-sage-intacct-errors',
         "patterns" : [
             "Department '([^']+)': '([^']+)' specified is not valid. Department is restricted by GL account.",
             "Invalid Department ([A-Z0-9-]+) selected ",
@@ -57,7 +59,7 @@ errors_ref = {
         ]
     },
     "PROJECT": {
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors',
         "patterns" : [
             "The employee isn’t a resource of the project '([^']+)'.",
             "The Project '([^']+)' has a project status that prevents expense submittal.",
@@ -66,7 +68,7 @@ errors_ref = {
         ]
     },
     "LOCATION": {
-        "article_link" : None,
+        "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317021-location-related-sage-intacct-errors',
         "patterns" : [
             "The location '([^']+)' is invalid.",
             "Location '([^']+)' is not valid",
