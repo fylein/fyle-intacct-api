@@ -1235,13 +1235,13 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]):
+    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdoc_id: str):
         """
         Post journal_entry  to Sage Intacct
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
-            journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
+            journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems, supdoc_id)
             created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
             return created_journal_entry
 

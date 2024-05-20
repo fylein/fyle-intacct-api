@@ -74,7 +74,7 @@ def update_last_export_details(workspace_id):
     return last_export_detail
 
 
-def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, expense_group: ExpenseGroup):
+def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_group: ExpenseGroup):
     """
     Get attachments from fyle
     :param sage_intacct_connection: Sage Intacct Connection
@@ -96,7 +96,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, key: str, ex
         if files_list:
             attachments = platform.files.bulk_generate_file_urls(files_list)
 
-        supdoc_id = key
+        supdoc_id = expense_group.id
         return sage_intacct_connection.post_attachments(attachments, supdoc_id)
 
     except Exception:
@@ -518,7 +518,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
 
 
 def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
-    task_log = TaskLog.objects.get(id=task_log_id)
+    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
     logger.info('Creating Journal Entry for Expense Group %s, current state is %s', expense_group.id, task_log.status)
 
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
@@ -549,15 +549,21 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         __validate_expense_group(expense_group, configuration)
         logger.info('Validated Expense Group %s successfully', expense_group.id)
 
-        created_attachment_id = None
+        if not task_log.supdoc_id:
+            task_log.supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            task_log.save()
+
         with transaction.atomic():
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group)
 
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
 
-            created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object,journal_entry_lineitem_object)
+            created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object,journal_entry_lineitem_object, task_log.supdoc_id)
             logger.info('Created Journal Entry with Expense Group %s successfully', expense_group.id)
+            
+            journal_entry_object.suppdoc_id = task_log.supdoc_id
+            journal_entry_object.save()
 
             task_log.journal_entry = journal_entry_object
             task_log.sage_intacct_errors = None
@@ -588,20 +594,6 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
-
-        created_attachment_id = load_attachments(sage_intacct_connection, created_journal_entry['data']['glbatch']['RECORDNO'], expense_group)
-
-        if created_attachment_id:
-            try:
-                sage_intacct_connection.update_journal_entry(journal_entry_object, journal_entry_lineitem_object, created_attachment_id, created_journal_entry['data']['glbatch']['RECORDNO'])
-                journal_entry_object.supdoc_id = created_attachment_id
-                journal_entry_object.save()
-            except Exception:
-                error = traceback.format_exc()
-                logger.info(
-                    'Updating Attachment failed for expense group id %s / workspace id %s Error: %s',
-                    expense_group.id, expense_group.workspace_id, {'error': error}
-                )
     
     except SageIntacctCredential.DoesNotExist:
         logger.info(
