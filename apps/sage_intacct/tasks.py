@@ -555,15 +555,12 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         with transaction.atomic():
 
-            journal_entry_object = JournalEntry.create_journal_entry(expense_group)
+            journal_entry_object = JournalEntry.create_journal_entry(expense_group, task_log.supdoc_id)
 
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
 
-            created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object,journal_entry_lineitem_object, task_log.supdoc_id)
+            created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object, journal_entry_lineitem_object)
             logger.info('Created Journal Entry with Expense Group %s successfully', expense_group.id)
-            
-            journal_entry_object.suppdoc_id = task_log.supdoc_id
-            journal_entry_object.save()
 
             task_log.journal_entry = journal_entry_object
             task_log.sage_intacct_errors = None

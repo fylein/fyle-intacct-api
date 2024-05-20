@@ -1054,7 +1054,7 @@ class SageIntacctConnector:
         logger.info("| Payload for the charge card transaction creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, CHARGE_CARD_TRANSACTION_PAYLOAD = {}}}".format(self.workspace_id, charge_card_transaction.expense_group.id, charge_card_transaction_payload))
         return charge_card_transaction_payload
 
-    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str = None, recordno : str  = None) -> Dict:
+    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], recordno : str  = None) -> Dict:
         """
         Create a journal_entry
         :param journal_entry: JournalEntry object extracted from database
@@ -1157,7 +1157,7 @@ class SageIntacctConnector:
             'journal': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
             'batch_date': transaction_date,
             'batch_title': journal_entry.memo,
-            'supdocid': supdocid if supdocid else None,
+            'supdocid': journal_entry.supdocid if journal_entry.supdocid else None,
             'entries':[
                 {
                     'glentry': journal_entry_payload
@@ -1235,13 +1235,13 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdoc_id: str):
+    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]):
         """
         Post journal_entry  to Sage Intacct
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
-            journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems, supdoc_id)
+            journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
             created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
             return created_journal_entry
 

@@ -814,7 +814,7 @@ class JournalEntry(models.Model):
         db_table = 'journal_entries'
 
     @staticmethod
-    def create_journal_entry(expense_group: ExpenseGroup):
+    def create_journal_entry(expense_group: ExpenseGroup, supdoc_id: str = None):
         """
         Create journal entry
         :param expense_group: expense group
@@ -831,6 +831,7 @@ class JournalEntry(models.Model):
                 'description': description,
                 'memo': memo,
                 'currency': expense.currency,
+                'supdoc_id': supdoc_id,
                 'transaction_date': get_transaction_date(expense_group)
             }
         )
