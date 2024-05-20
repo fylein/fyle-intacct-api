@@ -550,8 +550,10 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            task_log.supdoc_id = load_attachments(sage_intacct_connection, expense_group)
-            task_log.save()
+            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            if supdoc_id:
+                task_log.supdoc_id = supdoc_id
+                task_log.save()
 
         with transaction.atomic():
 
@@ -678,8 +680,10 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            task_log.supdoc_id = load_attachments(sage_intacct_connection, expense_group)
-            task_log.save()
+            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            if supdoc_id:
+                task_log.supdoc_id = supdoc_id
+                task_log.save()
 
         with transaction.atomic():
 
@@ -815,8 +819,10 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            task_log.supdoc_id = load_attachments(sage_intacct_connection, expense_group)
-            task_log.save()
+            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            if supdoc_id:
+                task_log.supdoc_id = supdoc_id
+                task_log.save()
 
         with transaction.atomic():
             bill_object = Bill.create_bill(expense_group, task_log.supdoc_id)
@@ -936,8 +942,10 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         logger.info('Validated Expense Group %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            task_log.supdoc_id = load_attachments(sage_intacct_connection, expense_group)
-            task_log.save()
+            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            if supdoc_id:
+                task_log.supdoc_id = supdoc_id
+                task_log.save()
 
         with transaction.atomic():
 
