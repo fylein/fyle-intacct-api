@@ -1160,7 +1160,7 @@ class SageIntacctConnector:
             'journal': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
             'batch_date': transaction_date,
             'batch_title': journal_entry.memo,
-            'supdocid': journal_entry.supdocid if journal_entry.supdocid else None,
+            'supdocid': journal_entry.supdoc_id if journal_entry.supdoc_id else None,
             'entries':[
                 {
                     'glentry': journal_entry_payload

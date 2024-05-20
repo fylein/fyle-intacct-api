@@ -925,6 +925,9 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
     last_export_failed = False
 
     try:
+        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
+
         merchant = expense_group.expenses.first().vendor
         vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
@@ -942,10 +945,6 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
             charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
                 create_charge_card_transaction_lineitems(expense_group, configuration)
-
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
-
-            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)

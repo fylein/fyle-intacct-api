@@ -1250,13 +1250,13 @@ def test_load_attachments(mocker, db):
     expense_group.expenses.set(expenses)
     expense_group.save()
 
-    post_attachments = load_attachments(sage_intacct_connection, 'dfghjk', expense_group)
+    post_attachments = load_attachments(sage_intacct_connection, expense_group)
     assert post_attachments == None
 
     try:
         with mock.patch('fyle_integrations_platform_connector.apis.Files.bulk_generate_file_urls') as mock_call:
             mock_call.side_effect = Exception()
-            post_attachments = load_attachments(sage_intacct_connection, 'dfghjk', expense_group)
+            post_attachments = load_attachments(sage_intacct_connection, expense_group)
     except:
         logger.info('wrong parameters')
 
