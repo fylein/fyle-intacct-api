@@ -879,6 +879,7 @@ class SageIntacctConnector:
                 'day': transaction_date.day
             },
             'state': 'Submitted',
+            'supdocid': expense_report.supdoc_id,
             'description': expense_report.memo,
             'basecurr': expense_report.currency,
             'currency': expense_report.currency,
@@ -960,6 +961,7 @@ class SageIntacctConnector:
             'RECORDID': bill.memo,
             'WHENDUE': current_date,
             'BASECURR': bill.currency,
+            'SUPDOCID': bill.supdoc_id,
             'CURRENCY': bill.currency,
             'EXCH_RATE_TYPE_ID': None,
             'APBILLITEMS': {
@@ -1043,6 +1045,7 @@ class SageIntacctConnector:
             'referenceno': charge_card_transaction.reference_no,
             'payee': charge_card_transaction.payee,
             'description': charge_card_transaction.memo,
+            'supdocid': charge_card_transaction.supdoc_id,
             'currency': charge_card_transaction.currency,
             'exchratetype': None,
             'inclusivetax': True if configuration.import_tax_codes else False,

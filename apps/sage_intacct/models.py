@@ -478,7 +478,7 @@ class Bill(models.Model):
         db_table = 'bills'
 
     @staticmethod
-    def create_bill(expense_group: ExpenseGroup):
+    def create_bill(expense_group: ExpenseGroup, supdoc_id: str = None):
         """
         Create bill
         :param expense_group: expense group
@@ -504,6 +504,7 @@ class Bill(models.Model):
                 'vendor_id': vendor_id,
                 'description': description,
                 'memo': memo,
+                'supdoc_id': supdoc_id,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
             }
@@ -646,7 +647,7 @@ class ExpenseReport(models.Model):
         db_table = 'expense_reports'
 
     @staticmethod
-    def create_expense_report(expense_group: ExpenseGroup):
+    def create_expense_report(expense_group: ExpenseGroup, supdoc_id: str = None):
         """
         Create expense report
         :param expense_group: expense group
@@ -665,6 +666,7 @@ class ExpenseReport(models.Model):
                 ).destination_employee.destination_id,
                 'description': description,
                 'memo': memo,
+                'supdoc_id': supdoc_id,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group),
             }
@@ -1014,7 +1016,7 @@ class ChargeCardTransaction(models.Model):
         db_table = 'charge_card_transactions'
 
     @staticmethod
-    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None):
+    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None, supdoc_id: str = None):
         """
         Create create charge card transaction
         :param expense_group: ExpenseGroup
@@ -1042,6 +1044,7 @@ class ChargeCardTransaction(models.Model):
                 'payee': merchant,
                 'description': description,
                 'memo': memo,
+                'supdoc_id': supdoc_id,
                 'reference_no': expense.expense_number,
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
