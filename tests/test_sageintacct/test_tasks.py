@@ -16,6 +16,7 @@ from apps.fyle.models import ExpenseGroup, Reimbursement
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.models import GeneralMapping
 from .fixtures import data
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ def test_handle_intacct_errors(db):
     assert error.error_detail == "Invalid Project '10064 => Direct Mail Campaign' specified."
     assert error.is_parsed == True
     assert error.attribute_type == 'PROJECT'
-    assert error.article_link == None
+    assert error.article_link == settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors'
     
     assert len(task_log.sage_intacct_errors) == 3
     assert task_log.sage_intacct_errors[0]['short_description'] == 'Bill error'
