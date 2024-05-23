@@ -1,3 +1,5 @@
+from django.conf import settings
+
 error_msgs = [
         # Employee Errors
         "The employee '1005' is invalid.",
@@ -41,48 +43,48 @@ error_msgs = [
     ]
 
 result_dict_list = [
-        {"attribute_type": "EMPLOYEE", "destination_id": "1005", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : None},
-        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : None},
-        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : None},
-        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : None},
-        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : None},
-        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : None},
-        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : None},
-        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : None},
-        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : None},
-        {"attribute_type": "VENDOR", "destination_id": "VM", "article_link" : None},
-        {"attribute_type": "CUSTOMER", "destination_id": "10001", "article_link" : None},
-        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : None},
-        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : None},
-        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : None},
-        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : None},
-        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : None},
-        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : None},
-        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : None}
+        {"attribute_type": "EMPLOYEE", "destination_id": "1005", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317015-employee-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317032-department-related-sage-intacct-errors'},
+        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317032-department-related-sage-intacct-errors'},
+        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317032-department-related-sage-intacct-errors'},
+        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317032-department-related-sage-intacct-errors'},
+        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317032-department-related-sage-intacct-errors'},
+        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317003-vendor-related-sage-intacct-errors'},
+        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317003-vendor-related-sage-intacct-errors'},
+        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317003-vendor-related-sage-intacct-errors'},
+        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317003-vendor-related-sage-intacct-errors'},
+        {"attribute_type": "VENDOR", "destination_id": "VM", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317003-vendor-related-sage-intacct-errors'},
+        {"attribute_type": "CUSTOMER", "destination_id": "10001", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317011-customer-related-sage-intacct-errors'},
+        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors'},
+        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors'},
+        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors'},
+        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors'},
+        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317021-location-related-sage-intacct-errors'},
+        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317021-location-related-sage-intacct-errors'},
+        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317021-location-related-sage-intacct-errors'}
     ]
 
 error_dict = [
-        {"attribute_type": "EMPLOYEE", "destination_id": "1005", "article_link" : None},
-        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : None},
-        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : None},
-        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : None},
-        {"attribute_type": "CUSTOMER", "destination_id": "10001", "article_link" : None},
-        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : None},
-        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : None}
+        {"attribute_type": "EMPLOYEE", "destination_id": "1005", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317015-employee-related-sage-intacct-errors'},
+        {"attribute_type": "ACCOUNT", "destination_id": "16200", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317035-account-related-sage-intacct-errors'},
+        {"attribute_type": "DEPARTMENT", "destination_id": "300", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317032-department-related-sage-intacct-errors'},
+        {"attribute_type": "VENDOR", "destination_id": "Vaishnavi Primary", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317003-vendor-related-sage-intacct-errors'},
+        {"attribute_type": "CUSTOMER", "destination_id": "10001", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317011-customer-related-sage-intacct-errors'},
+        {"attribute_type": "PROJECT", "destination_id": "10064", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors'},
+        {"attribute_type": "LOCATION", "destination_id": "600", "article_link" : settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317021-location-related-sage-intacct-errors'}
     ]
 
 entity_result_dict_list = [
