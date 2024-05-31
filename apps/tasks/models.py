@@ -39,6 +39,7 @@ class TaskLog(models.Model):
     journal_entry = models.ForeignKey(JournalEntry, on_delete=models.PROTECT, \
         help_text='Reference to JournalEntry', null=True)
     ap_payment = models.ForeignKey(APPayment, on_delete=models.PROTECT, help_text='Reference to AP Payment', null=True)
+    supdoc_id = models.CharField(help_text='Sage Intacct Attachments ID', max_length=255, null=True)
     sage_intacct_reimbursement = models.ForeignKey(SageIntacctReimbursement, on_delete=models.PROTECT,
                                                    help_text='Reference to Sage Intacct Reimbursement', null=True)
     status = models.CharField(max_length=255, help_text='Task Status')
