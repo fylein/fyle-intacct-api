@@ -1395,6 +1395,12 @@ def process_fyle_reimbursements(workspace_id):
         platform.reimbursements.bulk_post_reimbursements(reimbursements_list)
         platform.reimbursements.sync()
 
+        for reimbursement_id in reimbursement_ids:
+            reimbursement = Reimbursement.objects.filter(reimbursement_id=reimbursement_id).first()
+            reimbursement.paid_on_fyle = True
+            reimbursement.save()
+    
+
 
 def update_expense_and_post_summary(in_progress_expenses: List[Expense], workspace_id: int, fund_source: str) -> None:
     """

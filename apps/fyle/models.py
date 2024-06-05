@@ -476,6 +476,7 @@ class Reimbursement(models.Model):
     reimbursement_id = models.CharField(max_length=255, help_text='Fyle Reimbursement ID')
     payment_number = models.CharField(max_length=255, help_text='Fyle Payment Number', null=True)
     state = models.CharField(max_length=255, help_text='Fyle Reimbursement State')
+    paid_on_fyle = models.BooleanField(default=False, help_text='Paid on Fyle')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
