@@ -1368,38 +1368,18 @@ def process_fyle_reimbursements(workspace_id):
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    platform.reimbursements.sync()
+    report_ids = Expense.objects.filter(fund_source='PERSONAL', paid_on_fyle=False).values_list('report_id').distinct()
+    for report_id in report_ids:
+        expenses = Expense.objects.filter(fund_source='PERSONAL', report_id=report_id).all()
+        paid_expenses = expenses.filter(paid_on_sage_intacct=True)
 
-    reimbursements = Reimbursement.objects.filter(state='PENDING', workspace_id=workspace_id).all()
-
-    reimbursement_ids = []
-    expenses_paid_on_fyle = []
-
-    if reimbursements:
-        for reimbursement in reimbursements:
-            expenses = Expense.objects.filter(settlement_id=reimbursement.settlement_id, fund_source='PERSONAL').all()
-            paid_expenses = expenses.filter(paid_on_sage_intacct=True)
-
-            all_expense_paid = False
-            if len(expenses):
-                all_expense_paid = len(expenses) == len(paid_expenses)
-
-            if all_expense_paid:
-                reimbursement_ids.append(reimbursement.reimbursement_id)
-                expenses_paid_on_fyle.extend(expenses)
-
-    if reimbursement_ids:
-        reimbursements_list = []
-        for reimbursement_id in reimbursement_ids:
-            reimbursement_object = {'id': reimbursement_id}
-            reimbursements_list.append(reimbursement_object)
-
-        platform.reimbursements.bulk_post_reimbursements(reimbursements_list)
-        platform.reimbursements.sync()
-
-        for expense in expenses_paid_on_fyle:
-            expense.paid_on_fyle = True
-            expense.save()
+        all_expense_paid = False
+        if len(expenses):
+            all_expense_paid = len(expenses) == len(paid_expenses)
+        
+        if all_expense_paid:
+            platform.reports.bulk_mark_as_paid({'id': report_id, 'paid_notify_at': datetime.now()})
+            paid_expenses.update(paid_on_fyle=True)
 
 
 def update_expense_and_post_summary(in_progress_expenses: List[Expense], workspace_id: int, fund_source: str) -> None:
