@@ -1,7 +1,7 @@
 import logging
 import traceback
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.db import transaction
 from django.db.models import Q, F
@@ -1368,18 +1368,28 @@ def process_fyle_reimbursements(workspace_id):
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    report_ids = Expense.objects.filter(fund_source='PERSONAL', paid_on_fyle=False).values_list('report_id').distinct()
-    for report_id in report_ids:
-        expenses = Expense.objects.filter(fund_source='PERSONAL', report_id=report_id).all()
-        paid_expenses = expenses.filter(paid_on_sage_intacct=True)
+    expenses_to_be_marked = []
+    payloads = []
 
+    report_ids = Expense.objects.filter(fund_source='PERSONAL', paid_on_fyle=False, workspace_id=workspace_id).values_list('report_id').distinct()
+    for report_id in report_ids:
+        report_id = report_id[0]
+        expenses = Expense.objects.filter(fund_source='PERSONAL', report_id=report_id, workspace_id=workspace_id).all()
+        paid_expenses = expenses.filter(paid_on_sage_intacct=True)
+        
         all_expense_paid = False
         if len(expenses):
             all_expense_paid = len(expenses) == len(paid_expenses)
         
         if all_expense_paid:
-            platform.reports.bulk_mark_as_paid({'id': report_id, 'paid_notify_at': datetime.now()})
-            paid_expenses.update(paid_on_fyle=True)
+            payloads.append({'id': report_id, 'paid_notify_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')})
+            expenses_to_be_marked.extend(paid_expenses)
+
+    platform.reports.bulk_mark_as_paid(payloads)
+    if expenses_to_be_marked:
+        expense_ids_to_mark = [expense.id for expense in expenses_to_be_marked]
+        Expense.objects.filter(id__in=expense_ids_to_mark).update(paid_on_fyle=True)
+    
 
 
 def update_expense_and_post_summary(in_progress_expenses: List[Expense], workspace_id: int, fund_source: str) -> None:
