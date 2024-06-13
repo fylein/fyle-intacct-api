@@ -1,5 +1,5 @@
 # Fyle Sage Intacct API
-Django Rest Framework API for Fyle Sage Intacct Integration
+Django Rest Framework API for Fyle Sage Intacct Integration.
 
 
 ### Setup
