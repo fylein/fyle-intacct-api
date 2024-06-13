@@ -128,6 +128,7 @@ class Expense(models.Model):
     verified_at = models.DateTimeField(help_text='Report verified at', null=True)
     custom_properties = JSONField(null=True)
     paid_on_sage_intacct = models.BooleanField(help_text='Expense Payment status on Sage Intacct', default=False)
+    paid_on_fyle = models.BooleanField(help_text='Expense Payment status on Fyle', default=False)
     file_ids = ArrayField(base_field=models.CharField(max_length=255), null=True, help_text='File IDs')
     payment_number = models.CharField(max_length=55, help_text='Expense payment number', null=True)
     corporate_card_id = models.CharField(max_length=255, null=True, blank=True, help_text='Corporate Card ID')
