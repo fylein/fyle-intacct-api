@@ -3,15 +3,13 @@ Fyle Signal
 """
 import logging
 
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
 from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
 
 from .helpers import connect_to_platform
 from .models import DependentFieldSetting
-from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
-from apps.workspaces.models import Configuration
 
 
 logger = logging.getLogger(__name__)

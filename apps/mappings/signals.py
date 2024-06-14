@@ -20,7 +20,6 @@ from fyle_accounting_mappings.models import (
 from fyle.platform.exceptions import WrongParamsError
 
 from apps.workspaces.models import Configuration
-from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
 from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 from apps.tasks.models import Error
 from apps.mappings.models import LocationEntityMapping
@@ -101,15 +100,9 @@ def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwarg
     """
     configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
 
-    if instance.source_field == 'PROJECT':
-        schedule_or_delete_fyle_import_tasks(configuration)
+    if instance.source_field in ['PROJECT', 'COST_CENTER'] or instance.is_custom:
         new_schedule_or_delete_fyle_import_tasks(configuration, instance)
 
-    if instance.source_field == 'COST_CENTER':
-        new_schedule_or_delete_fyle_import_tasks(configuration, instance)
-
-    if instance.is_custom:
-        new_schedule_or_delete_fyle_import_tasks(configuration, instance)
 
 @receiver(pre_save, sender=MappingSetting)
 def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
