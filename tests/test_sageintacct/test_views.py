@@ -134,6 +134,11 @@ def test_payments_trigger(api_client, test_connection, mocker):
         'fyle_integrations_platform_connector.apis.Reimbursements.sync',
         return_value=None
     )
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Reports.bulk_mark_as_paid',
+        return_value=[]
+    )
     workspace_id = 1
 
     access_token = test_connection.access_token
