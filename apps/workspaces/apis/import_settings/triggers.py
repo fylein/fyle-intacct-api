@@ -1,7 +1,6 @@
 from typing import Dict, List
 from django.db.models import Q
 
-from apps.mappings.helpers import schedule_or_delete_fyle_import_tasks
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import Configuration
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
@@ -79,5 +78,3 @@ class ImportSettingsTrigger:
 
             # Delete the mapping settings
             mapping_settings_to_delete.delete()
-
-        schedule_or_delete_fyle_import_tasks(configurations_instance)

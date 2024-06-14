@@ -3,7 +3,6 @@ from datetime import datetime
 
 from unittest import mock
 
-from django_q.models import Schedule
 
 from fyle_integrations_platform_connector import PlatformConnector
 
@@ -12,7 +11,7 @@ from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.dependent_fields import (
-    schedule_dependent_field_imports, create_dependent_custom_field_in_fyle,
+    create_dependent_custom_field_in_fyle,
     post_dependent_cost_type, post_dependent_cost_code, post_dependent_expense_field_values,
     import_dependent_fields_to_fyle
 )
@@ -20,22 +19,6 @@ from apps.workspaces.models import FyleCredential
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
-
-
-def test_schedule_dependent_field_imports(db):
-    workspace_id = 1
-    schedule_dependent_field_imports(workspace_id, True)
-
-    assert Schedule.objects.filter(
-        func='apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle',
-        args=workspace_id
-    ).exists()
-
-    schedule_dependent_field_imports(workspace_id, False)
-    assert not Schedule.objects.filter(
-        func='apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle',
-        args=workspace_id
-    ).exists()
 
 
 def test_create_dependent_custom_field_in_fyle(mocker, db):

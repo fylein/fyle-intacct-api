@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import List
 
 from django_q.models import Schedule
-from django_q.tasks import Chain
 from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle.platform.exceptions import (
@@ -14,7 +13,6 @@ from fyle.platform.exceptions import (
 
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import (
-    MappingSetting,
     EmployeeMapping
 )
 from sageintacctsdk.exceptions import (
@@ -29,7 +27,6 @@ from apps.workspaces.models import (
     FyleCredential,
     Configuration
 )
-from apps.fyle.models import DependentFieldSetting
 
 
 logger = logging.getLogger(__name__)
@@ -221,23 +218,3 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
 
     else:
         sage_intacct_connection.sync_user_defined_dimensions()
-
-
-def auto_import_and_map_fyle_fields(workspace_id):
-    """
-    Auto import and map fyle fields
-    """
-    project_mapping = MappingSetting.objects.filter(
-        source_field='PROJECT',
-        workspace_id=workspace_id,
-        import_to_fyle=True
-    ).first()
-    dependent_fields = DependentFieldSetting.objects.filter(workspace_id=workspace_id, is_import_enabled=True).first()
-
-    chain = Chain()
-
-    if project_mapping and dependent_fields:
-        chain.append('apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle', workspace_id, q_options={'cluster': 'import', 'timeout': 27000})
-
-    if chain.length() > 0:
-        chain.run()
