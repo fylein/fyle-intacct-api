@@ -148,7 +148,11 @@ def check_interval_and_sync_dimension(workspace: Workspace, fyle_credentials: Fy
 
 def sync_dimensions(fyle_credentials, is_export: bool = False):
     platform = PlatformConnector(fyle_credentials)
-    platform.import_fyle_dimensions(is_export=is_export)
+    platform.import_fyle_dimensions(
+        import_taxes=True,
+        import_dependent_fields=True,
+        is_export=is_export
+    )
     if is_export:
         categories_count = platform.categories.get_count()
 
