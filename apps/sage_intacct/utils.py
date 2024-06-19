@@ -1079,7 +1079,7 @@ class SageIntacctConnector:
                 'description': lineitem.memo,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
-                'projectid': lineitem.project_id,
+                'projectid': lineitem.project_id if configuration.is_project_on_journal_entry_credit_line else None,
                 'customerid': lineitem.customer_id,
                 'vendorid': lineitem.vendor_id,
                 'employeeid': lineitem.employee_id,

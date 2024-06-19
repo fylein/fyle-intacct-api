@@ -129,6 +129,7 @@ class Configuration(models.Model):
         help_text='list of system fields for creating custom memo'
     )
     auto_create_destination_entity = models.BooleanField(default=False, help_text='Auto create vendor / employee')
+    is_project_on_journal_entry_credit_line = models.BooleanField(default=True, help_text='Project on journal entry credit line')
     is_simplify_report_closure_enabled = models.BooleanField(default=True, help_text='Simplify report closure is enbaled')
     change_accounting_period = models.BooleanField(default=False, help_text='Change the accounting period')
     import_vendors_as_merchants = models.BooleanField(default=False, help_text='Auto import vendors from sage intacct '
