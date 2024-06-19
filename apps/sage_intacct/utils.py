@@ -1088,7 +1088,7 @@ class SageIntacctConnector:
                 'itemid': lineitem.item_id,
                 'taskid': lineitem.task_id,
                 'costtypeid': lineitem.cost_type_id,
-                'billable': lineitem.billable if configuration.is_project_on_journal_entry_credit_line else None,
+                'billable': lineitem.billable if configuration.is_journal_credit_billable else None,
                 'customfields': {
                    'customfield': [
                     {
