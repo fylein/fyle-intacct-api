@@ -171,7 +171,6 @@ class Expense(models.Model):
                     'foreign_currency': expense['foreign_currency'],
                     'tax_amount': expense['tax_amount'],
                     'tax_group_id': expense['tax_group_id'],
-                    'settlement_id': expense['settlement_id'],
                     'reimbursable': expense['reimbursable'],
                     'billable': expense['billable'],
                     'state': expense['state'],
