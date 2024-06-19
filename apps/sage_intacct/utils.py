@@ -1079,7 +1079,7 @@ class SageIntacctConnector:
                 'description': lineitem.memo,
                 'department': lineitem.department_id,
                 'location': lineitem.location_id,
-                'projectid': lineitem.project_id if configuration.is_project_on_journal_entry_credit_line else None,
+                'projectid': lineitem.project_id,
                 'customerid': lineitem.customer_id,
                 'vendorid': lineitem.vendor_id,
                 'employeeid': lineitem.employee_id,
@@ -1088,7 +1088,7 @@ class SageIntacctConnector:
                 'itemid': lineitem.item_id,
                 'taskid': lineitem.task_id,
                 'costtypeid': lineitem.cost_type_id,
-                'billable': lineitem.billable,
+                'billable': lineitem.billable if configuration.is_project_on_journal_entry_credit_line else None,
                 'customfields': {
                    'customfield': [
                     {
