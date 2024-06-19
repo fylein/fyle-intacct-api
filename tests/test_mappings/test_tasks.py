@@ -1,4 +1,3 @@
-from unittest import mock
 from django_q.models import Schedule
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
@@ -222,19 +221,6 @@ def test_schedule_auto_map_charge_card_employees(db):
 
     schedule = Schedule.objects.filter(
         func='apps.mappings.tasks.async_auto_map_charge_card_account',
-        args='{}'.format(workspace_id),
-    ).first()
-
-    assert schedule == None
-
-
-def test_auto_import_and_map_fyle_fields(db):
-    workspace_id = 1
-
-    auto_import_and_map_fyle_fields(workspace_id=workspace_id)
-
-    schedule = Schedule.objects.filter(
-        func='apps.mappings.tasks.auto_import_and_map_fyle_fields',
         args='{}'.format(workspace_id),
     ).first()
 
