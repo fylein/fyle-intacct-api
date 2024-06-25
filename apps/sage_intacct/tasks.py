@@ -1361,7 +1361,7 @@ def check_sage_intacct_object_status(workspace_id):
                 expense_report.save()
 
 
-def process_reimbursements(workspace_id):
+def process_fyle_reimbursements(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
