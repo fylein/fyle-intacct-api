@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.6 (Debian 15.6-1.pgdg120+2)
+-- Dumped from database version 15.7 (Debian 15.7-1.pgdg120+1)
 -- Dumped by pg_dump version 15.7 (Debian 15.7-1.pgdg120+1)
 
 SET statement_timeout = 0;
@@ -396,7 +396,8 @@ CREATE TABLE public.configurations (
     import_vendors_as_merchants boolean NOT NULL,
     employee_field_mapping character varying(50),
     is_simplify_report_closure_enabled boolean NOT NULL,
-    use_merchant_in_journal_line boolean NOT NULL
+    use_merchant_in_journal_line boolean NOT NULL,
+    is_journal_credit_billable boolean NOT NULL
 );
 
 
@@ -2879,8 +2880,8 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 -- Data for Name: configurations; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, is_simplify_report_closure_enabled, use_merchant_in_journal_line) FROM stdin;
-1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	f
+COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, is_simplify_report_closure_enabled, use_merchant_in_journal_line, is_journal_credit_billable) FROM stdin;
+1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	f	t
 \.
 
 
@@ -4106,6 +4107,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 181	tasks	0008_error_repetition_count	2024-05-07 07:57:24.953894+00
 182	tasks	0009_tasklog_supdoc_id	2024-05-20 09:36:04.874867+00
 183	fyle	0031_expense_paid_on_fyle	2024-06-05 16:26:11.775475+00
+184	workspaces	0034_configuration_is_journal_credit_billable	2024-06-19 07:16:22.418147+00
 \.
 
 
@@ -8113,7 +8115,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 183, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 184, true);
 
 
 --

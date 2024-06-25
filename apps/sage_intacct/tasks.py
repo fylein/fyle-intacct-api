@@ -1,7 +1,7 @@
 import logging
 import traceback
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.db import transaction
 from django.db.models import Q, F
@@ -1368,38 +1368,35 @@ def process_fyle_reimbursements(workspace_id):
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
-    platform.reimbursements.sync()
+    expenses_to_be_marked = []
+    payloads = []
 
-    reimbursements = Reimbursement.objects.filter(state='PENDING', workspace_id=workspace_id).all()
+    report_ids = Expense.objects.filter(fund_source='PERSONAL', paid_on_fyle=False, workspace_id=workspace_id).values_list('report_id').distinct()
+    for report_id in report_ids:
+        report_id = report_id[0]
+        expenses = Expense.objects.filter(fund_source='PERSONAL', report_id=report_id, workspace_id=workspace_id).all()
+        paid_expenses = expenses.filter(paid_on_sage_intacct=True)
+        
+        all_expense_paid = False
+        if len(expenses):
+            all_expense_paid = len(expenses) == len(paid_expenses)
+        
+        if all_expense_paid:
+            payloads.append({'id': report_id, 'paid_notify_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ')})
+            expenses_to_be_marked.extend(paid_expenses)
 
-    reimbursement_ids = []
-    expenses_paid_on_fyle = []
-
-    if reimbursements:
-        for reimbursement in reimbursements:
-            expenses = Expense.objects.filter(settlement_id=reimbursement.settlement_id, fund_source='PERSONAL').all()
-            paid_expenses = expenses.filter(paid_on_sage_intacct=True)
-
-            all_expense_paid = False
-            if len(expenses):
-                all_expense_paid = len(expenses) == len(paid_expenses)
-
-            if all_expense_paid:
-                reimbursement_ids.append(reimbursement.reimbursement_id)
-                expenses_paid_on_fyle.extend(expenses)
-
-    if reimbursement_ids:
-        reimbursements_list = []
-        for reimbursement_id in reimbursement_ids:
-            reimbursement_object = {'id': reimbursement_id}
-            reimbursements_list.append(reimbursement_object)
-
-        platform.reimbursements.bulk_post_reimbursements(reimbursements_list)
-        platform.reimbursements.sync()
-
-        for expense in expenses_paid_on_fyle:
-            expense.paid_on_fyle = True
-            expense.save()
+    if payloads:
+        try:
+            platform.reports.bulk_mark_as_paid(payloads)
+            if expenses_to_be_marked:
+                expense_ids_to_mark = [expense.id for expense in expenses_to_be_marked]
+                Expense.objects.filter(id__in=expense_ids_to_mark).update(paid_on_fyle=True)
+        except Exception as error:
+            error = traceback.format_exc()
+            error = {
+                'error': error
+            }
+            logger.exception(error)
 
 
 def update_expense_and_post_summary(in_progress_expenses: List[Expense], workspace_id: int, fund_source: str) -> None:
