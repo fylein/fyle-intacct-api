@@ -50,6 +50,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
 
 def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     department_id = None
+    source_value = None
     if general_mappings and general_mappings.default_department_id:
         department_id = general_mappings.default_department_id
 
