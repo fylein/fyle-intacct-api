@@ -10,6 +10,7 @@ from django.utils.module_loading import import_string
 from django.conf import settings
 from django.db.models import Q
 from fyle_accounting_mappings.models import ExpenseAttribute
+from rest_framework.exceptions import ValidationError
 
 from apps.fyle.models import ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, Expense
 from apps.tasks.models import TaskLog
@@ -340,6 +341,16 @@ def handle_import_exception(task_log: TaskLog) -> None:
     task_log.status = 'FATAL'
     task_log.save()
     logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+
+
+def assert_valid_request(workspace_id:int, fyle_org_id:str):
+    """
+    Assert if the request is valid by checking
+    the url_workspace_id and fyle_org_id workspace
+    """
+    workspace = Workspace.objects.get(fyle_org_id=fyle_org_id)
+    if workspace.id != workspace_id:
+        raise ValidationError('Workspace mismatch')
 
 
 class AdvanceSearchFilter(django_filters.FilterSet):

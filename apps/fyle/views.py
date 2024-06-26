@@ -28,6 +28,7 @@ from .serializers import (
     DependentFieldSettingSerializer
 )
 from .queue import async_import_and_export_expenses
+from apps.exceptions import handle_view_exceptions
 
 
 class ExpenseGroupView(LookupFieldMixin, generics.ListCreateAPIView):
@@ -486,7 +487,8 @@ class ExportView(generics.CreateAPIView):
     authentication_classes = []
     permission_classes = []
 
+    @handle_view_exceptions()
     def post(self, request, *args, **kwargs):
-        async_import_and_export_expenses(request.data)
+        async_import_and_export_expenses(request.data, int(kwargs['workspace_id']))
 
         return Response(data={}, status=status.HTTP_200_OK)
