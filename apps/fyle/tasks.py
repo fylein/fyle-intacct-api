@@ -13,6 +13,8 @@ from fyle.platform.exceptions import (
     InternalServerError,
     InvalidTokenError
 )
+from fyle_integrations_platform_connector.apis.expenses import Expenses as FyleExpenses
+
 
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
@@ -321,3 +323,28 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
 
     except Exception:
         handle_import_exception(task_log)
+
+
+def update_non_exported_expenses(data: Dict) -> None:
+    """
+    To update expenses not in COMPLETE, IN_PROGRESS state
+    """
+    expense_state = None
+    org_id = data['org_id']
+    expense_id = data['id']
+    workspace = Workspace.objects.get(fyle_org_id=org_id)
+    expense = Expense.objects.filter(workspace_id=workspace.id, expense_id=expense_id).first()
+
+    if expense:
+        if 'state' in expense.accounting_export_summary:
+            expense_state = expense.accounting_export_summary['state']
+        else:
+            expense_state = 'NOT_EXPORTED'
+
+        if expense_state and expense_state not in ['COMPLETE', 'IN_PROGRESS']:
+            expense_obj = []
+            expense_obj.append(data)
+            expense_objects = FyleExpenses().construct_expense_object(expense_obj, expense.workspace_id)
+            Expense.create_expense_objects(
+                expense_objects, expense.workspace_id
+            )
