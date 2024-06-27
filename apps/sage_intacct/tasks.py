@@ -19,7 +19,7 @@ from fyle_accounting_mappings.models import (
     )
 
 from fyle_intacct_api.exceptions import BulkError
-from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
+from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings, Reimbursement, Expense
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
 from apps.fyle.actions import update_expenses_in_progress, update_failed_expenses, update_complete_expenses
@@ -1039,23 +1039,34 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         update_last_export_details(expense_group.workspace_id)
 
 
-def check_expenses_reimbursement_status(expenses):
-    all_expenses_paid = True
+def check_expenses_reimbursement_status(expenses, workspace_id, platform):
 
-    for expense in expenses:
-        reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
+    if expenses.first().paid_on_fyle:
+        return True
 
-        if reimbursement.state != 'COMPLETE':
-            all_expenses_paid = False
+    report_id = expenses.first().report_id
 
-    return all_expenses_paid
+    filter_credit_expenses = False
+ 
+    expenses = platform.expenses.get(
+        source_account_type=['PERSONAL_CASH_ACCOUNT'],
+        filter_credit_expenses=filter_credit_expenses,
+        report_id=report_id
+    )
+
+    is_paid = expenses[0]['state'] == 'PAID'
+
+    if is_paid:
+        Expense.objects.filter(workspace_id=workspace_id, report_id=report_id, paid_on_fyle=False).update(paid_on_fyle=True)
+
+    return is_paid
 
 
 def create_ap_payment(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
-    platform.reimbursements.sync()
+    # platform.reimbursements.sync()
 
     bills: List[Bill] = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
@@ -1065,7 +1076,7 @@ def create_ap_payment(workspace_id):
     if bills:
         for bill in bills:
             expense_group_reimbursement_status = check_expenses_reimbursement_status(
-                bill.expense_group.expenses.all())
+                bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform)
             if expense_group_reimbursement_status:
                 task_log, _ = TaskLog.objects.update_or_create(
                     workspace_id=workspace_id,
@@ -1177,7 +1188,7 @@ def create_sage_intacct_reimbursement(workspace_id):
 
     for expense_report in expense_reports:
         expense_group_reimbursement_status = check_expenses_reimbursement_status(
-            expense_report.expense_group.expenses.all())
+            expense_report.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform)
         if expense_group_reimbursement_status:
             task_log, _ = TaskLog.objects.update_or_create(
                 workspace_id=workspace_id,
