@@ -1039,22 +1039,22 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         update_last_export_details(expense_group.workspace_id)
 
 
-def check_expenses_reimbursement_status(expenses, workspace_id, platform):
+def check_expenses_reimbursement_status(expenses, workspace_id, platform, filter_credit_expenses):
 
     if expenses.first().paid_on_fyle:
         return True
 
     report_id = expenses.first().report_id
 
-    filter_credit_expenses = False
- 
     expenses = platform.expenses.get(
         source_account_type=['PERSONAL_CASH_ACCOUNT'],
         filter_credit_expenses=filter_credit_expenses,
         report_id=report_id
     )
 
-    is_paid = expenses[0]['state'] == 'PAID'
+    is_paid = False
+    if expenses:
+        is_paid = expenses[0]['state'] == 'PAID'
 
     if is_paid:
         Expense.objects.filter(workspace_id=workspace_id, report_id=report_id, paid_on_fyle=False).update(paid_on_fyle=True)
@@ -1064,9 +1064,8 @@ def check_expenses_reimbursement_status(expenses, workspace_id, platform):
 
 def create_ap_payment(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
-    # platform.reimbursements.sync()
+    platform = PlatformConnector(fyle_credentials)
+    filter_credit_expenses = False
 
     bills: List[Bill] = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
@@ -1076,7 +1075,7 @@ def create_ap_payment(workspace_id):
     if bills:
         for bill in bills:
             expense_group_reimbursement_status = check_expenses_reimbursement_status(
-                bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform)
+                bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
             if expense_group_reimbursement_status:
                 task_log, _ = TaskLog.objects.update_or_create(
                     workspace_id=workspace_id,
@@ -1179,7 +1178,7 @@ def create_sage_intacct_reimbursement(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
-    platform.reimbursements.sync()
+    filter_credit_expenses = False
 
     expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
@@ -1188,7 +1187,7 @@ def create_sage_intacct_reimbursement(workspace_id):
 
     for expense_report in expense_reports:
         expense_group_reimbursement_status = check_expenses_reimbursement_status(
-            expense_report.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform)
+            expense_report.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
         if expense_group_reimbursement_status:
             task_log, _ = TaskLog.objects.update_or_create(
                 workspace_id=workspace_id,
