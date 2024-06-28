@@ -344,6 +344,8 @@ def test_post_sage_intacct_reimbursements_success(mocker, create_task_logs, db, 
         'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
     )
 
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=data['expense'])
+
     workspace_id = 1
 
     expense_report, expense_report_lineitems = create_expense_report
@@ -386,6 +388,8 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
     mocker.patch(
         'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
     )
+
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=data['expense'])
 
     workspace_id = 1
 
@@ -863,6 +867,9 @@ def test_create_ap_payment(mocker, db):
         'sageintacctsdk.apis.Bills.update_attachment',
         return_value=data['bill_response']
     )
+
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
     workspace_id = 1
     task_log = TaskLog.objects.filter(expense_group__workspace_id=workspace_id).first()
     task_log.status = 'READY'
@@ -901,6 +908,9 @@ def test_post_ap_payment_exceptions(mocker, db):
         'fyle_integrations_platform_connector.apis.Reimbursements.sync',
         return_value=None
     )
+
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
     workspace_id = 1
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
     task_log.status = 'READY'
