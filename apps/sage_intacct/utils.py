@@ -802,6 +802,7 @@ class SageIntacctConnector:
                 'LASTNAME': name[-1] if len(name) == 2 else None
             }
         }
+        logger.info("| Payload for the vendor creation | Content : {{WORKSPACE_ID = {}, VENDOR_PAYLOAD = {}}}".format(self.workspace_id, vendor_payload))
 
         created_vendor = self.connection.vendors.post(vendor_payload)['data']['vendor']
 
