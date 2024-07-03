@@ -335,23 +335,8 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
     update_failed_expenses(expense_group.expenses.all(), False)
 
 
-def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration):
+def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Configuration):
     bulk_errors = []
-    row = 0
-
-    general_mapping = None
-    try:
-        general_mapping = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-    except GeneralMapping.DoesNotExist:
-        bulk_errors.append({
-            'row': None,
-            'expense_group_id': expense_group.id,
-            'value': 'general mappings',
-            'type': 'General Mappings',
-            'message': 'General mappings not found'
-        })
-
-    
     employee_attribute = ExpenseAttribute.objects.filter(
         value=expense_group.description.get('employee_email'),
         workspace_id=expense_group.workspace_id,
@@ -374,36 +359,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             if not entity:
                 raise EmployeeMapping.DoesNotExist
 
-        elif expense_group.fund_source == 'CCC':
-            if configuration.corporate_credit_card_expenses_object == 'BILL':
-                if general_mapping and not general_mapping.default_ccc_vendor_id:
-                    bulk_errors.append({
-                        'row': None,
-                        'expense_group_id': expense_group.id,
-                        'value': expense_group.description.get('employee_email'),
-                        'type': 'General Mapping',
-                        'message': 'Default Credit Card Vendor not found'
-                    })
-
-            elif configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
-                if general_mapping and not general_mapping.default_charge_card_id:
-                    bulk_errors.append({
-                        'row': None,
-                        'expense_group_id': expense_group.id,
-                        'value': expense_group.description.get('employee_email'),
-                        'type': 'General Mapping',
-                        'message': 'Default Charge Card not found'
-                    })
-
             elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
-                if general_mapping and not general_mapping.default_credit_card_id:
-                    bulk_errors.append({
-                        'row': None,
-                        'expense_group_id': expense_group.id,
-                        'value': expense_group.description.get('employee_email'),
-                        'type': 'General Mapping',
-                        'message': 'Default Credit Card not found'
-                    })
                 if settings.BRAND_ID == 'fyle':
                     error_message = 'Employee Mapping not found'
                     entity = EmployeeMapping.objects.get(
@@ -449,6 +405,57 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
                 }
             )
             error.increase_repetition_count_by_one(created)
+
+    if bulk_errors:
+        raise BulkError('Mappings are missing', bulk_errors)
+
+
+def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration):
+    bulk_errors = []
+    row = 0
+
+    general_mapping = None
+    try:
+        general_mapping = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
+    except GeneralMapping.DoesNotExist:
+        bulk_errors.append({
+            'row': None,
+            'expense_group_id': expense_group.id,
+            'value': 'general mappings',
+            'type': 'General Mappings',
+            'message': 'General mappings not found'
+        })
+
+    if expense_group.fund_source == 'CCC':
+        if configuration.corporate_credit_card_expenses_object == 'BILL':
+            if general_mapping and not general_mapping.default_ccc_vendor_id:
+                bulk_errors.append({
+                    'row': None,
+                    'expense_group_id': expense_group.id,
+                    'value': expense_group.description.get('employee_email'),
+                    'type': 'General Mapping',
+                    'message': 'Default Credit Card Vendor not found'
+                })
+
+        elif configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+            if general_mapping and not general_mapping.default_charge_card_id:
+                bulk_errors.append({
+                    'row': None,
+                    'expense_group_id': expense_group.id,
+                    'value': expense_group.description.get('employee_email'),
+                    'type': 'General Mapping',
+                    'message': 'Default Charge Card not found'
+                })
+
+        elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
+            if general_mapping and not general_mapping.default_credit_card_id:
+                bulk_errors.append({
+                    'row': None,
+                    'expense_group_id': expense_group.id,
+                    'value': expense_group.description.get('employee_email'),
+                    'type': 'General Mapping',
+                    'message': 'Default Credit Card not found'
+                })
 
     expenses = expense_group.expenses.all()
 
@@ -532,6 +539,8 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
     last_export_failed = False
 
     try:
+        __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
@@ -546,8 +555,8 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             merchant = expense_group.expenses.first().vendor
             get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
-        __validate_expense_group(expense_group, configuration)
-        logger.info('Validated Expense Group %s successfully', expense_group.id)
+        __validate_employee_mapping(expense_group, configuration)
+        logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
             supdoc_id = load_attachments(sage_intacct_connection, expense_group)
@@ -666,6 +675,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
     last_export_failed = False
 
     try:
+        __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
@@ -676,8 +687,8 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
                 configuration.employee_field_mapping
             )
 
-        __validate_expense_group(expense_group, configuration)
-        logger.info('Validated Expense Group %s successfully', expense_group.id)
+        __validate_employee_mapping(expense_group, configuration)
+        logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
             supdoc_id = load_attachments(sage_intacct_connection, expense_group)
@@ -804,6 +815,8 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
     last_export_failed = False
 
     try:
+        __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
@@ -815,8 +828,8 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
                 configuration.employee_field_mapping
             )
 
-        __validate_expense_group(expense_group, configuration)
-        logger.info('Validated Expense Group %s successfully', expense_group.id)
+        __validate_employee_mapping(expense_group, configuration)
+        logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
             supdoc_id = load_attachments(sage_intacct_connection, expense_group)
@@ -931,6 +944,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
     last_export_failed = False
 
     try:
+        __validate_expense_group(expense_group, configuration)
+        logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
@@ -938,8 +953,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
 
         vendor_id = vendor.destination_id if vendor else None
-        __validate_expense_group(expense_group, configuration)
-        logger.info('Validated Expense Group %s successfully', expense_group.id)
+        __validate_employee_mapping(expense_group, configuration)
+        logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
             supdoc_id = load_attachments(sage_intacct_connection, expense_group)

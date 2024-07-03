@@ -653,6 +653,7 @@ class SageIntacctConnector:
         if vendor_from_db:
             return vendor_from_db
 
+        logger.info('Searching for vendor: %s in Sage Intacct', vendor_name)
         vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
         vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
 
