@@ -1147,7 +1147,18 @@ def create_ap_payment(workspace_id):
                     task_log.status = 'FAILED'
                     task_log.detail = exception.response
 
-                    task_log.save()
+                    if exception.response and (
+                        "Oops, we can't find this transaction; enter a valid" in str(exception.response) 
+                        or 'No line items found' in str(exception.response)
+                        or 'There is no due on the bill' in str(exception.response)
+                    ):
+                        bill.payment_synced = True
+                        bill.paid_on_sage_intacct = True
+                        bill.save()
+
+                        task_log.delete()
+                    else:
+                        task_log.save()
 
                 except InvalidTokenError as exception:
                     logger.info(exception.response)
@@ -1259,8 +1270,21 @@ def create_sage_intacct_reimbursement(workspace_id):
                 logger.info(exception.response)
                 task_log.status = 'FAILED'
                 task_log.detail = exception.response
+                print('askjdhkjahsdad')
 
-                task_log.save()
+                if exception.response and (
+                    'exceeds total amount due ()' in str(exception.response)
+                    or 'exceeds total amount due (0)' in str(exception.response)
+                    or 'Payment cannot be processed because one or more bills are already paid' in str(exception.response)
+                    or 'The payment cannot be processed because one or more bills were paid' in str(exception.response)
+                ):
+                    expense_report.payment_synced = True
+                    expense_report.paid_on_sage_intacct = True
+                    expense_report.save()
+
+                    task_log.delete()
+                else:
+                    task_log.save()
             
             except InvalidTokenError as exception:
                 logger.info(exception.response)

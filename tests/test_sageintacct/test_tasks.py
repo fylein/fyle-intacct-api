@@ -455,6 +455,22 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
         create_sage_intacct_reimbursement(workspace_id)
 
+    with mock.patch('apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement') as mock_call:
+        expense_report.expense_group.expenses.all().update(paid_on_fyle=True)
+        assert expense_report.paid_on_sage_intacct == False
+        assert expense_report.payment_synced == False
+        mock_call.side_effect = WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': "exceeds total amount due ()", 'correction': ''}],
+                'type': 'Invalid_params'
+        })
+        create_sage_intacct_reimbursement(workspace_id)
+        expense_report = ExpenseReport.objects.get(id=expense_report.id)
+
+        assert expense_report.paid_on_sage_intacct == True
+        assert expense_report.payment_synced == True
 
 def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
     mocker.patch(
@@ -973,6 +989,23 @@ def test_post_ap_payment_exceptions(mocker, db):
         except:
             logger.info('Intacct credentials not found')
 
+    with mock.patch('apps.sage_intacct.models.APPayment.create_ap_payment') as mock_call:
+        bill.expense_group.expenses.all().update(paid_on_fyle=True)
+        assert bill.paid_on_sage_intacct == False
+        assert bill.payment_synced == False
+        mock_call.side_effect = WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': "Oops, we can't find this transaction; enter a valid", 'correction': ''}],
+                'type': 'Invalid_params'
+        })
+        create_ap_payment(workspace_id)
+        bill = Bill.objects.get(id=bill.id)
+
+        assert bill.paid_on_sage_intacct == True
+        assert bill.payment_synced == True
+
 
 def test_schedule_ap_payment_creation(db):
     workspace_id = 1
@@ -1105,7 +1138,7 @@ def test_schedule_sage_intacct_objects_status_sync(db):
 def test_schedule_journal_entries_creation(mocker, db):
     workspace_id = 1
 
-    schedule_journal_entries_creation(workspace_id, [1], False, 'PERSONAL')
+    schedule_journal_entries_creation(workspace_id, [1], False, 'PERSONAL', 1)
 
     TaskLog.objects.filter(type='CREATING_JOURNAL_ENTRIES').count() != 0
 
@@ -1113,7 +1146,7 @@ def test_schedule_journal_entries_creation(mocker, db):
 def test_schedule_expense_reports_creation(mocker, db):
     workspace_id = 1
 
-    schedule_expense_reports_creation(workspace_id, [1], False, 'PERSONAL')
+    schedule_expense_reports_creation(workspace_id, [1], False, 'PERSONAL', 1)
 
     TaskLog.objects.filter(type='CREATING_EXPENSE_REPORTS').count() != 0
 
@@ -1121,7 +1154,7 @@ def test_schedule_expense_reports_creation(mocker, db):
 def test_schedule_bills_creation(mocker, db):
     workspace_id = 1
 
-    schedule_bills_creation(workspace_id, [1], False, 'PERSONAL')
+    schedule_bills_creation(workspace_id, [1], False, 'PERSONAL', 1)
 
     TaskLog.objects.filter(type='CREATING_BILLS').count() != 0
 
@@ -1129,7 +1162,7 @@ def test_schedule_bills_creation(mocker, db):
 def test_schedule_charge_card_transaction_creation(mocker, db):
     workspace_id = 1
 
-    schedule_charge_card_transaction_creation(workspace_id, [2], False, 'CCC')
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 'CCC', 1)
 
     TaskLog.objects.filter(type='CREATING_CHARGE_CARD_TRANSACTIONS').count() != 0
 
