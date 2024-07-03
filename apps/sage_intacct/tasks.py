@@ -1270,7 +1270,6 @@ def create_sage_intacct_reimbursement(workspace_id):
                 logger.info(exception.response)
                 task_log.status = 'FAILED'
                 task_log.detail = exception.response
-                print('askjdhkjahsdad')
 
                 if exception.response and (
                     'exceeds total amount due ()' in str(exception.response)
