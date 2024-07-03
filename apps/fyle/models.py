@@ -38,6 +38,9 @@ CCC_EXPENSE_STATE = (
     ('PAYMENT_PROCESSING', 'PAYMENT_PROCESSING')
 )
 
+
+SPLIT_EXPENSE_GROUPING = (('SINGLE_LINE_ITEM', 'SINGLE_LINE_ITEM'), ('MULTIPLE_LINE_ITEM', 'MULTIPLE_LINE_ITEM'))
+
 EXPENSE_FILTER_RANK = (
     (1, 1),
     (2, 2)
@@ -89,6 +92,10 @@ def get_default_expense_state():
 def get_default_ccc_expense_state():
     return 'PAID'
 
+def get_default_split_expense_grouping():
+    return 'MULTIPLE_LINE_ITEM'
+
+
 class Expense(models.Model):
     """
     Expense
@@ -117,6 +124,7 @@ class Expense(models.Model):
     cost_center = models.CharField(max_length=255, null=True, blank=True, help_text='Fyle Expense Cost Center')
     purpose = models.TextField(null=True, blank=True, help_text='Purpose')
     report_id = models.CharField(max_length=255, help_text='Report ID')
+    bank_transaction_id = models.CharField(max_length=255, null=True, blank=True, help_text='Bank Transaction ID')
     spent_at = models.DateTimeField(null=True, help_text='Expense spent at')
     approved_at = models.DateTimeField(null=True, help_text='Expense approved at')
     posted_at = models.DateTimeField(null=True, help_text='Date when the money is taken from the bank')
@@ -179,6 +187,7 @@ class Expense(models.Model):
                     'purpose': expense['purpose'],
                     'report_id': expense['report_id'],
                     'report_title': expense['report_title'],
+                    'bank_transaction_id': expense['bank_transaction_id'],
                     'spent_at': expense['spent_at'],
                     'approved_at': expense['approved_at'],
                     'posted_at': expense['posted_at'],
@@ -221,6 +230,7 @@ class ExpenseGroupSettings(models.Model):
         choices=CCC_EXPENSE_STATE, help_text='state at which the ccc expenses are fetched (APPROVED/PAID)', null=True)
     reimbursable_export_date_type = models.CharField(max_length=100, default='current_date', help_text='Export Date')
     ccc_export_date_type = models.CharField(max_length=100, default='current_date', help_text='CCC Export Date')
+    split_expense_grouping = models.CharField(max_length=100, default=get_default_split_expense_grouping, choices=SPLIT_EXPENSE_GROUPING, help_text='specify line items for split expenses grouping')
     workspace = models.OneToOneField(
         Workspace, on_delete=models.PROTECT,
         help_text='To which workspace this expense group setting belongs to',
@@ -321,7 +331,8 @@ class ExpenseGroupSettings(models.Model):
                 'expense_state': expense_group_settings['expense_state'],
                 'ccc_expense_state': expense_group_settings['ccc_expense_state'],
                 'reimbursable_export_date_type': expense_group_settings['reimbursable_export_date_type'],
-                'ccc_export_date_type': expense_group_settings['ccc_export_date_type']
+                'ccc_export_date_type': expense_group_settings['ccc_export_date_type'],
+                'split_expense_grouping': expense_group_settings['split_expense_grouping']
             }
         )
 
