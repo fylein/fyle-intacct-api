@@ -26,7 +26,8 @@ data = {
                 'expense_id'
             ],
             'ccc_export_date_type': 'spent_at',
-            'ccc_expense_state': 'PAID'
+            'ccc_expense_state': 'PAID',
+            'split_expense_grouping': 'SINGLE_LINE_ITEM'
         },
         'general_mappings': {
             'default_gl_account': {
@@ -82,7 +83,8 @@ data = {
                 'expense_id'
             ],
             'ccc_export_date_type': 'spent_at',
-            'ccc_expense_state': 'PAID'
+            'ccc_expense_state': 'PAID',
+            'split_expense_grouping': 'SINGLE_LINE_ITEM'
         },
         'general_mappings': {
             'default_gl_account': {

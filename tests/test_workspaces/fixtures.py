@@ -21,6 +21,7 @@ data = {
             'tax_amount':None,
             'tax_group_id':None,
             'settlement_id':'setDiksMn83K7',
+            'bank_transaction_id': 'anish',
             'reimbursable':True,
             'billable':False,
             'exported':False,
