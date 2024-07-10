@@ -1,5 +1,11 @@
 #!/bin/bash
+echo "Current working directory: $(pwd)"
 
+echo "Checking if file exists:"
+ls -l ../../../scripts/sql/scripts/032-mark-split-expense-grouping.sql
+
+echo "Contents of scripts directory:"
+ls -l ../../../scripts/sql/scripts/
 # Setting value for DB Host
 export DB_HOST=db
 

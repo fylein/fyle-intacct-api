@@ -166,6 +166,7 @@ def test_post_accounting_export_summary(db, mocker):
 
 def test_update_non_exported_expenses(db, create_temp_workspace, mocker, api_client):
     expense = data['raw_expense']
+    expense['bank_transaction_id'] = 'btxnanish'
     default_raw_expense = data['default_raw_expense']
     org_id = expense['org_id']
     payload = {
