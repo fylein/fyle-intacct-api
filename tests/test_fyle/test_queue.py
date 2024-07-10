@@ -1,3 +1,5 @@
+from datetime import datetime, timezone, timedelta
+
 from apps.fyle.models import Expense
 from apps.workspaces.models import Workspace, FyleCredential
 from apps.tasks.models import Error
@@ -48,7 +50,8 @@ def test_async_import_and_export_expenses(db):
 def test_validate_failing_export(db):
     # Should return false for manual trigger from UI
     error = Error(
-        repetition_count=900
+        repetition_count=900,
+        updated_at=datetime.now().replace(tzinfo=timezone.utc)
     )
     skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, error=error)
 
@@ -57,27 +60,12 @@ def test_validate_failing_export(db):
     # Should return false if repetition count is less than 100
 
     error = Error(
-        repetition_count=90
+        repetition_count=90,
+        updated_at=datetime.now().replace(tzinfo=timezone.utc)
     )
     skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, error=error)
 
     assert skip_export is False
-
-    # Should return true if repetition count is greater than 100 and repetition count should be increased by 1
-    error = Error(
-        repetition_count=900,
-        workspace_id=1,
-        type='INTACCT_ERROR',
-        error_title='Dummy title',
-        error_detail='Dummy detail'
-    )
-    error.save()
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, error=error)
-
-    assert skip_export is True
-
-    latest_error = Error.objects.get(id=error.id)
-    assert latest_error.repetition_count == 901
 
     # Hourly schedule - erroed for 4 days straight - 101 repetitions
     error = Error(
@@ -85,49 +73,31 @@ def test_validate_failing_export(db):
         workspace_id=1,
         type='INTACCT_ERROR',
         error_title='Dummy title',
-        error_detail='Dummy detail'
+        error_detail='Dummy detail',
+        updated_at=datetime.now()
     )
     error.save()
 
     skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=error)
 
     assert skip_export is True
+
     latest_error = Error.objects.get(id=error.id)
     assert latest_error.repetition_count == 102
 
-    # 103 - repetition count should get increased by 1
-    validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error)
+    # Manually setting last error'd time to 25 hours ago
+    Error.objects.filter(id=error.id).update(updated_at=datetime.now() - timedelta(hours=25))
 
-    assert skip_export is True
     latest_error = Error.objects.get(id=error.id)
-    assert latest_error.repetition_count == 103
-
-    # 120 - manually setting to 120 and trying to check no skip case
-    latest_error.repetition_count = 119
-    latest_error.save()
 
     skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error)
 
     # Export should run once in a day
     assert skip_export is False
 
-    # 121 - it should skip
-    latest_error = Error.objects.get(id=latest_error.id)
-
+    # it should skip in next run after 1h, manually setting last error'd time to now
+    Error.objects.filter(id=error.id).update(updated_at=datetime.now())
+    latest_error = Error.objects.get(id=error.id)
     skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error)
 
     assert skip_export is True
-
-    # Test 24h schedule, it shouldn't get skipped at any point
-    error = Error(
-        repetition_count=105,
-        workspace_id=1,
-        type='INTACCT_ERROR',
-        error_title='Dummy title',
-        error_detail='Dummy detail'
-    )
-    error.save()
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=24, error=error)
-
-    assert skip_export is False

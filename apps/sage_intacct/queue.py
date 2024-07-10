@@ -1,9 +1,8 @@
 import logging
 import traceback
 from typing import List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
-from django.db import transaction
 from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
@@ -106,14 +105,10 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, error: Er
     :param error: Error
     """
     # If auto export is enabled and interval hours is set and error repetition count is greater than 100, export only once a day
-    if is_auto_export and interval_hours and error and error.repetition_count > 100:
+    if is_auto_export and interval_hours and error and error.repetition_count > 100 and datetime.now().replace(tzinfo=timezone.utc) - error.updated_at <= timedelta(hours=24):
         error.repetition_count += 1
         error.save()
-
-        limit = round(24 / interval_hours)
-
-        if error.repetition_count % limit != 0:
-            return True
+        return True
 
     return False
 
