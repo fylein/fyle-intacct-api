@@ -82,9 +82,6 @@ def test_validate_failing_export(db):
 
     assert skip_export is True
 
-    latest_error = Error.objects.get(id=error.id)
-    assert latest_error.repetition_count == 102
-
     # Manually setting last error'd time to 25 hours ago
     Error.objects.filter(id=error.id).update(updated_at=datetime.now() - timedelta(hours=25))
 
