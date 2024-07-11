@@ -105,10 +105,7 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, error: Er
     :param error: Error
     """
     # If auto export is enabled and interval hours is set and error repetition count is greater than 100, export only once a day
-    if is_auto_export and interval_hours and error and error.repetition_count > 100 and datetime.now().replace(tzinfo=timezone.utc) - error.updated_at <= timedelta(hours=24):
-        return True
-
-    return False
+    return is_auto_export and interval_hours and error and error.repetition_count > 100 and datetime.now().replace(tzinfo=timezone.utc) - error.updated_at <= timedelta(hours=24)
 
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str], is_auto_export: bool, fund_source: str, interval_hours: int):
