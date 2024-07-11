@@ -715,6 +715,28 @@ def test_get_or_create_vendor(mocker, db):
     new_employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
     assert new_employee_count == 68
 
+    new_vendor = DestinationAttribute.objects.create(
+        attribute_type='VENDOR',
+        active=True,
+        workspace_id=workspace_id,
+        value='Already existing vendor in DB',
+        destination_id='summaaaaaaa'
+    )
+
+    vendor = sage_intacct_connection.get_or_create_vendor('Already existing vendor in DB', 'ashwin.t@fyle.in', False)
+
+    assert vendor.id == new_vendor.id
+    assert vendor.value == 'Already existing vendor in DB'
+
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.get',
+        return_value={'VENDOR': data['get_vendors'], '@totalcount': 2}
+    )
+
+    vendor = sage_intacct_connection.get_or_create_vendor('Non existing vendor in DB', 'ashwin.t@fyle.in', False)
+
+    assert vendor.value == 'Ashwin'
+
 
 def test_get_or_create_employee(mocker, db):
     workspace_id = 1
