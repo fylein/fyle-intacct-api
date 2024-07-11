@@ -648,6 +648,12 @@ class SageIntacctConnector:
         :param create: False to just Get and True to Get or Create if not exists
         :return: Vendor
         """
+        vendor_from_db = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='VENDOR', value=vendor_name, active=True).first()
+
+        if vendor_from_db:
+            return vendor_from_db
+
+        logger.info('Searching for vendor: %s in Sage Intacct', vendor_name)
         vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
         vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
 
@@ -760,6 +766,16 @@ class SageIntacctConnector:
         vendors = self.connection.vendors.get_all()
         vendor_attributes = []
 
+        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
+                attribute_type= 'VENDOR', display_name='vendor').values('destination_id', 'value', 'detail')
+        disabled_fields_map = {}
+
+        for destination_attribute in destination_attributes:
+            disabled_fields_map[destination_attribute['destination_id']] = {
+                'value': destination_attribute['value'],
+                'detail': destination_attribute['detail']
+            }
+
         for vendor in vendors:
             if vendor['STATUS'] == 'active':
                 detail = {
@@ -773,6 +789,19 @@ class SageIntacctConnector:
                     'detail': detail,
                     'active': True
                 })
+
+                if vendor['VENDORID'] in disabled_fields_map:
+                    disabled_fields_map.pop(vendor['VENDORID'])
+
+        for destination_id in disabled_fields_map:
+            vendor_attributes.append({
+                'attribute_type': 'VENDOR',
+                'display_name': 'vendor',
+                'value': disabled_fields_map[destination_id]['value'],
+                'destination_id': destination_id,
+                'active': False,
+                'detail': disabled_fields_map[destination_id]['detail']
+            })
 
         if vendor_attributes:
             DestinationAttribute.bulk_create_or_update_destination_attributes(
