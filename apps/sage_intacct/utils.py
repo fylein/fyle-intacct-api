@@ -22,7 +22,7 @@ from apps.workspaces.models import SageIntacctCredential, FyleCredential, Worksp
 from .models import (
     ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, 
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement,
-    SageIntacctReimbursementLineitem, CostType
+    SageIntacctReimbursementLineitem, CostType, get_user_defined_dimension_object
 )
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,6 @@ SYNC_UPPER_LIMIT = {
     'items':15000,
     'classes': 15000
 }
-
 
 class SageIntacctConnector:
     """
@@ -501,6 +500,48 @@ class SageIntacctConnector:
             employee_attributes, 'EMPLOYEE', self.workspace_id, True)
 
         return []
+
+    def sync_allocation_entries(self):
+        """
+        Get allocations
+        """
+
+        allocation_entries = self.connection.allocation_entry.get_all_generator()
+        unique_allocation_entries = {}
+
+        allocation_attributes = []
+        
+        for allocation_entry in allocation_entries:
+            allocation_entry_key = (allocation_entry['ALLOCATIONID'], allocation_entry['ALLOCATIONKEY'])
+            if allocation_entry_key not in unique_allocation_entries:
+                unique_allocation_entries[allocation_entry_key] = {
+                    'ALLOCATIONID': allocation_entry['ALLOCATIONID'],
+                    'ALLOCATIONKEY': allocation_entry['ALLOCATIONKEY']
+                }
+            for field, value in allocation_entry.items():
+                if field not in ['ALLOCATIONID', 'ALLOCATIONKEY'] and value is not None:
+                    unique_allocation_entries[allocation_entry_key][field] = value
+            
+        for unique_allocation_entry in unique_allocation_entries:
+                
+                detail = dict(unique_allocation_entry)
+                allocation_id = detail.pop('ALLOCATIONID')
+                allocation_key = detail.pop('ALLOCATIONKEY')
+
+                allocation_attributes.append(
+                {
+                    'attribute_type': 'ALLOCATION_ENTRY',
+                    'display_name': 'allocation_entry',
+                    'value': allocation_id,
+                    'destination_id': allocation_key,
+                    'active': True,
+                    'detail': detail
+                })
+        
+        DestinationAttribute.bulk_create_or_update_destination_attributes(
+            allocation_attributes, 'ALLOCATION_ENTRY', self.workspace_id
+        )
+
 
     def sync_user_defined_dimensions(self):
         """
