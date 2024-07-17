@@ -503,7 +503,7 @@ class SageIntacctConnector:
 
     def sync_allocation_entries(self):
         """
-        Get allocations
+        Sync allocation entries from intacct
         """
 
         allocation_entries = self.connection.allocation_entry.get_all_generator()
