@@ -506,10 +506,10 @@ class SageIntacctConnector:
         Sync allocation entries from intacct
         """
         allocation_attributes = []
-        allocations = self.connection.allocations.get_all()
-        for allocation in allocations:
-            if allocation['STATUS'] == 'active':
+        allocations_generator = self.connection.allocations.get_all_generator(field='STATUS', value='active')
 
+        for allocations in allocations_generator:
+            for allocation in allocations:
                 allocation_entry_generator = self.connection.allocation_entry.get_all_generator(field='allocation.ALLOCATIONID', value=allocation['ALLOCATIONID'])
                 for allocation_entry in allocation_entry_generator:
                     detail = {}

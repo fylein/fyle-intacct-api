@@ -764,19 +764,23 @@ def test_get_or_create_employee(mocker, db):
 
 def test_sync_allocation_entries(mocker, db):
     workspace_id = 1
-    mocker.patch(
-        'sageintacctsdk.apis.Allocations.get_all',
-        return_value = data['allocations']
-    )
 
     def mock_allocation_entry_generator(field, value):
         for allocation_entry_list in data['allocation_entries']:
             if allocation_entry_list and allocation_entry_list[0]['ALLOCATIONID'] == value:
                 yield allocation_entry_list
     
+    def mock_allocations_generator(field, value):
+        yield data['allocations']
+    
     mocker.patch(
         'sageintacctsdk.apis.AllocationEntry.get_all_generator',
         side_effect=mock_allocation_entry_generator
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Allocations.get_all_generator',
+        side_effect = mock_allocations_generator
     )
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
