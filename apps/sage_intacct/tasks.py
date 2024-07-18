@@ -344,19 +344,20 @@ def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Conf
     ).first()
 
     try:
-        error_message = 'Employee Mapping not found'
-        entity = EmployeeMapping.objects.get(
-            source_employee__value=expense_group.description.get('employee_email'),
-            workspace_id=expense_group.workspace_id
-        )
+        if expense_group.fund_source == 'PERSONAL':
+            error_message = 'Employee Mapping not found'
+            entity = EmployeeMapping.objects.get(
+                source_employee__value=expense_group.description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            )
 
-        if configuration.employee_field_mapping == 'EMPLOYEE':
-            entity = entity.destination_employee
-        else:
-            entity = entity.destination_vendor
+            if configuration.employee_field_mapping == 'EMPLOYEE':
+                entity = entity.destination_employee
+            else:
+                entity = entity.destination_vendor
 
-        if not entity:
-            raise EmployeeMapping.DoesNotExist
+            if not entity:
+                raise EmployeeMapping.DoesNotExist
 
         elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
             if settings.BRAND_ID == 'fyle':
