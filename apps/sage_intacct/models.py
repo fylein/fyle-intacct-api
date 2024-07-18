@@ -923,17 +923,16 @@ class JournalEntryLineitem(models.Model):
                 default_employee_location_id is None else None
 
             employee_id = None
-            vendor_id = None
 
             if settings.BRAND_ID == 'fyle':
-                entity = EmployeeMapping.objects.filter(
+                entity = EmployeeMapping.objects.get(
                     source_employee__value=description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
-                ).first()
+                )
 
-                if entity:
-                    employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
-                    vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
+                employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
+
+                vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
                 if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
                     vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).order_by('-updated_at').first()
