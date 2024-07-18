@@ -505,39 +505,34 @@ class SageIntacctConnector:
         """
         Sync allocation entries from intacct
         """
-
-        allocation_entries = self.connection.allocation_entry.get_all_generator()
-        unique_allocation_entries = {}
-
         allocation_attributes = []
-        
-        for allocation_entry in allocation_entries:
-            allocation_entry_key = (allocation_entry['ALLOCATIONID'], allocation_entry['ALLOCATIONKEY'])
-            if allocation_entry_key not in unique_allocation_entries:
-                unique_allocation_entries[allocation_entry_key] = {
-                    'ALLOCATIONID': allocation_entry['ALLOCATIONID'],
-                    'ALLOCATIONKEY': allocation_entry['ALLOCATIONKEY']
-                }
-            for field, value in allocation_entry.items():
-                if field not in ['ALLOCATIONID', 'ALLOCATIONKEY'] and value is not None:
-                    unique_allocation_entries[allocation_entry_key][field] = value
-            
-        for unique_allocation_entry in unique_allocation_entries:
-                
-                detail = dict(unique_allocation_entry)
-                allocation_id = detail.pop('ALLOCATIONID')
-                allocation_key = detail.pop('ALLOCATIONKEY')
+        allocations = self.connection.allocations.get_all()
+        for allocation in allocations:
+            if allocation['STATUS'] == 'active':
 
-                allocation_attributes.append(
-                {
-                    'attribute_type': 'ALLOCATION_ENTRY',
-                    'display_name': 'allocation_entry',
-                    'value': allocation_id,
-                    'destination_id': allocation_key,
-                    'active': True,
-                    'detail': detail
-                })
-        
+                allocation_entry_generator = self.connection.allocation_entry.get_all_generator(field='allocation.ALLOCATIONID', value=allocation['ALLOCATIONID'])
+                for allocation_entry in allocation_entry_generator:
+                    detail = {}
+                    for entry in allocation_entry:
+                        value = entry['ALLOCATIONID']
+                        destinaion_id = entry['ALLOCATIONKEY']
+                        for field in entry.keys():
+                            if entry[field] is not None and field not in detail:
+                                detail[field] = True
+                    
+                    detail.pop('ALLOCATIONID')
+                    detail.pop('ALLOCATIONKEY')
+
+                    allocation_attributes.append(
+                    {
+                        'attribute_type': 'ALLOCATION_ENTRY',
+                        'display_name': 'allocation_entry',
+                        'value': value,
+                        'destination_id': destinaion_id,
+                        'active': True,
+                        'detail': detail
+                    })
+
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             allocation_attributes, 'ALLOCATION_ENTRY', self.workspace_id
         )

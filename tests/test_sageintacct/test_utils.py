@@ -760,3 +760,36 @@ def test_get_or_create_employee(mocker, db):
 
     new_employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EMPLOYEE').count()
     assert new_employee_count == 55
+
+
+def test_sync_allocation_entries(mocker, db):
+    workspace_id = 1
+    mocker.patch(
+        'sageintacctsdk.apis.Allocations.get_all',
+        return_value = data['allocations']
+    )
+
+    def mock_allocation_entry_generator(field, value):
+        for allocation_entry_list in data['allocation_entries']:
+            if allocation_entry_list and allocation_entry_list[0]['ALLOCATIONID'] == value:
+                yield allocation_entry_list
+    
+    mocker.patch(
+        'sageintacctsdk.apis.AllocationEntry.get_all_generator',
+        side_effect=mock_allocation_entry_generator
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    sage_intacct_connection.sync_allocation_entries()
+
+    allocation_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ALLOCATION_ENTRY')
+
+    assert allocation_attributes.count() == 2
+    
+    for allocation_attribute in allocation_attributes:
+        if allocation_attribute.value == 'RENT':
+            assert set(allocation_attribute.detail.keys()) == {'LOCATIONID'}
+        else:
+            assert set(allocation_attribute.detail.keys()) == {'LOCATIONID', 'GLDIMWHAT_IS_NILESH_PANT'}
