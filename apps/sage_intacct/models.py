@@ -17,6 +17,47 @@ from apps.workspaces.models import Configuration, Workspace, FyleCredential
 from typing import Dict, List, Union
 
 
+allocation_mapping = {
+    'LOCATIONID': 'location_id',
+    'DEPARTMENTID': 'department_id',
+    'CLASSID': 'class_id',
+    'CUSTOMERID': 'customer_id',
+    'ITEMID': 'item_id',
+    'TASKID': 'task_id',
+    'COSTTYPEID': 'cost_type_id'
+}
+
+def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
+    allocation_id = None
+    allocation_detail = None
+
+    allocation_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field ='ALLOCATION'
+    ).first()
+
+    if allocation_setting:
+        if allocation_setting.source_field == 'PROJECT':
+            source_value = lineitem.project
+        elif allocation_setting.source_field == 'COST_CENTER':
+            source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=allocation_setting.source_field).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=allocation_setting.source_field,
+            destination_type='ALLOCATION',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+
+        if mapping:
+            allocation_id = mapping.destination.value
+            allocation_detail = mapping.destination.detail
+    return allocation_id, allocation_detail
+
+
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     project_id = None
     if general_mappings and general_mappings.default_project_id:
@@ -537,6 +578,7 @@ class BillLineitem(models.Model):
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
+    allocation_id = models.CharField(max_length=255, help_text='Sage Intacct Allocation id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -594,8 +636,31 @@ class BillLineitem(models.Model):
             if dependent_field_setting:
                 task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
                 cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id)
-
+            
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
+
+            dimensions_values = {
+                    'project_id': project_id,
+                    'location_id': location_id,
+                    'department_id': department_id,
+                    'class_id': class_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id
+                }
+            
+            allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
+
+            if allocation_detail:
+                for key, var_name in allocation_mapping.items():
+                    if allocation_detail.get(key):
+                        dimensions_values[var_name] = None
+
+                user_defined_dimensions = [
+                    dimension for dimension in user_defined_dimensions
+                    if not any(key in allocation_detail for key in dimension.keys())
+                ]
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
@@ -605,21 +670,22 @@ class BillLineitem(models.Model):
                     if account and account.destination_account else None,
                     'expense_type_id': account.destination_expense_head.destination_id
                     if account and account.destination_expense_head else None,
-                    'project_id': project_id,
+                    'project_id': dimensions_values['project_id'],
                     'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
-                    'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
-                    'customer_id': customer_id,
-                    'item_id': item_id,
-                    'task_id': task_id,
-                    'cost_type_id': cost_type_id,
+                    else dimensions_values['department_id'],
+                    'class_id': dimensions_values['class_id'],
+                    'location_id': default_employee_location_id if default_employee_location_id else dimensions_values['location_id'],
+                    'customer_id': dimensions_values['customer_id'],
+                    'item_id': dimensions_values['item_id'],
+                    'task_id': dimensions_values['task_id'],
+                    'cost_type_id': dimensions_values['cost_type_id'],
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'allocation_id': allocation_id
                 }
             )
 

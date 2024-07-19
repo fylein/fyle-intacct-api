@@ -992,6 +992,7 @@ class SageIntacctConnector:
                 'COSTTYPEID': lineitem.cost_type_id,
                 'CLASSID': lineitem.class_id,
                 'BILLABLE': lineitem.billable,
+                'ALLOCATION': lineitem.allocation_id,
                 'TAXENTRIES': {
                     'TAXENTRY': {
                         'DETAILID': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id

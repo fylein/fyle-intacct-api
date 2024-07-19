@@ -27,9 +27,9 @@ data = {
     "report_id": "rpuN3bgphxbK",
     "report_title": None,
     "corporate_card_id": None,
-    "file_ids": None
+    "file_ids": None,
 }],
-    'bill_payload': {'WHENCREATED': '9/28/2022', 'SUPDOCID': None, 'VENDORID': 'Ashwin', 'RECORDID': 'Reimbursable expense - C/2022/09/R/21', 'WHENDUE': '9/28/2022', 'BASECURR': 'USD', 'CURRENCY': 'USD', 'EXCH_RATE_TYPE_ID': None, 'APBILLITEMS': {'APBILLITEM': [{'CLASS': 'sample', 'ACCOUNTNO': '20100', 'TRX_AMOUNT': 0.0, 'TOTALTRXAMOUNT': 21.0, 'TASKID': None, 'COSTTYPEID': None, 'ENTRYDESCRIPTION': 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/21 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txR9dyrqr1Jn?org_id=or79Cob97KSh', 'LOCATIONID': '600', 'DEPARTMENTID': '300', 'PROJECTID': '10061', 'CUSTOMERID': '10061', 'ITEMID': None, 'CLASSID': '600', 'BILLABLE': False, 'TAXENTRIES': {'TAXENTRY': {'DETAILID': 'Capital Goods Imported'}}, 'customfields': {'customfield': [{'customfieldname': 'FYLE_EXPENSE_URL', 'customfieldvalue': 'https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txR9dyrqr1Jn?org_id=or79Cob97KSh'}]}, 'INCLUSIVETAX': True, 'TAXSOLUTIONID': 'South Africa - VAT'}]}},
+    'bill_payload': {'WHENCREATED': '9/28/2022', 'SUPDOCID': None, 'VENDORID': 'Ashwin', 'RECORDID': 'Reimbursable expense - C/2022/09/R/21', 'WHENDUE': '9/28/2022', 'BASECURR': 'USD', 'CURRENCY': 'USD', 'EXCH_RATE_TYPE_ID': None, 'APBILLITEMS': {'APBILLITEM': [{'ALLOCATION': None, 'CLASS': 'sample', 'ACCOUNTNO': '20100', 'TRX_AMOUNT': 0.0, 'TOTALTRXAMOUNT': 21.0, 'TASKID': None, 'COSTTYPEID': None, 'ENTRYDESCRIPTION': 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/21 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txR9dyrqr1Jn?org_id=or79Cob97KSh', 'LOCATIONID': '600', 'DEPARTMENTID': '300', 'PROJECTID': '10061', 'CUSTOMERID': '10061', 'ITEMID': None, 'CLASSID': '600', 'BILLABLE': False, 'TAXENTRIES': {'TAXENTRY': {'DETAILID': 'Capital Goods Imported'}}, 'customfields': {'customfield': [{'customfieldname': 'FYLE_EXPENSE_URL', 'customfieldvalue': 'https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txR9dyrqr1Jn?org_id=or79Cob97KSh'}]}, 'INCLUSIVETAX': True, 'TAXSOLUTIONID': 'South Africa - VAT'}]}},
     'expense_report_payload': {
         'employeeid': 'Joanna',
         'datecreated': {'year': 2022, 'month': 9, 'day': 28},

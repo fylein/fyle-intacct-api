@@ -254,7 +254,8 @@ CREATE TABLE public.bill_lineitems (
     tax_amount double precision,
     tax_code character varying(255),
     cost_type_id character varying(255),
-    task_id character varying(255)
+    task_id character varying(255),
+    allocation_id character varying(255)
 );
 
 
@@ -2832,7 +2833,7 @@ COPY public.auth_tokens (id, refresh_token, user_id) FROM stdin;
 -- Data for Name: bill_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.bill_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, bill_id, expense_id, billable, customer_id, item_id, user_defined_dimensions, class_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+COPY public.bill_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, bill_id, expense_id, billable, customer_id, item_id, user_defined_dimensions, class_id, tax_amount, tax_code, cost_type_id, task_id, allocation_id) FROM stdin;
 \.
 
 
@@ -4111,6 +4112,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 183	fyle	0031_expense_paid_on_fyle	2024-06-05 16:26:11.775475+00
 184	workspaces	0034_configuration_is_journal_credit_billable	2024-06-19 07:16:22.418147+00
 185	fyle	0032_auto_20240703_1818	2024-07-03 18:29:14.061756+00
+186	sage_intacct	0026_billlineitem_allocation_id	2024-07-19 09:36:26.579359+00
 \.
 
 
@@ -8118,7 +8120,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 185, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 186, true);
 
 
 --
