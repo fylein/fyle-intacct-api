@@ -202,3 +202,53 @@ def create_expense_group_expense(db):
     expense_group.expenses.add(expense)
 
     return expense_group, expense
+
+@pytest.fixture
+def create_expense_group_for_allocation(db):
+
+    expense_group = ExpenseGroup.objects.create(
+        workspace_id=1,
+        fund_source='PERSONAL',
+        description={'employee_email': 'ashwin.t@fyle.in'}
+    )
+
+    expense, _ = Expense.objects.update_or_create(
+    expense_id='dummy_id',
+    defaults={
+        'employee_email': 'ashwin.t@fyle.in',
+        'category': 'category',
+        'sub_category': 'sub_category',
+        'project': 'Aaron Abbott',
+        'expense_number': 'expense_number',
+        'org_id': 'org_id',
+        'claim_number': 'claim_number',
+        'amount': round(123, 2),
+        'currency': 'USD',
+        'foreign_amount': 123,
+        'foreign_currency': 'USD',
+        'tax_amount': 123,
+        'tax_group_id': 'tax_group_id',
+        'settlement_id': 'settlement_id',
+        'reimbursable': True,
+        'billable': True,
+        'state': 'state',
+        'vendor': 'vendor',
+        'cost_center': 'Izio',
+        'purpose': 'purpose',
+        'report_id': 'report_id',
+        'report_title': 'report_title',
+        'spent_at': datetime.now(),
+        'approved_at': datetime.now(),
+        'expense_created_at': datetime.now(),
+        'expense_updated_at': datetime.now(),
+        'fund_source': 'PERSONAL',
+        'verified_at': datetime.now(),
+        'custom_properties': {'Cost Type': 'cost', 'Cost Code': 'task'},
+        'payment_number': 'payment_number',
+        'file_ids': [],
+        'corporate_card_id': 'corporate_card_id',
+        }
+    )
+    expense_group.expenses.add(expense)
+
+    return expense_group, expense

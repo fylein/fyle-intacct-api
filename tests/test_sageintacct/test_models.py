@@ -956,8 +956,91 @@ def test_bill_with_allocation(db, mocker):
         assert bill_lineitem.department_id is None
         assert bill_lineitem.item_id == '1012'
         assert bill_lineitem.amount == 21.0
-        assert bill_lineitem.billable == None    
+        assert bill_lineitem.billable == None
+        
 
     assert bill.currency == 'USD'
     assert bill.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
     assert bill.vendor_id == 'Ashwin'
+
+
+def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_group_for_allocation):
+    workspace_id = 1
+
+    expense_group, expense = create_expense_group_for_allocation
+
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
+    general_mappings.save()
+
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='TAX_CODE'
+    ).first()
+
+    expense_attribute = ExpenseAttribute.objects.filter(
+        attribute_type = 'COST_CENTER',
+        value = 'Izio',
+        workspace_id=1
+    ).first()
+
+    destination_attribute = DestinationAttribute.objects.create(
+        attribute_type='ALLOCATION',
+        workspace_id=workspace_id,
+        display_name = 'allocation',
+        value = 'RENT',
+        destination_id = '1',
+        active = True,
+        detail = {'GLDIMPROJECT': '2024'}
+    )
+
+    mapping_setting.source_field = 'COST_CENTER'
+    mapping_setting.destination_field = 'ALLOCATION'
+    mapping_setting.save()
+
+    mapping = Mapping.objects.filter(
+        source_type='TAX_GROUP',
+        workspace_id=expense_group.workspace_id
+    ).first()
+
+    mapping.destination_type = 'ALLOCATION'
+    mapping.source_type = 'COST_CENTER'
+    mapping.destination = destination_attribute
+    mapping.source=expense_attribute
+    mapping.save()
+
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='PROJECT'
+    ).first()
+
+    mapping_setting.source_field = 'PROJECT'
+    mapping_setting.destination_field = 'CLASS'
+    mapping_setting.save()
+
+    mapping = Mapping.objects.filter(
+        source_type='PROJECT',
+        workspace_id=expense_group.workspace_id
+    ).first()
+
+    mapping.destination_type = 'CLASS'
+    mapping.source = ExpenseAttribute.objects.get(value=expense.project)
+    mapping.save()
+
+    location_id = get_user_defined_dimension_object(expense_group, expense)
+    assert location_id == [{'GLDIMPROJECT': '10061'}]
+    
+    bill = Bill.create_bill(expense_group)
+    bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
+
+    for bill_lineitem in bill_lineitems:
+        assert bill_lineitem.user_defined_dimensions == []
+        assert bill_lineitem.project_id == '10061'
+        assert bill_lineitem.location_id == '600'
+        assert bill_lineitem.class_id == '10061'
+        assert bill_lineitem.department_id == '300'
+        assert bill_lineitem.customer_id == '10061'
+        assert bill_lineitem.item_id == '1012'
