@@ -788,7 +788,7 @@ def test_sync_allocation_entries(mocker, db):
 
     sage_intacct_connection.sync_allocation_entries()
 
-    allocation_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ALLOCATION_ENTRY')
+    allocation_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ALLOCATION')
 
     assert allocation_attributes.count() == 2
     
