@@ -446,9 +446,9 @@ def test_get_user_defined_dimension_object(mocker, db):
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
-    mapping_setting = MappingSetting.objects.filter( 
-        workspace_id=expense_group.workspace_id, 
-        destination_field='PROJECT' 
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='PROJECT'
     ).first()
 
     mapping_setting.source_field = 'PROJECT'
@@ -849,3 +849,115 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_
 
     assert CostType.objects.filter(record_number='2342341').exists()
     assert CostType.objects.get(record_number='34234').name == 'costUpdated'
+
+
+def test_get_allocation_or_none(db, mocker):
+    workspace_id = 1
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense = expense_group.expenses.first()
+
+    allocation_id, _ = get_allocation_id_or_none(expense_group=expense_group, lineitem=expense)
+
+    assert allocation_id == None
+
+    allocation_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
+    allocation_setting.source_field='PROJECT'
+    allocation_setting.destination_field='ALLOCATION'
+    allocation_setting.save()
+
+    expense_attribute = ExpenseAttribute.objects.filter(
+        attribute_type = 'PROJECT',
+        value = 'Aaron Abbott'
+    ).first()
+
+    destination_attribute = DestinationAttribute.objects.create(
+        attribute_type='ALLOCATION',
+        workspace_id=workspace_id,
+        display_name = 'allocation',
+        value = 'RENT',
+        destination_id = '1',
+        active = True,
+        detail = {'LOCATIONID':'100'}
+    )
+
+    mapping = Mapping.objects.first()
+    mapping.destination_type = 'ALLOCATION'
+    mapping.source_type = 'PROJECT'
+    mapping.destination = destination_attribute
+    mapping.source=expense_attribute
+    mapping.workspace_id=general_mappings.workspace
+    mapping.save()
+
+    source_value = expense.project
+    
+    mapping: Mapping = Mapping.objects.filter(
+            source_type=allocation_setting.source_field,
+            destination_type='ALLOCATION',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+
+    allocation_id, _ = get_allocation_id_or_none(expense_group, expense)
+
+    assert allocation_id == mapping.destination.value
+
+
+def test_bill_with_allocation(db, mocker):
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
+    general_mappings.save()
+
+    for lineitem in expense_group.expenses.all():
+        print(lineitem.__dict__)
+
+    allocation_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
+    allocation_setting.source_field='PROJECT'
+    allocation_setting.destination_field='ALLOCATION'
+    allocation_setting.save()
+
+    expense_attribute = ExpenseAttribute.objects.filter(
+        attribute_type = 'PROJECT',
+        value = 'Aaron Abbott'
+    ).first()
+
+    destination_attribute = DestinationAttribute.objects.create(
+        attribute_type='ALLOCATION',
+        workspace_id=workspace_id,
+        display_name = 'allocation',
+        value = 'RENT',
+        destination_id = '1',
+        active = True,
+        detail = {'LOCATIONID':'600', 'CLASSID': '600', 'DEPARTMENTID': '300'}
+    )
+
+    mapping = Mapping.objects.first()
+    mapping.destination_type = 'ALLOCATION'
+    mapping.source_type = 'PROJECT'
+    mapping.destination = destination_attribute
+    mapping.source=expense_attribute
+    mapping.workspace_id=general_mappings.workspace
+    mapping.save()
+
+    bill = Bill.create_bill(expense_group)
+    bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
+
+    for bill_lineitem in bill_lineitems:
+        assert bill_lineitem.location_id is None
+        assert bill_lineitem.class_id is None
+        assert bill_lineitem.department_id is None
+        assert bill_lineitem.item_id == '1012'
+        assert bill_lineitem.amount == 21.0
+        assert bill_lineitem.billable == None    
+
+    assert bill.currency == 'USD'
+    assert bill.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
+    assert bill.vendor_id == 'Ashwin'

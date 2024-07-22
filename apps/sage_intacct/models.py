@@ -430,7 +430,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
     default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
-                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE']
+                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE', 'ALLOCATION']
 
     for setting in mapping_settings:
         if setting.source_field not in default_expense_attributes and \
@@ -651,9 +651,11 @@ class BillLineitem(models.Model):
                 }
             
             allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
+            print(allocation_id, allocation_detail)
             if allocation_id and allocation_detail:
-                for allocation_key, dimension_variable_name in allocation_mapping.items():
-                        dimensions_values[dimension_variable_name] = None
+                for allocation_dimension, dimension_variable_name in allocation_mapping.items():
+                        if allocation_dimension in allocation_detail.keys():
+                            dimensions_values[dimension_variable_name] = None
 
                 allocation_dimensions = set(allocation_detail.keys())
                 user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
