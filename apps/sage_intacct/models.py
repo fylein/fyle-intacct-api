@@ -42,7 +42,7 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
         elif allocation_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=allocation_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=allocation_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -74,7 +74,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -106,7 +106,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field, workspace_id=expense_group.workspace_id).first()
             if attribute:
                 source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
@@ -138,7 +138,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -177,7 +177,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             elif customer_setting.source_field == 'COST_CENTER':
                 source_value = lineitem.cost_center
             else:
-                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field).first()
+                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field, workspace_id=expense_group.workspace_id).first()
                 source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
             mapping: Mapping = Mapping.objects.filter(
@@ -207,7 +207,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         elif item_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -272,7 +272,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         elif class_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -641,8 +641,8 @@ class BillLineitem(models.Model):
 
             dimensions_values = {
                     'project_id': project_id,
-                    'location_id': location_id,
-                    'department_id': department_id,
+                    'location_id': default_employee_location_id or location_id,
+                    'department_id': default_employee_department_id or department_id,
                     'class_id': class_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
@@ -651,17 +651,13 @@ class BillLineitem(models.Model):
                 }
             
             allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
+            if allocation_id and allocation_detail:
+                for allocation_key, dimension_variable_name in allocation_mapping.items():
+                        dimensions_values[dimension_variable_name] = None
 
-            if allocation_detail:
-                for key, var_name in allocation_mapping.items():
-                    if allocation_detail.get(key):
-                        dimensions_values[var_name] = None
-
-                user_defined_dimensions = [
-                    dimension for dimension in user_defined_dimensions
-                    if not any(key in allocation_detail for key in dimension.keys())
-                ]
-
+                allocation_dimensions = set(allocation_detail.keys())
+                user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
+            
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
                 expense_id=lineitem.id,
@@ -671,10 +667,9 @@ class BillLineitem(models.Model):
                     'expense_type_id': account.destination_expense_head.destination_id
                     if account and account.destination_expense_head else None,
                     'project_id': dimensions_values['project_id'],
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else dimensions_values['department_id'],
+                    'department_id': dimensions_values['department_id'],
                     'class_id': dimensions_values['class_id'],
-                    'location_id': default_employee_location_id if default_employee_location_id else dimensions_values['location_id'],
+                    'location_id': dimensions_values['location_id'],
                     'customer_id': dimensions_values['customer_id'],
                     'item_id': dimensions_values['item_id'],
                     'task_id': dimensions_values['task_id'],
