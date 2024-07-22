@@ -916,9 +916,6 @@ def test_bill_with_allocation(db, mocker):
     general_mappings.use_intacct_employee_departments = True
     general_mappings.save()
 
-    for lineitem in expense_group.expenses.all():
-        print(lineitem.__dict__)
-
     allocation_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
     allocation_setting.source_field='PROJECT'
     allocation_setting.destination_field='ALLOCATION'
@@ -957,6 +954,7 @@ def test_bill_with_allocation(db, mocker):
         assert bill_lineitem.item_id == '1012'
         assert bill_lineitem.amount == 21.0
         assert bill_lineitem.billable == None
+        assert bill_lineitem.allocation_id == 'RENT'
         
 
     assert bill.currency == 'USD'
@@ -1044,3 +1042,4 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
         assert bill_lineitem.department_id == '300'
         assert bill_lineitem.customer_id == '10061'
         assert bill_lineitem.item_id == '1012'
+        assert bill_lineitem.allocation_id == 'RENT'

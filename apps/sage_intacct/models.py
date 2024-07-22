@@ -651,7 +651,6 @@ class BillLineitem(models.Model):
                 }
             
             allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
-            print(allocation_id, allocation_detail)
             if allocation_id and allocation_detail:
                 for allocation_dimension, dimension_variable_name in allocation_mapping.items():
                         if allocation_dimension in allocation_detail.keys():
