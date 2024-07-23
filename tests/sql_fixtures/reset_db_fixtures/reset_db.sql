@@ -1547,7 +1547,8 @@ CREATE TABLE public.journal_entry_lineitems (
     tax_amount double precision,
     tax_code character varying(255),
     cost_type_id character varying(255),
-    task_id character varying(255)
+    task_id character varying(255),
+    allocation_id character varying(255)
 );
 
 
@@ -4113,6 +4114,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 184	workspaces	0034_configuration_is_journal_credit_billable	2024-06-19 07:16:22.418147+00
 185	fyle	0032_auto_20240703_1818	2024-07-03 18:29:14.061756+00
 186	sage_intacct	0026_billlineitem_allocation_id	2024-07-19 09:36:26.579359+00
+187	sage_intacct	0027_journalentrylineitem_allocation_id	2024-07-23 10:21:36.607877+00
 \.
 
 
@@ -7594,7 +7596,7 @@ COPY public.journal_entries (id, description, memo, currency, supdoc_id, transac
 -- Data for Name: journal_entry_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location_id, class_id, department_id, customer_id, item_id, memo, user_defined_dimensions, amount, billable, transaction_date, created_at, updated_at, expense_id, journal_entry_id, employee_id, vendor_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location_id, class_id, department_id, customer_id, item_id, memo, user_defined_dimensions, amount, billable, transaction_date, created_at, updated_at, expense_id, journal_entry_id, employee_id, vendor_id, tax_amount, tax_code, cost_type_id, task_id, allocation_id) FROM stdin;
 \.
 
 
@@ -8120,7 +8122,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 186, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 187, true);
 
 
 --
