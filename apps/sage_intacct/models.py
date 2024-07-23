@@ -930,6 +930,7 @@ class JournalEntryLineitem(models.Model):
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    allocation_id = models.CharField(max_length=255, help_text='Sage Intacct Allocation id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -1028,23 +1029,42 @@ class JournalEntryLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            dimensions_values = {
+                    'project_id': project_id,
+                    'location_id': default_employee_location_id or location_id,
+                    'department_id': default_employee_department_id or department_id,
+                    'class_id': class_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id
+                }
+            
+            allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
+            if allocation_id and allocation_detail:
+                for allocation_dimension, dimension_variable_name in allocation_mapping.items():
+                        if allocation_dimension in allocation_detail.keys():
+                            dimensions_values[dimension_variable_name] = None
+
+                allocation_dimensions = set(allocation_detail.keys())
+                user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
+
             journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
                 expense_id=lineitem.id,
                 defaults={
                     'gl_account_number': account.destination_account.destination_id
                     if account and account.destination_account else None,
-                    'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
-                    'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
-                    'customer_id': customer_id,
-                    'item_id': item_id,
+                    'project_id': dimensions_values['project_id'],
+                    'department_id': dimensions_values['department_id'],
+                    'class_id': dimensions_values['class_id'],
+                    'location_id': dimensions_values['location_id'],
+                    'customer_id': dimensions_values['customer_id'],
+                    'item_id': dimensions_values['item_id'],
                     'employee_id': employee_id,
                     'vendor_id': vendor_id,
-                    'task_id': task_id,
-                    'cost_type_id': cost_type_id,
+                    'task_id': dimensions_values['task_id'],
+                    'cost_type_id': dimensions_values['cost_type_id'],
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
