@@ -19,7 +19,7 @@ from apps.workspaces.models import Workspace, Configuration
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
     'fund_source', 'vendor', 'category', 'project', 'cost_center',
-    'verified_at', 'approved_at', 'spent_at', 'expense_id', 'expense_number', 'payment_number', 'posted_at'
+    'verified_at', 'approved_at', 'spent_at', 'expense_id', 'expense_number', 'payment_number', 'posted_at', 'bank_transaction_id'
 ]
 
 ALLOWED_FORM_INPUT = {
