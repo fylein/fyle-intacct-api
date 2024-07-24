@@ -334,6 +334,20 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
 
     update_failed_expenses(expense_group.expenses.all(), False)
 
+def verify_employee_mapping(expense_group: ExpenseGroup, configuration: Configuration):
+    entity = EmployeeMapping.objects.get(
+        source_employee__value=expense_group.description.get('employee_email'),
+        workspace_id=expense_group.workspace_id
+    )
+
+    if configuration.employee_field_mapping == 'EMPLOYEE':
+        entity = entity.destination_employee
+    else:
+        entity = entity.destination_vendor
+
+    if not entity:
+        raise EmployeeMapping.DoesNotExist
+
 
 def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Configuration):
     bulk_errors = []
@@ -342,47 +356,22 @@ def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Conf
         workspace_id=expense_group.workspace_id,
         attribute_type='EMPLOYEE'
     ).first()
+    error_message = 'Employee Mapping not found'
 
     try:
-        if expense_group.fund_source == 'PERSONAL':
-            error_message = 'Employee Mapping not found'
-            entity = EmployeeMapping.objects.get(
-                source_employee__value=expense_group.description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            )
-
-            if configuration.employee_field_mapping == 'EMPLOYEE':
-                entity = entity.destination_employee
-            else:
-                entity = entity.destination_vendor
-
-            if not entity:
-                raise EmployeeMapping.DoesNotExist
-
-        elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
-            if settings.BRAND_ID == 'fyle':
-                error_message = 'Employee Mapping not found'
-                entity = EmployeeMapping.objects.get(
-                    source_employee__value=expense_group.description.get('employee_email'),
-                    workspace_id=expense_group.workspace_id
-                )
-                if configuration.employee_field_mapping == 'EMPLOYEE':
-                    entity = entity.destination_employee
+        if expense_group.fund_source == 'CCC' and configuration.use_merchant_in_journal_line:
+            for expense in expense_group.expenses.all():
+                if expense.vendor:
+                    continue
                 else:
-                    entity = entity.destination_vendor
+                    verify_employee_mapping(expense_group, configuration)
 
-                if not entity:
-                    raise EmployeeMapping.DoesNotExist
+        if expense_group.fund_source == 'PERSONAL' or (expense_group.fund_source == 'CCC' and configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'):
+            verify_employee_mapping(expense_group, configuration)
 
-        elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-            error_message = 'Employee Mapping not found'
-            entity = EmployeeMapping.objects.get(
-                source_employee__value=expense_group.description.get('employee_email'),
-                workspace_id=expense_group.workspace_id
-            )
-
-            if not entity.destination_employee:
-                raise EmployeeMapping.DoesNotExist
+        elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' or configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
+            if settings.BRAND_ID == 'fyle':
+                verify_employee_mapping(expense_group, configuration)
 
     except EmployeeMapping.DoesNotExist:
         bulk_errors.append({
