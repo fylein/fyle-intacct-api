@@ -1043,3 +1043,142 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
         assert bill_lineitem.customer_id == '10061'
         assert bill_lineitem.item_id == '1012'
         assert bill_lineitem.allocation_id == 'RENT'
+
+
+def test_journal_entry_with_allocation(db, mocker):
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
+    general_mappings.save()
+
+    allocation_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
+    allocation_setting.source_field='PROJECT'
+    allocation_setting.destination_field='ALLOCATION'
+    allocation_setting.save()
+
+    expense_attribute = ExpenseAttribute.objects.filter(
+        attribute_type = 'PROJECT',
+        value = 'Aaron Abbott'
+    ).first()
+
+    destination_attribute = DestinationAttribute.objects.create(
+        attribute_type='ALLOCATION',
+        workspace_id=workspace_id,
+        display_name = 'allocation',
+        value = 'RENT',
+        destination_id = '1',
+        active = True,
+        detail = {'LOCATIONID':'600', 'CLASSID': '600', 'DEPARTMENTID': '300'}
+    )
+
+    mapping = Mapping.objects.first()
+    mapping.destination_type = 'ALLOCATION'
+    mapping.source_type = 'PROJECT'
+    mapping.destination = destination_attribute
+    mapping.source=expense_attribute
+    mapping.workspace_id=general_mappings.workspace
+    mapping.save()
+
+    journal_entry = JournalEntry.create_journal_entry(expense_group)
+    journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
+
+    for journal_entry_lineitem in journal_entry_lineitems:
+        assert journal_entry_lineitem.location_id is None
+        assert journal_entry_lineitem.class_id is None
+        assert journal_entry_lineitem.department_id is None
+        assert journal_entry_lineitem.item_id == '1012'
+        assert journal_entry_lineitem.amount == 21.0
+        assert journal_entry_lineitem.billable is None
+        assert journal_entry_lineitem.allocation_id == 'RENT'
+        
+
+    assert journal_entry.currency == 'USD'
+    assert journal_entry.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
+
+
+def test_journal_entry_with_allocation_and_user_dimensions(db, mocker, create_expense_group_for_allocation):
+    workspace_id = 1
+
+    expense_group, expense = create_expense_group_for_allocation
+
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.use_intacct_employee_locations = True
+    general_mappings.use_intacct_employee_departments = True
+    general_mappings.save()
+
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='TAX_CODE'
+    ).first()
+
+    expense_attribute = ExpenseAttribute.objects.filter(
+        attribute_type = 'COST_CENTER',
+        value = 'Izio',
+        workspace_id=1
+    ).first()
+
+    destination_attribute = DestinationAttribute.objects.create(
+        attribute_type='ALLOCATION',
+        workspace_id=workspace_id,
+        display_name = 'allocation',
+        value = 'RENT',
+        destination_id = '1',
+        active = True,
+        detail = {'GLDIMPROJECT': '2024'}
+    )
+
+    mapping_setting.source_field = 'COST_CENTER'
+    mapping_setting.destination_field = 'ALLOCATION'
+    mapping_setting.save()
+
+    mapping = Mapping.objects.filter(
+        source_type='TAX_GROUP',
+        workspace_id=expense_group.workspace_id
+    ).first()
+
+    mapping.destination_type = 'ALLOCATION'
+    mapping.source_type = 'COST_CENTER'
+    mapping.destination = destination_attribute
+    mapping.source=expense_attribute
+    mapping.save()
+
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='PROJECT'
+    ).first()
+
+    mapping_setting.source_field = 'PROJECT'
+    mapping_setting.destination_field = 'CLASS'
+    mapping_setting.save()
+
+    mapping = Mapping.objects.filter(
+        source_type='PROJECT',
+        workspace_id=expense_group.workspace_id
+    ).first()
+
+    mapping.destination_type = 'CLASS'
+    mapping.source = ExpenseAttribute.objects.get(value=expense.project)
+    mapping.save()
+
+    location_id = get_user_defined_dimension_object(expense_group, expense)
+    assert location_id == [{'GLDIMPROJECT': '10061'}]
+    
+    journal_entry = JournalEntry.create_journal_entry(expense_group)
+    journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
+
+    for journal_entry_lineitem in journal_entry_lineitems:
+        assert journal_entry_lineitem.user_defined_dimensions == []
+        assert journal_entry_lineitem.project_id == '10061'
+        assert journal_entry_lineitem.location_id == '600'
+        assert journal_entry_lineitem.class_id == '10061'
+        assert journal_entry_lineitem.department_id == '300'
+        assert journal_entry_lineitem.customer_id == '10061'
+        assert journal_entry_lineitem.item_id == '1012'
+        assert journal_entry_lineitem.allocation_id == 'RENT'

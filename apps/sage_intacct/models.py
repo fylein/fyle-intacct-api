@@ -1070,6 +1070,7 @@ class JournalEntryLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
+                    'allocation_id': allocation_id,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration) 
                 }
             )
