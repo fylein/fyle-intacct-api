@@ -24,7 +24,8 @@ allocation_mapping = {
     'CUSTOMERID': 'customer_id',
     'ITEMID': 'item_id',
     'TASKID': 'task_id',
-    'COSTTYPEID': 'cost_type_id'
+    'COSTTYPEID': 'cost_type_id',
+    'PROJECTID': 'project_id'
 }
 
 def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
