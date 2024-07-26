@@ -132,6 +132,8 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     )
     workspace_id = 1
 
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+
     expense_group = ExpenseGroup.objects.get(id=1)
     expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
     expense_group.save()
@@ -143,7 +145,7 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     general_mappings.save()
 
     merchant = expense_group.expenses.first().vendor
-    vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+    vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id, configuration)
 
     charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor.destination_id)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)

@@ -133,27 +133,61 @@ def test_handle_intacct_errors(db):
 
 
 def test_get_or_create_credit_card_vendor(mocker, db):
-    mocker.patch(
-        'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
-        return_value=[]
-    )
     workspace_id = 1
+    mock_get_or_create_vendor = mocker.patch(
+        'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor'
+    )
 
-    general_settings = Configuration.objects.get(workspace_id=workspace_id)
+    vendor = DestinationAttribute.objects.create(
+        value='Credit Card Misc',
+        attribute_type='VENDOR',
+        display_name='Vendor',
+        workspace_id=workspace_id,
+        destination_id='vendor123',
+        active=True,
+        detail={
+            'email': 'vendor123@fyle.in'
+        }
+    )
 
-    contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id)
-    assert contact != None
+    mock_get_or_create_vendor.return_value = vendor
 
-    contact = get_or_create_credit_card_vendor('', workspace_id)
-    assert contact != None
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.auto_create_merchants_as_vendors = True
+    configuration.save()
+
+    contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
+    assert contact.value == 'Credit Card Misc'
+
+    contact = get_or_create_credit_card_vendor('', workspace_id, configuration)
+    assert contact.value == 'Credit Card Misc'
+
+    configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    configuration.import_vendors_as_merchants = False
+    configuration.save()
+
+    vendor.value = 'samp_merchant'
+    vendor.save()
+
+    contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
+    assert contact.value == 'samp_merchant'
+
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.save()
+
+    vendor.value = 'samp_merchant_2'
+    vendor.save()
+
+    contact = get_or_create_credit_card_vendor('samp_merchant_2', workspace_id, configuration)
+    assert contact.value == 'samp_merchant_2'
 
     try:
         with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor') as mock_call:
             mock_call.side_effect = WrongParamsError(msg='wrong parameters', response='wrong parameters')
-            contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id)
+            contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
 
             mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-            contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id)
+            contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
     except:
         logger.info('wrong parameters')
 

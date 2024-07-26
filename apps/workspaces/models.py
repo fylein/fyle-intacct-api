@@ -134,8 +134,9 @@ class Configuration(models.Model):
     change_accounting_period = models.BooleanField(default=False, help_text='Change the accounting period')
     import_vendors_as_merchants = models.BooleanField(default=False, help_text='Auto import vendors from sage intacct '
                                                                                'as merchants to Fyle')
-    
+
     use_merchant_in_journal_line = models.BooleanField(default=False, help_text='Export merchant as vendor in journal entry line item')
+    auto_create_merchants_as_vendors = models.BooleanField(default=False, help_text='Auto create merchants as vendors in sage intacct')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
