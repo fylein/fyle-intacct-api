@@ -931,6 +931,7 @@ class JournalEntryLineitem(models.Model):
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    allocation_id = models.BooleanField(null=True, help_text='Sage Intacct Allocation id')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -1029,6 +1030,8 @@ class JournalEntryLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            allocation_id, _ = get_allocation_id_or_none(expense_group=expense_group, lineitem=lineitem)
+
             journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
                 expense_id=lineitem.id,
@@ -1051,7 +1054,8 @@ class JournalEntryLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration) 
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'allocation_id': allocation_id
                 }
             )
             journal_entry_lineitem_objects.append(journal_entry_lineitem_object)

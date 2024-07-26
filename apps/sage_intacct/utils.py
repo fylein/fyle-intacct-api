@@ -1168,6 +1168,38 @@ class SageIntacctConnector:
 
             tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
+            if lineitem.allocation_id:
+
+                allocation_mapping = {
+                    'LOCATIONID': 'location_id',
+                    'DEPARTMENTID': 'department_id',
+                    'CLASSID': 'class_id',
+                    'CUSTOMERID': 'customer_id',
+                    'ITEMID': 'item_id',
+                    'TASKID': 'task_id',
+                    'COSTTYPEID': 'cost_type_id',
+                    'PROJECTID': 'project_id'
+                }
+                dimensions_values = {
+                    'project_id': lineitem.project_id,
+                    'location_id': lineitem.location_id,
+                    'department_id': lineitem.department_id,
+                    'class_id': lineitem.class_id,
+                    'customer_id': lineitem.customer_id,
+                    'item_id': lineitem.item_id,
+                    'task_id': lineitem.task_id,
+                    'cost_type_id': lineitem.cost_type_id
+                }
+
+                allocation_detail = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='ALLOCATION', value=lineitem.allocation_id).first().detail
+
+                for allocation_dimension, dimension_variable_name in allocation_mapping.items():
+                    if allocation_dimension in allocation_detail.keys():
+                        dimensions_values[dimension_variable_name] = None
+                
+                allocation_dimensions = set(allocation_detail.keys())
+                lineitem.user_defined_dimensions = [user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
+
             debit_line = {
                 'accountno': lineitem.gl_account_number,
                 'currency': journal_entry.currency,
@@ -1185,6 +1217,7 @@ class SageIntacctConnector:
                 'costtypeid': lineitem.cost_type_id,
                 'classid': lineitem.class_id,
                 'billable': lineitem.billable,
+                'allocation': lineitem.allocation_id,
                 'taxentries': {
                     'taxentry': {
                         'trx_tax': lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_amount,
