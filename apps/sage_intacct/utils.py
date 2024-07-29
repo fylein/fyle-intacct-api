@@ -1552,7 +1552,13 @@ class SageIntacctConnector:
         :param vendor_name: Vendor Name
         :return: Sanitized Vendor Name
         """
+        sanitized_name = None
         if vendor_name:
             pattern = r'[!@#$%^&*()\-_=\+\[\]{}|\\:;"\'<>,.?/~`]'
             sanitized_name = re.sub(pattern, '', vendor_name)
-            return re.sub(r'\s+', ' ', sanitized_name).strip()
+            sanitized_name = re.sub(r'\s+', ' ', sanitized_name).strip()
+
+        if sanitized_name:
+            return sanitized_name
+
+        return None

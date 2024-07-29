@@ -808,12 +808,12 @@ def test_sanitize_vendor_name(db):
 
     # Test case 8: Vendor name with only special characters
     vendor_name = "@#$%^&*()"
-    expected_output = ""
+    expected_output = None
     assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
 
     # Test case 9: Vendor name with spaces only
     vendor_name = "     "
-    expected_output = ""
+    expected_output = None
     assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
 
     # Test case 10: Vendor name with leading and trailing special characters
