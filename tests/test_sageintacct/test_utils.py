@@ -762,7 +762,7 @@ def test_get_or_create_employee(mocker, db):
     assert new_employee_count == 55
 
 
-def test_sync_allocation(mocker, db):
+def test_sync_allocations(mocker, db):
     workspace_id = 1
 
     def mock_allocation_entry_generator(field, value):
@@ -786,7 +786,7 @@ def test_sync_allocation(mocker, db):
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
-    sage_intacct_connection.sync_allocation()
+    sage_intacct_connection.sync_allocations()
 
     allocation_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ALLOCATION')
 
