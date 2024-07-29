@@ -506,7 +506,6 @@ class SageIntacctConnector:
         Sync allocation entries from intacct
         """
 
-        print("askbdasjkbdjkasfbjasbfbasfkjbsfkjbsakjfbafskjbk=========")
         allocation_attributes = []
         allocations_generator = self.connection.allocations.get_all_generator(field='STATUS', value='active')
 
@@ -514,7 +513,6 @@ class SageIntacctConnector:
             for allocation in allocations:
                 allocation_entry_generator = self.connection.allocation_entry.get_all_generator(field='allocation.ALLOCATIONID', value=allocation['ALLOCATIONID'])
                 for allocation_entries in allocation_entry_generator:
-                    print('allocation_entries', allocation_entries)
                     detail = {}
                     for allocation_entry in allocation_entries:
                         value = allocation_entry['ALLOCATIONID']
@@ -523,8 +521,6 @@ class SageIntacctConnector:
                             if allocation_entry[field_name] is not None and field_name not in detail:
                                 detail[field_name] = True
                     
-
-                    print(detail)
                     
                     detail.pop('ALLOCATIONID')
                     detail.pop('ALLOCATIONKEY')
@@ -539,7 +535,6 @@ class SageIntacctConnector:
                         'detail': detail
                     })
 
-            print('allocation_attributes', allocation_attributes)
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 allocation_attributes, 'ALLOCATION', self.workspace_id, update=True
             )
