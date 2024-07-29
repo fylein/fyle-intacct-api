@@ -505,6 +505,8 @@ class SageIntacctConnector:
         """
         Sync allocation entries from intacct
         """
+
+        print("askbdasjkbdjkasfbjasbfbasfkjbsfkjbsakjfbafskjbk=========")
         allocation_attributes = []
         allocations_generator = self.connection.allocations.get_all_generator(field='STATUS', value='active')
 
@@ -512,6 +514,7 @@ class SageIntacctConnector:
             for allocation in allocations:
                 allocation_entry_generator = self.connection.allocation_entry.get_all_generator(field='allocation.ALLOCATIONID', value=allocation['ALLOCATIONID'])
                 for allocation_entries in allocation_entry_generator:
+                    print('allocation_entries', allocation_entries)
                     detail = {}
                     for allocation_entry in allocation_entries:
                         value = allocation_entry['ALLOCATIONID']
@@ -519,6 +522,9 @@ class SageIntacctConnector:
                         for field_name in allocation_entry.keys():
                             if allocation_entry[field_name] is not None and field_name not in detail:
                                 detail[field_name] = True
+                    
+
+                    print(detail)
                     
                     detail.pop('ALLOCATIONID')
                     detail.pop('ALLOCATIONKEY')
@@ -533,8 +539,9 @@ class SageIntacctConnector:
                         'detail': detail
                     })
 
+            print('allocation_attributes', allocation_attributes)
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                allocation_attributes, 'ALLOCATION', self.workspace_id
+                allocation_attributes, 'ALLOCATION', self.workspace_id, update=True
             )
 
 
@@ -1168,6 +1175,17 @@ class SageIntacctConnector:
 
             tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
+            dimensions_values = {
+                    'project_id': lineitem.project_id,
+                    'location_id': lineitem.location_id,
+                    'department_id': lineitem.department_id,
+                    'class_id': lineitem.class_id,
+                    'customer_id': lineitem.customer_id,
+                    'item_id': lineitem.item_id,
+                    'task_id': lineitem.task_id,
+                    'cost_type_id': lineitem.cost_type_id
+                }
+
             if lineitem.allocation_id:
 
                 allocation_mapping = {
@@ -1180,23 +1198,13 @@ class SageIntacctConnector:
                     'COSTTYPEID': 'cost_type_id',
                     'PROJECTID': 'project_id'
                 }
-                dimensions_values = {
-                    'project_id': lineitem.project_id,
-                    'location_id': lineitem.location_id,
-                    'department_id': lineitem.department_id,
-                    'class_id': lineitem.class_id,
-                    'customer_id': lineitem.customer_id,
-                    'item_id': lineitem.item_id,
-                    'task_id': lineitem.task_id,
-                    'cost_type_id': lineitem.cost_type_id
-                }
 
                 allocation_detail = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='ALLOCATION', value=lineitem.allocation_id).first().detail
 
                 for allocation_dimension, dimension_variable_name in allocation_mapping.items():
                     if allocation_dimension in allocation_detail.keys():
                         dimensions_values[dimension_variable_name] = None
-                
+
                 allocation_dimensions = set(allocation_detail.keys())
                 lineitem.user_defined_dimensions = [user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
 
@@ -1206,16 +1214,16 @@ class SageIntacctConnector:
                 'amount': round((lineitem.amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount,
                 'tr_type': 1,
                 'description': lineitem.memo,
-                'department': lineitem.department_id,
-                'location': lineitem.location_id,
-                'projectid': lineitem.project_id,
-                'customerid': lineitem.customer_id,
+                'department': dimensions_values['department_id'],
+                'location': dimensions_values['location_id'],
+                'projectid': dimensions_values['project_id'],
+                'customerid': dimensions_values['customer_id'],
                 'vendorid': lineitem.vendor_id,
                 'employeeid': lineitem.employee_id,
-                'itemid': lineitem.item_id,
-                'taskid': lineitem.task_id,
-                'costtypeid': lineitem.cost_type_id,
-                'classid': lineitem.class_id,
+                'itemid': dimensions_values['item_id'],
+                'taskid': dimensions_values['task_id'],
+                'costtypeid': dimensions_values['cost_type_id'],
+                'classid': dimensions_values['class_id'],
                 'billable': lineitem.billable,
                 'allocation': lineitem.allocation_id,
                 'taxentries': {

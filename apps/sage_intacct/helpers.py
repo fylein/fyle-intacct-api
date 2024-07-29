@@ -71,11 +71,14 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
         dimensions = [
             'locations', 'customers', 'departments', 'tax_details', 'projects', 
             'expense_payment_types', 'classes', 'charge_card_accounts','payment_accounts', 
-            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions'
+            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions', 'allocation_entries'
         ]
+
+        print(dimensions)
 
     for dimension in dimensions:
         try:
+            print(dimension)
             sync = getattr(sage_intacct_connection, 'sync_{}'.format(dimension))
             sync()
         except Exception as exception:

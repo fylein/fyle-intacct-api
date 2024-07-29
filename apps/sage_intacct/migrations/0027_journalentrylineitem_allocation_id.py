@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='journalentrylineitem',
             name='allocation_id',
-            field=models.BooleanField(help_text='Sage Intacct Allocation id', null=True),
+            field=models.CharField(help_text='Sage Intacct Allocation id', max_length=255, null=True),
         ),
     ]

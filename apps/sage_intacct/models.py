@@ -931,7 +931,7 @@ class JournalEntryLineitem(models.Model):
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
-    allocation_id = models.BooleanField(null=True, help_text='Sage Intacct Allocation id')
+    allocation_id = models.CharField(max_length=255, help_text='Sage Intacct Allocation id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
