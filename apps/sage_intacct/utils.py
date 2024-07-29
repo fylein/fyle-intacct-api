@@ -501,7 +501,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_allocation_entries(self):
+    def sync_allocation(self):
         """
         Sync allocation entries from intacct
         """
