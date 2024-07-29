@@ -1,9 +1,8 @@
+import re
 import logging
-import base64
 from typing import List, Dict
 from datetime import datetime, timedelta
 import unidecode
-import time
 from django.conf import settings
 
 from cryptography.fernet import Fernet
@@ -648,6 +647,7 @@ class SageIntacctConnector:
         :param create: False to just Get and True to Get or Create if not exists
         :return: Vendor
         """
+        vendor_name = self.sanitize_vendor_name(vendor_name)
         vendor_from_db = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='VENDOR', value=vendor_name, active=True).first()
 
         if vendor_from_db:
@@ -663,7 +663,7 @@ class SageIntacctConnector:
                 vendor = sorted_vendor_data[0]
             else:
                 vendor = vendor['VENDOR'][0]
-            
+
             vendor = vendor if vendor['STATUS'] == 'active' else None
         else:
             vendor = None
@@ -1545,3 +1545,14 @@ class SageIntacctConnector:
         reimbursement_payload = self.__construct_sage_intacct_reimbursement(reimbursement, reimbursement_lineitems)
         created_reimbursement = self.connection.reimbursements.post(reimbursement_payload)
         return created_reimbursement
+
+    def sanitize_vendor_name(self, vendor_name: str = None) -> str:
+        """
+        Remove special characters from Vendor Name
+        :param vendor_name: Vendor Name
+        :return: Sanitized Vendor Name
+        """
+        if vendor_name:
+            pattern = r'[!@#$%^&*()\-_=\+\[\]{}|\\:;"\'<>,.?/~`]'
+            sanitized_name = re.sub(pattern, '', vendor_name)
+            return re.sub(r'\s+', ' ', sanitized_name).strip()
