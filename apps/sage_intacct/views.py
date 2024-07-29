@@ -147,9 +147,8 @@ class SageIntacctFieldsView(generics.ListAPIView):
 
         # Adding project by default since we support importing Projects from Sage Intacct even though they don't exist
         configurations = Configuration.objects.get(workspace_id=self.kwargs['workspace_id'])
-        if configurations.corporate_credit_card_expenses_object in ['BILL', 'JOURNAL_ENTRY'] or configurations.reimbursable_expenses_object in ['BILL', 'JOURNAL_ENTRY']:
-            if {'attribute_type': 'ALLOCATION', 'display_name': 'allocation'} not in serialized_attributes:
-                serialized_attributes.append({'attribute_type': 'ALLOCATION', 'display_name': 'allocation'})
+        if configurations.corporate_credit_card_expenses_object not in ['BILL', 'JOURNAL_ENTRY'] and configurations.reimbursable_expenses_object not in ['BILL', 'JOURNAL_ENTRY']:
+            serialized_attributes.remove({'attribute_type': 'ALLOCATION', 'display_name': 'allocation'})
         
         serialized_attributes.append({'attribute_type': 'PROJECT', 'display_name': 'Project'})
 
