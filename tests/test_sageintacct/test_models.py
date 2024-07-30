@@ -82,7 +82,7 @@ def test_expense_report(db):
         logger.info('General mapping not found')
 
 
-def test_create_journal_entry(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+def test_create_journal_entry(db, mocker, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
@@ -94,7 +94,9 @@ def test_create_journal_entry(db, create_expense_group_expense, create_cost_type
     general_mappings.save()
 
     journal_entry = JournalEntry.create_journal_entry(expense_group)
-    journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
+    sage_intacct_connection = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector')
+    sage_intacct_connection.return_value = mocker.Mock()
+    journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
 
     for journal_entry_lineitem in journal_entry_lineitems:
         assert journal_entry_lineitem.amount == 11.0
@@ -105,7 +107,7 @@ def test_create_journal_entry(db, create_expense_group_expense, create_cost_type
 
     try:
         general_mappings.delete()
-        journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
+        journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
     except:
         logger.info('General mapping not found')
 
@@ -132,6 +134,8 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     )
     workspace_id = 1
 
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+
     expense_group = ExpenseGroup.objects.get(id=1)
     expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
     expense_group.save()
@@ -143,7 +147,7 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     general_mappings.save()
 
     merchant = expense_group.expenses.first().vendor
-    vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+    vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant)
 
     charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor.destination_id)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
