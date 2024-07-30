@@ -31,6 +31,7 @@ from apps.workspaces.models import (
         LastExportDetail,
         Workspace
     )
+from apps.sage_intacct.import_helpers import get_or_create_credit_card_vendor
 from apps.sage_intacct.models import (
         ExpenseReport,
         ExpenseReportLineitem,
@@ -222,41 +223,6 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                         source_employee.detail['full_name'],
                         expense_group.workspace_id
                     )
-
-
-def get_or_create_credit_card_vendor(merchant: str, workspace_id: int, configuration: Configuration):
-    """
-    Get or create default vendor
-    :param merchant: Fyle Expense Merchant
-    :param workspace_id: Workspace Id
-    :return:
-    """
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-    vendor = None
-
-    if (
-        merchant
-        and not configuration.import_vendors_as_merchants
-        and configuration.corporate_credit_card_expenses_object
-        and configuration.auto_create_merchants_as_vendors
-        and (
-            configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
-            or (
-                configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY'
-                and configuration.use_merchant_in_journal_line
-            )
-        )
-    ):
-        try:
-            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=True)
-        except WrongParamsError as bad_request:
-            logger.info(bad_request.response)
-
-    if not vendor:
-        vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
-
-    return vendor
 
 
 def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup):
@@ -565,7 +531,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
                 )
         else:
             merchant = expense_group.expenses.first().vendor
-            get_or_create_credit_card_vendor(merchant, expense_group.workspace_id, configuration)
+            get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant)
 
         __validate_employee_mapping(expense_group, configuration)
         logger.info('Validated Employee mapping %s successfully', expense_group.id)
@@ -962,7 +928,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
         merchant = expense_group.expenses.first().vendor
-        vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id, configuration)
+        vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant)
 
         vendor_id = vendor.destination_id if vendor else None
         __validate_employee_mapping(expense_group, configuration)

@@ -15,6 +15,7 @@ from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMappin
 from apps.fyle.models import ExpenseGroup, Reimbursement
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.import_helpers import get_or_create_credit_card_vendor
 from .fixtures import data
 from django.conf import settings
 
@@ -156,10 +157,10 @@ def test_get_or_create_credit_card_vendor(mocker, db):
     configuration.auto_create_merchants_as_vendors = True
     configuration.save()
 
-    contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
+    contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
     assert contact.value == 'Credit Card Misc'
 
-    contact = get_or_create_credit_card_vendor('', workspace_id, configuration)
+    contact = get_or_create_credit_card_vendor(workspace_id, configuration, '')
     assert contact.value == 'Credit Card Misc'
 
     configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
@@ -169,7 +170,7 @@ def test_get_or_create_credit_card_vendor(mocker, db):
     vendor.value = 'samp_merchant'
     vendor.save()
 
-    contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
+    contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
     assert contact.value == 'samp_merchant'
 
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
@@ -178,16 +179,16 @@ def test_get_or_create_credit_card_vendor(mocker, db):
     vendor.value = 'samp_merchant_2'
     vendor.save()
 
-    contact = get_or_create_credit_card_vendor('samp_merchant_2', workspace_id, configuration)
+    contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant_2')
     assert contact.value == 'samp_merchant_2'
 
     try:
         with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor') as mock_call:
             mock_call.side_effect = WrongParamsError(msg='wrong parameters', response='wrong parameters')
-            contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
+            contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
 
             mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-            contact = get_or_create_credit_card_vendor('samp_merchant', workspace_id, configuration)
+            contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
     except:
         logger.info('wrong parameters')
 

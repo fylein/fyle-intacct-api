@@ -3,7 +3,7 @@ from datetime import datetime
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import Bill,BillLineitem
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings, ExpenseAttribute
-from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
+from apps.sage_intacct.import_helpers import get_or_create_credit_card_vendor
 from apps.workspaces.models import Configuration, Workspace
 from fyle_accounting_mappings.models import MappingSetting
 from apps.sage_intacct.models import *
@@ -145,7 +145,7 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     general_mappings.save()
 
     merchant = expense_group.expenses.first().vendor
-    vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id, configuration)
+    vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant)
 
     charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor.destination_id)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)

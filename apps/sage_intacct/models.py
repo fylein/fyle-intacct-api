@@ -7,6 +7,7 @@ from django.db.models import Q,JSONField
 from django.db import models
 
 
+from apps.sage_intacct.import_helpers import get_or_create_credit_card_vendor
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
     EmployeeMapping
 
@@ -934,8 +935,9 @@ class JournalEntryLineitem(models.Model):
 
                 vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
-                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
-                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).order_by('-updated_at').first()
+                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line:
+                    # here it would create a Credit Card Vendor if the expene vendor is not present
+                    vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, lineitem.vendor)
                     if vendor:
                         vendor_id = vendor.destination_id
 
