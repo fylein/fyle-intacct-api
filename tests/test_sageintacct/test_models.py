@@ -3,7 +3,7 @@ from datetime import datetime
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import Bill,BillLineitem
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings, ExpenseAttribute
-from apps.sage_intacct.import_helpers import get_or_create_credit_card_vendor
+from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
 from apps.workspaces.models import Configuration, Workspace
 from fyle_accounting_mappings.models import MappingSetting
 from apps.sage_intacct.models import *
@@ -82,7 +82,7 @@ def test_expense_report(db):
         logger.info('General mapping not found')
 
 
-def test_create_journal_entry(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+def test_create_journal_entry(db, mocker, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
@@ -94,7 +94,9 @@ def test_create_journal_entry(db, create_expense_group_expense, create_cost_type
     general_mappings.save()
 
     journal_entry = JournalEntry.create_journal_entry(expense_group)
-    journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
+    sage_intacct_connection = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector')
+    sage_intacct_connection.return_value = mocker.Mock()
+    journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
 
     for journal_entry_lineitem in journal_entry_lineitems:
         assert journal_entry_lineitem.amount == 11.0
@@ -105,7 +107,7 @@ def test_create_journal_entry(db, create_expense_group_expense, create_cost_type
 
     try:
         general_mappings.delete()
-        journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings)
+        journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
     except:
         logger.info('General mapping not found')
 
