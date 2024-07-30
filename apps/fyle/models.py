@@ -19,7 +19,7 @@ from apps.workspaces.models import Workspace, Configuration
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
     'fund_source', 'vendor', 'category', 'project', 'cost_center',
-    'verified_at', 'approved_at', 'spent_at', 'expense_id', 'expense_number', 'payment_number', 'posted_at'
+    'verified_at', 'approved_at', 'spent_at', 'expense_id', 'expense_number', 'payment_number', 'posted_at', 'bank_transaction_id'
 ]
 
 ALLOWED_FORM_INPUT = {
@@ -425,6 +425,7 @@ class ExpenseGroup(models.Model):
         Group expense by and fund_source
         """
         expense_groups = []
+        filtered_corporate_credit_card_expense_groups = []
         expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
 
         reimbursable_expense_group_fields = expense_group_settings.reimbursable_expense_group_fields
@@ -440,45 +441,46 @@ class ExpenseGroup(models.Model):
 
         corporate_credit_card_expense_group_field = expense_group_settings.corporate_credit_card_expense_group_fields
         corporate_credit_card_expenses = list(filter(lambda expense: expense.fund_source == 'CCC', expense_objects))
-        
-        if (
-        configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' and
-        expense_group_settings.split_expense_grouping == 'MULTIPLE_LINE_ITEM'
-        ):
-            ccc_expenses_without_bank_transaction = [
-                expense for expense in expense_objects
-                if not expense.bank_transaction_id
-            ]
 
-            ccc_expenses_with_bank_transaction = [
-                expense for expense in expense_objects
-                if expense.bank_transaction_id
-            ]
+        if corporate_credit_card_expenses:        
+            if (
+            configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' and
+            expense_group_settings.split_expense_grouping == 'MULTIPLE_LINE_ITEM'
+            ):
+                ccc_expenses_without_bank_transaction = [
+                    expense for expense in corporate_credit_card_expenses
+                    if not expense.bank_transaction_id
+                ]
 
-            filtered_corporate_credit_card_expense_groups = _group_expenses(
-                ccc_expenses_without_bank_transaction,
-                corporate_credit_card_expense_group_field,
-                workspace_id,
-            )
+                ccc_expenses_with_bank_transaction = [
+                    expense for expense in corporate_credit_card_expenses
+                    if expense.bank_transaction_id
+                ]
 
-            corporate_credit_card_expense_group_field = [
-                field for field in corporate_credit_card_expense_group_field
-                if field not in {'expense_number', 'expense_id'}
-            ]
-            corporate_credit_card_expense_group_field.append('bank_transaction_id')
-            filtered_corporate_credit_card_expense_groups.extend(
-                _group_expenses(
-                    ccc_expenses_with_bank_transaction,
+                filtered_corporate_credit_card_expense_groups = _group_expenses(
+                    ccc_expenses_without_bank_transaction,
                     corporate_credit_card_expense_group_field,
                     workspace_id,
                 )
-            )
-        else:
-            filtered_corporate_credit_card_expense_groups = _group_expenses(
-                corporate_credit_card_expenses,
-                corporate_credit_card_expense_group_field,
-                workspace_id,
-            )
+
+                corporate_credit_card_expense_group_field = [
+                    field for field in corporate_credit_card_expense_group_field
+                    if field not in {'expense_number', 'expense_id'}
+                ]
+                corporate_credit_card_expense_group_field.append('bank_transaction_id')
+                filtered_corporate_credit_card_expense_groups.extend(
+                    _group_expenses(
+                        ccc_expenses_with_bank_transaction,
+                        corporate_credit_card_expense_group_field,
+                        workspace_id,
+                    )
+                )
+            else:
+                filtered_corporate_credit_card_expense_groups = _group_expenses(
+                    corporate_credit_card_expenses,
+                    corporate_credit_card_expense_group_field,
+                    workspace_id,
+                )
 
         filtered_corporate_credit_card_expense_groups = filter_expense_groups(
             filtered_corporate_credit_card_expense_groups, corporate_credit_card_expenses, configuration.corporate_credit_card_expenses_object, corporate_credit_card_expense_group_field

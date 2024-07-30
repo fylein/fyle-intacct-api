@@ -30,7 +30,8 @@ class ConfigurationSerializer(serializers.ModelSerializer):
             'sync_fyle_to_sage_intacct_payments',
             'sync_sage_intacct_to_fyle_payments',
             'auto_create_destination_entity',
-            'memo_structure'
+            'memo_structure',
+            'auto_create_merchants_as_vendors'
         ]
 
 
@@ -56,7 +57,6 @@ class GeneralMappingsSerializer(serializers.ModelSerializer):
             'use_intacct_employee_departments',
             'use_intacct_employee_locations'
         ]
-
 
     def get_default_location(self, instance):
         return {
@@ -127,10 +127,8 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['workspace_id']
 
-
     def get_workspace_id(self, instance):
         return instance.id
-
 
     def update(self, instance, validated):
         configurations = validated.pop('configurations')
@@ -144,7 +142,8 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
                 'sync_sage_intacct_to_fyle_payments': configurations.get('sync_sage_intacct_to_fyle_payments'),
                 'auto_create_destination_entity': configurations.get('auto_create_destination_entity'),
                 'change_accounting_period': configurations.get('change_accounting_period'),
-                'memo_structure': configurations.get('memo_structure')
+                'memo_structure': configurations.get('memo_structure'),
+                'auto_create_merchants_as_vendors': configurations.get('auto_create_merchants_as_vendors')
             }
         )
 

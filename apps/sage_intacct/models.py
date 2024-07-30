@@ -5,7 +5,7 @@ from datetime import datetime
 from django.conf import settings
 from django.db.models import Q,JSONField
 from django.db import models
-
+from django.utils.module_loading import import_string
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
     EmployeeMapping
@@ -13,7 +13,7 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, Destination
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings, DependentFieldSetting
 from apps.mappings.models import GeneralMapping
 
-from apps.workspaces.models import Configuration, Workspace, FyleCredential
+from apps.workspaces.models import Configuration, Workspace, FyleCredential, SageIntacctCredential
 from typing import Dict, List, Union
 
 
@@ -937,9 +937,9 @@ class JournalEntryLineitem(models.Model):
 
     class Meta:
         db_table = 'journal_entry_lineitems'
-    
+
     @staticmethod
-    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration):
+    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection):
         """
         Create journal entry lineitems
         :param expense_group: expense group
@@ -998,8 +998,9 @@ class JournalEntryLineitem(models.Model):
 
                 vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
-                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
-                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).order_by('-updated_at').first()
+                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line:
+                    # here it would create a Credit Card Vendor if the expene vendor is not present
+                    vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
                     if vendor:
                         vendor_id = vendor.destination_id
 
