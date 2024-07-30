@@ -43,13 +43,15 @@ def create_expense_report(db):
 
 
 @pytest.fixture
-def create_journal_entry(db):
+def create_journal_entry(db, mocker):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
     journal_entry = JournalEntry.create_journal_entry(expense_group)
-    journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group,workspace_general_settings)
+    sage_intacct_connection = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector')
+    sage_intacct_connection.return_value = mocker.Mock()
+    journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group,workspace_general_settings, sage_intacct_connection)
 
     return journal_entry,journal_entry_lineitems
 
