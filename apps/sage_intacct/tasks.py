@@ -239,9 +239,7 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
 
     if (
         merchant
-        and not configuration.import_vendors_as_merchants
         and configuration.corporate_credit_card_expenses_object
-        and configuration.auto_create_merchants_as_vendors
         and (
             configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
             or (
@@ -251,7 +249,8 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
         )
     ):
         try:
-            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=True)
+            is_create = configuration.auto_create_merchants_as_vendors and not configuration.import_vendors_as_merchants
+            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=is_create)
         except WrongParamsError as bad_request:
             logger.info(bad_request.response)
 
