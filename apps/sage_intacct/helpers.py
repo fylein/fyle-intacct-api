@@ -49,6 +49,8 @@ def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: Sage
     return: True/False based on sync
     """
 
+    print('task reached check_interval_and_sync_dimension')
+
     if workspace.destination_synced_at:
         time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
@@ -80,3 +82,14 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
             sync()
         except Exception as exception:
             logger.info(exception)
+
+def handle_sync_dimensions(task):
+    synced = task.result
+    workspace = task.kwargs.get('kwargs').get('workspace')
+
+    print("Task complete")
+    print(f'{synced=}')
+    print(f'{workspace=}')
+    if synced:
+        workspace.destination_synced_at = datetime.now()
+        workspace.save(update_fields=['destination_synced_at'])

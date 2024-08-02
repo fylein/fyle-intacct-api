@@ -11,6 +11,8 @@ from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 
 from sageintacctsdk.exceptions import InvalidTokenError
 
+from django_q.tasks import async_task
+
 from apps.workspaces.models import SageIntacctCredential, Workspace, Configuration
 
 from .helpers import sync_dimensions, check_interval_and_sync_dimension
@@ -162,11 +164,14 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
 
-            synced = check_interval_and_sync_dimension(workspace, sage_intacct_credentials)
+            # synced = check_interval_and_sync_dimension(workspace, sage_intacct_credentials)
 
-            if synced:
-                workspace.destination_synced_at = datetime.now()
-                workspace.save(update_fields=['destination_synced_at'])
+            async_task(
+                'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
+                workspace, sage_intacct_credentials, 
+                hook='apps.sage_intacct.helpers.handle_sync_dimensions',
+                kwargs={ 'workspace': workspace }
+            )
 
             return Response(
                 status=status.HTTP_200_OK
@@ -196,7 +201,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
 
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
-            sync_dimensions(sage_intacct_credentials, workspace.id, dimensions_to_sync)
+            async_task('apps.sage_intacct.helpers.sync_dimensions', sage_intacct_credentials, workspace.id, dimensions_to_sync)
 
             # Update destination_synced_at to current time only when full refresh happens
             if not dimensions_to_sync:
