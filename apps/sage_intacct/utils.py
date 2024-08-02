@@ -647,7 +647,6 @@ class SageIntacctConnector:
         :param create: False to just Get and True to Get or Create if not exists
         :return: Vendor
         """
-        vendor_name = self.sanitize_vendor_name(vendor_name)
         vendor_from_db = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='VENDOR', value=vendor_name, active=True).first()
 
         if vendor_from_db:
@@ -670,7 +669,7 @@ class SageIntacctConnector:
 
         if not vendor:
             if create:
-                vendor_id = vendor_name
+                vendor_id = self.sanitize_vendor_name(vendor_name)
                 created_vendor = self.post_vendor(vendor_id, vendor_name, email)
                 return self.create_destination_attribute(
                     'vendor', vendor_name, created_vendor['VENDORID'], email)
