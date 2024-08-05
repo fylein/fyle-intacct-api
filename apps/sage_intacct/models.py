@@ -5,7 +5,7 @@ from datetime import datetime
 from django.conf import settings
 from django.db.models import Q,JSONField
 from django.db import models
-
+from django.utils.module_loading import import_string
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
     EmployeeMapping
@@ -13,7 +13,7 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, Destination
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings, DependentFieldSetting
 from apps.mappings.models import GeneralMapping
 
-from apps.workspaces.models import Configuration, Workspace, FyleCredential
+from apps.workspaces.models import Configuration, Workspace, FyleCredential, SageIntacctCredential
 from typing import Dict, List, Union
 
 
@@ -931,14 +931,15 @@ class JournalEntryLineitem(models.Model):
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    allocation_id = models.CharField(max_length=255, help_text='Sage Intacct Allocation id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
     class Meta:
         db_table = 'journal_entry_lineitems'
-    
+
     @staticmethod
-    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration):
+    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection):
         """
         Create journal entry lineitems
         :param expense_group: expense group
@@ -997,8 +998,9 @@ class JournalEntryLineitem(models.Model):
 
                 vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
-                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
-                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).order_by('-updated_at').first()
+                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line:
+                    # here it would create a Credit Card Vendor if the expene vendor is not present
+                    vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
                     if vendor:
                         vendor_id = vendor.destination_id
 
@@ -1029,6 +1031,8 @@ class JournalEntryLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            allocation_id, _ = get_allocation_id_or_none(expense_group=expense_group, lineitem=lineitem)
+
             journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
                 expense_id=lineitem.id,
@@ -1051,7 +1055,8 @@ class JournalEntryLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration) 
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'allocation_id': allocation_id
                 }
             )
             journal_entry_lineitem_objects.append(journal_entry_lineitem_object)
