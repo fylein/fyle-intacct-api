@@ -1512,5 +1512,8 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
         url = 'https://www-p02.intacct.com'
         logger.error('Error while generating export url %s', error)
 
+    expense_group.export_url = url
+    expense_group.save()
+
     update_complete_expenses(expense_group.expenses.all(), url)
     post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
