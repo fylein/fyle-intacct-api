@@ -1035,7 +1035,8 @@ CREATE TABLE public.expense_groups (
     exported_at timestamp with time zone,
     export_type character varying(50),
     employee_name character varying(100),
-    response_logs jsonb
+    response_logs jsonb,
+    export_url character varying(255)
 );
 
 
@@ -4115,8 +4116,9 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 184	workspaces	0034_configuration_is_journal_credit_billable	2024-06-19 07:16:22.418147+00
 185	fyle	0032_auto_20240703_1818	2024-07-03 18:29:14.061756+00
 186	workspaces	0035_configuration_auto_create_merchants_as_vendors	2024-07-26 17:26:19.583422+00
-187	sage_intacct	0026_billlineitem_allocation_id	2024-07-19 09:36:26.579359+00
-188	sage_intacct	0027_journalentrylineitem_allocation_id	2024-07-26 11:27:56.709021+00
+187	fyle	0033_expensegroup_export_url	2024-08-03 14:47:55.730073+00
+188	sage_intacct	0026_billlineitem_allocation_id	2024-07-19 09:36:26.579359+00
+189	sage_intacct	0027_journalentrylineitem_allocation_id	2024-07-26 11:27:56.709021+00
 \.
 
 
@@ -7515,10 +7517,10 @@ COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corpo
 -- Data for Name: expense_groups; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at, export_type, employee_name, response_logs) FROM stdin;
-1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N	\N	\N	\N
-2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N	\N	\N	\N
-3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N	\N	\N	\N
+COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at, export_type, employee_name, response_logs, export_url) FROM stdin;
+1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N	\N	\N	\N	\N
+2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N	\N	\N	\N	\N
+3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N	\N	\N	\N	\N
 \.
 
 
@@ -8124,7 +8126,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 188, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 189, true);
 
 
 --
