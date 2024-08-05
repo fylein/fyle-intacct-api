@@ -5,7 +5,7 @@ from datetime import datetime
 from django.conf import settings
 from django.db.models import Q,JSONField
 from django.db import models
-
+from django.utils.module_loading import import_string
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
     EmployeeMapping
@@ -13,8 +13,50 @@ from fyle_accounting_mappings.models import Mapping, MappingSetting, Destination
 from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings, DependentFieldSetting
 from apps.mappings.models import GeneralMapping
 
-from apps.workspaces.models import Configuration, Workspace, FyleCredential
+from apps.workspaces.models import Configuration, Workspace, FyleCredential, SageIntacctCredential
 from typing import Dict, List, Union
+
+
+allocation_mapping = {
+    'LOCATIONID': 'location_id',
+    'DEPARTMENTID': 'department_id',
+    'CLASSID': 'class_id',
+    'CUSTOMERID': 'customer_id',
+    'ITEMID': 'item_id',
+    'TASKID': 'task_id',
+    'COSTTYPEID': 'cost_type_id',
+    'PROJECTID': 'project_id'
+}
+
+def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
+    allocation_id = None
+    allocation_detail = None
+
+    allocation_setting: MappingSetting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field ='ALLOCATION'
+    ).first()
+
+    if allocation_setting:
+        if allocation_setting.source_field == 'PROJECT':
+            source_value = lineitem.project
+        elif allocation_setting.source_field == 'COST_CENTER':
+            source_value = lineitem.cost_center
+        else:
+            attribute = ExpenseAttribute.objects.filter(attribute_type=allocation_setting.source_field, workspace_id=expense_group.workspace_id).first()
+            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+
+        mapping: Mapping = Mapping.objects.filter(
+            source_type=allocation_setting.source_field,
+            destination_type='ALLOCATION',
+            source__value=source_value,
+            workspace_id=expense_group.workspace_id
+        ).first()
+
+        if mapping:
+            allocation_id = mapping.destination.value
+            allocation_detail = mapping.destination.detail
+    return allocation_id, allocation_detail
 
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
@@ -33,7 +75,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -65,7 +107,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field, workspace_id=expense_group.workspace_id).first()
             if attribute:
                 source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
@@ -97,7 +139,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -136,7 +178,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             elif customer_setting.source_field == 'COST_CENTER':
                 source_value = lineitem.cost_center
             else:
-                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field).first()
+                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field, workspace_id=expense_group.workspace_id).first()
                 source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
             mapping: Mapping = Mapping.objects.filter(
@@ -166,7 +208,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         elif item_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -231,7 +273,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         elif class_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field).first()
+            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
         mapping: Mapping = Mapping.objects.filter(
@@ -389,7 +431,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
     default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
-                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE']
+                                      'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE', 'ALLOCATION']
 
     for setting in mapping_settings:
         if setting.source_field not in default_expense_attributes and \
@@ -537,6 +579,7 @@ class BillLineitem(models.Model):
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
+    allocation_id = models.CharField(max_length=255, help_text='Sage Intacct Allocation id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -594,9 +637,29 @@ class BillLineitem(models.Model):
             if dependent_field_setting:
                 task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
                 cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id)
-
+            
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            dimensions_values = {
+                    'project_id': project_id,
+                    'location_id': default_employee_location_id or location_id,
+                    'department_id': default_employee_department_id or department_id,
+                    'class_id': class_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id
+                }
+            
+            allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
+            if allocation_id and allocation_detail:
+                for allocation_dimension, dimension_variable_name in allocation_mapping.items():
+                        if allocation_dimension in allocation_detail.keys():
+                            dimensions_values[dimension_variable_name] = None
+
+                allocation_dimensions = set(allocation_detail.keys())
+                user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
+            
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
                 expense_id=lineitem.id,
@@ -605,21 +668,21 @@ class BillLineitem(models.Model):
                     if account and account.destination_account else None,
                     'expense_type_id': account.destination_expense_head.destination_id
                     if account and account.destination_expense_head else None,
-                    'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
-                    'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
-                    'customer_id': customer_id,
-                    'item_id': item_id,
-                    'task_id': task_id,
-                    'cost_type_id': cost_type_id,
+                    'project_id': dimensions_values['project_id'],
+                    'department_id': dimensions_values['department_id'],
+                    'class_id': dimensions_values['class_id'],
+                    'location_id': dimensions_values['location_id'],
+                    'customer_id': dimensions_values['customer_id'],
+                    'item_id': dimensions_values['item_id'],
+                    'task_id': dimensions_values['task_id'],
+                    'cost_type_id': dimensions_values['cost_type_id'],
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'allocation_id': allocation_id
                 }
             )
 
@@ -868,14 +931,15 @@ class JournalEntryLineitem(models.Model):
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    allocation_id = models.CharField(max_length=255, help_text='Sage Intacct Allocation id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
     class Meta:
         db_table = 'journal_entry_lineitems'
-    
+
     @staticmethod
-    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration):
+    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection):
         """
         Create journal entry lineitems
         :param expense_group: expense group
@@ -934,8 +998,9 @@ class JournalEntryLineitem(models.Model):
 
                 vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
-                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line and lineitem.vendor:
-                    vendor = DestinationAttribute.objects.filter(attribute_type='VENDOR', value__iexact=lineitem.vendor, workspace_id=expense_group.workspace_id).order_by('-updated_at').first()
+                if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line:
+                    # here it would create a Credit Card Vendor if the expene vendor is not present
+                    vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
                     if vendor:
                         vendor_id = vendor.destination_id
 
@@ -966,6 +1031,8 @@ class JournalEntryLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            allocation_id, _ = get_allocation_id_or_none(expense_group=expense_group, lineitem=lineitem)
+
             journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
                 expense_id=lineitem.id,
@@ -988,7 +1055,8 @@ class JournalEntryLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration) 
+                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'allocation_id': allocation_id
                 }
             )
             journal_entry_lineitem_objects.append(journal_entry_lineitem_object)

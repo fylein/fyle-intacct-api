@@ -6,6 +6,7 @@ data = {
             "sync_sage_intacct_to_fyle_payments": False,
             "auto_create_destination_entity": False,
             "memo_structure": ["merchant", "purpose"],
+            "auto_create_merchants_as_vendors": False,
         },
         "general_mappings": {
             "payment_account": {"id": "100", "name": "First Community Bank"},
@@ -31,6 +32,7 @@ data = {
             "sync_sage_intacct_to_fyle_payments": False,
             "auto_create_destination_entity": False,
             "memo_structure": ["merchant", "purpose"],
+            "auto_create_merchants_as_vendors": False,
         },
         "general_mappings": {
             "payment_account": {"id": "100", "name": "First Community Bank"},
