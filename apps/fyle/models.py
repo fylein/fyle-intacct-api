@@ -411,7 +411,7 @@ class ExpenseGroup(models.Model):
     description = JSONField(max_length=255, help_text='Description', null=True)
     response_logs = JSONField(help_text='Reponse log of the export', null=True)
     employee_name = models.CharField(max_length=100, help_text='Expense Group Employee Name', null=True)
-    export_url = models.CharField(max_length=255, help_text='Netsuite URL for the exported expenses', null=True)
+    export_url = models.CharField(max_length=255, help_text='Intacct URL for the exported expenses', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     export_type = models.CharField(max_length=50, help_text='Expense Group exported as', null=True)
     exported_at = models.DateTimeField(help_text='Exported at', null=True)
