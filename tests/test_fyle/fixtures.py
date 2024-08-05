@@ -1106,6 +1106,7 @@ data = {
         },
         "response_logs":"None",
         "employee_name":"None",
+        "export_url": "None",
         "created_at":"2022-09-20T08:48:21.765399Z",
         "export_type":"None",
         "exported_at":"None",
