@@ -761,7 +761,7 @@ def test_get_or_create_employee(mocker, db):
     new_employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EMPLOYEE').count()
     assert new_employee_count == 55
 
-
+            
 def test_sanitize_vendor_name(db):
     workspace_id = 1
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -830,3 +830,40 @@ def test_sanitize_vendor_name(db):
     vendor_name = "Vendor\tName\n123"
     expected_output = "Vendor Name 123"
     assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+
+def test_sync_allocations(mocker, db):
+    workspace_id = 1
+
+    def mock_allocation_entry_generator(field, value):
+        for allocation_entry_list in data['allocation_entries']:
+            if allocation_entry_list and allocation_entry_list[0]['ALLOCATIONID'] == value:
+                yield allocation_entry_list
+
+    def mock_allocations_generator(field, value):
+        yield data['allocations']
+ 
+    mocker.patch(
+        'sageintacctsdk.apis.AllocationEntry.get_all_generator',
+        side_effect=mock_allocation_entry_generator
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Allocations.get_all_generator',
+        side_effect = mock_allocations_generator
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    sage_intacct_connection.sync_allocations()
+
+    allocation_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ALLOCATION')
+
+    assert allocation_attributes.count() == 2
+  
+    for allocation_attribute in allocation_attributes:
+        if allocation_attribute.value == 'RENT':
+            assert set(allocation_attribute.detail.keys()) == {'LOCATIONID'}
+        else:
+            assert set(allocation_attribute.detail.keys()) == {'LOCATIONID', 'GLDIMWHAT_IS_NILESH_PANT'}

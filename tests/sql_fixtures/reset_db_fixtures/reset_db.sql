@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.7 (Debian 15.7-1.pgdg120+1)
+-- Dumped from database version 15.6 (Debian 15.6-1.pgdg120+2)
 -- Dumped by pg_dump version 15.7 (Debian 15.7-1.pgdg120+1)
 
 SET statement_timeout = 0;
@@ -254,7 +254,8 @@ CREATE TABLE public.bill_lineitems (
     tax_amount double precision,
     tax_code character varying(255),
     cost_type_id character varying(255),
-    task_id character varying(255)
+    task_id character varying(255),
+    allocation_id character varying(255)
 );
 
 
@@ -1548,7 +1549,8 @@ CREATE TABLE public.journal_entry_lineitems (
     tax_amount double precision,
     tax_code character varying(255),
     cost_type_id character varying(255),
-    task_id character varying(255)
+    task_id character varying(255),
+    allocation_id boolean
 );
 
 
@@ -2834,7 +2836,7 @@ COPY public.auth_tokens (id, refresh_token, user_id) FROM stdin;
 -- Data for Name: bill_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.bill_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, bill_id, expense_id, billable, customer_id, item_id, user_defined_dimensions, class_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+COPY public.bill_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, bill_id, expense_id, billable, customer_id, item_id, user_defined_dimensions, class_id, tax_amount, tax_code, cost_type_id, task_id, allocation_id) FROM stdin;
 \.
 
 
@@ -4115,6 +4117,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 185	fyle	0032_auto_20240703_1818	2024-07-03 18:29:14.061756+00
 186	workspaces	0035_configuration_auto_create_merchants_as_vendors	2024-07-26 17:26:19.583422+00
 187	fyle	0033_expensegroup_export_url	2024-08-03 14:47:55.730073+00
+188	sage_intacct	0026_billlineitem_allocation_id	2024-07-19 09:36:26.579359+00
+189	sage_intacct	0027_journalentrylineitem_allocation_id	2024-07-26 11:27:56.709021+00
 \.
 
 
@@ -7596,7 +7600,7 @@ COPY public.journal_entries (id, description, memo, currency, supdoc_id, transac
 -- Data for Name: journal_entry_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location_id, class_id, department_id, customer_id, item_id, memo, user_defined_dimensions, amount, billable, transaction_date, created_at, updated_at, expense_id, journal_entry_id, employee_id, vendor_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location_id, class_id, department_id, customer_id, item_id, memo, user_defined_dimensions, amount, billable, transaction_date, created_at, updated_at, expense_id, journal_entry_id, employee_id, vendor_id, tax_amount, tax_code, cost_type_id, task_id, allocation_id) FROM stdin;
 \.
 
 
@@ -8122,7 +8126,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 187, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 189, true);
 
 
 --
