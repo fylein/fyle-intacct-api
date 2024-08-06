@@ -71,7 +71,7 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
         dimensions = [
             'locations', 'customers', 'departments', 'tax_details', 'projects', 
             'expense_payment_types', 'classes', 'charge_card_accounts','payment_accounts', 
-            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions'
+            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions', 'allocations'
         ]
 
     for dimension in dimensions:
