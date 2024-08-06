@@ -161,14 +161,9 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
 
         try:
-            workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
-
             async_task(
                 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
-                workspace, sage_intacct_credentials, 
-                hook='apps.sage_intacct.helpers.handle_sync_dimensions',
-                kwargs={ 'workspace': workspace }
+                kwargs['workspace_id'], 
             )
 
             return Response(
@@ -194,33 +189,14 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
         """
         Sync data from sage intacct
         """
-        try:
-            dimensions_to_sync = request.data.get('dimensions_to_sync', [])
-            workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
+        dimensions_to_sync = request.data.get('dimensions_to_sync', [])
+        
+        async_task(
+            'apps.sage_intacct.helpers.handle_refresh_dimensions',
+            dimensions_to_sync,
+            kwargs['workspace_id']
+        )
 
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
-
-            async_task(
-                'apps.sage_intacct.helpers.sync_dimensions',
-                sage_intacct_credentials,
-                workspace.id,
-                dimensions_to_sync
-            )
-
-            # Update destination_synced_at to current time only when full refresh happens
-            if not dimensions_to_sync:
-                workspace.destination_synced_at = datetime.now()
-                workspace.save(update_fields=['destination_synced_at'])
-
-            return Response(
-                status=status.HTTP_200_OK
-            )
-
-        except (SageIntacctCredential.DoesNotExist, InvalidTokenError) as exception:
-            logger.info('Sage Intacct credentials not found / invalid in workspace', exception.__dict__)
-            return Response(
-                data={
-                    'message': 'Sage Intacct credentials not found / invalid in workspace'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response(
+            status=status.HTTP_200_OK
+        )

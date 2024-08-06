@@ -11,6 +11,8 @@ from apps.workspaces.models import Configuration, Workspace, SageIntacctCredenti
 from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_intacct_objects_status_sync, \
     schedule_sage_intacct_reimbursement_creation, schedule_fyle_reimbursements_sync
 
+from sageintacctsdk.exceptions import InvalidTokenError
+
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
@@ -40,24 +42,23 @@ def schedule_payment_sync(configuration: Configuration):
     )
 
 
-def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: SageIntacctCredential, **kwargs) -> bool:
+def check_interval_and_sync_dimension(workspace_id, **kwargs) -> bool:
     """
     Check sync interval and sync dimensions
-    :param workspace: Workspace Instance
-    :param si_credentials: SageIntacctCredentials Instance
-
-    return: True/False based on sync
+    :param workspace_id: Workspace ID
     """
+
+    workspace = Workspace.objects.get(pk=workspace_id)
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+
 
     if workspace.destination_synced_at:
         time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
     if workspace.destination_synced_at is None or time_interval.days > 0:
-        sync_dimensions(si_credentials, workspace.id)
-        return True
-
-    return False
-
+        sync_dimensions(sage_intacct_credentials, workspace.id)
+        workspace.destination_synced_at = datetime.now()
+        workspace.save(update_fields=['destination_synced_at'])
 
 def is_dependent_field_import_enabled(workspace_id: int) -> bool:
     return DependentFieldSetting.objects.filter(workspace_id=workspace_id).exists()
@@ -81,10 +82,24 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
         except Exception as exception:
             logger.info(exception)
 
-def handle_sync_dimensions(task):
-    synced = task.result
-    workspace = task.kwargs.get('kwargs').get('workspace')
 
-    if synced:
-        workspace.destination_synced_at = datetime.now()
-        workspace.save(update_fields=['destination_synced_at'])
+def handle_refresh_dimensions(dimensions_to_sync: list[str], workspace_id):
+    try:
+        workspace = Workspace.objects.get(pk=workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+
+        sync_dimensions(sage_intacct_credentials, workspace.id, dimensions_to_sync)
+        async_task(
+            'apps.sage_intacct.helpers.sync_dimensions',
+            sage_intacct_credentials,
+            workspace.id,
+            dimensions_to_sync
+        )
+
+        # Update destination_synced_at to current time only when full refresh happens
+        if not dimensions_to_sync:
+            workspace.destination_synced_at = datetime.now()
+            workspace.save(update_fields=['destination_synced_at'])
+
+    except (SageIntacctCredential.DoesNotExist, InvalidTokenError) as exception:
+        logger.info('Sage Intacct credentials not found / invalid in workspace', exception.__dict__)
