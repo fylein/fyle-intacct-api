@@ -130,7 +130,7 @@ def add_expense_id_to_expense_group_settings(workspace_id: int):
     expense_group_settings.save()
 
 
-def check_interval_and_sync_dimension(workspace: Workspace, fyle_credentials: FyleCredential) -> bool:
+def check_interval_and_sync_dimension(workspace: Workspace, fyle_credentials: FyleCredential, **kwargs) -> bool:
     """
     Check sync interval and sync dimension
     :param workspace: Workspace Instance
@@ -145,6 +145,14 @@ def check_interval_and_sync_dimension(workspace: Workspace, fyle_credentials: Fy
         return True
 
     return False
+
+def handle_check_interval_and_sync_dimension(task):
+    synced = task.result
+    workspace = task.kwargs.get('kwargs').get('workspace')
+
+    if synced:
+        workspace.source_synced_at = datetime.now()
+        workspace.save(update_fields=['source_synced_at'])
 
 
 def sync_dimensions(fyle_credentials, is_export: bool = False):

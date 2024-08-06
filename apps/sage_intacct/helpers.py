@@ -40,7 +40,7 @@ def schedule_payment_sync(configuration: Configuration):
     )
 
 
-def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: SageIntacctCredential) -> bool:
+def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: SageIntacctCredential, **kwargs) -> bool:
     """
     Check sync interval and sync dimensions
     :param workspace: Workspace Instance
@@ -48,8 +48,6 @@ def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: Sage
 
     return: True/False based on sync
     """
-
-    print('task reached check_interval_and_sync_dimension')
 
     if workspace.destination_synced_at:
         time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
@@ -87,9 +85,6 @@ def handle_sync_dimensions(task):
     synced = task.result
     workspace = task.kwargs.get('kwargs').get('workspace')
 
-    print("Task complete")
-    print(f'{synced=}')
-    print(f'{workspace=}')
     if synced:
         workspace.destination_synced_at = datetime.now()
         workspace.save(update_fields=['destination_synced_at'])

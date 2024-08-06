@@ -164,8 +164,6 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
 
-            # synced = check_interval_and_sync_dimension(workspace, sage_intacct_credentials)
-
             async_task(
                 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
                 workspace, sage_intacct_credentials, 
@@ -201,7 +199,13 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
 
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
-            async_task('apps.sage_intacct.helpers.sync_dimensions', sage_intacct_credentials, workspace.id, dimensions_to_sync)
+
+            async_task(
+                'apps.sage_intacct.helpers.sync_dimensions',
+                sage_intacct_credentials,
+                workspace.id,
+                dimensions_to_sync
+            )
 
             # Update destination_synced_at to current time only when full refresh happens
             if not dimensions_to_sync:

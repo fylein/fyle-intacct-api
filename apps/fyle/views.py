@@ -5,7 +5,7 @@ from rest_framework.views import status
 from rest_framework import generics
 from rest_framework.response import Response
 
-from django_q.tasks import Chain
+from django_q.tasks import Chain, async_task
 
 from django_filters.rest_framework import DjangoFilterBackend
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
@@ -285,10 +285,12 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
 
-            synced = check_interval_and_sync_dimension(workspace, fyle_credentials)
-            if synced:
-                workspace.source_synced_at = datetime.now()
-                workspace.save(update_fields=['source_synced_at'])
+            async_task(
+                'apps.fyle.helpers.check_interval_and_sync_dimension',
+                workspace, fyle_credentials,
+                hook='apps.fyle.helpers.handle_check_interval_and_sync_dimension',
+                kwargs={'workspace': workspace}
+            )
 
             return Response(
                 status=status.HTTP_200_OK
@@ -339,7 +341,7 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
                 chain.run()
 
 
-            sync_dimensions(fyle_credentials)
+            async_task('apps.fyle.helpers.sync_dimensions', fyle_credentials)
 
             workspace.source_synced_at = datetime.now()
             workspace.save(update_fields=['source_synced_at'])
