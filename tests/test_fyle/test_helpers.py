@@ -725,6 +725,6 @@ def test_bulk_update_expenses(db):
         assert expense.accounting_export_summary['id'] == expense.expense_id
 
 
-def test_handle_refresh_dimensions():
+def test_handle_refresh_dimensions(db):
     result = handle_refresh_dimensions('1')
     assert result is None
