@@ -175,31 +175,31 @@ def sync_dimensions(fyle_credentials, is_export: bool = False):
             platform.projects.sync()
 
 def handle_refresh_dimensions(workspace_id):
-        workspace = Workspace.objects.get(id=workspace_id)
-        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
+    workspace = Workspace.objects.get(id=workspace_id)
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
 
-        mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
-        chain = Chain()
+    mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
+    chain = Chain()
 
-        for mapping_setting in mapping_settings:
-            if mapping_setting.source_field in ['PROJECT', 'COST_CENTER'] or mapping_setting.is_custom:
-                chain.append(
-                    'apps.mappings.imports.tasks.trigger_import_via_schedule',
-                    int(workspace_id),
-                    mapping_setting.destination_field,
-                    mapping_setting.source_field,
-                    mapping_setting.is_custom,
-                    q_options={'cluster': 'import'}
-                )
+    for mapping_setting in mapping_settings:
+        if mapping_setting.source_field in ['PROJECT', 'COST_CENTER'] or mapping_setting.is_custom:
+            chain.append(
+                'apps.mappings.imports.tasks.trigger_import_via_schedule',
+                int(workspace_id),
+                mapping_setting.destination_field,
+                mapping_setting.source_field,
+                mapping_setting.is_custom,
+                q_options={'cluster': 'import'}
+            )
 
-        if chain.length() > 0:
-            chain.run()
+    if chain.length() > 0:
+        chain.run()
 
 
-        sync_dimensions(fyle_credentials)
+    sync_dimensions(fyle_credentials)
 
-        workspace.source_synced_at = datetime.now()
-        workspace.save(update_fields=['source_synced_at'])
+    workspace.source_synced_at = datetime.now()
+    workspace.save(update_fields=['source_synced_at'])
 
 
 def construct_expense_filter(expense_filter):
