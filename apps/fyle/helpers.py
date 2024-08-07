@@ -9,7 +9,7 @@ from typing import List, Union
 from django.utils.module_loading import import_string
 from django.conf import settings
 from django.db.models import Q
-from django_q.tasks import Chain, async_task
+from django_q.tasks import Chain
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from rest_framework.exceptions import ValidationError
 
