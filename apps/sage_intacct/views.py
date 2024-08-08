@@ -173,6 +173,9 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
 
         try:
+            workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
+            SageIntacctCredential.objects.get(workspace_id=workspace.id)
+
             async_task(
                 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
                 kwargs['workspace_id'], 
@@ -203,12 +206,29 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
         """
         dimensions_to_sync = request.data.get('dimensions_to_sync', [])
         
-        async_task(
-            'apps.sage_intacct.helpers.handle_refresh_dimensions',
-            dimensions_to_sync,
-            kwargs['workspace_id']
-        )
+        try:
+            workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
 
-        return Response(
-            status=status.HTTP_200_OK
-        )
+            # If only specified dimensions are to be synced, sync them synchronously
+            if dimensions_to_sync:
+                sync_dimensions(sage_intacct_credentials, workspace.id, dimensions_to_sync)
+            else:
+                async_task(
+                    'apps.sage_intacct.helpers.sync_dimensions',
+                    sage_intacct_credentials,
+                    workspace.id
+                )
+
+            return Response(
+                status=status.HTTP_200_OK
+            )
+
+        except (SageIntacctCredential.DoesNotExist, InvalidTokenError) as exception:
+            logger.info('Sage Intacct credentials not found / invalid in workspace', exception.__dict__)
+            return Response(
+                data={
+                    'message': 'Sage Intacct credentials not found / invalid in workspace'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
