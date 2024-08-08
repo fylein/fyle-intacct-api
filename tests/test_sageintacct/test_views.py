@@ -169,6 +169,16 @@ def test_sync_dimensions(api_client, test_connection):
     response = api_client.post(url)
     assert response.status_code == 200
 
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_credentials.delete()
+
+    response = api_client.post(url)
+    assert response.status_code == 400
+
+    response = json.loads(response.content)
+    assert response['message'] == 'Sage Intacct credentials not found / invalid in workspace'
+
+
 def test_refresh_dimensions(api_client, test_connection):
     workspace_id = 1
 
@@ -179,3 +189,12 @@ def test_refresh_dimensions(api_client, test_connection):
 
     response = api_client.post(url)
     assert response.status_code == 200
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_credentials.delete()
+
+    response = api_client.post(url)
+    assert response.status_code == 400
+
+    response = json.loads(response.content)
+    assert response['message'] == 'Sage Intacct credentials not found / invalid in workspace'
