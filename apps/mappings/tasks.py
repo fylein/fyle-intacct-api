@@ -27,6 +27,7 @@ from apps.workspaces.models import (
     FyleCredential,
     Configuration
 )
+from apps.mappings.models import ImportLog
 
 
 logger = logging.getLogger(__name__)
@@ -181,7 +182,7 @@ def schedule_auto_map_charge_card_employees(workspace_id: int):
             schedule.delete()
 
 
-def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int):
+def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int, import_log: ImportLog = None):
     sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
     sage_intacct_connection = SageIntacctConnector(
@@ -209,9 +210,9 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
 
     elif sageintacct_attribute_type == 'ITEM':
         sage_intacct_connection.sync_items()
-    
+
     elif sageintacct_attribute_type == 'COST_TYPE':
-        sage_intacct_connection.sync_cost_types()
+        sage_intacct_connection.sync_cost_types(import_log)
 
     elif sageintacct_attribute_type == 'CUSTOMER':
         sage_intacct_connection.sync_customers()

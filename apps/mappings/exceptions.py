@@ -21,7 +21,11 @@ logger.level = logging.INFO
 
 def handle_import_exceptions(func):
     def new_fn(expense_attribute_instance, *args):
-        import_log: ImportLog = args[0]
+        import_log = None
+        if isinstance(expense_attribute_instance, ImportLog):
+            import_log: ImportLog = expense_attribute_instance
+        else:
+            import_log: ImportLog = args[0]
         workspace_id = import_log.workspace_id
         attribute_type = import_log.attribute_type
         error = {

@@ -1,9 +1,8 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 from time import sleep
 
-from django_q.models import Schedule
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from fyle_integrations_platform_connector import PlatformConnector
@@ -22,7 +21,8 @@ from apps.fyle.models import DependentFieldSetting
 from apps.mappings.tasks import sync_sage_intacct_attributes
 from apps.sage_intacct.models import CostType
 from apps.workspaces.models import SageIntacctCredential
-
+from apps.mappings.models import ImportLog
+from apps.mappings.exceptions import handle_import_exceptions
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -56,10 +56,15 @@ def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: 
     return new_placeholder
 
 
-def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict) -> List[str]:
+@handle_import_exceptions
+def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict) -> List[str]:
     projects = CostType.objects.filter(**filters).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
     projects_from_cost_types = [project['project_name'] for project in projects]
     posted_cost_types = []
+
+    processed_batches = 0
+    is_errored = False
+    last_successful_run_at = datetime.now(timezone.utc)
 
     existing_projects_in_fyle = ExpenseAttribute.objects.filter(
         workspace_id=dependent_field_setting.workspace_id,
@@ -67,6 +72,9 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
         value__in=projects_from_cost_types
     ).values_list('value', flat=True)
     existing_projects_in_fyle = [project.lower() for project in existing_projects_in_fyle]
+
+    import_log.total_batches_count = len(existing_projects_in_fyle)
+    import_log.save()
 
     for project in projects:
         payload = []
@@ -83,33 +91,67 @@ def post_dependent_cost_code(dependent_field_setting: DependentFieldSetting, pla
                 task_names.append(task)
         if payload:
             sleep(0.2)
-            platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
-            posted_cost_types.extend(task_names)
+            try:
+                platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
+                posted_cost_types.extend(task_names)
+                processed_batches += 1
+            except Exception as exception:
+                is_errored = True
+                logger.error(f'Exception while posting dependent cost code | Error: {exception} | Payload: {payload}')
 
-    return posted_cost_types
+    import_log.status = 'PARTIALLY_FAILED' if is_errored else 'COMPLETE'
+    import_log.error_log = []
+    import_log.processed_batches_count = processed_batches
+    if not is_errored:
+        import_log.last_successful_run_at = last_successful_run_at
+    import_log.save()
+
+    return posted_cost_types, is_errored
 
 
-def post_dependent_cost_type(dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
+@handle_import_exceptions
+def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
     tasks = CostType.objects.filter(is_imported=False, **filters).values('task_name').annotate(cost_types=ArrayAgg('name', distinct=True))
 
+    is_errored = False
+    processed_batches = 0
+    last_successful_run_at = datetime.now(timezone.utc)
+
+    import_log.total_batches_count = tasks.count()
+    import_log.save()
+
     for task in tasks:
-        payload = [
-            {
+        payload = []
+        for cost_type in task['cost_types']:
+            payload.append({
                 'parent_expense_field_id': dependent_field_setting.cost_code_field_id,
                 'parent_expense_field_value': task['task_name'],
                 'expense_field_id': dependent_field_setting.cost_type_field_id,
                 'expense_field_value': cost_type,
                 'is_enabled': True
-            } for cost_type in task['cost_types']
-        ]
+            })
 
         if payload:
             sleep(0.2)
-            platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
-            CostType.objects.filter(task_name=task['task_name'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True)
+            try:
+                platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
+                CostType.objects.filter(task_name=task['task_name'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True)
+                processed_batches += 1
+            except Exception as exception:
+                is_errored = True
+                logger.error(f'Exception while posting dependent cost type | Error: {exception} | Payload: {payload}')
+
+    import_log.status = 'PARTIALLY_FAILED' if is_errored else 'COMPLETE'
+    import_log.error_log = []
+    import_log.processed_batches_count = processed_batches
+    if not is_errored:
+        import_log.last_successful_run_at = last_successful_run_at
+    import_log.save()
+
+    return is_errored
 
 
-def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None):
+def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None, cost_code_import_log: ImportLog = None, cost_type_import_log: ImportLog = None):
     if not platform:
         platform = connect_to_platform(workspace_id)
 
@@ -120,12 +162,19 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
     if dependent_field_setting.last_successful_import_at:
         filters['updated_at__gte'] = dependent_field_setting.last_successful_import_at
 
-    posted_cost_types = post_dependent_cost_code(dependent_field_setting, platform, filters)
+    posted_cost_types, is_cost_code_errored = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters)
     if posted_cost_types:
         filters['task_name__in'] = posted_cost_types
-        post_dependent_cost_type(dependent_field_setting, platform, filters)
 
-    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
+    if cost_code_import_log.status in ['FAILED', 'FATAL']:
+        cost_type_import_log.status = 'FAILED'
+        cost_type_import_log.error_log = {'message': 'Importing COST_CODE failed'}
+        cost_type_import_log.save()
+        return
+    else:
+        is_cost_type_errored = post_dependent_cost_type(cost_type_import_log, dependent_field_setting, platform, filters)
+        if not is_cost_type_errored and not is_cost_code_errored and cost_type_import_log.processed_batches_count > 0:
+            DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
 
 
 def import_dependent_fields_to_fyle(workspace_id: str):
@@ -133,8 +182,10 @@ def import_dependent_fields_to_fyle(workspace_id: str):
 
     try:
         platform = connect_to_platform(workspace_id)
-        sync_sage_intacct_attributes('COST_TYPE', workspace_id)
-        post_dependent_expense_field_values(workspace_id, dependent_field, platform)
+        cost_code_import_log = ImportLog.create(attribute_type='COST_CODE', workspace_id=workspace_id)
+        cost_type_import_log = ImportLog.create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+        sync_sage_intacct_attributes('COST_TYPE', workspace_id, cost_type_import_log)
+        post_dependent_expense_field_values(workspace_id, dependent_field, platform, cost_code_import_log, cost_type_import_log)
 
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
@@ -170,4 +221,3 @@ def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type
     }
 
     return platform.expense_custom_fields.post(expense_custom_field_payload)
-

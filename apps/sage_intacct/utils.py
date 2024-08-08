@@ -23,8 +23,10 @@ from .models import (
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement,
     SageIntacctReimbursementLineitem, CostType, get_user_defined_dimension_object
 )
+from apps.mappings.exceptions import handle_import_exceptions
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 SYNC_UPPER_LIMIT = {
@@ -33,6 +35,7 @@ SYNC_UPPER_LIMIT = {
     'items':15000,
     'classes': 15000
 }
+
 
 class SageIntacctConnector:
     """
@@ -60,7 +63,6 @@ class SageIntacctConnector:
 
         self.workspace_id = workspace_id
 
-
     def get_tax_solution_id_or_none(self, lineitems):
 
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
@@ -78,7 +80,6 @@ class SageIntacctConnector:
                 tax_solution_id = destination_attribute.detail['tax_solution_id']
 
             return tax_solution_id
-
 
     def get_tax_exclusive_amount(self, amount, default_tax_code_id):
 
@@ -266,7 +267,8 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_cost_types(self):
+    @handle_import_exceptions
+    def sync_cost_types(self, _import_log=None):
         """
         Sync of Sage Intacct Cost Types
         """
