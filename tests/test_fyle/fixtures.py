@@ -43,7 +43,7 @@ data = {
             'name': 'Administration'
         },
         'cost_center_id': 23166,
-        'created_at': '2024-05-10T07:52:10.551260+00:00',
+        'created_at': None,
         'creator_user_id': 'usVN2WTtPqE7',
         'currency': 'USD',
         'custom_fields': [
@@ -159,31 +159,6 @@ data = {
         },
         'project_id': 330241,
         'purpose': None,
-        'report': {
-            'amount': 12,
-            'approvals': [
-                {
-                    'approver_user': {
-                        'email': 'admin1@fyleforimporrttest.in',
-                        'full_name': 'Theresa Brown',
-                        'id': 'usVN2WTtPqE7'
-                    },
-                    'approver_user_id': 'usVN2WTtPqE7',
-                    'state': 'APPROVAL_DONE'
-                }
-            ],
-            'id': 'rpN41rGGnxNI',
-            'last_approved_at': '2024-05-10T07:53:25.774+00:00',
-            'last_paid_at': None,
-            'last_submitted_at': '2024-05-10T07:53:09.457+00:00',
-            'last_verified_at': '2024-05-10T07:55:02.32928+00:00',
-            'reimbursement_id': 'reimYNNUkKQiWp',
-            'reimbursement_seq_num': 'P/2024/05/T/P/2024/05/R/30',
-            'seq_num': 'C/2024/05/R/45',
-            'settlement_id': 'setUkp31alIp7',
-            'state': 'PAYMENT_PROCESSING',
-            'title': '#5:  May 2024'
-        },
         'report_id': 'rpN41rGGnxNI',
         'report_last_approved_at': '2024-05-10T07:53:25.774000+00:00',
         'report_last_paid_at': None,
@@ -205,7 +180,7 @@ data = {
         'tax_group': None,
         'tax_group_id': None,
         'travel_classes': [],
-        'updated_at': '2024-06-10T11:41:40.779611+00:00',
+        'updated_at': None,
         'user': {
             'email': 'admin1@fyleforimporrttest.in',
             'full_name': 'Theresa Brown',
@@ -787,11 +762,12 @@ data = {
             'paid_on_qbo': False,
             'created_at': '2024-06-18T19:12:17.003409+00:00',
             'updated_at': '2024-06-18T19:12:17.003421+00:00',
-            'bank_transaction_id': 'Arkham'
+            'bank_transaction_id': 'Arkham',
+            'fund_source': 'CCC'
         },
         {
             'id': '24004',
-            'employee_email': 'admin21@fyleforbamboohr.com',
+            'employee_email': 'admin11@fyleforbamboohr.com',
             'employee_name': 'Theresa Brown',
             'report_title': '#1: Aug 2024',
             'category': 'Taxi',
@@ -814,15 +790,15 @@ data = {
             'state': 'APPROVED',
             'vendor': None,
             'cost_center': 'F & A',
-            'corporate_card_id': None,
+            'corporate_card_id': 'baccOhXVSIlP7S',
             'purpose': None,
             'report_id': 'rp6lAwelLh54',
             'file_ids': [],
             'spent_at': '2024-06-05T00:00:00+00:00',
             'posted_at': None,
             'approved_at': '2024-06-05T12:35:28.453+00:00',
-            'expense_created_at': '2024-06-05T12:34:41.770252+00:00',
-            'expense_updated_at': '2024-06-10T11:45:09.305064+00:00',
+            'expense_created_at': '2024-06-05T12:34:09.350864+00:00',
+            'expense_updated_at': '2024-06-10T11:45:43.338229+00:00',
             'source_account_type': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT',
             'verified_at': None,
             'custom_properties': {
@@ -836,13 +812,14 @@ data = {
             'previous_export_state': None,
             'paid_on_fyle': False,
             'paid_on_qbo': False,
-            'created_at': '2024-06-18T19:12:17.020617+00:00',
-            'updated_at': '2024-06-18T19:12:17.020627+00:00',
-            'bank_transaction_id': 'Arkham'
+            'created_at': '2024-06-18T19:12:17.003409+00:00',
+            'updated_at': '2024-06-18T19:12:17.003421+00:00',
+            'bank_transaction_id': 'Arkham',
+            'fund_source': 'CCC'
         },
         {
             'id': '24008',
-            'employee_email': 'admin1@fyleforbamboohr.com',
+            'employee_email': 'admin11@fyleforbamboohr.com',
             'employee_name': 'Theresa Brown',
             'report_title': '#1: Jun 2024',
             'category': 'Taxi',
@@ -886,11 +863,12 @@ data = {
             'paid_on_qbo': False,
             'created_at': '2024-06-18T19:12:17.003409+00:00',
             'updated_at': '2024-06-18T19:12:17.003421+00:00',
-            'bank_transaction_id': 'Anish'
+            'bank_transaction_id': 'Anish',
+            'fund_source': 'CCC'
         },
         {
             'id': '24009',
-            'employee_email': 'admin1@fyleforbamboohr.com',
+            'employee_email': 'admin11@fyleforbamboohr.com',
             'employee_name': 'Theresa Brown',
             'report_title': '#1: Jun 2024',
             'category': 'Taxi',
@@ -913,15 +891,15 @@ data = {
             'state': 'APPROVED',
             'vendor': None,
             'cost_center': 'F & A',
-            'corporate_card_id': None,
+            'corporate_card_id': 'baccOhXVSIlP7S',
             'purpose': None,
             'report_id': 'rp6lAwelLh54',
             'file_ids': [],
             'spent_at': '2024-06-05T00:00:00+00:00',
             'posted_at': None,
             'approved_at': '2024-06-05T12:35:28.453+00:00',
-            'expense_created_at': '2024-06-05T12:34:41.770252+00:00',
-            'expense_updated_at': '2024-06-10T11:45:09.305064+00:00',
+            'expense_created_at': '2024-06-05T12:34:09.350864+00:00',
+            'expense_updated_at': '2024-06-10T11:45:43.338229+00:00',
             'source_account_type': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT',
             'verified_at': None,
             'custom_properties': {
@@ -935,9 +913,10 @@ data = {
             'previous_export_state': None,
             'paid_on_fyle': False,
             'paid_on_qbo': False,
-            'created_at': '2024-06-18T19:12:17.020617+00:00',
-            'updated_at': '2024-06-18T19:12:17.020627+00:00',
-            'bank_transaction_id': 'Anish'
+            'created_at': '2024-06-18T19:12:17.003409+00:00',
+            'updated_at': '2024-06-18T19:12:17.003421+00:00',
+            'bank_transaction_id': 'Anish',
+            'fund_source': 'CCC'
         }
     ],
     'expense_group_id': {
@@ -1127,6 +1106,7 @@ data = {
         },
         "response_logs":"None",
         "employee_name":"None",
+        "export_url": "None",
         "created_at":"2022-09-20T08:48:21.765399Z",
         "export_type":"None",
         "exported_at":"None",

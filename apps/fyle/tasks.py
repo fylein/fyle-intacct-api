@@ -38,12 +38,6 @@ SOURCE_ACCOUNT_MAP = {
     'CCC': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT'
 }
 
-
-def sync_reimbursements(fyle_credentials, workspace_id: int):
-    platform = PlatformConnector(fyle_credentials)
-    platform.reimbursements.sync()
-
-
 def get_task_log_and_fund_source(workspace_id: int):
     task_log, _ = TaskLog.objects.update_or_create(
         workspace_id=workspace_id,
@@ -346,5 +340,5 @@ def update_non_exported_expenses(data: Dict) -> None:
             expense_obj.append(data)
             expense_objects = FyleExpenses().construct_expense_object(expense_obj, expense.workspace_id)
             Expense.create_expense_objects(
-                expense_objects, expense.workspace_id
+                expense_objects, expense.workspace_id, skip_update=True
             )

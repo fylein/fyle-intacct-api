@@ -1,6 +1,9 @@
+from datetime import datetime, timezone, timedelta
+
 from apps.fyle.models import Expense
 from apps.workspaces.models import Workspace, FyleCredential
-from apps.sage_intacct.queue import __create_chain_and_run
+from apps.tasks.models import Error
+from apps.sage_intacct.queue import __create_chain_and_run, validate_failing_export
 from apps.fyle.queue import async_post_accounting_export_summary, async_import_and_export_expenses
 
 
@@ -42,3 +45,56 @@ def test_async_import_and_export_expenses(db):
     )
 
     async_import_and_export_expenses(body, worksapce.id)
+
+
+def test_validate_failing_export(db):
+    # Should return false for manual trigger from UI
+    error = Error(
+        repetition_count=900,
+        updated_at=datetime.now().replace(tzinfo=timezone.utc)
+    )
+    skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, error=error)
+
+    assert skip_export is False
+
+    # Should return false if repetition count is less than 100
+
+    error = Error(
+        repetition_count=90,
+        updated_at=datetime.now().replace(tzinfo=timezone.utc)
+    )
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, error=error)
+
+    assert skip_export is False
+
+    # Hourly schedule - erroed for 4 days straight - 101 repetitions
+    error = Error(
+        repetition_count=101,
+        workspace_id=1,
+        type='INTACCT_ERROR',
+        error_title='Dummy title',
+        error_detail='Dummy detail',
+        updated_at=datetime.now()
+    )
+    error.save()
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=error)
+
+    assert skip_export is True
+
+    # Manually setting last error'd time to 25 hours ago
+    Error.objects.filter(id=error.id).update(updated_at=datetime.now() - timedelta(hours=25))
+
+    latest_error = Error.objects.get(id=error.id)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error)
+
+    # Export should run once in a day
+    assert skip_export is False
+
+    # it should skip in next run after 1h, manually setting last error'd time to now
+    Error.objects.filter(id=error.id).update(updated_at=datetime.now())
+    latest_error = Error.objects.get(id=error.id)
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error)
+
+    assert skip_export is True

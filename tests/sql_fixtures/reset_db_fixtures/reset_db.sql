@@ -254,7 +254,8 @@ CREATE TABLE public.bill_lineitems (
     tax_amount double precision,
     tax_code character varying(255),
     cost_type_id character varying(255),
-    task_id character varying(255)
+    task_id character varying(255),
+    allocation_id character varying(255)
 );
 
 
@@ -397,7 +398,8 @@ CREATE TABLE public.configurations (
     employee_field_mapping character varying(50),
     is_simplify_report_closure_enabled boolean NOT NULL,
     use_merchant_in_journal_line boolean NOT NULL,
-    is_journal_credit_billable boolean NOT NULL
+    is_journal_credit_billable boolean NOT NULL,
+    auto_create_merchants_as_vendors boolean NOT NULL
 );
 
 
@@ -1033,7 +1035,8 @@ CREATE TABLE public.expense_groups (
     exported_at timestamp with time zone,
     export_type character varying(50),
     employee_name character varying(100),
-    response_logs jsonb
+    response_logs jsonb,
+    export_url character varying(255)
 );
 
 
@@ -1546,7 +1549,8 @@ CREATE TABLE public.journal_entry_lineitems (
     tax_amount double precision,
     tax_code character varying(255),
     cost_type_id character varying(255),
-    task_id character varying(255)
+    task_id character varying(255),
+    allocation_id boolean
 );
 
 
@@ -2832,7 +2836,7 @@ COPY public.auth_tokens (id, refresh_token, user_id) FROM stdin;
 -- Data for Name: bill_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.bill_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, bill_id, expense_id, billable, customer_id, item_id, user_defined_dimensions, class_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+COPY public.bill_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, bill_id, expense_id, billable, customer_id, item_id, user_defined_dimensions, class_id, tax_amount, tax_code, cost_type_id, task_id, allocation_id) FROM stdin;
 \.
 
 
@@ -2882,8 +2886,8 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 -- Data for Name: configurations; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, is_simplify_report_closure_enabled, use_merchant_in_journal_line, is_journal_credit_billable) FROM stdin;
-1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	f	t
+COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, is_simplify_report_closure_enabled, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors) FROM stdin;
+1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	f	t	f
 \.
 
 
@@ -4111,6 +4115,11 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 183	fyle	0031_expense_paid_on_fyle	2024-06-05 16:26:11.775475+00
 184	workspaces	0034_configuration_is_journal_credit_billable	2024-06-19 07:16:22.418147+00
 185	fyle	0032_auto_20240703_1818	2024-07-03 18:29:14.061756+00
+186	workspaces	0035_configuration_auto_create_merchants_as_vendors	2024-07-26 17:26:19.583422+00
+187	fyle	0033_expensegroup_export_url	2024-08-03 14:47:55.730073+00
+188	sage_intacct	0026_billlineitem_allocation_id	2024-07-19 09:36:26.579359+00
+189	sage_intacct	0027_journalentrylineitem_allocation_id	2024-07-26 11:27:56.709021+00
+190	workspaces	0036_alter_configuration_is_journal_credit_billable	2024-08-06 11:33:56.808396+00
 \.
 
 
@@ -7509,10 +7518,10 @@ COPY public.expense_group_settings (id, reimbursable_expense_group_fields, corpo
 -- Data for Name: expense_groups; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at, export_type, employee_name, response_logs) FROM stdin;
-1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N	\N	\N	\N
-2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N	\N	\N	\N
-3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N	\N	\N	\N
+COPY public.expense_groups (id, description, created_at, updated_at, workspace_id, fund_source, exported_at, export_type, employee_name, response_logs, export_url) FROM stdin;
+1	{"report_id": "rpEZGqVCyWxQ", "fund_source": "PERSONAL", "claim_number": "C/2022/09/R/21", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:48:21.765399+00	2022-09-20 08:48:21.765445+00	1	PERSONAL	\N	\N	\N	\N	\N
+2	{"report_id": "rpSTYO8AfUVA", "expense_id": "txCqLqsEnAjf", "fund_source": "CCC", "claim_number": "C/2022/09/R/22", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:51:27.651115+00	2022-09-20 08:51:27.651167+00	1	CCC	\N	\N	\N	\N	\N
+3	{"report_id": "rpBf5ibqUT6B", "expense_id": "txTHfEPWOEOp", "fund_source": "CCC", "claim_number": "C/2022/09/R/23", "employee_email": "ashwin.t@fyle.in"}	2022-09-20 08:56:50.147276+00	2022-09-20 08:56:50.147324+00	1	CCC	\N	\N	\N	\N	\N
 \.
 
 
@@ -7592,7 +7601,7 @@ COPY public.journal_entries (id, description, memo, currency, supdoc_id, transac
 -- Data for Name: journal_entry_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location_id, class_id, department_id, customer_id, item_id, memo, user_defined_dimensions, amount, billable, transaction_date, created_at, updated_at, expense_id, journal_entry_id, employee_id, vendor_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location_id, class_id, department_id, customer_id, item_id, memo, user_defined_dimensions, amount, billable, transaction_date, created_at, updated_at, expense_id, journal_entry_id, employee_id, vendor_id, tax_amount, tax_code, cost_type_id, task_id, allocation_id) FROM stdin;
 \.
 
 
@@ -8118,7 +8127,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 185, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 190, true);
 
 
 --

@@ -6,7 +6,6 @@ from fyle_integrations_platform_connector import PlatformConnector
 import logging
 from typing import List, Union
 
-from django.utils.module_loading import import_string
 from django.conf import settings
 from django.db.models import Q
 from django_q.tasks import Chain
