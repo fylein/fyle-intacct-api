@@ -723,3 +723,15 @@ def test_bulk_update_expenses(db):
             settings.INTACCT_INTEGRATION_APP_URL
         )
         assert expense.accounting_export_summary['id'] == expense.expense_id
+
+def test_handle_refresh_dimensions(db, mocker):
+    mocker.patch(
+        'apps.fyle.helpers.sync_dimensions',
+        return_value=None
+    )
+
+    res = handle_refresh_dimensions(workspace_id=1)
+    assert res == None
+
+    workspace = Workspace.objects.get(id=1)
+    assert workspace.source_synced_at != None
