@@ -87,4 +87,11 @@ def handle_import_exceptions(func):
         import_log.error_log = error
         import_log.save()
 
+        if import_log.attribute_type == 'COST_TYPE' and import_log.status in ['FAILED', 'FATAL']:
+            cost_code_log = ImportLog.objects.filter(workspace_id=import_log.workspace_id, attribute_type='COST_CODE').first()
+            if cost_code_log and cost_code_log.status == 'IN_PROGRESS':
+                cost_code_log.status = 'FAILED'
+                cost_code_log.error_log = error
+                cost_code_log.save()
+
     return new_fn

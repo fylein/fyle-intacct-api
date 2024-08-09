@@ -185,8 +185,10 @@ def import_dependent_fields_to_fyle(workspace_id: str):
         cost_code_import_log = ImportLog.create(attribute_type='COST_CODE', workspace_id=workspace_id)
         cost_type_import_log = ImportLog.create(attribute_type='COST_TYPE', workspace_id=workspace_id)
         sync_sage_intacct_attributes('COST_TYPE', workspace_id, cost_type_import_log)
-        post_dependent_expense_field_values(workspace_id, dependent_field, platform, cost_code_import_log, cost_type_import_log)
-
+        if cost_code_import_log.status == 'IN_PROGRESS' and cost_type_import_log.status == 'IN_PROGRESS':
+            post_dependent_expense_field_values(workspace_id, dependent_field, platform, cost_code_import_log, cost_type_import_log)
+        else:
+            logger.error('Importing dependent fields to fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
     except NoPrivilegeError:
