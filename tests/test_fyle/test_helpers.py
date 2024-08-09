@@ -735,3 +735,16 @@ def test_handle_refresh_dimensions(db, mocker):
 
     workspace = Workspace.objects.get(id=1)
     assert workspace.source_synced_at != None
+
+def test_check_interval_and_sync_dimension(db, mocker):
+    mocker.patch(
+        'apps.fyle.helpers.sync_dimensions',
+        return_value=None
+    )
+
+    res = check_interval_and_sync_dimension(workspace_id=1)
+    assert res == None
+
+    workspace = Workspace.objects.get(id=1)
+    assert workspace.source_synced_at != None
+
