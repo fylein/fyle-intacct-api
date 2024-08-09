@@ -500,6 +500,12 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
 
     return general_mappings.default_charge_card_id
 
+def get_credit_card_purchase_number(expense_group: ExpenseGroup, expense: Expense, expense_group_settings: ExpenseGroupSettings):
+    if expense_group.expenses.count() > 1 and expense_group_settings.split_expense_grouping == 'MULTIPLE_LINE_ITEM' and 'bank_transaction_id' in expense_group.description:
+        return expense_group.description['bank_transaction_id']
+    else:
+        return expense.expense_number
+
 class Bill(models.Model):
     """
     Sage Intacct Bill
@@ -1094,7 +1100,7 @@ class ChargeCardTransaction(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
-
+        expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=expense_group.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         charge_card_id = get_ccc_account_id(general_mappings, expense, description)
 
@@ -1114,7 +1120,11 @@ class ChargeCardTransaction(models.Model):
                 'description': description,
                 'memo': memo,
                 'supdoc_id': supdoc_id,
-                'reference_no': expense.expense_number,
+                'reference_no': get_credit_card_purchase_number(
+                    expense_group,
+                    expense,
+                    expense_group_settings
+                ),
                 'currency': expense.currency,
                 'transaction_date': get_transaction_date(expense_group)
             }
