@@ -8,7 +8,8 @@ from typing import List, Union
 
 from django.conf import settings
 from django.db.models import Q
-from fyle_accounting_mappings.models import ExpenseAttribute
+from django_q.tasks import Chain
+from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from rest_framework.exceptions import ValidationError
 
 from apps.fyle.models import ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, Expense
@@ -129,22 +130,22 @@ def add_expense_id_to_expense_group_settings(workspace_id: int):
     expense_group_settings.save()
 
 
-def check_interval_and_sync_dimension(workspace: Workspace, fyle_credentials: FyleCredential) -> bool:
+def check_interval_and_sync_dimension(workspace_id, **kwargs) -> bool:
     """
     Check sync interval and sync dimension
-    :param workspace: Workspace Instance
-    :param fyle_credentials: Fyle credentials of an org
-    return: True/False based on sync
+    :param workspace_id: Workspace ID
     """
+
+    workspace = Workspace.objects.get(pk=workspace_id)
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
+
     if workspace.source_synced_at:
         time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
     if workspace.source_synced_at is None or time_interval.days > 0:
         sync_dimensions(fyle_credentials)
-        return True
-
-    return False
-
+        workspace.source_synced_at = datetime.now()
+        workspace.save(update_fields=['source_synced_at'])
 
 def sync_dimensions(fyle_credentials, is_export: bool = False):
     platform = PlatformConnector(fyle_credentials)
@@ -171,6 +172,33 @@ def sync_dimensions(fyle_credentials, is_export: bool = False):
 
         if projects_count != projects_expense_attribute_count:
             platform.projects.sync()
+
+def handle_refresh_dimensions(workspace_id):
+    workspace = Workspace.objects.get(id=workspace_id)
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
+
+    mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
+    chain = Chain()
+
+    for mapping_setting in mapping_settings:
+        if mapping_setting.source_field in ['PROJECT', 'COST_CENTER'] or mapping_setting.is_custom:
+            chain.append(
+                'apps.mappings.imports.tasks.trigger_import_via_schedule',
+                int(workspace_id),
+                mapping_setting.destination_field,
+                mapping_setting.source_field,
+                mapping_setting.is_custom,
+                q_options={'cluster': 'import'}
+            )
+
+    if chain.length() > 0:
+        chain.run()
+
+
+    sync_dimensions(fyle_credentials)
+
+    workspace.source_synced_at = datetime.now()
+    workspace.save(update_fields=['source_synced_at'])
 
 
 def construct_expense_filter(expense_filter):

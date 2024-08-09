@@ -90,9 +90,10 @@ class WorkspaceView(viewsets.ViewSet):
         """
         user = User.objects.get(user_id=request.user)
         org_id = request.query_params.get('org_id')
+        is_polling = request.query_params.get('is_polling', False)
         workspaces = Workspace.objects.filter(user__in=[user], fyle_org_id=org_id).all()
 
-        if workspaces:
+        if workspaces and not is_polling:
             async_task(
                 'apps.workspaces.tasks.async_update_workspace_name',
                 workspaces[0],
