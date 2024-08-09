@@ -500,7 +500,7 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
 
     return general_mappings.default_charge_card_id
 
-def get_credit_card_purchase_number(expense_group: ExpenseGroup, expense: Expense, expense_group_settings: ExpenseGroupSettings):
+def get_credit_card_transaction_number(expense_group: ExpenseGroup, expense: Expense, expense_group_settings: ExpenseGroupSettings):
     if expense_group.expenses.count() > 1 and expense_group_settings.split_expense_grouping == 'MULTIPLE_LINE_ITEM' and 'bank_transaction_id' in expense_group.description:
         return expense_group.description['bank_transaction_id']
     else:
@@ -1120,7 +1120,7 @@ class ChargeCardTransaction(models.Model):
                 'description': description,
                 'memo': memo,
                 'supdoc_id': supdoc_id,
-                'reference_no': get_credit_card_purchase_number(
+                'reference_no': get_credit_card_transaction_number(
                     expense_group,
                     expense,
                     expense_group_settings
