@@ -13,15 +13,14 @@ def test_schedule_payment_sync(db):
 def test_check_interval_and_sync_dimension(db):
     workspace_id = 1
 
-    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     workspace = Workspace.objects.get(id=workspace_id)
 
-    check_interval_and_sync_dimension(workspace, intacct_credentials)
+    check_interval_and_sync_dimension(workspace_id)
 
     workspace.destination_synced_at = None
     workspace.save()
 
-    check_interval_and_sync_dimension(workspace, intacct_credentials)
+    check_interval_and_sync_dimension(workspace_id)
 
 
 def test_is_dependent_field_import_enabled(db, create_dependent_field_setting):
