@@ -1505,12 +1505,9 @@ class CostType(models.Model):
                 cost_types_to_be_created.append(cost_type_object)
 
             elif cost_type['RECORDNO'] in primary_key_map.keys() and (
-                cost_type['PROJECTNAME'] != primary_key_map[cost_type['RECORDNO']]['project_name']
-                or cost_type['PROJECTID'] != primary_key_map[cost_type['RECORDNO']]['project_id']
-                or cost_type['STATUS'] != primary_key_map[cost_type['RECORDNO']]['status']
+                cost_type['STATUS'] != primary_key_map[cost_type['RECORDNO']]['status']
             ):
                 cost_type_object.id = primary_key_map[cost_type['RECORDNO']]['id']
-                cost_type_object.updated_at = datetime.now(timezone.utc)
                 cost_types_to_be_updated.append(cost_type_object)
 
         if cost_types_to_be_created:
@@ -1520,7 +1517,7 @@ class CostType(models.Model):
             CostType.objects.bulk_update(
                 cost_types_to_be_updated, fields=[
                     'project_key', 'project_id', 'project_name', 'task_key', 'task_id', 'task_name',
-                    'cost_type_id', 'name', 'status', 'when_modified', 'updated_at'
+                    'cost_type_id', 'name', 'status', 'when_modified'
                 ],
                 batch_size=2000
             )
