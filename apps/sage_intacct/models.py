@@ -1,9 +1,9 @@
 """
 Sage Intacct models
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from django.conf import settings
-from django.db.models import Q,JSONField
+from django.db.models import JSONField
 from django.db import models
 from django.utils.module_loading import import_string
 
@@ -1461,7 +1461,9 @@ class CostType(models.Model):
             'id',
             'record_number',
             'name',
-            'status'
+            'status',
+            'project_name',
+            'project_id'
         )
 
         existing_cost_type_record_numbers = []
@@ -1475,6 +1477,8 @@ class CostType(models.Model):
                 'id': existing_cost_type['id'],
                 'name': existing_cost_type['name'],
                 'status': existing_cost_type['status'],
+                'project_name': existing_cost_type['project_name'],
+                'project_id': existing_cost_type['project_id']
             }
 
         cost_types_to_be_created = []
@@ -1501,9 +1505,12 @@ class CostType(models.Model):
                 cost_types_to_be_created.append(cost_type_object)
 
             elif cost_type['RECORDNO'] in primary_key_map.keys() and (
-                cost_type['NAME'] != primary_key_map[cost_type['RECORDNO']]['name'] or cost_type['STATUS'] != primary_key_map[cost_type['RECORDNO']]['status']
+                cost_type['PROJECTNAME'] != primary_key_map[cost_type['RECORDNO']]['project_name']
+                or cost_type['PROJECTID'] != primary_key_map[cost_type['RECORDNO']]['project_id']
+                or cost_type['STATUS'] != primary_key_map[cost_type['RECORDNO']]['status']
             ):
                 cost_type_object.id = primary_key_map[cost_type['RECORDNO']]['id']
+                cost_type_object.updated_at = datetime.now(timezone.utc)
                 cost_types_to_be_updated.append(cost_type_object)
 
         if cost_types_to_be_created:
@@ -1513,7 +1520,7 @@ class CostType(models.Model):
             CostType.objects.bulk_update(
                 cost_types_to_be_updated, fields=[
                     'project_key', 'project_id', 'project_name', 'task_key', 'task_id', 'task_name',
-                    'cost_type_id', 'name', 'status', 'when_modified'
+                    'cost_type_id', 'name', 'status', 'when_modified', 'updated_at'
                 ],
                 batch_size=2000
             )

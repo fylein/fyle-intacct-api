@@ -13,7 +13,7 @@ from django.db.models import Q
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
 
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
@@ -34,6 +34,11 @@ SYNC_UPPER_LIMIT = {
     'customers': 15000,
     'items':15000,
     'classes': 15000
+}
+
+ATTRIBUTE_DISABLE_CALLBACK_PATH = {
+    'PROJECT': 'apps.mappings.imports.modules.projects.disable_projects',
+    'ACCOUNT': 'apps.mappings.imports.modules.categories.disable_categories'
 }
 
 
@@ -104,13 +109,14 @@ class SageIntacctConnector:
             'ccc_account': []
         }
         destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, 
-                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail')
+                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail', 'code')
         disabled_fields_map = {}
 
         for destination_attribute in destination_attributes:
             disabled_fields_map[destination_attribute['destination_id']] = {
                 'value': destination_attribute['value'],
-                'detail': destination_attribute['detail']
+                'detail': destination_attribute['detail'],
+                'code': destination_attribute['code']
             }
 
         for account in accounts:
@@ -123,7 +129,8 @@ class SageIntacctConnector:
                     'active': True,
                     'detail': {
                         'account_type': account['ACCOUNTTYPE']
-                    }
+                    },
+                    'code': account['ACCOUNTNO']
                 })
                 if account['ACCOUNTNO'] in disabled_fields_map:
                     disabled_fields_map.pop(account['ACCOUNTNO'])
@@ -140,13 +147,19 @@ class SageIntacctConnector:
                 'value': disabled_fields_map[destination_id]['value'],
                 'destination_id': destination_id,
                 'active': False,
-                'detail': disabled_fields_map[destination_id]['detail']
+                'detail': disabled_fields_map[destination_id]['detail'],
+                'code': disabled_fields_map[destination_id]['code']
             })
 
         for attribute_type, account_attribute in account_attributes.items():
             if account_attribute:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    account_attribute, attribute_type.upper(), self.workspace_id, True)
+                    account_attribute,
+                    attribute_type.upper(),
+                    self.workspace_id,
+                    True,
+                    attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT']
+                )
         return []
 
     def sync_departments(self):
@@ -163,11 +176,17 @@ class SageIntacctConnector:
                 'display_name': 'department',
                 'value': department['TITLE'],
                 'destination_id': department['DEPARTMENTID'],
+                'code': department['DEPARTMENTID'],
                 'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            department_attributes, 'DEPARTMENT', self.workspace_id, True)
+            department_attributes,
+            'DEPARTMENT',
+            self.workspace_id,
+            True,
+            attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT')
+        )
 
         return []
 
@@ -303,13 +322,14 @@ class SageIntacctConnector:
 
             project_attributes = []
             destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail')
+                attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail', 'code')
             disabled_fields_map = {}
 
             for destination_attribute in destination_attributes:
                 disabled_fields_map[destination_attribute['destination_id']] = {
                     'value': destination_attribute['value'],
-                    'detail': destination_attribute['detail']
+                    'detail': destination_attribute['detail'],
+                    'code': destination_attribute['code']
                 }
 
             for project in projects:
@@ -325,7 +345,8 @@ class SageIntacctConnector:
                         'value': project['NAME'],
                         'destination_id': project['PROJECTID'],
                         'active': True,
-                        'detail': detail
+                        'detail': detail,
+                        'code': project['PROJECTID']
                     })
                     if project['PROJECTID'] in disabled_fields_map:
                         disabled_fields_map.pop(project['PROJECTID'])
@@ -342,11 +363,17 @@ class SageIntacctConnector:
                     'value': disabled_fields_map[destination_id]['value'],
                     'destination_id': destination_id,
                     'active': False,
-                    'detail': disabled_fields_map[destination_id]['detail']
+                    'detail': disabled_fields_map[destination_id]['detail'],
+                    'code': disabled_fields_map[destination_id]['code']
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                project_attributes, 'PROJECT', self.workspace_id, True)
+                project_attributes,
+                'PROJECT',
+                self.workspace_id,
+                True,
+                attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT')
+            )
 
         return []
 
@@ -1636,4 +1663,18 @@ class SageIntacctConnector:
         if sanitized_name:
             return sanitized_name
 
+        return None
+
+    def get_disable_attribute_callback_func(self, destination_field: str):
+        """
+        Get the callback function to disable the attribute
+        :param destination_field: Destination Field
+        :return: Callback Function
+        """
+        mapping_settings = MappingSetting.objects.filter(
+            workspace_id=self.workspace_id,
+            destination_field=destination_field
+        ).first()
+        if mapping_settings and mapping_settings.source_field in ATTRIBUTE_DISABLE_CALLBACK_PATH.keys():
+            return ATTRIBUTE_DISABLE_CALLBACK_PATH[mapping_settings.source_field]
         return None

@@ -20,6 +20,7 @@ from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.exceptions import handle_import_exceptions
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration
+from apps.mappings.helpers import prepend_code_to_name
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -35,13 +36,15 @@ class Base:
             source_field: str,
             destination_field: str,
             platform_class_name: str,
-            sync_after:datetime,
-        ):
+            sync_after: datetime,
+            prepend_code_to_name: bool = False
+    ):
         self.workspace_id = workspace_id
         self.source_field = source_field
         self.destination_field = destination_field
         self.platform_class_name = platform_class_name
         self.sync_after = sync_after
+        self.prepend_code_to_name = prepend_code_to_name
 
 
     def get_platform_class(self, platform: PlatformConnector):
@@ -82,7 +85,7 @@ class Base:
             filters['value__in'] = paginated_destination_attribute_values
 
         return filters
-    
+
     def remove_duplicate_attributes(self, destination_attributes: List[DestinationAttribute]):
         """
         Remove duplicate attributes
@@ -93,9 +96,13 @@ class Base:
         attribute_values = []
 
         for destination_attribute in destination_attributes:
-            if destination_attribute.value.lower() not in attribute_values:
+            attribute_value = destination_attribute.value
+            attribute_value = prepend_code_to_name(self.prepend_code_to_name, destination_attribute.value, destination_attribute.code)
+
+            if attribute_value.lower() not in attribute_values:
+                destination_attribute.value = attribute_value
                 unique_attributes.append(destination_attribute)
-                attribute_values.append(destination_attribute.value.lower())
+                attribute_values.append(attribute_value.lower())
 
         return unique_attributes
 

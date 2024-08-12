@@ -15,6 +15,8 @@ def chain_import_fields_to_fyle(workspace_id):
     project_mapping = MappingSetting.objects.filter(source_field='PROJECT', workspace_id=workspace_id, import_to_fyle=True).first()
     dependent_fields = DependentFieldSetting.objects.filter(workspace_id=workspace_id, is_import_enabled=True).first()
 
+    import_code_fields = configuration.import_code_fields
+
     chain = Chain()
 
     if configuration.import_tax_codes:
@@ -47,6 +49,8 @@ def chain_import_fields_to_fyle(workspace_id):
             workspace_id,
             destination_field,
             'CATEGORY',
+            False,
+            True if 'ACCOUNT' in import_code_fields else False,
             q_options={'cluster': 'import'}
         )
 
@@ -57,6 +61,8 @@ def chain_import_fields_to_fyle(workspace_id):
                 workspace_id,
                 mapping_setting.destination_field,
                 mapping_setting.source_field,
+                False,
+                True if mapping_setting.destination_field in import_code_fields else False,
                 q_options={'cluster': 'import'}
             )
 
@@ -67,6 +73,7 @@ def chain_import_fields_to_fyle(workspace_id):
             custom_fields_mapping_setting.destination_field,
             custom_fields_mapping_setting.source_field,
             True,
+            True if custom_fields_mapping_setting.destination_field in import_code_fields else False,
             q_options={'cluster': 'import'}
         )
 

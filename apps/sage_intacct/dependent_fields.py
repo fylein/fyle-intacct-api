@@ -57,7 +57,7 @@ def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: 
 
 
 @handle_import_exceptions
-def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict) -> List[str]:
+def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict, is_enabled: bool = True) -> List[str]:
     projects = CostType.objects.filter(**filters).values('project_name').annotate(tasks=ArrayAgg('task_name', distinct=True))
     projects_from_cost_types = [project['project_name'] for project in projects]
     posted_cost_types = []
@@ -86,7 +86,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                     'parent_expense_field_value': project['project_name'],
                     'expense_field_id': dependent_field_setting.cost_code_field_id,
                     'expense_field_value': task,
-                    'is_enabled': True
+                    'is_enabled': is_enabled
                 })
                 task_names.append(task)
         if payload:
@@ -223,3 +223,21 @@ def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type
     }
 
     return platform.expense_custom_fields.post(expense_custom_field_payload)
+
+
+def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: Dict, platform: PlatformConnector):
+    """
+    Update the job_name in CostType and disable the old cost code in Fyle
+    """
+    dependent_field_setting = DependentFieldSetting.objects.filter(is_import_enabled=True, workspace_id=workspace_id).first()
+
+    if dependent_field_setting:
+        filters = {
+            'project_id__in': list(cost_codes_to_disable.keys()),
+            'workspace_id': workspace_id
+        }
+        cost_code_import_log = ImportLog.create('COST_CODE', workspace_id)
+        # This call will disable the cost codes in Fyle that has old project name
+        posted_cost_codes = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
+
+        logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")

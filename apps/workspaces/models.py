@@ -29,6 +29,12 @@ APP_VERSION_CHOICES = (
     ('v2', 'v2')
 )
 
+CODE_IMPORT_FIELD_CHOICES = (
+    ('PROJECT', 'PROJECT'),
+    ('ACCOUNT', 'ACCOUNT'),
+    ('DEPARTMENT', 'DEPARTMENT')
+)
+
 
 def get_default_onboarding_state():
     return 'CONNECTION'
@@ -137,6 +143,11 @@ class Configuration(models.Model):
 
     use_merchant_in_journal_line = models.BooleanField(default=False, help_text='Export merchant as vendor in journal entry line item')
     auto_create_merchants_as_vendors = models.BooleanField(default=False, help_text='Auto create merchants as vendors in sage intacct')
+    import_code_fields = ArrayField(
+        base_field=models.CharField(max_length=100, choices=CODE_IMPORT_FIELD_CHOICES),
+        help_text='Array Field to store code-naming preference',
+        blank=True, default=list
+    )
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
