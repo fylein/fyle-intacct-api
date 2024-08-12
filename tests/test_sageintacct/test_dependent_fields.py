@@ -43,7 +43,7 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
-    import_log = ImportLog.create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
 
     post_dependent_cost_type(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
@@ -59,7 +59,7 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
-    import_log = ImportLog.create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
 
     posted_cost_types, is_errored = post_dependent_cost_code(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
@@ -75,8 +75,8 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
         return_value=None
     )
 
-    cost_code_import_log = ImportLog.create(attribute_type='COST_CODE', workspace_id=workspace_id)
-    cost_type_import_log = ImportLog.create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
 
     current_datetime = datetime.now()
     post_dependent_expense_field_values(workspace_id, create_dependent_field_setting, cost_code_import_log=cost_code_import_log, cost_type_import_log=cost_type_import_log)

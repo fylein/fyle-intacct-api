@@ -103,7 +103,7 @@ class ImportLog(models.Model):
         unique_together = ('workspace', 'attribute_type')
 
     @classmethod
-    def create(self, attribute_type, workspace_id):
+    def update_or_create(self, attribute_type, workspace_id):
         """
         Create import logs set to IN_PROGRESS
         """
