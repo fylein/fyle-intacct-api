@@ -70,6 +70,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
 
     BATCH_SIZE = 200
     posted_cost_codes = []
+    total_batches = 0
     processed_batches = 0
     is_errored = False
     cost_type_ids = []
@@ -80,7 +81,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
         cost_type_ids.append(cost_type_id)
 
         if len(cost_type_ids) >= BATCH_SIZE:
-            batches_processed, batch_errored = process_cost_code_batch(
+            total_batches_processed, batches_processed, batch_errored = process_cost_code_batch(
                 platform,
                 cost_type_ids,
                 posted_cost_codes,
@@ -89,12 +90,13 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                 dependent_field_setting,
                 is_enabled
             )
+            total_batches += total_batches_processed
             processed_batches += batches_processed
             is_errored = is_errored and batch_errored
             cost_type_ids = []
 
     if cost_type_ids:
-        batches_processed, batch_errored = process_cost_code_batch(
+        total_batches_processed, batches_processed, batch_errored = process_cost_code_batch(
             platform,
             cost_type_ids,
             posted_cost_codes,
@@ -103,9 +105,11 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
             dependent_field_setting,
             is_enabled
         )
+        total_batches += total_batches_processed
         processed_batches += batches_processed
         is_errored = is_errored and batch_errored
 
+    import_log.total_batches_count = total_batches
     import_log.status = 'PARTIALLY_FAILED' if is_errored else 'COMPLETE'
     import_log.error_log = []
     import_log.processed_batches_count = processed_batches
@@ -125,6 +129,7 @@ def process_cost_code_batch(
     dependent_field_setting: DependentFieldSetting,
     is_enabled: bool
 ):
+    total_batches = 0
     processed_batches = 0
     is_errored = False
 
@@ -176,6 +181,7 @@ def process_cost_code_batch(
             if payload:
                 sleep(0.2)
                 try:
+                    total_batches += 1
                     platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
                     posted_cost_codes.extend(cost_code_names)
                     processed_batches += 1
@@ -183,7 +189,7 @@ def process_cost_code_batch(
                     is_errored = True
                     logger.error(f'Exception while posting dependent cost code | Error: {exception} | Payload: {payload}')
 
-    return processed_batches, is_errored
+    return total_batches, processed_batches, is_errored
 
 
 @handle_import_exceptions
@@ -195,6 +201,7 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
     use_cost_type_code_in_naming = 'COST_TYPE' in configuration.import_code_fields
 
     BATCH_SIZE = 200
+    total_batches = 0
     processed_batches = 0
     is_errored = False
     cost_type_ids = []
@@ -205,30 +212,31 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
         cost_type_ids.append(cost_type_id)
 
         if len(cost_type_ids) >= BATCH_SIZE:
-            batches_processed, batch_errored = process_cost_type_batch(
+            total_batches_processed, batches_processed, batch_errored = process_cost_type_batch(
                 platform,
-                filters,
                 cost_type_ids,
                 use_cost_code_in_naming,
                 use_cost_type_code_in_naming,
                 dependent_field_setting
             )
+            total_batches += total_batches_processed
             processed_batches += batches_processed
             is_errored = is_errored and batch_errored
             cost_type_ids = []
 
     if cost_type_ids:
-        batches_processed, batch_errored = process_cost_type_batch(
+        total_batches_processed, batches_processed, batch_errored = process_cost_type_batch(
             platform,
-            filters,
             cost_type_ids,
             use_cost_code_in_naming,
             use_cost_type_code_in_naming,
             dependent_field_setting
         )
+        total_batches += total_batches_processed
         processed_batches += batches_processed
         is_errored = is_errored and batch_errored
 
+    import_log.total_batches_count = total_batches
     import_log.status = 'PARTIALLY_FAILED' if is_errored else 'COMPLETE'
     import_log.error_log = []
     import_log.processed_batches_count = processed_batches
@@ -241,12 +249,12 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
 
 def process_cost_type_batch(
     platform: PlatformConnector,
-    filters: Dict,
     cost_type_ids: List[int],
     use_cost_code_in_naming: bool,
     use_cost_type_code_in_naming: bool,
     dependent_field_setting: DependentFieldSetting
 ):
+    total_batches = 0
     processed_batches = 0
     is_errored = False
 
@@ -283,6 +291,7 @@ def process_cost_type_batch(
         if payload:
             sleep(0.2)
             try:
+                total_batches += 1
                 platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
                 CostType.objects.filter(task_name=cost_types['task_name'], task_id=cost_types['task_id'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True)
                 processed_batches += 1
@@ -290,7 +299,7 @@ def process_cost_type_batch(
                 is_errored = True
                 logger.error(f'Exception while posting dependent cost type | Error: {exception} | Payload: {payload}')
 
-    return processed_batches, is_errored
+    return total_batches, processed_batches, is_errored
 
 
 def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None, cost_code_import_log: ImportLog = None, cost_type_import_log: ImportLog = None):
