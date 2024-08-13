@@ -198,13 +198,14 @@ class SageIntacctConnector:
 
         expense_types_attributes = []
         destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail')
+                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail', 'code')
         disabled_fields_map = {}
 
         for destination_attribute in destination_attributes:
             disabled_fields_map[destination_attribute['destination_id']] = {
                 'value': destination_attribute['value'],
-                'detail': destination_attribute['detail']
+                'detail': destination_attribute['detail'],
+                'code': destination_attribute['code']
             }
 
         for expense_type in expense_types:
@@ -218,7 +219,8 @@ class SageIntacctConnector:
                     'detail': {
                         'gl_account_no': expense_type['GLACCOUNTNO'],
                         'gl_account_title': expense_type['GLACCOUNTTITLE']
-                    }
+                    },
+                    'code': expense_type['ACCOUNTLABEL']
                 })
                 if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
                     disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
@@ -235,11 +237,17 @@ class SageIntacctConnector:
                 'value': disabled_fields_map[destination_id]['value'],
                 'destination_id': destination_id,
                 'active': False,
-                'detail': disabled_fields_map[destination_id]['detail']
+                'detail': disabled_fields_map[destination_id]['detail'],
+                'code': disabled_fields_map[destination_id]['code']
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            expense_types_attributes, 'EXPENSE_TYPE', self.workspace_id, True)
+            expense_types_attributes,
+            'EXPENSE_TYPE',
+            self.workspace_id,
+            True,
+            attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT']
+        )
         return []
 
     def sync_charge_card_accounts(self):
