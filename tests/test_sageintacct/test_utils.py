@@ -161,6 +161,11 @@ def test_sync_projects(mocker, db):
         'sageintacctsdk.apis.Projects.count',
         return_value=5
     )
+
+    mock = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mocker.patch.object(mock.return_value.projects, 'post_bulk')
+    mocker.patch.object(mock.return_value.projects, 'sync')
+
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
@@ -453,6 +458,9 @@ def tests_sync_accounts(mocker, db):
         'sageintacctsdk.apis.Accounts.get_all',
         return_value=data['get_accounts']
     )
+
+    mock = mocker.patch('apps.mappings.imports.modules.categories.PlatformConnector')
+    mocker.patch.object(mock.return_value.categories, 'post_bulk')
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)

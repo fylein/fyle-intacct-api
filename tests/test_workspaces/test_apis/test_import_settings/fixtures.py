@@ -4,6 +4,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
@@ -46,6 +47,7 @@ data = {
             "charts_of_accounts": ["Expense"],
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
@@ -88,6 +90,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": []
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
@@ -129,6 +132,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {},
         "mapping_settings": [
@@ -147,6 +151,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}

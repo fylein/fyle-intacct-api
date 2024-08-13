@@ -8,6 +8,7 @@ from fyle_integrations_platform_connector import PlatformConnector
 
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.dependent_fields import (
@@ -61,6 +62,7 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
 
     import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
 
+    ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', value='pro').update(active=True)
     posted_cost_types, is_errored = post_dependent_cost_code(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
     assert mock.call_count == 1
@@ -77,6 +79,7 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
 
     cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
     cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', value='pro').update(active=True)
 
     current_datetime = datetime.now()
     post_dependent_expense_field_values(workspace_id, create_dependent_field_setting, cost_code_import_log=cost_code_import_log, cost_type_import_log=cost_type_import_log)

@@ -163,6 +163,10 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=[]
     )
 
+    mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
+    mocker.patch.object(mock_platform.return_value.projects, 'sync')
+
 
     sync_sage_intacct_attributes('DEPARTMENT', workspace_id=workspace_id)
     sync_sage_intacct_attributes('LOCATION', workspace_id=workspace_id)
