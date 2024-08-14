@@ -238,7 +238,22 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                 is_errored = True
                 break
 
-        if 'ACCOUNT' in diff_code_pref_list and 'CATEGORY' in import_logs:
+        destination_field = 'ACCOUNT'
+        if import_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT' \
+                or import_settings.reimbursable_expenses_object == 'EXPENSE_REPORT':
+            destination_field = 'EXPENSE_TYPE'
+
+        if data.get('configurations').get('import_categories') and destination_field not in new_code_pref_list:
+            new_code_pref_list.update(['_{0}'.format(destination_field)])
+
+        if (
+            (destination_field == 'ACCOUNT' and 'EXPENSE_TYPE' in diff_code_pref_list)
+            or (destination_field == 'EXPENSE_TYPE' and 'ACCOUNT' in diff_code_pref_list)
+            or ('ACCOUNT' in new_code_pref_list and '_ACCOUNT' in new_code_pref_list)
+            or ('EXPENSE_TYPE' in new_code_pref_list and '_EXPENSE_TYPE' in new_code_pref_list)
+            or ('_{0}'.format(destination_field) in new_code_pref_list and destination_field in old_code_pref_list)
+            or (destination_field in diff_code_pref_list and '_{0}'.format(destination_field) in old_code_pref_list)
+        ):
             is_errored = True
 
         if not old_code_pref_list.issubset(new_code_pref_list):

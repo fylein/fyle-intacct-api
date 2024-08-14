@@ -1,6 +1,5 @@
-import pytest
 from unittest import mock
-from apps.mappings.imports.modules.categories import Category
+from apps.mappings.imports.modules.categories import Category, disable_categories
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute,
@@ -13,7 +12,6 @@ from apps.workspaces.models import (
     Workspace
 )
 from .fixtures import category_data
-
 
 
 def test_sync_destination_attributes_categories(mocker, db):
@@ -315,3 +313,139 @@ def test_construct_fyle_payload(db):
     )
 
     assert fyle_payload == category_data['create_fyle_category_payload_create_disable_case']
+
+
+def test_get_existing_fyle_attributes(
+    db,
+    add_expense_destination_attributes_1,
+    add_expense_destination_attributes_2,
+    add_configuration
+):
+    category = Category(98, 'ACCOUNT', None)
+
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT')
+    paginated_destination_attributes_without_duplicates = category.remove_duplicate_attributes(paginated_destination_attributes)
+    paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
+    existing_fyle_attributes_map = category.get_existing_fyle_attributes(paginated_destination_attribute_values)
+
+    assert existing_fyle_attributes_map == {'internet': '10091', 'meals': '10092'}
+
+    # with code prepending
+    category.prepend_code_to_name = True
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT', code__isnull=False)
+    paginated_destination_attributes_without_duplicates = category.remove_duplicate_attributes(paginated_destination_attributes)
+    paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
+    existing_fyle_attributes_map = category.get_existing_fyle_attributes(paginated_destination_attribute_values)
+
+    assert existing_fyle_attributes_map == {'123 sageintacct': '10095'}
+
+
+def test_construct_fyle_payload_with_code(
+    db,
+    add_expense_destination_attributes_1,
+    add_expense_destination_attributes_2,
+    add_configuration
+):
+    category = Category(98, 'ACCOUNT', None, True)
+
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT')
+    paginated_destination_attributes_without_duplicates = category.remove_duplicate_attributes(paginated_destination_attributes)
+    paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
+    existing_fyle_attributes_map = category.get_existing_fyle_attributes(paginated_destination_attribute_values)
+
+    # already exists
+    fyle_payload = category.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        True
+    )
+
+    assert fyle_payload == []
+
+    # create new case
+    existing_fyle_attributes_map = {}
+    fyle_payload = category.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        True
+    )
+
+    assert fyle_payload == category_data["create_fyle_category_payload_with_code_create_new_case"]
+
+
+def test_disable_categories(
+    db,
+    mocker,
+    add_configuration
+):
+    workspace_id = 1
+
+    categories_to_disable = {
+        'destination_id': {
+            'value': 'old_category',
+            'updated_value': 'new_category',
+            'code': 'old_category_code',
+            'updated_code': 'old_category_code'
+        }
+    }
+
+    ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='CATEGORY',
+        display_name='Category',
+        value='old_category',
+        source_id='source_id',
+        active=True
+    )
+
+    mock_platform = mocker.patch('apps.mappings.imports.modules.categories.PlatformConnector')
+    bulk_post_call = mocker.patch.object(mock_platform.return_value.categories, 'post_bulk')
+
+    disable_categories(workspace_id, categories_to_disable)
+
+    assert bulk_post_call.call_count == 1
+
+    categories_to_disable = {
+        'destination_id': {
+            'value': 'old_category_2',
+            'updated_value': 'new_category',
+            'code': 'old_category_code',
+            'updated_code': 'new_category_code'
+        }
+    }
+
+    disable_categories(workspace_id, categories_to_disable)
+    assert bulk_post_call.call_count == 1
+
+    # Test disable projects with code in naming
+    import_settings = Configuration.objects.get(workspace_id=workspace_id)
+    import_settings.import_code_fields = ['ACCOUNT']
+    import_settings.save()
+
+    ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='CATEGORY',
+        display_name='Category',
+        value='old_category_code old_category',
+        source_id='source_id_123',
+        active=True
+    )
+
+    categories_to_disable = {
+        'destination_id': {
+            'value': 'old_category',
+            'updated_value': 'new_category',
+            'code': 'old_category_code',
+            'updated_code': 'old_category_code'
+        }
+    }
+
+    payload = [{
+        'name': 'old_category_code old_category',
+        'code': 'destination_id',
+        'is_enabled': False,
+        'id': 'source_id_123'
+    }]
+
+    bulk_payload = disable_categories(workspace_id, categories_to_disable)
+    assert bulk_payload == payload

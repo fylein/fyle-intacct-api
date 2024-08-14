@@ -1,5 +1,6 @@
 import json
 from unittest import mock
+from django.urls import reverse
 from django.contrib.auth import get_user_model
 from fyle_rest_auth.utils import AuthUtils
 from tests.helper import dict_compare_keys
@@ -8,6 +9,8 @@ from fyle.platform import exceptions as fyle_exc
 from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail, Workspace
 from .fixtures import data
 from ..test_fyle.fixtures import data as fyle_data
+from apps.mappings.models import ImportLog
+from fyle_accounting_mappings.models import MappingSetting
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -431,3 +434,74 @@ def test_last_export_detail_view(mocker, db, api_client, test_connection):
 
     response = api_client.get(url)
     assert response.status_code == 404
+
+
+def test_import_code_field_view(db, mocker, api_client, test_connection):
+    """
+    Test ImportCodeFieldView
+    """
+    workspace_id = 1
+    url = reverse('import-code-fields-config', kwargs={'workspace_id': workspace_id})
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    department_log = ImportLog.update_or_create('COST_CENTER', workspace_id)
+    project_log = ImportLog.update_or_create('PROJECT', workspace_id)
+
+    with mocker.patch('django.db.models.signals.post_save.send'):
+        # Create MappingSetting object with the signal mocked
+        MappingSetting.objects.update_or_create(
+            destination_field='PROJECT',
+            workspace_id=workspace_id,
+            defaults={
+                'source_field': 'PROJECT',
+                'import_to_fyle': True,
+                'is_custom': False
+            }
+        )
+
+        MappingSetting.objects.update_or_create(
+            destination_field='DEPARTMENT',
+            workspace_id=workspace_id,
+            defaults={
+                'source_field': 'COST_CENTER',
+                'import_to_fyle': True,
+                'is_custom': False
+            }
+        )
+
+    Configuration.objects.filter(workspace_id=workspace_id).update(import_code_fields=['ACCOUNT', 'EXPENSE_TYPE'])
+
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data == {
+        'PROJECT': False,
+        'EXPENSE_TYPE': False,
+        'ACCOUNT': False,
+        'DEPARTMENT': False
+    }
+
+    project_log.delete()
+    department_log.delete()
+
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data == {
+        'PROJECT': True,
+        'EXPENSE_TYPE': False,
+        'ACCOUNT': False,
+        'DEPARTMENT': True
+    }
+
+    Configuration.objects.filter(workspace_id=workspace_id).update(import_code_fields=[])
+
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data == {
+        'PROJECT': True,
+        'EXPENSE_TYPE': True,
+        'ACCOUNT': True,
+        'DEPARTMENT': True
+    }

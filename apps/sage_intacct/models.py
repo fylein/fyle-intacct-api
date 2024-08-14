@@ -1482,7 +1482,6 @@ class CostType(models.Model):
             }
 
         cost_types_to_be_created = []
-        cost_types_to_be_updated = []
 
         for cost_type in cost_types:
             cost_type_object = CostType(
@@ -1504,20 +1503,5 @@ class CostType(models.Model):
             if cost_type['RECORDNO'] not in existing_cost_type_record_numbers:
                 cost_types_to_be_created.append(cost_type_object)
 
-            elif cost_type['RECORDNO'] in primary_key_map.keys() and (
-                cost_type['STATUS'] != primary_key_map[cost_type['RECORDNO']]['status']
-            ):
-                cost_type_object.id = primary_key_map[cost_type['RECORDNO']]['id']
-                cost_types_to_be_updated.append(cost_type_object)
-
         if cost_types_to_be_created:
             CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
-
-        if cost_types_to_be_updated:
-            CostType.objects.bulk_update(
-                cost_types_to_be_updated, fields=[
-                    'project_key', 'project_id', 'project_name', 'task_key', 'task_id', 'task_name',
-                    'cost_type_id', 'name', 'status', 'when_modified'
-                ],
-                batch_size=2000
-            )

@@ -330,6 +330,8 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
 
 def import_dependent_fields_to_fyle(workspace_id: str):
     dependent_field = DependentFieldSetting.objects.get(workspace_id=workspace_id)
+    cost_code_import_log = None
+    cost_type_import_log = None
 
     try:
         platform = connect_to_platform(workspace_id)
@@ -339,7 +341,7 @@ def import_dependent_fields_to_fyle(workspace_id: str):
         if cost_code_import_log.status == 'IN_PROGRESS' and cost_type_import_log.status == 'IN_PROGRESS':
             post_dependent_expense_field_values(workspace_id, dependent_field, platform, cost_code_import_log, cost_type_import_log)
         else:
-            logger.error('Importing dependent fields to fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
+            logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
     except NoPrivilegeError:
@@ -350,6 +352,16 @@ def import_dependent_fields_to_fyle(workspace_id: str):
         logger.info('Sage Intacct SDK Error - %s', exception)
     except Exception as exception:
         logger.error('Exception while importing dependent fields to fyle - %s', exception)
+    finally:
+        if cost_type_import_log and cost_type_import_log.status == 'IN_PROGRESS':
+            cost_type_import_log.status = 'FAILED'
+            cost_type_import_log.error_log = "Importing COST_TYPE failed"
+            cost_type_import_log.save()
+
+        if cost_code_import_log and cost_code_import_log.status == 'IN_PROGRESS':
+            cost_code_import_log.status = 'FAILED'
+            cost_code_import_log.error_log = "Importing COST_CODE failed"
+            cost_code_import_log.save()
 
 
 def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type: str, platform: PlatformConnector, parent_field_id: str, source_placeholder: str = None):
@@ -376,7 +388,7 @@ def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type
     return platform.expense_custom_fields.post(expense_custom_field_payload)
 
 
-def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: Dict, platform: PlatformConnector):
+def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: Dict, platform: PlatformConnector, use_code_in_naming: bool):
     """
     Update the job_name in CostType and disable the old cost code in Fyle
     """
@@ -396,7 +408,7 @@ def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: Dict,
         BATCH_SIZE = 500
 
         for destination_id, value in cost_codes_to_disable.items():
-            updated_project_name = prepend_code_to_name(prepend_code_in_name=prepend_code_to_name, value=value['updated_value'], code=value['updated_code'])
+            updated_project_name = prepend_code_to_name(prepend_code_in_name=use_code_in_naming, value=value['updated_value'], code=value['updated_code'])
 
             cost_types_queryset = CostType.objects.filter(
                 workspace_id=workspace_id,

@@ -50,7 +50,7 @@ def chain_import_fields_to_fyle(workspace_id):
             destination_field,
             'CATEGORY',
             False,
-            True if 'ACCOUNT' in import_code_fields else False,
+            True if destination_field in import_code_fields else False,
             q_options={'cluster': 'import'}
         )
 

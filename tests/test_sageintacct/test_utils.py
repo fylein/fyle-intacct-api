@@ -100,6 +100,11 @@ def test_sync_expense_types(mocker, db):
         'sageintacctsdk.apis.ExpenseTypes.get_all',
         return_value=data['get_expense_types']
     )
+
+    mocker.patch(
+        'apps.mappings.imports.modules.categories.disable_categories'
+    )
+
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
