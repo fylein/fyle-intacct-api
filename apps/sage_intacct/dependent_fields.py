@@ -6,7 +6,7 @@ from time import sleep
 from django.contrib.postgres.fields import JSONField
 from django.db.models import F, Func, Value
 
-from django.contrib.postgres.aggregates import ArrayAgg, JSONBAgg
+from django.contrib.postgres.aggregates import JSONBAgg
 from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle_accounting_mappings.models import ExpenseAttribute
@@ -420,6 +420,7 @@ def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: Dict,
             for cost_type in cost_types_queryset.iterator(chunk_size=BATCH_SIZE):
                 cost_type.project_id = value['updated_code']
                 cost_type.project_name = value['updated_value']
+                # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
                 cost_type.updated_at = datetime.now(timezone.utc)
                 bulk_update_payload.append(cost_type)
 

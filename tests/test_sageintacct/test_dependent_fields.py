@@ -49,6 +49,9 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
     post_dependent_cost_type(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
     assert mock.call_count == 1
+    assert import_log.status == 'COMPLETE'
+    assert import_log.total_batches_count == 1
+    assert import_log.processed_batches_count == 1
 
 
 def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent_field_setting):
@@ -68,6 +71,9 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     assert mock.call_count == 1
     assert posted_cost_types == ['task']
     assert is_errored is False
+    assert import_log.status == 'COMPLETE'
+    assert import_log.total_batches_count == 1
+    assert import_log.processed_batches_count == 1
 
 
 def test_post_dependent_expense_field_values(db, mocker, create_cost_type, create_dependent_field_setting):
@@ -118,3 +124,9 @@ def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_de
         import_dependent_fields_to_fyle(workspace_id)
 
         assert mock_call.call_count == 0
+
+        cost_code_import_log = ImportLog.objects.filter(attribute_type='COST_CODE', workspace_id=workspace_id).first()
+        assert cost_code_import_log.status == 'FAILED'
+
+        cost_type_import_log = ImportLog.objects.filter(attribute_type='COST_TYPE', workspace_id=workspace_id).first()
+        assert cost_type_import_log.status == 'FAILED'

@@ -238,6 +238,9 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                 is_errored = True
                 break
 
+        # Changes related to ACCOUNT and EXPENSE_TYPE imported as CATEGORY
+        # If the ACCOUNT is imported without code we add _ACCOUNT to the code fields
+        # same with EXPENSE_TYPE, we add _EXPENSE_TYPE to the code fields
         destination_field = 'ACCOUNT'
         if import_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT' \
                 or import_settings.reimbursable_expenses_object == 'EXPENSE_REPORT':
