@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from unittest import mock
 
@@ -16,6 +16,7 @@ from apps.sage_intacct.dependent_fields import (
     post_dependent_cost_type, post_dependent_cost_code, post_dependent_expense_field_values,
     import_dependent_fields_to_fyle
 )
+from apps.sage_intacct.models import CostType
 from apps.workspaces.models import FyleCredential
 from apps.mappings.models import ImportLog
 logger = logging.getLogger(__name__)
@@ -45,6 +46,8 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
     platform = PlatformConnector(fyle_credentials)
 
     import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    cost_types = CostType.objects.filter(workspace_id=workspace_id, is_imported=False)
+    assert cost_types.count() == 1
 
     post_dependent_cost_type(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
@@ -52,6 +55,17 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
     assert import_log.status == 'COMPLETE'
     assert import_log.total_batches_count == 1
     assert import_log.processed_batches_count == 1
+
+    import_log.status = 'IN_PROGRESS'
+    import_log.save()
+
+    cost_types = CostType.objects.filter(workspace_id=workspace_id, is_imported=True).update(is_imported=False)
+
+    mocker.patch('apps.sage_intacct.dependent_fields.process_cost_type_batch', side_effect=Exception('Something went wrong'))
+    post_dependent_cost_type(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
+
+    assert import_log.status == 'FATAL'
+    assert import_log.error_log['message'] == 'Something went wrong'
 
 
 def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent_field_setting):
@@ -75,6 +89,15 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     assert import_log.total_batches_count == 1
     assert import_log.processed_batches_count == 1
 
+    import_log.status = 'IN_PROGRESS'
+    import_log.save()
+
+    mocker.patch('apps.sage_intacct.dependent_fields.process_cost_code_batch', side_effect=Exception('Something went wrong'))
+    post_dependent_cost_code(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
+
+    assert import_log.status == 'FATAL'
+    assert import_log.error_log['message'] == 'Something went wrong'
+
 
 def test_post_dependent_expense_field_values(db, mocker, create_cost_type, create_dependent_field_setting):
     workspace_id = 1
@@ -94,12 +117,20 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
     # There should be 2 post calls, 1 for cost_type and 1 for cost_code
     assert mock.call_count == 2
 
+    cost_code_import_log.status = 'IN_PROGRESS'
+    cost_code_import_log.save()
+    cost_type_import_log.status = 'IN_PROGRESS'
+    cost_type_import_log.save()
+
     create_dependent_field_setting.last_successful_import_at = current_datetime
     create_dependent_field_setting.save()
     post_dependent_expense_field_values(workspace_id, create_dependent_field_setting, cost_code_import_log=cost_code_import_log, cost_type_import_log=cost_type_import_log)
 
     # Since we've updated timestamp and there would no new cost_types, the mock call count should still exist as 2
     assert mock.call_count == 2
+    assert cost_code_import_log.status == 'COMPLETE'
+    assert cost_type_import_log.status == 'COMPLETE'
+    assert DependentFieldSetting.objects.get(id=create_dependent_field_setting.id).last_successful_import_at >= datetime.now(timezone.utc) - timedelta(minutes=1)
 
 
 def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_dependent_field_setting):
@@ -127,6 +158,8 @@ def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_de
 
         cost_code_import_log = ImportLog.objects.filter(attribute_type='COST_CODE', workspace_id=workspace_id).first()
         assert cost_code_import_log.status == 'FAILED'
+        assert cost_code_import_log.error_log == 'Sage Intacct SDK Error'
 
         cost_type_import_log = ImportLog.objects.filter(attribute_type='COST_TYPE', workspace_id=workspace_id).first()
         assert cost_type_import_log.status == 'FAILED'
+        assert cost_type_import_log.error_log == 'Sage Intacct SDK Error'

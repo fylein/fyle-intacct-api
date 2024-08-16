@@ -109,12 +109,15 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
         processed_batches += batches_processed
         is_errored = is_errored and batch_errored
 
-    import_log.total_batches_count = total_batches
-    import_log.status = 'PARTIALLY_FAILED' if is_errored else 'COMPLETE'
-    import_log.error_log = []
-    import_log.processed_batches_count = processed_batches
-    if not is_errored:
+    if is_errored or import_log.status != 'IN_PROGRESS':
+        import_log.status = 'PARTIALLY_FAILED'
+    else:
+        import_log.status = 'COMPLETE'
+        import_log.error_log = []
         import_log.last_successful_run_at = last_successful_run_at
+
+    import_log.total_batches_count = total_batches
+    import_log.processed_batches_count = processed_batches
     import_log.save()
 
     return posted_cost_codes, is_errored
@@ -236,12 +239,15 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
         processed_batches += batches_processed
         is_errored = is_errored and batch_errored
 
-    import_log.total_batches_count = total_batches
-    import_log.status = 'PARTIALLY_FAILED' if is_errored else 'COMPLETE'
-    import_log.error_log = []
-    import_log.processed_batches_count = processed_batches
-    if not is_errored:
+    if is_errored or import_log.status != 'IN_PROGRESS':
+        import_log.status = 'PARTIALLY_FAILED'
+    else:
+        import_log.status = 'COMPLETE'
+        import_log.error_log = []
         import_log.last_successful_run_at = last_successful_run_at
+
+    import_log.total_batches_count = total_batches
+    import_log.processed_batches_count = processed_batches
     import_log.save()
 
     return is_errored
@@ -330,37 +336,40 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
 
 def import_dependent_fields_to_fyle(workspace_id: str):
     dependent_field = DependentFieldSetting.objects.get(workspace_id=workspace_id)
-    cost_code_import_log = None
-    cost_type_import_log = None
-
+    cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    exception = None
     try:
         platform = connect_to_platform(workspace_id)
-        cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
-        cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
-        sync_sage_intacct_attributes('COST_TYPE', workspace_id, cost_type_import_log)
+        sync_sage_intacct_attributes('COST_TYPE', workspace_id)
         if cost_code_import_log.status == 'IN_PROGRESS' and cost_type_import_log.status == 'IN_PROGRESS':
             post_dependent_expense_field_values(workspace_id, dependent_field, platform, cost_code_import_log, cost_type_import_log)
         else:
             logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
+        exception = "Invalid Token or Sage Intacct credentials does not exist"
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
     except NoPrivilegeError:
-        logger.info('Insufficient permission to access the requested module')
+        exception = "Insufficient permission to access the requested module"
+        logger.info('Insufficient permission to access the requested module - %s', workspace_id)
     except FyleInvalidTokenError:
+        exception = "Invalid Token or Fyle credentials does not exist"
         logger.info('Invalid Token or Fyle credentials does not exist - %s', workspace_id)
-    except SageIntacctSDKError as exception:
-        logger.info('Sage Intacct SDK Error - %s', exception)
-    except Exception as exception:
+    except SageIntacctSDKError as e:
+        exception = "Sage Intacct SDK Error"
+        logger.info('Sage Intacct SDK Error - %s', e)
+    except Exception as e:
+        exception = e.__str__()
         logger.error('Exception while importing dependent fields to fyle - %s', exception)
     finally:
         if cost_type_import_log and cost_type_import_log.status == 'IN_PROGRESS':
             cost_type_import_log.status = 'FAILED'
-            cost_type_import_log.error_log = "Importing COST_TYPE failed"
+            cost_type_import_log.error_log = exception
             cost_type_import_log.save()
 
         if cost_code_import_log and cost_code_import_log.status == 'IN_PROGRESS':
             cost_code_import_log.status = 'FAILED'
-            cost_code_import_log.error_log = "Importing COST_CODE failed"
+            cost_code_import_log.error_log = exception
             cost_code_import_log.save()
 
 

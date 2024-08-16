@@ -182,7 +182,7 @@ def schedule_auto_map_charge_card_employees(workspace_id: int):
             schedule.delete()
 
 
-def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int, import_log: ImportLog = None):
+def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int):
     sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
     sage_intacct_connection = SageIntacctConnector(
@@ -212,7 +212,7 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
         sage_intacct_connection.sync_items()
 
     elif sageintacct_attribute_type == 'COST_TYPE':
-        sage_intacct_connection.sync_cost_types(import_log)
+        sage_intacct_connection.sync_cost_types()
 
     elif sageintacct_attribute_type == 'CUSTOMER':
         sage_intacct_connection.sync_customers()
