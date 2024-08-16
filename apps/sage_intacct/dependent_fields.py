@@ -92,7 +92,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
             )
             total_batches += total_batches_processed
             processed_batches += batches_processed
-            is_errored = is_errored and batch_errored
+            is_errored = is_errored or batch_errored
             cost_type_ids = []
 
     if cost_type_ids:
@@ -107,7 +107,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
         )
         total_batches += total_batches_processed
         processed_batches += batches_processed
-        is_errored = is_errored and batch_errored
+        is_errored = is_errored or batch_errored
 
     if is_errored or import_log.status != 'IN_PROGRESS':
         import_log.status = 'PARTIALLY_FAILED'
@@ -224,7 +224,7 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
             )
             total_batches += total_batches_processed
             processed_batches += batches_processed
-            is_errored = is_errored and batch_errored
+            is_errored = is_errored or batch_errored
             cost_type_ids = []
 
     if cost_type_ids:
@@ -237,7 +237,7 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
         )
         total_batches += total_batches_processed
         processed_batches += batches_processed
-        is_errored = is_errored and batch_errored
+        is_errored = is_errored or batch_errored
 
     if is_errored or import_log.status != 'IN_PROGRESS':
         import_log.status = 'PARTIALLY_FAILED'
@@ -330,7 +330,10 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
         return
     else:
         is_cost_type_errored = post_dependent_cost_type(cost_type_import_log, dependent_field_setting, platform, filters)
-        if not is_cost_type_errored and not is_cost_code_errored and cost_type_import_log.processed_batches_count > 0:
+        if not is_cost_type_errored and not is_cost_code_errored and (
+            cost_type_import_log.processed_batches_count == cost_type_import_log.total_batches_count
+            and cost_code_import_log.processed_batches_count == cost_code_import_log.total_batches_count
+        ):
             DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
 
 
