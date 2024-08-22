@@ -695,11 +695,11 @@ def test_get_expense_link(mocker, db, create_journal_entry):
 
 def test_get_or_create_vendor(mocker, db):
     workspace_id = 1
-    mocker.patch(
+    get_call_mock = mocker.patch(
         'sageintacctsdk.apis.Vendors.get',
         return_value={'vendor': data['get_vendors'], '@totalcount': 2}
     )
-    mocker.patch(
+    post_call_mock = mocker.patch(
         'sageintacctsdk.apis.Vendors.post',
         return_value=data['post_vendors']
     )
@@ -728,14 +728,46 @@ def test_get_or_create_vendor(mocker, db):
     assert vendor.id == new_vendor.id
     assert vendor.value == 'Already existing vendor in DB'
 
-    mocker.patch(
-        'sageintacctsdk.apis.Vendors.get',
-        return_value={'VENDOR': data['get_vendors'], '@totalcount': 2}
-    )
+    get_call_mock.return_value = {'VENDOR': data['get_vendors'], '@totalcount': 2}
 
     vendor = sage_intacct_connection.get_or_create_vendor('Non existing vendor in DB', 'ashwin.t@fyle.in', False)
 
     assert vendor.value == 'Ashwin'
+
+    # case insensitive search in db
+    vendor_from_db = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').first()
+    vendor_from_db.value = 'already Existing VENDOR iN Db UsE aLl CaSeS'
+    vendor_from_db.active = True
+    vendor_from_db.save()
+
+    assert DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='already Existing VENDOR iN Db UsE aLl CaSeS').exists() is True
+    vendor_to_create = 'Already eXisting VeNdor In dB UsE aLl caSES'
+    vendor = sage_intacct_connection.get_or_create_vendor(vendor_to_create, create=True)
+
+    assert vendor.value == vendor_from_db.value
+    assert vendor.id == vendor_from_db.id
+
+    # case insensitive not found in db -> search in intacct and found
+    data['get_vendors'][0]['NAME'] = 'Non existing vendor in DB use all cases'
+
+    get_call_mock.return_value = {'VENDOR': data['get_vendors'], '@totalcount': 2}
+
+    vendor = sage_intacct_connection.get_or_create_vendor('non exiSting VENDOR iN Db UsE aLl CaSeS', create=True)
+
+    assert vendor.value == 'Non existing vendor in DB use all cases'
+    assert DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='Non existing vendor in DB use all cases').exists() is True
+
+    # case insensitive not found in db -> search in intacct and not found -> create new in intacct
+    get_call_mock.return_value = {}
+
+    new_post_vendors_data = data['post_vendors']
+    new_post_vendors_data['data']['vendor']['NAME'] = 'non exiSting VENDOR iN intacct UsE aLl CaSeS'
+    new_post_vendors_data['data']['vendor']['VENDORID'] = 'non exiSting VENDOR iN intacct UsE aLl CaSeS'
+
+    post_call_mock.return_value = new_post_vendors_data
+
+    vendor = sage_intacct_connection.get_or_create_vendor('non exiSting VENDOR iN intacct UsE aLl CaSeS', create=True)
+    assert vendor.destination_id == 'non exiSting VENDOR iN intacct UsE aLl CaSeS'
 
 
 def test_get_or_create_employee(mocker, db):
@@ -761,7 +793,7 @@ def test_get_or_create_employee(mocker, db):
     new_employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EMPLOYEE').count()
     assert new_employee_count == 55
 
-            
+
 def test_sanitize_vendor_name(db):
     workspace_id = 1
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
