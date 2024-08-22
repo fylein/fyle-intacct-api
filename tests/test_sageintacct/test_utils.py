@@ -760,3 +760,110 @@ def test_get_or_create_employee(mocker, db):
 
     new_employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EMPLOYEE').count()
     assert new_employee_count == 55
+
+            
+def test_sanitize_vendor_name(db):
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    # Test case 1: Vendor name with special characters
+    vendor_name = "ABC@123"
+    expected_output = "ABC123"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 2: Vendor name without any special characters
+    vendor_name = "VendorName"
+    expected_output = "VendorName"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 3: Vendor name with multiple special characters
+    vendor_name = "Vendor@Name!123"
+    expected_output = "VendorName123"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 4: Vendor name with special characters and spaces
+    vendor_name = "Vendor Name @ 123"
+    expected_output = "Vendor Name 123"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 5: Vendor name with special characters and numbers
+    vendor_name = "Vendor@123"
+    expected_output = "Vendor123"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 6: Vendor name with special characters and uppercase letters
+    vendor_name = "Vendor@ABC~!@#$%^&*()_+=|"
+    expected_output = "VendorABC"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 7: Vendor name None
+    vendor_name = None
+    expected_output = None
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 8: Vendor name with only special characters
+    vendor_name = "@#$%^&*()"
+    expected_output = None
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 9: Vendor name with spaces only
+    vendor_name = "     "
+    expected_output = None
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 10: Vendor name with leading and trailing special characters
+    vendor_name = "@VendorName@"
+    expected_output = "VendorName"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 11: Vendor name that is an empty string
+    vendor_name = ""
+    expected_output = None
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+    # Test case 12: Vendor name with tabs and newlines
+    vendor_name = "Vendor\tName\n123"
+    expected_output = "Vendor Name 123"
+    assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
+
+
+def test_sync_allocations(mocker, db):
+    workspace_id = 1
+
+    def mock_allocation_entry_generator(field, value):
+        for allocation_entry_list in data['allocation_entries']:
+            if allocation_entry_list and allocation_entry_list[0]['ALLOCATIONID'] == value:
+                yield allocation_entry_list
+
+    def mock_allocations_generator(field, value):
+        yield data['allocations']
+ 
+    mocker.patch(
+        'sageintacctsdk.apis.AllocationEntry.get_all_generator',
+        side_effect=mock_allocation_entry_generator
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Allocations.get_all_generator',
+        side_effect = mock_allocations_generator
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    sage_intacct_connection.sync_allocations()
+
+    allocation_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ALLOCATION')
+
+    assert allocation_attributes.count() == 2
+  
+    for allocation_attribute in allocation_attributes:
+        if allocation_attribute.value == 'RENT':
+            assert set(allocation_attribute.detail.keys()) == {'LOCATIONID'}
+        else:
+            assert set(allocation_attribute.detail.keys()) == {'LOCATIONID', 'GLDIMWHAT_IS_NILESH_PANT'}

@@ -1,5 +1,6 @@
 from django.db.models import Q
 from datetime import datetime
+from django.conf import settings
 import logging
 
 from rest_framework.response import Response
@@ -10,6 +11,8 @@ from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 
 from sageintacctsdk.exceptions import InvalidTokenError
+
+from django_q.tasks import async_task
 
 from apps.workspaces.models import SageIntacctCredential, Workspace, Configuration
 
@@ -145,6 +148,17 @@ class SageIntacctFieldsView(generics.ListAPIView):
 
         serialized_attributes = SageIntacctFieldSerializer(attributes, many=True).data
 
+        if settings.BRAND_ID != 'fyle':
+            if {'attribute_type': 'ALLOCATION', 'display_name': 'allocation'} in serialized_attributes:
+                serialized_attributes.remove({'attribute_type': 'ALLOCATION', 'display_name': 'allocation'})
+
+        else:
+            configurations = Configuration.objects.get(workspace_id=self.kwargs['workspace_id'])
+
+            if configurations.corporate_credit_card_expenses_object not in ['BILL', 'JOURNAL_ENTRY'] and configurations.reimbursable_expenses_object not in ['BILL', 'JOURNAL_ENTRY']:
+                if {'attribute_type': 'ALLOCATION', 'display_name': 'allocation'} in serialized_attributes:
+                    serialized_attributes.remove({'attribute_type': 'ALLOCATION', 'display_name': 'allocation'})
+        
         # Adding project by default since we support importing Projects from Sage Intacct even though they don't exist
         serialized_attributes.append({'attribute_type': 'PROJECT', 'display_name': 'Project'})
 
@@ -160,13 +174,12 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
 
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+            SageIntacctCredential.objects.get(workspace_id=workspace.id)
 
-            synced = check_interval_and_sync_dimension(workspace, sage_intacct_credentials)
-
-            if synced:
-                workspace.destination_synced_at = datetime.now()
-                workspace.save(update_fields=['destination_synced_at'])
+            async_task(
+                'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
+                kwargs['workspace_id'], 
+            )
 
             return Response(
                 status=status.HTTP_200_OK
@@ -191,17 +204,21 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
         """
         Sync data from sage intacct
         """
+        dimensions_to_sync = request.data.get('dimensions_to_sync', [])
+        
         try:
-            dimensions_to_sync = request.data.get('dimensions_to_sync', [])
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
-            sync_dimensions(sage_intacct_credentials, workspace.id, dimensions_to_sync)
 
-            # Update destination_synced_at to current time only when full refresh happens
-            if not dimensions_to_sync:
-                workspace.destination_synced_at = datetime.now()
-                workspace.save(update_fields=['destination_synced_at'])
+            # If only specified dimensions are to be synced, sync them synchronously
+            if dimensions_to_sync:
+                sync_dimensions(sage_intacct_credentials, workspace.id, dimensions_to_sync)
+            else:
+                async_task(
+                    'apps.sage_intacct.helpers.sync_dimensions',
+                    sage_intacct_credentials,
+                    workspace.id
+                )
 
             return Response(
                 status=status.HTTP_200_OK

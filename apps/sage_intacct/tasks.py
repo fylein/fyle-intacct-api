@@ -19,29 +19,29 @@ from fyle_accounting_mappings.models import (
     )
 
 from fyle_intacct_api.exceptions import BulkError
-from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings, Reimbursement, Expense
+from apps.fyle.models import ExpenseGroup, Expense
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
 from apps.fyle.actions import update_expenses_in_progress, update_failed_expenses, update_complete_expenses
 from apps.fyle.tasks import post_accounting_export_summary
 from apps.workspaces.models import (
-        SageIntacctCredential, 
-        FyleCredential, 
-        Configuration, 
+        SageIntacctCredential,
+        FyleCredential,
+        Configuration,
         LastExportDetail,
         Workspace
     )
 from apps.sage_intacct.models import (
-        ExpenseReport, 
-        ExpenseReportLineitem, 
+        ExpenseReport,
+        ExpenseReportLineitem,
         Bill,
-        BillLineitem, 
+        BillLineitem,
         ChargeCardTransaction,
-        ChargeCardTransactionLineitem, 
-        APPayment, 
-        APPaymentLineitem, 
-        JournalEntry, 
-        JournalEntryLineitem, 
+        ChargeCardTransactionLineitem,
+        APPayment,
+        APPaymentLineitem,
+        JournalEntry,
+        JournalEntryLineitem,
         SageIntacctReimbursement,
         SageIntacctReimbursementLineitem
     )
@@ -224,20 +224,33 @@ def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_
                     )
 
 
-def get_or_create_credit_card_vendor(merchant: str, workspace_id: int):
+def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configuration, merchant: str = None, sage_intacct_connection: SageIntacctConnector = None):
     """
     Get or create default vendor
     :param merchant: Fyle Expense Merchant
     :param workspace_id: Workspace Id
     :return:
     """
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+    if not sage_intacct_connection:
+        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+
     vendor = None
 
-    if merchant:
+    if (
+        merchant
+        and configuration.corporate_credit_card_expenses_object
+        and (
+            configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+            or (
+                configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY'
+                and configuration.use_merchant_in_journal_line
+            )
+        )
+    ):
         try:
-            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=False)
+            is_create = configuration.auto_create_merchants_as_vendors and not configuration.import_vendors_as_merchants
+            vendor = sage_intacct_connection.get_or_create_vendor(merchant, create=is_create)
         except WrongParamsError as bad_request:
             logger.info(bad_request.response)
 
@@ -539,7 +552,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
                 )
         else:
             merchant = expense_group.expenses.first().vendor
-            get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+            get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
 
         __validate_employee_mapping(expense_group, configuration)
         logger.info('Validated Employee mapping %s successfully', expense_group.id)
@@ -554,7 +567,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group, task_log.supdoc_id)
 
-            journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration)
+            journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration, sage_intacct_connection)
 
             created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object, journal_entry_lineitem_object)
             logger.info('Created Journal Entry with Expense Group %s successfully', expense_group.id)
@@ -936,7 +949,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
         merchant = expense_group.expenses.first().vendor
-        vendor = get_or_create_credit_card_vendor(merchant, expense_group.workspace_id)
+        vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
 
         vendor_id = vendor.destination_id if vendor else None
         __validate_employee_mapping(expense_group, configuration)
@@ -1484,6 +1497,9 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
         # Defaulting it to Intacct app url, worst case scenario if we're not able to parse it properly
         url = 'https://www-p02.intacct.com'
         logger.error('Error while generating export url %s', error)
+
+    expense_group.export_url = url
+    expense_group.save()
 
     update_complete_expenses(expense_group.expenses.all(), url)
     post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)

@@ -40,24 +40,23 @@ def schedule_payment_sync(configuration: Configuration):
     )
 
 
-def check_interval_and_sync_dimension(workspace: Workspace, si_credentials: SageIntacctCredential) -> bool:
+def check_interval_and_sync_dimension(workspace_id, **kwargs) -> bool:
     """
     Check sync interval and sync dimensions
-    :param workspace: Workspace Instance
-    :param si_credentials: SageIntacctCredentials Instance
-
-    return: True/False based on sync
+    :param workspace_id: Workspace ID
     """
+
+    workspace = Workspace.objects.get(pk=workspace_id)
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+
 
     if workspace.destination_synced_at:
         time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
     if workspace.destination_synced_at is None or time_interval.days > 0:
-        sync_dimensions(si_credentials, workspace.id)
-        return True
-
-    return False
-
+        sync_dimensions(sage_intacct_credentials, workspace.id)
+        workspace.destination_synced_at = datetime.now()
+        workspace.save(update_fields=['destination_synced_at'])
 
 def is_dependent_field_import_enabled(workspace_id: int) -> bool:
     return DependentFieldSetting.objects.filter(workspace_id=workspace_id).exists()
@@ -67,12 +66,15 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
     sage_intacct_connection = import_string(
         'apps.sage_intacct.utils.SageIntacctConnector'
     )(si_credentials, workspace_id)
+    
+    update_timestamp = False
     if not dimensions:
         dimensions = [
             'locations', 'customers', 'departments', 'tax_details', 'projects', 
             'expense_payment_types', 'classes', 'charge_card_accounts','payment_accounts', 
-            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions'
+            'vendors', 'employees', 'accounts', 'expense_types', 'items', 'user_defined_dimensions', 'allocations'
         ]
+        update_timestamp = True
 
     for dimension in dimensions:
         try:
@@ -80,3 +82,10 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
             sync()
         except Exception as exception:
             logger.info(exception)
+    
+    if update_timestamp:
+        # Update destination_synced_at to current time only when full refresh happens
+        workspace = Workspace.objects.get(pk=workspace_id)
+
+        workspace.destination_synced_at = datetime.now()
+        workspace.save(update_fields=['destination_synced_at'])
