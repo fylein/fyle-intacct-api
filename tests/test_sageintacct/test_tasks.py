@@ -4,7 +4,7 @@ from unittest import mock
 from django_q.models import Schedule
 from apps.tasks.models import TaskLog
 from apps.sage_intacct.models import *
-from apps.sage_intacct.tasks import __validate_expense_group
+from apps.sage_intacct.tasks import __validate_expense_group, __validate_employee_mapping
 from apps.sage_intacct.tasks import *
 from apps.sage_intacct.queue import *
 from fyle_intacct_api.exceptions import BulkError
@@ -1344,3 +1344,81 @@ def test_update_last_export_details(db):
     workspace_id = 1
     last_export_detail = update_last_export_details(workspace_id)
     assert last_export_detail.export_mode == 'MANUAL'
+
+
+def test__validate_employee_mapping(mocker, db):
+    workspace_id = 1
+
+    # Set up the expense group with necessary details
+    expense_group = ExpenseGroup.objects.get(id=2)
+    expense_group.description.update({'employee_email': 'user4@fyleforgotham.in'})
+    expense_group.save()
+
+    # Set up the configuration
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.reimbursable_expenses_object = 'JOURNAL_ENTRY'
+    configuration.use_merchant_in_journal_line = False
+    configuration.employee_field_mapping = 'EMPLOYEE'
+    configuration.save()
+
+    # Mock the settings
+    mocker.patch('django.conf.settings.BRAND_ID', 'fyle')
+
+    # Case: EmployeeMapping does not exist
+    mocker.patch('apps.sage_intacct.tasks.EmployeeMapping.objects.get', side_effect=EmployeeMapping.DoesNotExist)
+    try:
+        __validate_employee_mapping(expense_group, configuration)
+    except BulkError as exception:
+        logger.info('Employee mapping not found')
+
+    # Case: EmployeeMapping exists, but entity is None
+    employee_mapping = mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get').return_value
+    employee_mapping.destination_employee = None
+    employee_mapping.destination_vendor = None
+
+    mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get', side_effect=employee_mapping)
+
+    mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.DoesNotExist', side_effect=EmployeeMapping.DoesNotExist)
+
+    try:
+        __validate_employee_mapping(expense_group, configuration)
+    except BulkError as exception:
+        logger.info(exception.response)
+
+    # Case: Corporate Credit Card and configuration.use_merchant_in_journal_line is True
+    configuration.use_merchant_in_journal_line = True
+    configuration.save()
+
+    mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get', side_effect=employee_mapping)
+    
+    mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.DoesNotExist', side_effect=EmployeeMapping.DoesNotExist)
+
+    try:
+        __validate_employee_mapping(expense_group, configuration)
+    except BulkError as exception:
+        logger.info(exception.response)
+
+    # Case: Fund source is PERSONAL
+    expense_group.fund_source = 'PERSONAL'
+    expense_group.save()
+
+    mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get', side_effect=employee_mapping)
+
+    try:
+        __validate_employee_mapping(expense_group, configuration)
+    except BulkError as exception:
+        logger.info(exception.response)
+
+    # Case: Fund source is CCC and corporate_credit_card_expenses_object is EXPENSE_REPORT
+    expense_group.fund_source = 'CCC'
+    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    expense_group.save()
+    configuration.save()
+
+    mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get', side_effect=employee_mapping)
+
+    try:
+        __validate_employee_mapping(expense_group, configuration)
+    except BulkError as exception:
+        logger.info(exception.response)
