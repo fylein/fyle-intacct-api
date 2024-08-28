@@ -347,20 +347,6 @@ def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log:
 
     update_failed_expenses(expense_group.expenses.all(), False)
 
-def verify_employee_mapping(expense_group: ExpenseGroup, configuration: Configuration):
-    entity = EmployeeMapping.objects.get(
-        source_employee__value=expense_group.description.get('employee_email'),
-        workspace_id=expense_group.workspace_id
-    )
-
-    if configuration.employee_field_mapping == 'EMPLOYEE':
-        entity = entity.destination_employee
-    else:
-        entity = entity.destination_vendor
-
-    if not entity:
-        raise EmployeeMapping.DoesNotExist
-
 
 def get_employee_mapping(employee_email, workspace_id, configuration):
     entity = EmployeeMapping.objects.get(
@@ -381,7 +367,6 @@ def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Conf
         workspace_id=workspace_id,
         attribute_type='EMPLOYEE'
     ).first()
-    error_message = 'Employee Mapping not found'
 
     try:
         if expense_group.fund_source == 'PERSONAL':

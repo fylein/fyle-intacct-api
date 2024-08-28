@@ -1346,44 +1346,6 @@ def test_update_last_export_details(db):
     assert last_export_detail.export_mode == 'MANUAL'
 
 
-def test_verify_employee_mapping(mocker, db):
-        expense_group = mocker.Mock(spec=ExpenseGroup)
-        expense_group.description = {'employee_email': 'test@example.com'}
-        expense_group.workspace_id = 1
-
-        configuration = mocker.Mock(spec=Configuration)
-        configuration.employee_field_mapping = 'EMPLOYEE'
-
-        employee_mapping = mocker.Mock()
-        employee_mapping.destination_employee = 'EmployeeEntity'
-        mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get', return_value=employee_mapping)
-
-        verify_employee_mapping(expense_group, configuration)
-
-        configuration = mocker.Mock(spec=Configuration)
-        configuration.employee_field_mapping = 'VENDOR'
-
-        employee_mapping = mocker.Mock()
-        employee_mapping.destination_employee = 'VendorEntity'
-        mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get', return_value=employee_mapping)
-
-        verify_employee_mapping(expense_group, configuration)
-
-        expense_group = mocker.Mock(spec=ExpenseGroup)
-        expense_group.description = {'employee_email': 'notfound@example.com'}
-        expense_group.workspace_id = 1
-
-        configuration = mocker.Mock(spec=Configuration)
-        configuration.employee_field_mapping = 'EMPLOYEE'
-
-        mocker.patch('apps.sage_intacct.tasks.EmployeeMapping.objects.get', side_effect=EmployeeMapping.DoesNotExist)
-
-        try:
-            verify_employee_mapping(expense_group, configuration)
-        except EmployeeMapping.DoesNotExist:
-            logger.info('Employee mapping not found')
-
-
 def test__validate_employee_mapping(mocker, db):
     workspace_id = 1
 

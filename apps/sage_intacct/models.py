@@ -999,9 +999,9 @@ class JournalEntryLineitem(models.Model):
                     workspace_id=expense_group.workspace_id
                 )
 
-                employee_id = entity.destination_employee.destination_id if entity and entity.destination_employee and employee_mapping_setting == 'EMPLOYEE' else None
+                employee_id = entity.destination_employee.destination_id if employee_mapping_setting == 'EMPLOYEE' else None
 
-                vendor_id = entity.destination_vendor.destination_id if entity and entity.destination_vendor and employee_mapping_setting == 'VENDOR' else None
+                vendor_id = entity.destination_vendor.destination_id if employee_mapping_setting == 'VENDOR' else None
 
                 if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line:
                     # here it would create a Credit Card Vendor if the expene vendor is not present
