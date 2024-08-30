@@ -1,7 +1,9 @@
 import logging
 import traceback
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from django.utils import timezone
 
 from django.db import transaction
 from django.db.models import Q, F
@@ -1091,11 +1093,39 @@ def create_ap_payment(workspace_id):
         expense_group__fund_source='PERSONAL'
     ).all()
 
+    print('bills length', len(bills))
+
     if bills:
         for bill in bills:
             expense_group_reimbursement_status = check_expenses_reimbursement_status(
                 bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
             if expense_group_reimbursement_status:
+                
+                task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).first()
+
+                if task_log:
+                    now = timezone.now()
+                    
+                    if now - relativedelta(months=2) > task_log.created_at:
+                        task_log.status = 'FAILED'
+                        task_log.save()
+                        continue
+
+                    elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
+                        # if updated_at is within 1 months will be skipped
+                        if task_log.updated_at > now - relativedelta(months=1):
+                            task_log.status = 'FAILED'
+                            task_log.save()
+                            continue
+                    
+                    # If created is within 1 month
+                    elif now - relativedelta(months=1) < task_log.created_at:
+                        # Skip if updated within the last week
+                        if task_log.updated_at > now - relativedelta(weeks=1):
+                            task_log.status = 'FAILED'
+                            task_log.save()
+                            continue
+                
                 task_log, _ = TaskLog.objects.update_or_create(
                     workspace_id=workspace_id,
                     task_id='PAYMENT_{}'.format(bill.expense_group.id),
@@ -1104,6 +1134,7 @@ def create_ap_payment(workspace_id):
                         'type': 'CREATING_AP_PAYMENT'
                     }
                 )
+
 
                 try:
                     with transaction.atomic():
