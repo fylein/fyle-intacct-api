@@ -1487,32 +1487,36 @@ def test_skipping_create_ap_payment(mocker, db):
         create_ap_payment(workspace_id)
 
     now = datetime.now().replace(tzinfo=timezone.utc)
+    updated_at = now - timedelta(days=25)
     # Update created_at to more than 2 months ago (more than 60 days)
     TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).update(
         created_at=now - timedelta(days=61),  # More than 2 months ago
-        updated_at=now - timedelta(days=25)  # Updated within the last 1 month
+        updated_at=updated_at  # Updated within the last 1 month
     )
 
     task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(bill.expense_group.id))
 
     create_ap_payment(workspace_id)
     task_log.refresh_from_db()
-    assert task_log.status == 'FAILED'
+    assert task_log.updated_at == updated_at
+    
 
+    updated_at = now - timedelta(days=25)
     # Update created_at to between 1 and 2 months ago (between 30 and 60 days)
     TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).update(
         created_at=now - timedelta(days=45),  # Between 1 and 2 months ago
-        updated_at=now - timedelta(days=25)  # Updated within the last 1 month
+        updated_at=updated_at  # Updated within the last 1 month
     )
     create_ap_payment(workspace_id)
     task_log.refresh_from_db()
-    assert task_log.status == 'FAILED'
+    assert task_log.updated_at == updated_at
 
+    updated_at = now - timedelta(days=5)
     # Update created_at to within the last 1 month (less than 30 days)
     TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).update(
         created_at=now - timedelta(days=25),  # Within the last 1 month
-        updated_at=now - timedelta(days=5)   # Updated within the last week
+        updated_at=updated_at  # Updated within the last week
     )
     create_ap_payment(workspace_id)
     task_log.refresh_from_db()
-    assert task_log.status == 'FAILED'
+    assert task_log.updated_at == updated_at
