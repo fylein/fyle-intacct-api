@@ -336,15 +336,11 @@ def get_memo(expense_group: ExpenseGroup,
             memo = f'{memo} by {email}'
 
         # Internal ID
-        expense_number = expense_group.expenses.first().expense_number
-        memo = f'{memo} - {expense_number}'
-
         count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
         if count > 0:
             memo = f'{memo} - {count}'
 
         return memo
-
 
     expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' \
         else 'Corporate Credit Card expense'
