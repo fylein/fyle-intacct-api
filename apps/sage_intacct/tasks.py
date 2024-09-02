@@ -1083,12 +1083,14 @@ def check_expenses_reimbursement_status(expenses, workspace_id, platform, filter
     return is_paid
 
 
-def validate_for_skipping_payment(expense_group_id, workspace_id):
-    task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_group_id), workspace_id=workspace_id, type='CREATING_AP_PAYMENT').first()
+def validate_for_skipping_payment(export_module: Bill | ExpenseReport, workspace_id: int, type: str):
+    task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(export_module.expense_group.id), workspace_id=workspace_id, type=type).first()
     if task_log:
         now = timezone.now()
 
         if now - relativedelta(months=2) > task_log.created_at:
+            export_module.is_retired = True
+            export_module.save()
             return True
 
         elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
@@ -1111,7 +1113,7 @@ def create_ap_payment(workspace_id):
 
     bills: List[Bill] = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
-        expense_group__fund_source='PERSONAL'
+        expense_group__fund_source='PERSONAL', is_retired=False
     ).all()
 
     if bills:
@@ -1120,10 +1122,8 @@ def create_ap_payment(workspace_id):
                 bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
             if expense_group_reimbursement_status:
                 
-                skip_payment = validate_for_skipping_payment(expense_group_id=bill.expense_group.id, workspace_id=workspace_id)
+                skip_payment = validate_for_skipping_payment(export_module=bill, workspace_id=workspace_id, type='CREATING_AP_PAYMENT')
                 if skip_payment:
-                    bill.is_retired = True
-                    bill.save()
                     continue
                 
                 task_log, _ = TaskLog.objects.update_or_create(
@@ -1134,7 +1134,6 @@ def create_ap_payment(workspace_id):
                         'type': 'CREATING_AP_PAYMENT'
                     }
                 )
-
 
                 try:
                     with transaction.atomic():
@@ -1235,28 +1234,6 @@ def create_ap_payment(workspace_id):
                                  task_log.detail)
 
 
-def validate_for_skipping_reimbursement(expense_group_id, workspace_id):
-
-    task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_group_id), workspace_id=workspace_id, type='CREATING_REIMBURSEMENT').first()
-    if task_log:
-        now = timezone.now()
-
-        if now - relativedelta(months=2) > task_log.created_at:
-            return True
-
-        elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
-            # if updated_at is within 1 months will be skipped
-            if task_log.updated_at > now - relativedelta(months=1):
-                return True
-        
-        # If created is within 1 month
-        elif now - relativedelta(months=1) < task_log.created_at:
-            # Skip if updated within the last week
-            if task_log.updated_at > now - relativedelta(weeks=1):
-                return True
-    
-    return False
-
 def create_sage_intacct_reimbursement(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
@@ -1265,7 +1242,7 @@ def create_sage_intacct_reimbursement(workspace_id):
 
     expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
-        expense_group__fund_source='PERSONAL'
+        expense_group__fund_source='PERSONAL', is_retired=False
     ).all()
 
     for expense_report in expense_reports:
@@ -1273,10 +1250,8 @@ def create_sage_intacct_reimbursement(workspace_id):
             expense_report.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
         if expense_group_reimbursement_status:
 
-            skip_reimbursement = validate_for_skipping_reimbursement(expense_group_id=expense_report.expense_group.id, workspace_id=workspace_id)
+            skip_reimbursement = validate_for_skipping_payment(export_module=expense_report, workspace_id=workspace_id, type='CREATING_REIMBURSEMENT')
             if skip_reimbursement:
-                expense_report.is_retired = True
-                expense_report.save()
                 continue
 
             task_log, _ = TaskLog.objects.update_or_create(
