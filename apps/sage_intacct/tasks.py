@@ -1083,6 +1083,27 @@ def check_expenses_reimbursement_status(expenses, workspace_id, platform, filter
     return is_paid
 
 
+def validate_for_skipping_payment(expense_group_id, workspace_id):
+    task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_group_id), workspace_id=workspace_id, type='CREATING_AP_PAYMENT').first()
+    if task_log:
+        now = timezone.now()
+
+        if now - relativedelta(months=2) > task_log.created_at:
+            return True
+
+        elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
+            # if updated_at is within 1 months will be skipped
+            if task_log.updated_at > now - relativedelta(months=1):
+                return True
+        
+        # If created is within 1 month
+        elif now - relativedelta(months=1) < task_log.created_at:
+            # Skip if updated within the last week
+            if task_log.updated_at > now - relativedelta(weeks=1):
+                return True
+    
+    return False
+
 def create_ap_payment(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
@@ -1093,38 +1114,17 @@ def create_ap_payment(workspace_id):
         expense_group__fund_source='PERSONAL'
     ).all()
 
-    print('bills length', len(bills))
-
     if bills:
         for bill in bills:
             expense_group_reimbursement_status = check_expenses_reimbursement_status(
                 bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
             if expense_group_reimbursement_status:
                 
-                task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).first()
-
-                if task_log:
-                    now = timezone.now()
-                    
-                    if now - relativedelta(months=2) > task_log.created_at:
-                        task_log.status = 'FAILED'
-                        task_log.save()
-                        continue
-
-                    elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
-                        # if updated_at is within 1 months will be skipped
-                        if task_log.updated_at > now - relativedelta(months=1):
-                            task_log.status = 'FAILED'
-                            task_log.save()
-                            continue
-                    
-                    # If created is within 1 month
-                    elif now - relativedelta(months=1) < task_log.created_at:
-                        # Skip if updated within the last week
-                        if task_log.updated_at > now - relativedelta(weeks=1):
-                            task_log.status = 'FAILED'
-                            task_log.save()
-                            continue
+                skip_payment = validate_for_skipping_payment(expense_group_id=bill.expense_group.id, workspace_id=workspace_id)
+                if skip_payment:
+                    bill.is_retired = True
+                    bill.save()
+                    continue
                 
                 task_log, _ = TaskLog.objects.update_or_create(
                     workspace_id=workspace_id,
@@ -1235,6 +1235,28 @@ def create_ap_payment(workspace_id):
                                  task_log.detail)
 
 
+def validate_for_skipping_reimbursement(expense_group_id, workspace_id):
+
+    task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_group_id), workspace_id=workspace_id, type='CREATING_REIMBURSEMENT').first()
+    if task_log:
+        now = timezone.now()
+
+        if now - relativedelta(months=2) > task_log.created_at:
+            return True
+
+        elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
+            # if updated_at is within 1 months will be skipped
+            if task_log.updated_at > now - relativedelta(months=1):
+                return True
+        
+        # If created is within 1 month
+        elif now - relativedelta(months=1) < task_log.created_at:
+            # Skip if updated within the last week
+            if task_log.updated_at > now - relativedelta(weeks=1):
+                return True
+    
+    return False
+
 def create_sage_intacct_reimbursement(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
@@ -1250,6 +1272,13 @@ def create_sage_intacct_reimbursement(workspace_id):
         expense_group_reimbursement_status = check_expenses_reimbursement_status(
             expense_report.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
         if expense_group_reimbursement_status:
+
+            skip_reimbursement = validate_for_skipping_reimbursement(expense_group_id=expense_report.expense_group.id, workspace_id=workspace_id)
+            if skip_reimbursement:
+                expense_report.is_retired = True
+                expense_report.save()
+                continue
+
             task_log, _ = TaskLog.objects.update_or_create(
                 workspace_id=workspace_id,
                 task_id='PAYMENT_{}'.format(expense_report.expense_group.id),

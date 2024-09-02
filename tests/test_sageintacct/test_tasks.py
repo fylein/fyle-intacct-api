@@ -454,7 +454,12 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+
+        now = datetime.now().replace(tzinfo=timezone.utc)
+        updated_at = now - timedelta(days=10)
+
         mock_call.side_effect = Exception()
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
@@ -467,6 +472,7 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
         })
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
@@ -479,11 +485,13 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
         })
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
         create_sage_intacct_reimbursement(workspace_id)
 
@@ -504,6 +512,10 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': "exceeds total amount due ()", 'correction': ''}],
                 'type': 'Invalid_params'
         })
+
+        now = datetime.now().replace(tzinfo=timezone.utc)
+        updated_at = now - timedelta(days=10)
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
         expense_report = ExpenseReport.objects.get(id=expense_report.id)
 
