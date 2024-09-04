@@ -620,6 +620,35 @@ def test_get_memo(db):
 
     get_memo(expense_group, Bill, workspace_id)
 
+    expense_group = ExpenseGroup.objects.get(id=2)
+    workspace_id = expense_group.workspace.id
+
+    config = Configuration.objects.get(workspace_id=workspace_id)
+    config.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    config.save()
+
+    expense_group.description['employee_email'] = 'abc@def.co'
+    expense_group.save()
+
+    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    assert memo == 'Corporate Card Expense by abc@def.co'
+
+    ChargeCardTransaction.create_charge_card_transaction(expense_group)
+
+    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    assert memo == 'Corporate Card Expense by abc@def.co - 1'
+
+    for i in range(3):
+        expense_group = ExpenseGroup.objects.get(id=i + 1)
+        expense_group.description['employee_email'] = 'abc@def.co'
+        expense_group.save()
+
+        ChargeCardTransaction.create_charge_card_transaction(expense_group)
+
+    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    assert memo == 'Corporate Card Expense by abc@def.co - 3'
+
+
 def test_get_item_id_or_none(db, mocker):
     workspace_id = 1
 
