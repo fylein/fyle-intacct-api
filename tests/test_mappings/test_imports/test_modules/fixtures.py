@@ -1820,7 +1820,7 @@ category_data = {
             'is_enabled': True
         },
         {
-            'name': '123 SageIntacct',
+            'name': '123: SageIntacct',
             'code': '10085',
             'is_enabled': True
         }
@@ -4380,14 +4380,14 @@ cost_center_data = {
     ],
     "create_fyle_cost_center_payload_with_code_create_new_case":[
         {
-            "name": "123 CRE Platform",
+            "name": "123: CRE Platform",
             "is_enabled": True,
-            "description": "Cost Center - 123 CRE Platform, Id - 10065"
+            "description": "Cost Center - 123: CRE Platform, Id - 10065"
         },
         {
-            "name": "123 Integrations CRE",
+            "name": "123: Integrations CRE",
             "is_enabled": True,
-            "description": "Cost Center - 123 Integrations CRE, Id - 10082"
+            "description": "Cost Center - 123: Integrations CRE, Id - 10082"
         }
     ],
     'create_new_auto_create_cost_centers_destination_attributes_subsequent_run' : [

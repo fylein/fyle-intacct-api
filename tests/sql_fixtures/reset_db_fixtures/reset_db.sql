@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.7 (Debian 15.7-1.pgdg120+1)
+-- Dumped from database version 15.6 (Debian 15.6-1.pgdg120+2)
 -- Dumped by pg_dump version 15.8 (Debian 15.8-1.pgdg120+1)
 
 SET statement_timeout = 0;
@@ -4124,6 +4124,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 190	workspaces	0036_alter_configuration_is_journal_credit_billable	2024-08-06 11:33:56.808396+00
 191	workspaces	0037_configuration_import_code_fields	2024-08-12 10:35:18.352466+00
 192	fyle_accounting_mappings	0026_destinationattribute_code	2024-08-12 10:38:36.247956+00
+193	workspaces	0038_alter_configuration_import_code_fields	2024-09-04 11:00:27.611651+00
 \.
 
 
@@ -8131,7 +8132,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 192, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 193, true);
 
 
 --

@@ -37,7 +37,8 @@ SYNC_UPPER_LIMIT = {
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
     'PROJECT': 'apps.mappings.imports.modules.projects.disable_projects',
-    'ACCOUNT': 'apps.mappings.imports.modules.categories.disable_categories'
+    'ACCOUNT': 'apps.mappings.imports.modules.categories.disable_categories',
+    'COST_CENTER': 'apps.mappings.imports.modules.cost_centers.disable_cost_centers'
 }
 
 

@@ -152,9 +152,9 @@ def test_get_existing_fyle_attributes(
     add_cost_center_mappings,
     add_configuration
 ):
-    cost_center = CostCenter(98, 'JOB', None)
+    cost_center = CostCenter(98, 'DEPARTMENT', None)
 
-    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='JOB')
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT')
     paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
     paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
     existing_fyle_attributes_map = cost_center.get_existing_fyle_attributes(paginated_destination_attribute_values)
@@ -163,12 +163,12 @@ def test_get_existing_fyle_attributes(
 
     # with code prepending
     cost_center.prepend_code_to_name = True
-    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='JOB', code__isnull=False)
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT', code__isnull=False)
     paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
     paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
     existing_fyle_attributes_map = cost_center.get_existing_fyle_attributes(paginated_destination_attribute_values)
 
-    assert existing_fyle_attributes_map == {'123 cre platform': '10065', '123 integrations cre': '10082'}
+    assert existing_fyle_attributes_map == {'123: cre platform': '10065', '123: integrations cre': '10082'}
 
 
 def test_construct_fyle_payload_with_code(
@@ -176,9 +176,9 @@ def test_construct_fyle_payload_with_code(
     add_cost_center_mappings,
     add_configuration
 ):
-    cost_center = CostCenter(98, 'JOB', None, True)
+    cost_center = CostCenter(98, 'DEPARTMENT', None, True)
 
-    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='JOB')
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT')
     paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
     paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
     existing_fyle_attributes_map = cost_center.get_existing_fyle_attributes(paginated_destination_attribute_values)
@@ -273,7 +273,7 @@ def test_disable_cost_centers(
         workspace_id=workspace_id,
         attribute_type='COST_CENTER',
         display_name='CostCenter',
-        value='old_cost_center_code old_cost_center',
+        value='old_cost_center_code: old_cost_center',
         source_id='source_id_123',
         active=True
     )
@@ -289,10 +289,10 @@ def test_disable_cost_centers(
 
     payload = [
         {
-            'name': 'old_cost_center_code old_cost_center',
+            'name': 'old_cost_center_code: old_cost_center',
             'is_enabled': False,
             'id': 'source_id_123',
-            'description': 'Cost Center - old_cost_center_code old_cost_center, Id - destination_id'
+            'description': 'Cost Center - old_cost_center_code: old_cost_center, Id - destination_id'
         }
     ]
 

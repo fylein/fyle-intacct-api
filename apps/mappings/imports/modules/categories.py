@@ -76,10 +76,6 @@ class Category(Base):
             'workspace_id': self.workspace_id,
             'attribute_type': self.destination_field
         }
-        if self.destination_field == 'EXPENSE_TYPE':
-            filters['destination_expense_head__isnull'] = True
-        elif self.destination_field == 'ACCOUNT':
-            filters['destination_account__isnull'] = True
 
         # get all the destination attributes that have category mappings as null
         destination_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)

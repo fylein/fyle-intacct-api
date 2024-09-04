@@ -101,7 +101,7 @@ def add_project_mappings(db):
         )
         DestinationAttribute.objects.create(
             workspace_id=workspace_id,
-            attribute_type='JOB',
+            attribute_type='DEPARTMENT',
             display_name='CRE Platform',
             value='CRE Platform',
             destination_id='10065',
@@ -111,7 +111,7 @@ def add_project_mappings(db):
         )
         DestinationAttribute.objects.create(
             workspace_id=workspace_id,
-            attribute_type='JOB',
+            attribute_type='DEPARTMENT',
             display_name='Integrations CRE',
             value='Integrations CRE',
             destination_id='10082',
@@ -270,7 +270,7 @@ def add_expense_destination_attributes_2():
         workspace_id=98,
         attribute_type='CATEGORY',
         display_name='Category',
-        value="123 SageIntacct",
+        value="123: SageIntacct",
         source_id='10095',
         detail='Merchant - Platform APIs, Id - 10085',
         active=True
@@ -341,21 +341,21 @@ def add_cost_center_mappings(db):
         )
         DestinationAttribute.objects.create(
             workspace_id=workspace_id,
-            attribute_type='JOB',
+            attribute_type='DEPARTMENT',
             display_name='CRE Platform',
             value='CRE Platform',
             destination_id='10065',
-            detail='Sage Intacct Project - CRE Platform, Id - 10065',
+            detail='Sage Intacct Department - CRE Platform, Id - 10065',
             active=True,
             code='123'
         )
         DestinationAttribute.objects.create(
             workspace_id=workspace_id,
-            attribute_type='JOB',
+            attribute_type='DEPARTMENT',
             display_name='Integrations CRE',
             value='Integrations CRE',
             destination_id='10082',
-            detail='Sage Intacct Project - Integrations CRE, Id - 10082',
+            detail='Sage Intacct Department - Integrations CRE, Id - 10082',
             active=True,
             code='123'
         )
@@ -363,7 +363,7 @@ def add_cost_center_mappings(db):
             workspace_id=workspace_id,
             attribute_type='COST_CENTER',
             display_name='CRE Platform',
-            value='123 CRE Platform',
+            value='123: CRE Platform',
             source_id='10065',
             detail='Sage Intacct Cost_Center - 123 CRE Platform, Id - 10065',
             active=True
@@ -372,7 +372,7 @@ def add_cost_center_mappings(db):
             workspace_id=workspace_id,
             attribute_type='COST_CENTER',
             display_name='Integrations CRE',
-            value='123 Integrations CRE',
+            value='123: Integrations CRE',
             source_id='10082',
             detail='Sage Intacct Cost_Center - 123 Integrations CRE, Id - 10082',
             active=True

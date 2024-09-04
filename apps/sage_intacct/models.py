@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from django.conf import settings
 from django.db.models import JSONField
 from django.db import models
+from django.db.models.functions import Concat
+from django.db.models import Value, CharField
 from django.utils.module_loading import import_string
 
 from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
@@ -224,16 +226,31 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     return item_id
 
 
-def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, task_id: str):
+def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, task_id: str, prepend_code_to_name: bool = False):
     cost_type_id = None
 
     selected_cost_type = lineitem.custom_properties.get(dependent_field_setting.cost_type_field_name, None)
-    cost_type = CostType.objects.filter(
-        workspace_id=expense_group.workspace_id,
-        task_id=task_id,
-        project_id=project_id,
-        name=selected_cost_type
-    ).first()
+
+    if prepend_code_to_name:
+        cost_type = CostType.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            task_id=task_id,
+            project_id=project_id,
+            name__isnull=False,
+            cost_type_id__isnull=False,
+        ).annotate(
+            combined_code_name=Concat('cost_type_id', Value(': '), 'name', output_field=CharField())
+        ).filter(
+            combined_code_name=selected_cost_type
+        ).first()
+
+    else:
+        cost_type = CostType.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            task_id=task_id,
+            project_id=project_id,
+            name=selected_cost_type
+        ).first()
 
     if cost_type:
         cost_type_id = cost_type.cost_type_id
@@ -241,15 +258,29 @@ def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dep
     return cost_type_id
 
 
-def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str):
+def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, prepend_code_to_name: bool = False):
     task_id = None
 
     selected_cost_code = lineitem.custom_properties.get(dependent_field_setting.cost_code_field_name, None)
-    cost_type = CostType.objects.filter(
-        workspace_id=expense_group.workspace_id,
-        task_name=selected_cost_code,
-        project_id=project_id
-    ).first()
+
+    if prepend_code_to_name:
+        cost_type = CostType.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            project_id=project_id,
+            task_id__isnull=False,
+            task_name__isnull=False
+        ).annotate(
+            combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
+        ).filter(
+            combined_code_name=selected_cost_code
+        ).first()
+
+    else:
+        cost_type = CostType.objects.filter(
+            workspace_id=expense_group.workspace_id,
+            task_name=selected_cost_code,
+            project_id=project_id
+        ).first()
 
     if cost_type:
         task_id = cost_type.task_id
@@ -640,9 +671,11 @@ class BillLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             if dependent_field_setting:
-                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
-                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id)
-            
+                prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, prepend_code_to_task)
+                prepend_code_to_cost_type = True if 'COST_TYPE' in configuration.import_code_fields else False
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id, prepend_code_to_cost_type)
+
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             dimensions_values = {
@@ -825,9 +858,11 @@ class ExpenseReportLineitem(models.Model):
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
 
             if dependent_field_setting:
-                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
-                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id)
-
+                prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, prepend_code_to_task)
+                prepend_code_to_cost_type = True if 'COST_TYPE' in configuration.import_code_fields else False
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id, prepend_code_to_cost_type)
+            
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             if expense_group.fund_source == 'PERSONAL':
@@ -1029,8 +1064,10 @@ class JournalEntryLineitem(models.Model):
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
 
             if dependent_field_setting:
-                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
-                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id)
+                prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, prepend_code_to_task)
+                prepend_code_to_cost_type = True if 'COST_TYPE' in configuration.import_code_fields else False
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id, prepend_code_to_cost_type)
 
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -1213,8 +1250,10 @@ class ChargeCardTransactionLineitem(models.Model):
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             if dependent_field_setting:
-                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id)
-                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id)
+                prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
+                task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, prepend_code_to_task)
+                prepend_code_to_cost_type = True if 'COST_TYPE' in configuration.import_code_fields else False
+                cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id, prepend_code_to_cost_type)
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,
