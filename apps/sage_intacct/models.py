@@ -357,6 +357,21 @@ def get_memo(expense_group: ExpenseGroup,
     :param payment_type: The payment type to use in the memo.
     :return: The memo.
     """
+
+    config = Configuration.objects.get(workspace_id=workspace_id)
+    if config.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+        memo = 'Corporate Card Expense'
+        email = expense_group.description.get('employee_email')
+        if email:
+            memo = f'{memo} by {email}'
+
+        # Internal ID
+        count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
+        if count > 0:
+            memo = f'{memo} - {count}'
+
+        return memo
+
     expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' \
         else 'Corporate Credit Card expense'
     unique_number = None
