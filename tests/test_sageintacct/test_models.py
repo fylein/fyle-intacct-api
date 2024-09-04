@@ -643,7 +643,7 @@ def test_get_memo(db):
         expense_group.description['employee_email'] = 'abc@def.co'
         expense_group.save()
 
-        x = ChargeCardTransaction.create_charge_card_transaction(expense_group)
+        ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
     memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
     assert memo == 'Corporate Card Expense by abc@def.co - 3'

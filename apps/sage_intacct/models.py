@@ -328,8 +328,7 @@ def get_memo(expense_group: ExpenseGroup,
     """
 
     config = Configuration.objects.get(workspace_id=workspace_id)
-    ccc_export_type = config.corporate_credit_card_expenses_object
-    if ccc_export_type == 'CHARGE_CARD_TRANSACTION':
+    if config.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         memo = 'Corporate Card Expense'
         email = expense_group.description.get('employee_email')
         if email:
