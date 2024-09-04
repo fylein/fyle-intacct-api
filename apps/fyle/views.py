@@ -320,6 +320,7 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
         try:
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
+            configuration = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
 
             mapping_settings = MappingSetting.objects.filter(workspace_id=kwargs['workspace_id'], import_to_fyle=True)
             chain = Chain()
@@ -332,6 +333,7 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
                         mapping_setting.destination_field,
                         mapping_setting.source_field,
                         mapping_setting.is_custom,
+                        True if mapping_setting.destination_field in configuration.import_code_fields else False,
                         q_options={'cluster': 'import'}
                     )
 

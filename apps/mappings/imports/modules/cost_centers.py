@@ -111,7 +111,6 @@ def disable_cost_centers(workspace_id: int, cost_centers_to_disable: Dict, *args
         if code:
             payload = {
                 'name': expense_attribute.value,
-                'code': code,
                 'is_enabled': False,
                 'id': expense_attribute.source_id,
                 'description': 'Cost Center - {0}, Id - {1}'.format(

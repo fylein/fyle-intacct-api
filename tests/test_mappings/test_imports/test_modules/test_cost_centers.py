@@ -1,13 +1,13 @@
-import pytest
 from unittest import mock
-from apps.mappings.imports.modules.cost_centers import CostCenter
+from apps.mappings.imports.modules.cost_centers import CostCenter, disable_cost_centers
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute,
-    Mapping
+    Mapping,
+    MappingSetting
 )
 from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import FyleCredential, Workspace
+from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from .fixtures import cost_center_data
 
 
@@ -145,3 +145,156 @@ def test_construct_fyle_payload(db):
     )
 
     assert fyle_payload == cost_center_data['create_fyle_cost_center_payload_create_new_case']
+
+
+def test_get_existing_fyle_attributes(
+    db,
+    add_cost_center_mappings,
+    add_configuration
+):
+    cost_center = CostCenter(98, 'JOB', None)
+
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='JOB')
+    paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
+    paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
+    existing_fyle_attributes_map = cost_center.get_existing_fyle_attributes(paginated_destination_attribute_values)
+
+    assert existing_fyle_attributes_map == {}
+
+    # with code prepending
+    cost_center.prepend_code_to_name = True
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='JOB', code__isnull=False)
+    paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
+    paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
+    existing_fyle_attributes_map = cost_center.get_existing_fyle_attributes(paginated_destination_attribute_values)
+
+    assert existing_fyle_attributes_map == {'123 cre platform': '10065', '123 integrations cre': '10082'}
+
+
+def test_construct_fyle_payload_with_code(
+    db,
+    add_cost_center_mappings,
+    add_configuration
+):
+    cost_center = CostCenter(98, 'JOB', None, True)
+
+    paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='JOB')
+    paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
+    paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
+    existing_fyle_attributes_map = cost_center.get_existing_fyle_attributes(paginated_destination_attribute_values)
+
+    # already exists
+    fyle_payload = cost_center.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        True
+    )
+
+    assert fyle_payload == []
+
+    # create new case
+    existing_fyle_attributes_map = {}
+    fyle_payload = cost_center.construct_fyle_payload(
+        paginated_destination_attributes,
+        existing_fyle_attributes_map,
+        True
+    )
+
+    assert fyle_payload == cost_center_data["create_fyle_cost_center_payload_with_code_create_new_case"]
+
+
+def test_disable_cost_centers(
+    db,
+    mocker,
+    add_cost_center_mappings,
+    add_configuration
+):
+    workspace_id = 98
+
+    mocker.patch(
+        'django.db.models.signals.post_save.send'
+    )
+    FyleCredential.objects.create(
+        workspace_id=workspace_id,
+        refresh_token='refresh_token',
+        cluster_domain='cluster_domain'
+    )
+    MappingSetting.objects.create(
+        workspace_id=workspace_id,
+        source_field='COST_CENTER',
+        destination_field='PROJECT',
+        import_to_fyle=True,
+        is_custom=False
+    )
+
+    cost_centers_to_disable = {
+        'destination_id': {
+            'value': 'old_cost_center',
+            'updated_value': 'new_cost_center',
+            'code': 'old_cost_center_code',
+            'updated_code': 'old_cost_center_code'
+        }
+    }
+
+    ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='COST_CENTER',
+        display_name='CostCenter',
+        value='old_cost_center',
+        source_id='source_id',
+        active=True
+    )
+
+    mock_platform = mocker.patch('apps.mappings.imports.modules.cost_centers.PlatformConnector')
+    bulk_post_call = mocker.patch.object(mock_platform.return_value.cost_centers, 'post_bulk')
+
+    disable_cost_centers(workspace_id, cost_centers_to_disable)
+
+    assert bulk_post_call.call_count == 1
+
+    cost_centers_to_disable = {
+        'destination_id': {
+            'value': 'old_cost_center_2',
+            'updated_value': 'new_cost_center',
+            'code': 'old_cost_center_code',
+            'updated_code': 'new_cost_center_code'
+        }
+    }
+
+    disable_cost_centers(workspace_id, cost_centers_to_disable)
+    assert bulk_post_call.call_count == 1
+
+    # Test disable projects with code in naming
+    import_settings = Configuration.objects.get(workspace_id=workspace_id)
+    import_settings.import_code_fields = ['PROJECT']
+    import_settings.save()
+
+    ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='COST_CENTER',
+        display_name='CostCenter',
+        value='old_cost_center_code old_cost_center',
+        source_id='source_id_123',
+        active=True
+    )
+
+    cost_centers_to_disable = {
+        'destination_id': {
+            'value': 'old_cost_center',
+            'updated_value': 'new_cost_center',
+            'code': 'old_cost_center_code',
+            'updated_code': 'old_cost_center_code'
+        }
+    }
+
+    payload = [
+        {
+            'name': 'old_cost_center_code old_cost_center',
+            'is_enabled': False,
+            'id': 'source_id_123',
+            'description': 'Cost Center - old_cost_center_code old_cost_center, Id - destination_id'
+        }
+    ]
+
+    bulk_payload = disable_cost_centers(workspace_id, cost_centers_to_disable)
+    assert bulk_payload == payload

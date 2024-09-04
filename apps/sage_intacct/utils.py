@@ -23,7 +23,6 @@ from .models import (
     ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement,
     SageIntacctReimbursementLineitem, CostType, get_user_defined_dimension_object
 )
-from apps.mappings.exceptions import handle_import_exceptions
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -294,8 +293,7 @@ class SageIntacctConnector:
 
         return []
 
-    @handle_import_exceptions
-    def sync_cost_types(self, _import_log=None):
+    def sync_cost_types(self):
         """
         Sync of Sage Intacct Cost Types
         """

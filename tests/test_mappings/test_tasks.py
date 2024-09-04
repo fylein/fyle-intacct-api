@@ -173,8 +173,7 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
     sync_sage_intacct_attributes('PROJECT', workspace_id=workspace_id)
     sync_sage_intacct_attributes('VENDOR', workspace_id=workspace_id)
 
-    import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
-    sync_sage_intacct_attributes('COST_TYPE', workspace_id, import_log)
+    sync_sage_intacct_attributes('COST_TYPE', workspace_id)
 
     projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='PROJECT').count()
