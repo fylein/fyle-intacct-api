@@ -103,6 +103,7 @@ class SageIntacctConnector:
         Get accounts
         """
         accounts = self.connection.accounts.get_all()
+        is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
         account_attributes = {
             'account': [],
@@ -158,7 +159,8 @@ class SageIntacctConnector:
                     attribute_type.upper(),
                     self.workspace_id,
                     True,
-                    attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT']
+                    attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
+                    is_import_to_fyle_enabled=is_account_import_enabled
                 )
         return []
 
@@ -194,6 +196,7 @@ class SageIntacctConnector:
         """
         Get expense types
         """
+        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
         expense_types = self.connection.expense_types.get_all()
 
         expense_types_attributes = []
@@ -246,7 +249,8 @@ class SageIntacctConnector:
             'EXPENSE_TYPE',
             self.workspace_id,
             True,
-            attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT']
+            attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
+            is_import_to_fyle_enabled=is_expense_type_import_enabled
         )
         return []
 
@@ -323,8 +327,10 @@ class SageIntacctConnector:
         """
         Get projects
         """
+
         projects_count = self.connection.projects.count()
         if projects_count < SYNC_UPPER_LIMIT['projects']:
+            is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
             projects = self.connection.projects.get_all()
 
             project_attributes = []
@@ -379,7 +385,8 @@ class SageIntacctConnector:
                 'PROJECT',
                 self.workspace_id,
                 True,
-                attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT')
+                attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT'),
+                is_import_to_fyle_enabled=is_project_import_enabled
             )
 
         return []
@@ -1683,3 +1690,25 @@ class SageIntacctConnector:
         if mapping_settings and mapping_settings.source_field in ATTRIBUTE_DISABLE_CALLBACK_PATH.keys():
             return ATTRIBUTE_DISABLE_CALLBACK_PATH[mapping_settings.source_field]
         return None
+
+
+    def is_import_enabled(self, attribute_type: str, workspace_id: int):
+        """
+        Check if the import is enabled for the attribute type
+        :param attribute_type: Attribute Type
+        :param workspace_id: Workspace ID
+        :return: True if enabled, False otherwise
+        """
+        is_enabled = False
+
+        if attribute_type in ['PROJECT', 'DEPARTMENT']:
+            mapping = MappingSetting.objects.filter(workspace_id=workspace_id, destination_field=attribute_type).first()
+            if mapping and mapping.import_to_fyle:
+                is_enabled = True
+
+        elif attribute_type == 'ACCOUNT' or attribute_type == 'EXPENSE_TYPE':
+            configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+            if configuration and configuration.import_categories:
+                is_enabled = True
+
+        return is_enabled

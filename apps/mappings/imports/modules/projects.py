@@ -69,7 +69,7 @@ class Project(Base):
         return payload
 
 
-def disable_projects(workspace_id: int, projects_to_disable: Dict, **kwargs):
+def disable_projects(workspace_id: int, projects_to_disable: Dict, is_import_to_fyle_enabled: bool = False, *args, **kwargs):
     """
     Disable projects in Fyle when the projects are updated in Sage Intacct.
     This is a callback function that is triggered from accounting_mappings.
@@ -82,8 +82,11 @@ def disable_projects(workspace_id: int, projects_to_disable: Dict, **kwargs):
             'updated_code': 'new_project_code'
         }
     }
-
     """
+    if not is_import_to_fyle_enabled or len(projects_to_disable) == 0:
+        logger.info("Skipping disabling projects in Fyle | WORKSPACE_ID: %s", workspace_id)
+        return
+
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     platform.projects.sync()
@@ -95,6 +98,11 @@ def disable_projects(workspace_id: int, projects_to_disable: Dict, **kwargs):
 
     project_values = []
     for projects_map in projects_to_disable.values():
+        if not use_coding_in_name and projects_map['value'] == projects_map['updated_value']:
+            continue
+        elif use_coding_in_name and (projects_map['value'] == projects_map['updated_value'] and projects_map['code'] == projects_map['update_code']):
+            continue
+
         project_name = prepend_code_to_name(prepend_code_in_name=use_coding_in_name, value=projects_map['value'], code=projects_map['code'])
         project_values.append(project_name)
 
@@ -107,9 +115,9 @@ def disable_projects(workspace_id: int, projects_to_disable: Dict, **kwargs):
 
     # Expense attribute value map is as follows: {old_project_name: destination_id}
     expense_attribute_value_map = {}
-    for k, v in projects_to_disable.items():
+    for destination_id, v in projects_to_disable.items():
         project_name = prepend_code_to_name(prepend_code_in_name=use_coding_in_name, value=v['value'], code=v['code'])
-        expense_attribute_value_map[project_name] = k
+        expense_attribute_value_map[project_name] = destination_id
 
     expense_attributes = ExpenseAttribute.objects.filter(**filters)
 
@@ -134,9 +142,9 @@ def disable_projects(workspace_id: int, projects_to_disable: Dict, **kwargs):
     if bulk_payload:
         logger.info(f"Disabling Projects in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_payload)}")
         platform.projects.post_bulk(bulk_payload)
+        update_and_disable_cost_code(workspace_id, projects_to_disable, platform, use_coding_in_name)
+        platform.projects.sync()
     else:
         logger.info(f"No Projects to Disable in Fyle | WORKSPACE_ID: {workspace_id}")
 
-    update_and_disable_cost_code(workspace_id, projects_to_disable, platform, use_coding_in_name)
-    platform.projects.sync()
     return bulk_payload
