@@ -1200,7 +1200,7 @@ class ChargeCardTransactionLineitem(models.Model):
         except GeneralMapping.DoesNotExist:
             general_mappings = None
 
-        charge_card_transaction_lineitem_objects = []
+        charge_card_transaction_lineitem_objects: List[ChargeCardTransactionLineitem] = []
 
         for lineitem in expenses:
             category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
