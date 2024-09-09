@@ -345,7 +345,8 @@ CREATE TABLE public.charge_card_transaction_lineitems (
     tax_code character varying(255),
     cost_type_id character varying(255),
     task_id character varying(255),
-    user_defined_dimensions jsonb
+    user_defined_dimensions jsonb,
+    billable boolean
 );
 
 
@@ -2870,7 +2871,7 @@ COPY public.category_mappings (id, created_at, updated_at, destination_account_i
 -- Data for Name: charge_card_transaction_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.charge_card_transaction_lineitems (id, gl_account_number, project_id, location_id, department_id, amount, created_at, updated_at, charge_card_transaction_id, expense_id, memo, customer_id, item_id, class_id, tax_amount, tax_code, cost_type_id, task_id, user_defined_dimensions) FROM stdin;
+COPY public.charge_card_transaction_lineitems (id, gl_account_number, project_id, location_id, department_id, amount, created_at, updated_at, charge_card_transaction_id, expense_id, memo, customer_id, item_id, class_id, tax_amount, tax_code, cost_type_id, task_id, user_defined_dimensions, billable) FROM stdin;
 \.
 
 
@@ -4120,6 +4121,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 188	sage_intacct	0026_billlineitem_allocation_id	2024-07-19 09:36:26.579359+00
 189	sage_intacct	0027_journalentrylineitem_allocation_id	2024-07-26 11:27:56.709021+00
 190	workspaces	0036_alter_configuration_is_journal_credit_billable	2024-08-06 11:33:56.808396+00
+191	sage_intacct	0028_add_billable_field_to_cct	2024-09-05 19:30:23.212861+00
 \.
 
 
@@ -8127,7 +8129,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 190, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 191, true);
 
 
 --
