@@ -327,8 +327,7 @@ def get_memo(expense_group: ExpenseGroup,
     :return: The memo.
     """
 
-    config = Configuration.objects.get(workspace_id=workspace_id)
-    if config.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+    if ExportTable is ChargeCardTransaction:
         memo = 'Corporate Card Expense'
         email = expense_group.description.get('employee_email')
         if email:
