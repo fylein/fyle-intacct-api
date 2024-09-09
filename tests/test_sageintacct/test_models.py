@@ -186,6 +186,37 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     assert charge_card_transaction.currency == 'USD'
     assert charge_card_transaction.transaction_date.split('T')[0] == '2022-09-20'
 
+    # Test billable field
+    expense_group = ExpenseGroup.objects.get(id=1)
+    workspace_id = expense_group.workspace_id
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    expense = expense_group.expenses.first()
+    expense.billable = True
+    expense.save()
+
+    mocker.patch(
+        'apps.sage_intacct.models.get_item_id_or_none',
+        return_value='123'
+    )
+
+    mocker.patch(
+        'apps.sage_intacct.models.get_customer_id_or_none',
+        return_value='123'
+    )
+
+    charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+
+    assert charge_card_transaction_lineitems[0].billable
+
+    mocker.patch(
+        'apps.sage_intacct.models.get_customer_id_or_none',
+        return_value=None
+    )
+    charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+
+    assert not charge_card_transaction_lineitems[0].billable
+
     try:
         general_mappings.delete()
         charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
