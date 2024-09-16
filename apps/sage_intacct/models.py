@@ -1008,10 +1008,10 @@ class JournalEntryLineitem(models.Model):
             employee_id = None
 
             if settings.BRAND_ID == 'fyle':
-                entity = EmployeeMapping.objects.get(
+                entity = EmployeeMapping.objects.filter(
                     source_employee__value=description.get('employee_email'),
                     workspace_id=expense_group.workspace_id
-                )
+                ).first()
 
                 employee_id = entity.destination_employee.destination_id if entity and entity.destination_employee and employee_mapping_setting == 'EMPLOYEE' else None
 
