@@ -358,8 +358,7 @@ def get_memo(expense_group: ExpenseGroup,
     :return: The memo.
     """
 
-    config = Configuration.objects.get(workspace_id=workspace_id)
-    if config.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+    if ExportTable is ChargeCardTransaction:
         memo = 'Corporate Card Expense'
         email = expense_group.description.get('employee_email')
         if email:
@@ -1207,6 +1206,7 @@ class ChargeCardTransactionLineitem(models.Model):
     amount = models.FloatField(help_text='Charge Card Transaction amount')
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
+    billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -1236,7 +1236,7 @@ class ChargeCardTransactionLineitem(models.Model):
         except GeneralMapping.DoesNotExist:
             general_mappings = None
 
-        charge_card_transaction_lineitem_objects = []
+        charge_card_transaction_lineitem_objects: List[ChargeCardTransactionLineitem] = []
 
         for lineitem in expenses:
             category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
@@ -1288,6 +1288,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'amount': lineitem.amount,
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
+                    'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
                     'user_defined_dimensions': user_defined_dimensions
                 }
