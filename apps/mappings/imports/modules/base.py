@@ -327,7 +327,7 @@ class Base:
         :param is_last_batch: bool
         :param import_log: ImportLog object
         """
-        logger.info("| Importing {} to Fyle | Content : {{Fyle Payload count: {} is_last_batch: {}}}".format(self.source_field, len(fyle_payload), is_last_batch))
+        logger.info("| Importing {} to Fyle | Content : {{WORKSPACE_ID: {} Fyle Payload count: {} is_last_batch: {}}}".format(self.source_field, self.workspace_id, len(fyle_payload), is_last_batch))
         
         if fyle_payload and self.platform_class_name in ['expense_custom_fields', 'merchants']:
             resource_class.post(fyle_payload)
