@@ -681,7 +681,9 @@ class SageIntacctConnector:
             employee = None
 
         if not employee:
+            print(source_employee)
             created_employee = self.post_employees(source_employee)
+            print(created_employee)
             return self.create_destination_attribute(
                 'employee', created_employee['EMPLOYEEID'], created_employee['EMPLOYEEID'], source_employee.value
             )

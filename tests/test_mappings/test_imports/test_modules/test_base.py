@@ -25,7 +25,7 @@ def test_sync_destination_attributes(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all',
+        'sageintacctsdk.apis.Projects.get_all_generator',
         return_value=destination_attributes_data['get_projects_destination_attributes']
     )
     mocker.patch(
@@ -160,7 +160,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=18
         )
         mocker.patch(
-            'sageintacctsdk.apis.Projects.get_all',
+            'sageintacctsdk.apis.Projects.get_all_generator',
             return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes']
         )
         mock_call.side_effect = [
@@ -194,7 +194,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=18
         )
         mocker.patch(
-            'sageintacctsdk.apis.Projects.get_all',
+            'sageintacctsdk.apis.Projects.get_all_generator',
             return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_disable_case']
         )
         mocker.patch(
@@ -247,7 +247,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=18
         )
         mocker.patch(
-            'sageintacctsdk.apis.Projects.get_all',
+            'sageintacctsdk.apis.Projects.get_all_generator',
             return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_re_enable_case']
         )
         mocker.patch(
@@ -328,7 +328,7 @@ def test_auto_create_destination_attributes(mocker, db):
         return_value=0
     )
     mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all',
+        'sageintacctsdk.apis.Projects.get_all_generator',
         return_value=[]
     )
 

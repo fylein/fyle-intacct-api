@@ -79,12 +79,12 @@ def test_async_auto_map_employees(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Vendors.get_all',
+        'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=intacct_data['get_vendors']
     )
 
     mocker.patch(
-        'sageintacctsdk.apis.Employees.get_all',
+        'sageintacctsdk.apis.Employees.get_all_generator',
         return_value=intacct_data['get_employees']
     )
 
@@ -137,7 +137,7 @@ def test_schedule_auto_map_employees(db):
 def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting, create_cost_type):
     workspace_id = 1
     mocker.patch(
-        'sageintacctsdk.apis.Locations.get_all',
+        'sageintacctsdk.apis.Locations.get_all_generator',
         return_value=intacct_data['get_locations']
     )
     mocker.patch(
@@ -145,15 +145,15 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=5
     )
     mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all',
+        'sageintacctsdk.apis.Projects.get_all_generator',
         return_value=intacct_data['get_projects']
     )
     mocker.patch(
-        'sageintacctsdk.apis.Departments.get_all',
+        'sageintacctsdk.apis.Departments.get_all_generator',
         return_value=intacct_data['get_departments']
     )
     mocker.patch(
-        'sageintacctsdk.apis.Vendors.get_all',
+        'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=intacct_data['get_vendors']
     )
 

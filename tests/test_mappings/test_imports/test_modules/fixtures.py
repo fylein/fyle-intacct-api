@@ -1,5 +1,5 @@
 data = {
-    'get_projects_destination_attributes':[
+    'get_projects_destination_attributes':[[
         {
             'RECORDNO':'113',
             'PROJECTID':'10066',
@@ -46,7 +46,7 @@ data = {
             'MEGAENTITYID':'600',
             'MEGAENTITYNAME':'Australia'
         }
-    ],
+    ]],
     'create_new_auto_create_projects_expense_attributes_0' : [
         {
             "count":3,
@@ -418,7 +418,7 @@ data = {
             'offset':0
         }
     ],
-    "create_new_auto_create_projects_destination_attributes": [
+    "create_new_auto_create_projects_destination_attributes": [[
         {
             'RECORDNO':'132',
             'PROJECTID':'10083',
@@ -833,8 +833,8 @@ data = {
             'MEGAENTITYID':None,
             'MEGAENTITYNAME':None
         }
-    ],
-    "create_new_auto_create_projects_destination_attributes_disable_case": [
+    ]],
+    "create_new_auto_create_projects_destination_attributes_disable_case": [[
         {
             'RECORDNO':'132',
             'PROJECTID':'10083',
@@ -1249,8 +1249,8 @@ data = {
             'MEGAENTITYID':None,
             'MEGAENTITYNAME':None
         }
-    ],
-    "create_new_auto_create_projects_destination_attributes_re_enable_case": [
+    ]],
+    "create_new_auto_create_projects_destination_attributes_re_enable_case": [[
         {
             'RECORDNO':'132',
             'PROJECTID':'10083',
@@ -1665,7 +1665,7 @@ data = {
             'MEGAENTITYID':None,
             'MEGAENTITYNAME':None
         }
-    ],
+    ]],
     "create_fyle_project_payload_create_new_case":
     [
         {
@@ -1784,7 +1784,7 @@ data = {
 }
 
 category_data = {
-    'get_categories_destination_attributes_account': [
+    'get_categories_destination_attributes_account': [[
         {
             'RECORDNO':'2871',
             'ACCOUNTNO':'16269',
@@ -1807,8 +1807,8 @@ category_data = {
             'CATEGORY':'Patents',
             'ALTERNATIVEACCOUNT':'None'
         }
-    ],
-    'get_categories_destination_attributes_expense_type':[
+    ]],
+    'get_categories_destination_attributes_expense_type':[[
         {
             'RECORDNO':'199',
             'ACCOUNTLABEL':'highkey',
@@ -1827,7 +1827,7 @@ category_data = {
             'STATUS':'active',
             'ITEMID':'1004'
         }
-    ],
+    ]],
     "create_new_auto_create_categories_expense_attributes_0":[
         {
             'count':20,
@@ -3943,7 +3943,7 @@ category_data = {
             'offset':0
         }
     ],
-    "create_new_auto_create_expense_type_destination_attributes":[
+    "create_new_auto_create_expense_type_destination_attributes":[[
         {
             'RECORDNO':'1',
             'ACCOUNTLABEL':'Airfare',
@@ -4052,8 +4052,8 @@ category_data = {
             'STATUS':'active',
             'ITEMID':None
         }
-    ],
-    "create_new_auto_create_expense_type_destination_attributes_disable_case" : [
+    ]],
+    "create_new_auto_create_expense_type_destination_attributes_disable_case" : [[
         {
             'RECORDNO':'1',
             'ACCOUNTLABEL':'Airfare',
@@ -4162,8 +4162,8 @@ category_data = {
             'STATUS':'active',
             'ITEMID':None
         }
-    ],
-    "create_new_auto_create_categories_destination_attributes_re_enable_case":[
+    ]],
+    "create_new_auto_create_categories_destination_attributes_re_enable_case":[[
         {
             'RECORDNO':'1',
             'ACCOUNTLABEL':'Airfare',
@@ -4272,7 +4272,7 @@ category_data = {
             'STATUS':'active',
             'ITEMID':None
         }
-    ],
+    ]],
     "create_fyle_category_payload_create_new_case": [
         {
             'name':'Airfare',
@@ -4331,7 +4331,7 @@ category_data = {
     ]
 }
 cost_center_data = {
-    'create_new_auto_create_cost_centers_destination_attributes' : [
+    'create_new_auto_create_cost_centers_destination_attributes' : [[
         {
             'NAME':'Small Business',
             'CLASSID':'400'
@@ -4360,8 +4360,8 @@ cost_center_data = {
             'NAME':'Killua Class',
             'CLASSID':'9903'
         }
-    ],
-    'create_new_auto_create_cost_centers_destination_attributes_subsequent_run' : [
+    ]],
+    'create_new_auto_create_cost_centers_destination_attributes_subsequent_run' : [[
         {
             'NAME':'Small Business',
             'CLASSID':'400'
@@ -4398,7 +4398,7 @@ cost_center_data = {
             'NAME':'Raikage',
             'CLASSID':'9904'
         }
-    ],
+    ]],
     'create_new_auto_create_cost_centers_expense_attributes_0': [
         {
             'count':6,
@@ -4794,7 +4794,7 @@ expense_custom_field_data = {
             "offset": 0
         }
     ],
-    'create_new_auto_create_expense_custom_fields_destination_attributes': [
+    'create_new_auto_create_expense_custom_fields_destination_attributes': [[
         {
             'RECORDNO':'1',
             'LOCATIONID':'100',
@@ -4963,8 +4963,8 @@ expense_custom_field_data = {
             'STATUS':'active',
             'CURRENCY':'ZAR'
         }
-    ],
-    'create_new_auto_create_expense_custom_fields_destination_attributes_subsequent_run': [
+    ]],
+    'create_new_auto_create_expense_custom_fields_destination_attributes_subsequent_run': [[
         {
             'RECORDNO':'1',
             'LOCATIONID':'100',
@@ -5149,7 +5149,7 @@ expense_custom_field_data = {
             'STATUS':'active',
             'CURRENCY':'ZAR'
         }
-    ],
+    ]],
     'create_new_auto_create_expense_custom_fields_get_by_id': {
         'category_ids':[
             259385,
@@ -5242,7 +5242,7 @@ expense_custom_field_data = {
     'create_fyle_expense_custom_fields_payload_create_new_case': {'field_name': 'Luke', 'type': 'SELECT', 'is_enabled': True, 'is_mandatory': False, 'placeholder': 'Select Luke', 'options': ['Australia', 'New South Wales'], 'code': None}
 }
 tax_groups_data={
-    'get_tax_details_destination_attributes' : [
+    'get_tax_details_destination_attributes' : [[
         {
             'RECORDNO':'78',
             'DETAILID':'UK Import Services Zero Rate',
@@ -7685,8 +7685,8 @@ tax_groups_data={
             'MEGAENTITYID':None,
             'MEGAENTITYNAME':None
         },
-    ],
-    'get_tax_details_destination_attributes_subsequent_run': [
+    ]],
+    'get_tax_details_destination_attributes_subsequent_run': [[
         {
             'RECORDNO':'78',
             'DETAILID':'UK Import Services Zero Rate',
@@ -10174,7 +10174,7 @@ tax_groups_data={
             'MEGAENTITYID':None,
             'MEGAENTITYNAME':None
         },
-    ],
+    ]],
     'create_new_auto_create_tax_groups_expense_attributes_0': [
         {
             'count':68,
@@ -12562,7 +12562,7 @@ tax_groups_data={
         ]
 }
 merchants_data={
-    'get_vendors_destination_attributes': [
+    'get_vendors_destination_attributes': [[
         {
             'RECORDNO':'54',
             'NAME':'Vaishnavi Primary',
@@ -14315,8 +14315,8 @@ merchants_data={
             'APACCOUNTTITLE':None,
             'STATUS':'active'
         }
-    ],
-    'get_vendors_destination_attributes_subsequent_run': [
+    ]],
+    'get_vendors_destination_attributes_subsequent_run': [[
         {
             'RECORDNO':'54',
             'NAME':'Vaishnavi Primary',
@@ -16118,7 +16118,7 @@ merchants_data={
             'APACCOUNTTITLE':None,
             'STATUS':'active'
         }
-    ],
+    ]],
     'create_new_auto_create_merchants_expense_attributes_0': [
         {
             'count':1,

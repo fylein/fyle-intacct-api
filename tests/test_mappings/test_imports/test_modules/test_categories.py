@@ -20,7 +20,7 @@ def test_sync_destination_attributes_categories(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Accounts.get_all',
+        'sageintacctsdk.apis.Accounts.get_all_generator',
         return_value=category_data['get_categories_destination_attributes_account']
     )
 
@@ -31,10 +31,10 @@ def test_sync_destination_attributes_categories(mocker, db):
     category.sync_destination_attributes('ACCOUNT')
 
     new_account_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ACCOUNT').count()
-    assert new_account_count == account_count + len(category_data['get_categories_destination_attributes_account'])
+    assert new_account_count == account_count + len(category_data['get_categories_destination_attributes_account'][0])
 
     mocker.patch(
-        'sageintacctsdk.apis.ExpenseTypes.get_all',
+        'sageintacctsdk.apis.ExpenseTypes.get_all_generator',
         return_value=category_data['get_categories_destination_attributes_expense_type']
     )
 
@@ -45,7 +45,7 @@ def test_sync_destination_attributes_categories(mocker, db):
     category.sync_destination_attributes('EXPENSE_TYPE')
 
     new_expense_type_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EXPENSE_TYPE').count()
-    assert new_expense_type_count == expense_type_count + len(category_data['get_categories_destination_attributes_expense_type'])
+    assert new_expense_type_count == expense_type_count + len(category_data['get_categories_destination_attributes_expense_type'][0])
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -98,7 +98,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.ExpenseTypes.get_all',
+            'sageintacctsdk.apis.ExpenseTypes.get_all_generator',
             return_value=category_data['create_new_auto_create_expense_type_destination_attributes']
         )
         mock_call.side_effect = [
@@ -128,7 +128,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
     # disable case for categories import
     with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
         mocker.patch(
-            'sageintacctsdk.apis.ExpenseTypes.get_all',
+            'sageintacctsdk.apis.ExpenseTypes.get_all_generator',
             return_value=category_data['create_new_auto_create_expense_type_destination_attributes_disable_case']
         )
         mocker.patch(
@@ -176,7 +176,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
     #not re-enable case for project import
     with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
         mocker.patch(
-            'sageintacctsdk.apis.ExpenseTypes.get_all',
+            'sageintacctsdk.apis.ExpenseTypes.get_all_generator',
             return_value=category_data['create_new_auto_create_categories_destination_attributes_re_enable_case']
         )
         mocker.patch(
@@ -217,7 +217,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.Accounts.get_all',
+            'sageintacctsdk.apis.Accounts.get_all_generator',
             return_value=[]
         )
         mock_call.side_effect = [
@@ -255,7 +255,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.Accounts.get_all',
+            'sageintacctsdk.apis.Accounts.get_all_generator',
             return_value=[]
         )
         mock_call.side_effect = [
