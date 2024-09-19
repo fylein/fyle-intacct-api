@@ -900,7 +900,7 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_
             'RECORDNO': '34234',
             'PROJECTKEY': 34,
             'PROJECTID': 'pro1',
-            'PROJECTNAME': 'pro',
+            'PROJECTNAME': 'proUpdated',
             'TASKKEY': 34,
             'TASKNAME': 'task1',
             'STATUS': 'ACTIVE',
@@ -909,10 +909,15 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_
             'TASKID': 'task1'
         }
     ]
+    existing_cost_type = CostType.objects.get(record_number='34234')
+    assert existing_cost_type.name == 'cost'
+    assert existing_cost_type.project_name == 'pro'
+
     CostType.bulk_create_or_update(cost_types, 1)
 
     assert CostType.objects.filter(record_number='2342341').exists()
-    assert CostType.objects.get(record_number='34234').name == 'costUpdated'
+    # We would not update only the status and nothing else
+    assert CostType.objects.get(record_number='34234').name == 'cost'
 
 
 def test_get_allocation_or_none(db, mocker):
