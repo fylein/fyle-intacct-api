@@ -186,6 +186,37 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     assert charge_card_transaction.currency == 'USD'
     assert charge_card_transaction.transaction_date.split('T')[0] == '2022-09-20'
 
+    # Test billable field
+    expense_group = ExpenseGroup.objects.get(id=1)
+    workspace_id = expense_group.workspace_id
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    expense = expense_group.expenses.first()
+    expense.billable = True
+    expense.save()
+
+    mocker.patch(
+        'apps.sage_intacct.models.get_item_id_or_none',
+        return_value='123'
+    )
+
+    mocker.patch(
+        'apps.sage_intacct.models.get_customer_id_or_none',
+        return_value='123'
+    )
+
+    charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+
+    assert charge_card_transaction_lineitems[0].billable
+
+    mocker.patch(
+        'apps.sage_intacct.models.get_customer_id_or_none',
+        return_value=None
+    )
+    charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+
+    assert not charge_card_transaction_lineitems[0].billable
+
     try:
         general_mappings.delete()
         charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
@@ -620,6 +651,35 @@ def test_get_memo(db):
 
     get_memo(expense_group, Bill, workspace_id)
 
+    expense_group = ExpenseGroup.objects.get(id=2)
+    workspace_id = expense_group.workspace.id
+
+    config = Configuration.objects.get(workspace_id=workspace_id)
+    config.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    config.save()
+
+    expense_group.description['employee_email'] = 'abc@def.co'
+    expense_group.save()
+
+    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    assert memo == 'Corporate Card Expense by abc@def.co'
+
+    ChargeCardTransaction.create_charge_card_transaction(expense_group)
+
+    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    assert memo == 'Corporate Card Expense by abc@def.co - 1'
+
+    for i in range(3):
+        expense_group = ExpenseGroup.objects.get(id=i + 1)
+        expense_group.description['employee_email'] = 'abc@def.co'
+        expense_group.save()
+
+        ChargeCardTransaction.create_charge_card_transaction(expense_group)
+
+    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    assert memo == 'Corporate Card Expense by abc@def.co - 3'
+
+
 def test_get_item_id_or_none(db, mocker):
     workspace_id = 1
 
@@ -840,7 +900,7 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_
             'RECORDNO': '34234',
             'PROJECTKEY': 34,
             'PROJECTID': 'pro1',
-            'PROJECTNAME': 'pro',
+            'PROJECTNAME': 'proUpdated',
             'TASKKEY': 34,
             'TASKNAME': 'task1',
             'STATUS': 'ACTIVE',
@@ -849,10 +909,15 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_
             'TASKID': 'task1'
         }
     ]
+    existing_cost_type = CostType.objects.get(record_number='34234')
+    assert existing_cost_type.name == 'cost'
+    assert existing_cost_type.project_name == 'pro'
+
     CostType.bulk_create_or_update(cost_types, 1)
 
     assert CostType.objects.filter(record_number='2342341').exists()
-    assert CostType.objects.get(record_number='34234').name == 'costUpdated'
+    # We would not update only the status and nothing else
+    assert CostType.objects.get(record_number='34234').name == 'cost'
 
 
 def test_get_allocation_or_none(db, mocker):

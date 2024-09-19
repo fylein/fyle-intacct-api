@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import serializers
 from fyle_accounting_mappings.models import MappingSetting
 from django.db import transaction
@@ -7,7 +9,10 @@ from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import Workspace, Configuration
 from apps.mappings.models import GeneralMapping
 from .triggers import ImportSettingsTrigger
+from apps.mappings.models import ImportLog
 
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 class MappingSettingFilteredListSerializer(serializers.ListSerializer):
@@ -66,8 +71,9 @@ class ConfigurationsSerializer(serializers.ModelSerializer):
         model = Configuration
         fields = [
             'import_categories',
-            'import_tax_codes', 
+            'import_tax_codes',
             'import_vendors_as_merchants',
+            'import_code_fields'
         ]
 
 
@@ -109,7 +115,6 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
     mapping_settings = MappingSettingSerializer(many=True)
     workspace_id = serializers.SerializerMethodField()
 
-
     class Meta:
         model = Workspace
         fields = [
@@ -121,10 +126,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['workspace_id']
 
-
     def get_workspace_id(self, instance):
         return instance.id
-
 
     def update(self, instance, validated):
         configurations = validated.pop('configurations')
@@ -138,7 +141,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                 defaults={
                     'import_categories': configurations.get('import_categories'),
                     'import_tax_codes': configurations.get('import_tax_codes'),
-                    'import_vendors_as_merchants': configurations.get('import_vendors_as_merchants')
+                    'import_vendors_as_merchants': configurations.get('import_vendors_as_merchants'),
+                    'import_code_fields': configurations.get('import_code_fields')
                 }
             )
 
@@ -186,13 +190,11 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
 
             trigger.post_save_mapping_settings(configurations_instance)
 
-
         if instance.onboarding_state == 'IMPORT_SETTINGS':
             instance.onboarding_state = 'ADVANCED_CONFIGURATION'
             instance.save()
 
         return instance
-
 
     def validate(self, data):
         if not data.get('configurations'):
@@ -203,8 +205,65 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
 
         if not data.get('general_mappings'):
             raise serializers.ValidationError('General mappings are required')
-            
+
         if not data.get('dependent_field_settings'):
             pass
 
+        workspace_id = self.context['request'].parser_context.get('kwargs').get('workspace_id')
+        import_settings = Configuration.objects.filter(workspace_id=workspace_id).first()
+        import_logs = ImportLog.objects.filter(workspace_id=workspace_id).values_list('attribute_type', flat=True)
+
+        is_errored = False
+        old_code_pref_list = set()
+
+        if import_settings:
+            old_code_pref_list = set(import_settings.import_code_fields)
+
+        new_code_pref_list = set(data.get('configurations', {}).get('import_code_fields', []))
+        diff_code_pref_list = list(old_code_pref_list.symmetric_difference(new_code_pref_list))
+
+        logger.info("Import Settings import_code_fields | Content: {{WORKSPACE_ID: {}, Old Import Code Fields: {}, New Import Code Fields: {}}}".format(workspace_id, old_code_pref_list if old_code_pref_list else {}, new_code_pref_list if new_code_pref_list else {}))
+
+        """ If the PROJECT is in the code_fields then we also add Dep fields"""
+        mapping_settings = data.get('mapping_settings', [])
+
+        for setting in mapping_settings:
+            if setting['destination_field'] == 'PROJECT' and 'PROJECT' in new_code_pref_list:
+                if setting['source_field'] == 'PROJECT':
+                    new_code_pref_list.update(['COST_CODE', 'COST_TYPE'])
+                else:
+                    old_code_pref_list.difference_update(['COST_CODE', 'COST_TYPE'])
+
+            if setting['destination_field'] in diff_code_pref_list and setting['source_field'] in import_logs:
+                is_errored = True
+                break
+
+        # Changes related to ACCOUNT and EXPENSE_TYPE imported as CATEGORY
+        # If the ACCOUNT is imported without code we add _ACCOUNT to the code fields
+        # same with EXPENSE_TYPE, we add _EXPENSE_TYPE to the code fields
+        destination_field = 'ACCOUNT'
+        if import_settings.corporate_credit_card_expenses_object == 'EXPENSE_REPORT' \
+                or import_settings.reimbursable_expenses_object == 'EXPENSE_REPORT':
+            destination_field = 'EXPENSE_TYPE'
+
+        if data.get('configurations').get('import_categories') and destination_field not in new_code_pref_list:
+            new_code_pref_list.update(['_{0}'.format(destination_field)])
+
+        if (
+            (destination_field == 'ACCOUNT' and 'EXPENSE_TYPE' in diff_code_pref_list)
+            or (destination_field == 'EXPENSE_TYPE' and 'ACCOUNT' in diff_code_pref_list)
+            or ('ACCOUNT' in new_code_pref_list and '_ACCOUNT' in new_code_pref_list)
+            or ('EXPENSE_TYPE' in new_code_pref_list and '_EXPENSE_TYPE' in new_code_pref_list)
+            or ('_{0}'.format(destination_field) in new_code_pref_list and destination_field in old_code_pref_list)
+            or (destination_field in diff_code_pref_list and '_{0}'.format(destination_field) in old_code_pref_list)
+        ):
+            is_errored = True
+
+        if not old_code_pref_list.issubset(new_code_pref_list):
+            is_errored = True
+
+        if is_errored:
+            raise serializers.ValidationError('Cannot change the code fields once they are imported')
+
+        data.get('configurations')['import_code_fields'] = list(new_code_pref_list)
         return data
