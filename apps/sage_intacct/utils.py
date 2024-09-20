@@ -1076,6 +1076,8 @@ class SageIntacctConnector:
             'SUPDOCID': bill.supdoc_id,
             'CURRENCY': bill.currency,
             'EXCH_RATE_TYPE_ID': None,
+            'INCLUSIVETAX': False,
+            'TAXSOLUTIONID': None,
             'APBILLITEMS': {
                 'APBILLITEM': bill_lineitems_payload
             }
