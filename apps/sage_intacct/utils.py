@@ -169,6 +169,7 @@ class SageIntacctConnector:
         Get departments
         """
         departments = self.connection.departments.get_all(field='STATUS', value='active')
+        is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
 
         department_attributes = []
 
@@ -187,7 +188,8 @@ class SageIntacctConnector:
             'DEPARTMENT',
             self.workspace_id,
             True,
-            attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT')
+            attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT'),
+            is_import_to_fyle_enabled=is_import_enabled
         )
 
         return []
@@ -1691,7 +1693,6 @@ class SageIntacctConnector:
         if mapping_settings and mapping_settings.source_field in ATTRIBUTE_DISABLE_CALLBACK_PATH.keys():
             return ATTRIBUTE_DISABLE_CALLBACK_PATH[mapping_settings.source_field]
         return None
-
 
     def is_import_enabled(self, attribute_type: str, workspace_id: int):
         """
