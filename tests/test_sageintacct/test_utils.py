@@ -872,7 +872,7 @@ def test_sync_allocations(mocker, db):
             if allocation_entry_list and allocation_entry_list[0]['ALLOCATIONID'] == value:
                 yield allocation_entry_list
 
-    def mock_allocations_generator(field, value):
+    def mock_allocations_generator(field, value, updated_at=None):
         yield data['allocations']
  
     mocker.patch(
