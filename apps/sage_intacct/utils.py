@@ -124,7 +124,6 @@ class SageIntacctConnector:
                 'value': destination_attribute['value'],
                 'detail': destination_attribute['detail']
             }
-
         for accounts in account_generator:
             for account in accounts:
                 account_attributes['account'].append({
@@ -191,7 +190,7 @@ class SageIntacctConnector:
         Get expense types
         """
 
-        fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE']
+        fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
 
         expense_type_generator = self.connection.expense_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
@@ -207,7 +206,9 @@ class SageIntacctConnector:
                 'detail': destination_attribute['detail']
             }
 
+        print('syncing expense types')
         for expense_types in expense_type_generator:
+            print(expense_types)
             for expense_type in expense_types:
                 if expense_type['STATUS'] == 'active':
                     expense_types_attributes.append({
@@ -321,7 +322,7 @@ class SageIntacctConnector:
         """
         projects_count = self.connection.projects.count()
         if projects_count < SYNC_UPPER_LIMIT['projects']:
-            fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID']
+            fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
             latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
             project_generator = self.connection.projects.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
 
