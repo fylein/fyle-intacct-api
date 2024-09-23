@@ -748,3 +748,13 @@ def test_check_interval_and_sync_dimension(db, mocker):
     workspace = Workspace.objects.get(id=1)
     assert workspace.source_synced_at != None
 
+
+def test_get_fund_source(db):
+    workspace_id = 1
+    Configuration.objects.filter(workspace_id=workspace_id).update(
+        reimbursable_expenses_object='BILL',
+        corporate_credit_card_expenses_object='JOURNAL_ENTRY'
+    )
+    fund_source = get_fund_source(workspace_id)
+
+    assert fund_source == ['PERSONAL', 'CCC']

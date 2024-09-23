@@ -176,6 +176,9 @@ def sync_dimensions(fyle_credentials, is_export: bool = False):
 def handle_refresh_dimensions(workspace_id):
     workspace = Workspace.objects.get(id=workspace_id)
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+
+    import_code_fields = [] if not configuration else configuration.import_code_fields
 
     mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
     chain = Chain()
@@ -188,12 +191,40 @@ def handle_refresh_dimensions(workspace_id):
                 mapping_setting.destination_field,
                 mapping_setting.source_field,
                 mapping_setting.is_custom,
+                True if mapping_setting.destination_field in import_code_fields else False,
                 q_options={'cluster': 'import'}
             )
 
+    if configuration and configuration.import_vendors_as_merchants:
+        chain.append(
+            'apps.mappings.imports.tasks.trigger_import_via_schedule',
+            int(workspace_id),
+            'VENDOR',
+            'MERCHANT',
+            False,
+            False,
+            q_options={'cluster': 'import'}
+        )
+
+    if configuration and configuration.import_categories:
+        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' or \
+            configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
+            destination_field = 'EXPENSE_TYPE'
+        else:
+            destination_field = 'ACCOUNT'
+
+        chain.append(
+            'apps.mappings.imports.tasks.trigger_import_via_schedule',
+            int(workspace_id),
+            destination_field,
+            'CATEGORY',
+            False,
+            True if destination_field in import_code_fields else False,
+            q_options={'cluster': 'import'}
+        )
+
     if chain.length() > 0:
         chain.run()
-
 
     sync_dimensions(fyle_credentials)
 
