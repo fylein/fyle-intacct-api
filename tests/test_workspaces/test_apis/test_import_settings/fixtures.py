@@ -4,6 +4,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
@@ -46,6 +47,7 @@ data = {
             "charts_of_accounts": ["Expense"],
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
@@ -88,6 +90,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": []
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
@@ -129,6 +132,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {},
         "mapping_settings": [
@@ -147,6 +151,7 @@ data = {
             "import_categories": True,
             "import_tax_codes": True,
             "import_vendors_as_merchants": True,
+            "import_code_fields": [],
         },
         "general_mappings": {
             "default_tax_code": {"name": "12.5% TR @12.5%", "id": "22"}
@@ -154,4 +159,74 @@ data = {
         "mapping_settings": None,
         "dependent_field_settings": None,
     },
+    "import_setting_validation_payload": {
+        "configurations": {
+            "import_categories": False,
+            "import_tax_codes": False,
+            "import_vendors_as_merchants": False,
+            "import_code_fields": [
+                "PROJECT",
+                "DEPARTMENT"
+            ]
+        },
+        "general_mappings": {
+            "default_tax_code": {
+                "name": None,
+                "id": None
+            }
+        },
+        "mapping_settings": [
+            {
+                "source_field": "PROJECT",
+                "destination_field": "PROJECT",
+                "import_to_fyle": True,
+                "is_custom": False,
+                "source_placeholder": None
+            },
+            {
+                "source_field": "COST_CENTER",
+                "destination_field": "DEPARTMENT",
+                "import_to_fyle": True,
+                "is_custom": False,
+                "source_placeholder": None
+            }
+        ],
+        "dependent_field_settings": None,
+        "workspace_id": 1
+    },
+    "import_setting_validation_response": {
+        "configurations": {
+            "import_categories": False,
+            "import_tax_codes": False,
+            "import_vendors_as_merchants": False,
+            "import_code_fields": [
+                "PROJECT",
+                "DEPARTMENT"
+            ]
+        },
+        "general_mappings": {
+            "default_tax_code": {
+                "name": None,
+                "id": None
+            }
+        },
+        "mapping_settings": [
+            {
+                "source_field": "PROJECT",
+                "destination_field": "PROJECT",
+                "import_to_fyle": True,
+                "is_custom": False,
+                "source_placeholder": None
+            },
+            {
+                "source_field": "COST_CENTER",
+                "destination_field": "DEPARTMENT",
+                "import_to_fyle": True,
+                "is_custom": False,
+                "source_placeholder": None
+            }
+        ],
+        "dependent_field_settings": None,
+        "workspace_id": 1
+    }
 }

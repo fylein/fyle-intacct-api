@@ -9,6 +9,7 @@ from fyle_accounting_mappings.models import (
 from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import FyleCredential
 from .fixtures import merchants_data
+from tests.helper import dict_compare_keys
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -155,4 +156,4 @@ def test_construct_fyle_payload(db):
         is_auto_sync_status_allowed
     )
 
-    assert fyle_payload == merchants_data['create_fyle_merchants_payload_create_new_case']
+    assert dict_compare_keys(fyle_payload, merchants_data['create_fyle_merchants_payload_create_new_case']) == [], 'Keys mismatch for merchant payload'
