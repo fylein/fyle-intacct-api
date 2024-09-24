@@ -114,27 +114,25 @@ class SageIntacctConnector:
         Get accounts
         """
 
-        fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE']
+        fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
-        print('latest_updated_at', latest_updated_at)
-        print('updated latest_updated_at',latest_updated_at)
-        account_generator = self.connection.accounts.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+
+        params = {'fields': fields}
+
+        if latest_updated_at:
+            params['updated_at'] = latest_updated_at
+        else:
+            params['field'] = 'STATUS'
+            params['value'] = 'active'
+    
+        account_generator = self.connection.accounts.get_all_generator(**params)
         is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
         account_attributes = {
             'account': [],
             'ccc_account': []
         }
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, 
-                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail', 'code')
-        disabled_fields_map = {}
 
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail'],
-                'code': destination_attribute['code']
-            }
         for accounts in account_generator:
             for account in accounts:
                 account_attributes['account'].append({
@@ -142,30 +140,12 @@ class SageIntacctConnector:
                     'display_name': 'account',
                     'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO'],
-                    'active': True,
+                    'active': account['STATUS'] == 'active',
                     'detail': {
                         'account_type': account['ACCOUNTTYPE']
                     },
                     'code': account['ACCOUNTNO']
                 })
-                if account['ACCOUNTNO'] in disabled_fields_map:
-                    disabled_fields_map.pop(account['ACCOUNTNO'])
-
-        # For setting active to False
-        # During the initial run we only pull in the active ones.
-        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-            # If yes then we pop the item from the disable_field_map else we set the active = True.
-        # This should take care of delete as well as inactive case since we are checking the status=Active case.
-        for destination_id in disabled_fields_map:
-            account_attributes['account'].append({
-                'attribute_type': 'ACCOUNT',
-                'display_name': 'account',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail'],
-                'code': disabled_fields_map[destination_id]['code']
-            })
 
         for attribute_type, account_attribute in account_attributes.items():
             if account_attribute:
@@ -219,53 +199,32 @@ class SageIntacctConnector:
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
 
-        expense_type_generator = self.connection.expense_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        params = {'fields': fields}
+
+        if latest_updated_at:
+            params['updated_at'] = latest_updated_at
+        else:
+            params['field'] = 'STATUS'
+            params['value'] = 'active'
+
+        expense_type_generator = self.connection.expense_types.get_all_generator(**params)
         is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
 
         expense_types_attributes = []
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail', 'code')
-        disabled_fields_map = {}
-
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail'],
-                'code': destination_attribute['code']
-            }
 
         for expense_types in expense_type_generator:
             for expense_type in expense_types:
-                if expense_type['STATUS'] == 'active':
                     expense_types_attributes.append({
                         'attribute_type': 'EXPENSE_TYPE',
                         'display_name': 'Expense Types',
                         'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
                         'destination_id': expense_type['ACCOUNTLABEL'],
-                        'active': True,
+                        'active': expense_type['STATUS'] == 'active',
                         'detail': {
                             'gl_account_no': expense_type['GLACCOUNTNO'],
                             'gl_account_title': expense_type['GLACCOUNTTITLE']
                         }
                     })
-                    if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
-                        disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
-        
-        # For setting active to False
-        # During the initial run we only pull in the active ones.
-        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-            # If yes then we pop the item from the disable_field_map else we set the active = True.
-        # This should take care of delete as well as inactive case since we are checking the status=Active case.
-        for destination_id in disabled_fields_map:
-            expense_types_attributes.append({
-                'attribute_type': 'EXPENSE_TYPE',
-                'display_name': 'Expense Types',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail'],
-                'code': disabled_fields_map[destination_id]['code']
-            })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             expense_types_attributes,
@@ -358,55 +317,34 @@ class SageIntacctConnector:
         if projects_count < SYNC_UPPER_LIMIT['projects']:
             fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
             latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-            project_generator = self.connection.projects.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+
+            params = {'fields': fields}
+            if latest_updated_at:
+                params['updated_at'] = latest_updated_at
+            else:
+                params['field'] = 'STATUS'
+                params['value'] = 'active'
+
+            project_generator = self.connection.projects.get_all_generator(**params)
             is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
             project_attributes = []
-            destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail', 'code')
-            disabled_fields_map = {}
-
-            for destination_attribute in destination_attributes:
-                disabled_fields_map[destination_attribute['destination_id']] = {
-                    'value': destination_attribute['value'],
-                    'detail': destination_attribute['detail'],
-                    'code': destination_attribute['code']
-                }
 
             for projects in project_generator:
                 for project in projects:
-                    if project['STATUS'] == 'active':
-                        detail = {
-                            'customer_id': project['CUSTOMERID'],
-                            'customer_name': project['CUSTOMERNAME']
-                        }
+                    detail = {
+                        'customer_id': project['CUSTOMERID'],
+                        'customer_name': project['CUSTOMERNAME']
+                    }
 
-                        project_attributes.append({
-                            'attribute_type': 'PROJECT',
-                            'display_name': 'project',
-                            'value': project['NAME'],
-                            'destination_id': project['PROJECTID'],
-                            'active': True,
-                            'detail': detail
-                        })
-                        if project['PROJECTID'] in disabled_fields_map:
-                            disabled_fields_map.pop(project['PROJECTID'])
-
-            # For setting active to False
-            # During the initial run we only pull in the active ones.
-            # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-                # If yes then we pop the item from the disable_field_map else we set the active = True.
-            # This should take care of delete as well as inactive case since we are checking the status=Active case.
-            for destination_id in disabled_fields_map:
-                project_attributes.append({
-                    'attribute_type': 'PROJECT',
-                    'display_name': 'project',
-                    'value': disabled_fields_map[destination_id]['value'],
-                    'destination_id': destination_id,
-                    'active': False,
-                    'detail': disabled_fields_map[destination_id]['detail'],
-                    'code': disabled_fields_map[destination_id]['code']
-                })
+                    project_attributes.append({
+                        'attribute_type': 'PROJECT',
+                        'display_name': 'project',
+                        'value': project['NAME'],
+                        'destination_id': project['PROJECTID'],
+                        'active': project['STATUS'] == 'active',
+                        'detail': detail
+                    })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes,
@@ -592,8 +530,14 @@ class SageIntacctConnector:
         """
 
         allocation_attributes = []
-        latest_sync = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='ALLOCATION').order_by('-updated_at').first()
-        allocations_generator = self.connection.allocations.get_all_generator(field='STATUS', value='active', updated_at=latest_sync.updated_at if latest_sync else None)
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
+        params = {}
+        if latest_updated_at:
+            params['updated_at'] = latest_updated_at
+        else:
+            params['field'] = 'STATUS'
+            params['value'] = 'active'
+        allocations_generator = self.connection.allocations.get_all_generator(**params)
 
         for allocations in allocations_generator:
             for allocation in allocations:
@@ -602,6 +546,7 @@ class SageIntacctConnector:
                     detail = {}
                     for allocation_entry in allocation_entries:
                         value = allocation_entry['ALLOCATIONID']
+                        status = allocation['STATUS']
                         destination_id = allocation_entry['ALLOCATIONKEY']
                         for field_name in allocation_entry.keys():
                             if allocation_entry[field_name] is not None and field_name not in detail:
@@ -617,7 +562,7 @@ class SageIntacctConnector:
                         'display_name': 'allocation',
                         'value': value,
                         'destination_id': destination_id,
-                        'active': True,
+                        'active': status=='active',
                         'detail': detail
                     })
 
