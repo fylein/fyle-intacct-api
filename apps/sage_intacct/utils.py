@@ -103,7 +103,8 @@ class SageIntacctConnector:
 
         latest_sync = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type=attribute_type).order_by('-updated_at').first()
         if latest_sync:
-            return latest_sync.updated_at
+            latest_synced_timestamp = latest_sync.updated_at - timedelta(days=1)
+            return latest_synced_timestamp.strftime('%m/%d/%Y')
         
         return None
 
@@ -114,8 +115,10 @@ class SageIntacctConnector:
         """
 
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE']
-        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
-        account_generator = self.connection.accounts.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
+        print('latest_updated_at', latest_updated_at)
+        print('updated latest_updated_at',latest_updated_at)
+        account_generator = self.connection.accounts.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
         is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
         account_attributes = {
@@ -182,7 +185,7 @@ class SageIntacctConnector:
         """
         fields = ['TITLE', 'DEPARTMENTID']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='DEPARTMENT')
-        department_generator = self.connection.departments.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+        department_generator = self.connection.departments.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
         is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
 
         department_attributes = []
@@ -216,7 +219,7 @@ class SageIntacctConnector:
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
 
-        expense_type_generator = self.connection.expense_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+        expense_type_generator = self.connection.expense_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
         is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
 
         expense_types_attributes = []
@@ -231,9 +234,7 @@ class SageIntacctConnector:
                 'code': destination_attribute['code']
             }
 
-        print('syncing expense types')
         for expense_types in expense_type_generator:
-            print(expense_types)
             for expense_type in expense_types:
                 if expense_type['STATUS'] == 'active':
                     expense_types_attributes.append({
@@ -303,8 +304,8 @@ class SageIntacctConnector:
         Get Payment accounts
         """
         fields = ['BANKNAME', 'BANKACCOUNTID']
-        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PAYMENT_ACCOUNT')
-        payment_account_generator = self.connection.checking_accounts.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PAYMENT_ACCOUNT')
+        payment_account_generator = self.connection.checking_accounts.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         payment_accounts_attributes = []
 
@@ -356,8 +357,8 @@ class SageIntacctConnector:
         projects_count = self.connection.projects.count()
         if projects_count < SYNC_UPPER_LIMIT['projects']:
             fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
-            latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-            project_generator = self.connection.projects.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
+            project_generator = self.connection.projects.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
             is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
             project_attributes = []
@@ -425,8 +426,8 @@ class SageIntacctConnector:
         count = self.connection.items.count()
         if count <= SYNC_UPPER_LIMIT['items']:
             fields = ['NAME', 'ITEMID']
-            latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
-            item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
+            item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
             item_attributes = []
 
@@ -452,8 +453,8 @@ class SageIntacctConnector:
         Get locations
         """
         fields = ['NAME', 'LOCATIONID']
-        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION')
-        location_generator = self.connection.locations.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION')
+        location_generator = self.connection.locations.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         location_attributes = []
 
@@ -500,8 +501,8 @@ class SageIntacctConnector:
         """
         if not self.__get_entity_slide_preference():
             fields = ['NAME', 'LOCATIONID', 'OPCOUNTRY']
-            latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION_ENTITY')
-            location_entity_generator = self.connection.location_entities.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION_ENTITY')
+            location_entity_generator = self.connection.location_entities.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
             location_entities_attributes = []
 
@@ -529,8 +530,8 @@ class SageIntacctConnector:
         Get Expense Payment Types
         """
         fields = ['NAME', 'RECORDNO', 'NONREIMBURSABLE']
-        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_PAYMENT_TYPE')
-        expense_payment_type_generator = self.connection.expense_payment_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_PAYMENT_TYPE')
+        expense_payment_type_generator = self.connection.expense_payment_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         expense_payment_type_attributes = []
 
@@ -557,8 +558,8 @@ class SageIntacctConnector:
         Get employees
         """
         fields = ['CONTACT.EMAIL1', 'CONTACT.PRINTAS', 'DEPARTMENTID', 'CONTACT.CONTACTNAME', 'EMPLOYEEID']
-        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EMPLOYEE')
-        employee_generator = self.connection.employees.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EMPLOYEE')
+        employee_generator = self.connection.employees.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         employee_attributes = []
 
@@ -659,8 +660,8 @@ class SageIntacctConnector:
         """
         count = self.connection.classes.count()
         if count <= SYNC_UPPER_LIMIT['classes']:
-            latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
-            class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
+            class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at if latest_updated_at else None)
             class_attributes = []
 
             for _classes in class_generator:
@@ -684,8 +685,8 @@ class SageIntacctConnector:
         """
         customers_count = self.connection.customers.count()
         if customers_count < SYNC_UPPER_LIMIT['customers']:
-            latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
-            customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
+            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
+            customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at if latest_updated_at else None)
 
             customer_attributes = []
 
@@ -709,23 +710,20 @@ class SageIntacctConnector:
         Get and Sync Tax Details
         """
         attributes = []
-        fields = ['DETAILID', 'VALUE', 'TAXSOLUTIONID']
-        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='TAX_DETAIL')
-        tax_detail_generator = self.connection.tax_details.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at-timedelta(hours=1) if latest_updated_at else None)
-        for tax_details in tax_detail_generator:
-            for tax_detail in tax_details:
-                if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
-                    attributes.append({
-                        'attribute_type': 'TAX_DETAIL',
-                        'display_name': 'Tax Detail',
-                        'value': tax_detail['DETAILID'],
-                        'destination_id': tax_detail['DETAILID'],
-                        'active': True,
-                        'detail': {
-                            'tax_rate': float(tax_detail['VALUE']),
-                            'tax_solution_id': tax_detail['TAXSOLUTIONID']
-                        }
-                    })
+        tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
+        for tax_detail in tax_details:
+            if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
+                attributes.append({
+                    'attribute_type': 'TAX_DETAIL',
+                    'display_name': 'Tax Detail',
+                    'value': tax_detail['DETAILID'],
+                    'destination_id': tax_detail['DETAILID'],
+                    'active': True,
+                    'detail': {
+                        'tax_rate': float(tax_detail['VALUE']),
+                        'tax_solution_id': tax_detail['TAXSOLUTIONID']
+                    }
+                })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
                 attributes, 'TAX_DETAIL', self.workspace_id, True)
