@@ -1,3 +1,6 @@
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+
 import logging
 import random
 from unittest import mock
@@ -451,7 +454,12 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+
+        now = datetime.now().replace(tzinfo=timezone.utc)
+        updated_at = now - timedelta(days=10)
+
         mock_call.side_effect = Exception()
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
@@ -464,6 +472,7 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
         })
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
@@ -476,11 +485,13 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
         })
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
         create_sage_intacct_reimbursement(workspace_id)
 
@@ -501,6 +512,10 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': "exceeds total amount due ()", 'correction': ''}],
                 'type': 'Invalid_params'
         })
+
+        now = datetime.now().replace(tzinfo=timezone.utc)
+        updated_at = now - timedelta(days=10)
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
         expense_report = ExpenseReport.objects.get(id=expense_report.id)
 
@@ -1422,3 +1437,98 @@ def test__validate_employee_mapping(mocker, db):
         __validate_employee_mapping(expense_group, configuration)
     except BulkError as exception:
         logger.info(exception.response)
+
+
+def test_skipping_create_ap_payment(mocker, db):
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.post',
+        return_value=data['bill_response']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.get',
+        return_value=data['bill_response']['data']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.APPayments.post',
+        return_value=data['reimbursements']
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.load_attachments',
+        return_value=['sdfgh']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Reimbursements.post',
+        return_value=data['reimbursements']
+    )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Reimbursements.sync',
+        return_value=None
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.update_attachment',
+        return_value=data['bill_response']
+    )
+
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(expense_group__workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+    
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expenses = expense_group.expenses.all()
+
+    for expense in expenses:
+        reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
+        reimbursement.state = 'COMPLETE'
+        reimbursement.save()
+    
+    create_bill(expense_group, task_log.id, True)
+
+    bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
+
+    task_log = TaskLog.objects.get(expense_group=bill.expense_group)
+    task_log.detail = data['bill_response']
+    task_log.save()
+
+    bill.expense_group.expenses.all().update(paid_on_fyle=True)
+
+    with mock.patch('apps.sage_intacct.models.APPayment.create_ap_payment') as mock_call:
+        mock_call.side_effect = BulkError(msg='employess not found', response='mapping error')
+        create_ap_payment(workspace_id)
+
+    now = datetime.now().replace(tzinfo=timezone.utc)
+    updated_at = now - timedelta(days=25)
+    # Update created_at to more than 2 months ago (more than 60 days)
+    TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).update(
+        created_at=now - timedelta(days=61),  # More than 2 months ago
+        updated_at=updated_at  # Updated within the last 1 month
+    )
+
+    task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(bill.expense_group.id))
+
+    create_ap_payment(workspace_id)
+    task_log.refresh_from_db()
+    assert task_log.updated_at == updated_at
+    
+
+    updated_at = now - timedelta(days=25)
+    # Update created_at to between 1 and 2 months ago (between 30 and 60 days)
+    TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).update(
+        created_at=now - timedelta(days=45),  # Between 1 and 2 months ago
+        updated_at=updated_at  # Updated within the last 1 month
+    )
+    create_ap_payment(workspace_id)
+    task_log.refresh_from_db()
+    assert task_log.updated_at == updated_at
+
+    updated_at = now - timedelta(days=5)
+    # Update created_at to within the last 1 month (less than 30 days)
+    TaskLog.objects.filter(task_id='PAYMENT_{}'.format(bill.expense_group.id)).update(
+        created_at=now - timedelta(days=25),  # Within the last 1 month
+        updated_at=updated_at  # Updated within the last week
+    )
+    create_ap_payment(workspace_id)
+    task_log.refresh_from_db()
+    assert task_log.updated_at == updated_at
