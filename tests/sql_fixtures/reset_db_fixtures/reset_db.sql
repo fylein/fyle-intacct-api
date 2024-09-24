@@ -277,7 +277,8 @@ CREATE TABLE public.bills (
     transaction_date timestamp with time zone,
     paid_on_sage_intacct boolean NOT NULL,
     payment_synced boolean NOT NULL,
-    currency character varying(5) NOT NULL
+    currency character varying(5) NOT NULL,
+    is_retired boolean NOT NULL
 );
 
 
@@ -1107,7 +1108,8 @@ CREATE TABLE public.expense_reports (
     transaction_date timestamp with time zone,
     paid_on_sage_intacct boolean NOT NULL,
     payment_synced boolean NOT NULL,
-    currency character varying(5) NOT NULL
+    currency character varying(5) NOT NULL,
+    is_retired boolean NOT NULL
 );
 
 
@@ -2847,7 +2849,7 @@ COPY public.bill_lineitems (id, expense_type_id, gl_account_number, project_id, 
 -- Data for Name: bills; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.bills (id, vendor_id, description, supdoc_id, created_at, updated_at, expense_group_id, memo, transaction_date, paid_on_sage_intacct, payment_synced, currency) FROM stdin;
+COPY public.bills (id, vendor_id, description, supdoc_id, created_at, updated_at, expense_group_id, memo, transaction_date, paid_on_sage_intacct, payment_synced, currency, is_retired) FROM stdin;
 \.
 
 
@@ -4127,6 +4129,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 192	workspaces	0037_configuration_import_code_fields	2024-08-12 10:35:18.352466+00
 193	fyle_accounting_mappings	0026_destinationattribute_code	2024-08-12 10:38:36.247956+00
 194	workspaces	0038_alter_configuration_import_code_fields	2024-09-04 11:00:27.611651+00
+195	sage_intacct	0029_auto_20240902_1511	2024-09-02 15:12:18.555335+00
 \.
 
 
@@ -7555,7 +7558,7 @@ COPY public.expense_report_lineitems (id, expense_type_id, gl_account_number, pr
 -- Data for Name: expense_reports; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_reports (id, employee_id, description, supdoc_id, created_at, updated_at, expense_group_id, memo, transaction_date, paid_on_sage_intacct, payment_synced, currency) FROM stdin;
+COPY public.expense_reports (id, employee_id, description, supdoc_id, created_at, updated_at, expense_group_id, memo, transaction_date, paid_on_sage_intacct, payment_synced, currency, is_retired) FROM stdin;
 \.
 
 
@@ -8134,7 +8137,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 194, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 195, true);
 
 
 --

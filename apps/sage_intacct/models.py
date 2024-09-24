@@ -565,6 +565,7 @@ class Bill(models.Model):
     transaction_date = models.DateTimeField(help_text='Bill transaction date', null=True)
     payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
     paid_on_sage_intacct = models.BooleanField(help_text='Payment status in Sage Intacct', default=False)
+    is_retired = models.BooleanField(help_text='Is Payment sync retried', default=False)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -757,6 +758,7 @@ class ExpenseReport(models.Model):
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
     payment_synced = models.BooleanField(help_text='Payment synced status', default=False)
     paid_on_sage_intacct = models.BooleanField(help_text='Payment status in Sage Intacct', default=False)
+    is_retired = models.BooleanField(help_text='Is Payment sync retried', default=False)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
