@@ -13,7 +13,7 @@ from django.db.models import Q
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
 
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
@@ -25,14 +25,22 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 SYNC_UPPER_LIMIT = {
     'projects': 25000,
     'customers': 15000,
-    'items':15000,
+    'items': 15000,
     'classes': 15000
 }
+
+ATTRIBUTE_DISABLE_CALLBACK_PATH = {
+    'PROJECT': 'apps.mappings.imports.modules.projects.disable_projects',
+    'ACCOUNT': 'apps.mappings.imports.modules.categories.disable_categories',
+    'COST_CENTER': 'apps.mappings.imports.modules.cost_centers.disable_cost_centers'
+}
+
 
 class SageIntacctConnector:
     """
@@ -60,7 +68,6 @@ class SageIntacctConnector:
 
         self.workspace_id = workspace_id
 
-
     def get_tax_solution_id_or_none(self, lineitems):
 
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
@@ -79,7 +86,6 @@ class SageIntacctConnector:
 
             return tax_solution_id
 
-
     def get_tax_exclusive_amount(self, amount, default_tax_code_id):
 
         tax_attribute = DestinationAttribute.objects.filter(destination_id=default_tax_code_id, attribute_type='TAX_DETAIL',workspace_id=self.workspace_id).first()
@@ -97,19 +103,21 @@ class SageIntacctConnector:
         Get accounts
         """
         accounts = self.connection.accounts.get_all()
+        is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
         account_attributes = {
             'account': [],
             'ccc_account': []
         }
         destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, 
-                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail')
+                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail', 'code')
         disabled_fields_map = {}
 
         for destination_attribute in destination_attributes:
             disabled_fields_map[destination_attribute['destination_id']] = {
                 'value': destination_attribute['value'],
-                'detail': destination_attribute['detail']
+                'detail': destination_attribute['detail'],
+                'code': destination_attribute['code']
             }
 
         for account in accounts:
@@ -122,7 +130,8 @@ class SageIntacctConnector:
                     'active': True,
                     'detail': {
                         'account_type': account['ACCOUNTTYPE']
-                    }
+                    },
+                    'code': account['ACCOUNTNO']
                 })
                 if account['ACCOUNTNO'] in disabled_fields_map:
                     disabled_fields_map.pop(account['ACCOUNTNO'])
@@ -139,13 +148,20 @@ class SageIntacctConnector:
                 'value': disabled_fields_map[destination_id]['value'],
                 'destination_id': destination_id,
                 'active': False,
-                'detail': disabled_fields_map[destination_id]['detail']
+                'detail': disabled_fields_map[destination_id]['detail'],
+                'code': disabled_fields_map[destination_id]['code']
             })
 
         for attribute_type, account_attribute in account_attributes.items():
             if account_attribute:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    account_attribute, attribute_type.upper(), self.workspace_id, True)
+                    account_attribute,
+                    attribute_type.upper(),
+                    self.workspace_id,
+                    True,
+                    attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
+                    is_import_to_fyle_enabled=is_account_import_enabled
+                )
         return []
 
     def sync_departments(self):
@@ -153,6 +169,7 @@ class SageIntacctConnector:
         Get departments
         """
         departments = self.connection.departments.get_all(field='STATUS', value='active')
+        is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
 
         department_attributes = []
 
@@ -162,11 +179,18 @@ class SageIntacctConnector:
                 'display_name': 'department',
                 'value': department['TITLE'],
                 'destination_id': department['DEPARTMENTID'],
+                'code': department['DEPARTMENTID'],
                 'active': True
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            department_attributes, 'DEPARTMENT', self.workspace_id, True)
+            department_attributes,
+            'DEPARTMENT',
+            self.workspace_id,
+            True,
+            attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT'),
+            is_import_to_fyle_enabled=is_import_enabled
+        )
 
         return []
 
@@ -174,17 +198,19 @@ class SageIntacctConnector:
         """
         Get expense types
         """
+        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
         expense_types = self.connection.expense_types.get_all()
 
         expense_types_attributes = []
         destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail')
+                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail', 'code')
         disabled_fields_map = {}
 
         for destination_attribute in destination_attributes:
             disabled_fields_map[destination_attribute['destination_id']] = {
                 'value': destination_attribute['value'],
-                'detail': destination_attribute['detail']
+                'detail': destination_attribute['detail'],
+                'code': destination_attribute['code']
             }
 
         for expense_type in expense_types:
@@ -198,7 +224,8 @@ class SageIntacctConnector:
                     'detail': {
                         'gl_account_no': expense_type['GLACCOUNTNO'],
                         'gl_account_title': expense_type['GLACCOUNTTITLE']
-                    }
+                    },
+                    'code': expense_type['ACCOUNTLABEL']
                 })
                 if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
                     disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
@@ -215,11 +242,18 @@ class SageIntacctConnector:
                 'value': disabled_fields_map[destination_id]['value'],
                 'destination_id': destination_id,
                 'active': False,
-                'detail': disabled_fields_map[destination_id]['detail']
+                'detail': disabled_fields_map[destination_id]['detail'],
+                'code': disabled_fields_map[destination_id]['code']
             })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            expense_types_attributes, 'EXPENSE_TYPE', self.workspace_id, True)
+            expense_types_attributes,
+            'EXPENSE_TYPE',
+            self.workspace_id,
+            True,
+            attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
+            is_import_to_fyle_enabled=is_expense_type_import_enabled
+        )
         return []
 
     def sync_charge_card_accounts(self):
@@ -295,19 +329,22 @@ class SageIntacctConnector:
         """
         Get projects
         """
+
         projects_count = self.connection.projects.count()
         if projects_count < SYNC_UPPER_LIMIT['projects']:
+            is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
             projects = self.connection.projects.get_all()
 
             project_attributes = []
             destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail')
+                attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail', 'code')
             disabled_fields_map = {}
 
             for destination_attribute in destination_attributes:
                 disabled_fields_map[destination_attribute['destination_id']] = {
                     'value': destination_attribute['value'],
-                    'detail': destination_attribute['detail']
+                    'detail': destination_attribute['detail'],
+                    'code': destination_attribute['code']
                 }
 
             for project in projects:
@@ -323,7 +360,8 @@ class SageIntacctConnector:
                         'value': project['NAME'],
                         'destination_id': project['PROJECTID'],
                         'active': True,
-                        'detail': detail
+                        'detail': detail,
+                        'code': project['PROJECTID']
                     })
                     if project['PROJECTID'] in disabled_fields_map:
                         disabled_fields_map.pop(project['PROJECTID'])
@@ -340,11 +378,18 @@ class SageIntacctConnector:
                     'value': disabled_fields_map[destination_id]['value'],
                     'destination_id': destination_id,
                     'active': False,
-                    'detail': disabled_fields_map[destination_id]['detail']
+                    'detail': disabled_fields_map[destination_id]['detail'],
+                    'code': disabled_fields_map[destination_id]['code']
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                project_attributes, 'PROJECT', self.workspace_id, True)
+                project_attributes,
+                'PROJECT',
+                self.workspace_id,
+                True,
+                attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT'),
+                is_import_to_fyle_enabled=is_project_import_enabled
+            )
 
         return []
 
@@ -1090,6 +1135,7 @@ class SageIntacctConnector:
                         'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
                     }
                 },
+                'billable': lineitem.billable
             }
 
             for dimension in lineitem.user_defined_dimensions:
@@ -1633,3 +1679,38 @@ class SageIntacctConnector:
             return sanitized_name
 
         return None
+
+    def get_disable_attribute_callback_func(self, destination_field: str):
+        """
+        Get the callback function to disable the attribute
+        :param destination_field: Destination Field
+        :return: Callback Function
+        """
+        mapping_settings = MappingSetting.objects.filter(
+            workspace_id=self.workspace_id,
+            destination_field=destination_field
+        ).first()
+        if mapping_settings and mapping_settings.source_field in ATTRIBUTE_DISABLE_CALLBACK_PATH.keys():
+            return ATTRIBUTE_DISABLE_CALLBACK_PATH[mapping_settings.source_field]
+        return None
+
+    def is_import_enabled(self, attribute_type: str, workspace_id: int):
+        """
+        Check if the import is enabled for the attribute type
+        :param attribute_type: Attribute Type
+        :param workspace_id: Workspace ID
+        :return: True if enabled, False otherwise
+        """
+        is_enabled = False
+
+        if attribute_type in ['PROJECT', 'DEPARTMENT']:
+            mapping = MappingSetting.objects.filter(workspace_id=workspace_id, destination_field=attribute_type).first()
+            if mapping and mapping.import_to_fyle:
+                is_enabled = True
+
+        elif attribute_type == 'ACCOUNT' or attribute_type == 'EXPENSE_TYPE':
+            configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+            if configuration and configuration.import_categories:
+                is_enabled = True
+
+        return is_enabled

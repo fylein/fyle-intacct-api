@@ -1,23 +1,32 @@
+import logging
 from datetime import datetime
-from typing import List
+from typing import List, Dict
 from apps.mappings.imports.modules.base import Base
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
-    CategoryMapping
+    CategoryMapping,
+    ExpenseAttribute
 )
+from fyle_integrations_platform_connector import PlatformConnector
+from apps.workspaces.models import Configuration, FyleCredential
+from apps.mappings.helpers import prepend_code_to_name
+
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 class Category(Base):
     """
     Class for Category module
     """
-    def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime):
+    def __init__(self, workspace_id: int, destination_field: str, sync_after: datetime, prepend_code_to_name: bool = False):
         super().__init__(
             workspace_id=workspace_id,
             source_field='CATEGORY',
             destination_field=destination_field,
             platform_class_name='categories',
-            sync_after=sync_after
+            sync_after=sync_after,
+            prepend_code_to_name=prepend_code_to_name
         )
 
     def trigger_import(self):
@@ -67,10 +76,6 @@ class Category(Base):
             'workspace_id': self.workspace_id,
             'attribute_type': self.destination_field
         }
-        if self.destination_field == 'EXPENSE_TYPE':
-            filters['destination_expense_head__isnull'] = True
-        elif self.destination_field == 'ACCOUNT':
-            filters['destination_account__isnull'] = True
 
         # get all the destination attributes that have category mappings as null
         destination_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)
@@ -83,3 +88,74 @@ class Category(Base):
             self.destination_field,
             self.workspace_id
         )
+
+
+def disable_categories(workspace_id: int, categories_to_disable: Dict, is_import_to_fyle_enabled: bool = False, *args, **kwargs):
+    """
+    categories_to_disable object format:
+    {
+        'destination_id': {
+            'value': 'old_category_name',
+            'updated_value': 'new_category_name',
+            'code': 'old_code',
+            'updated_code': 'new_code' ---- if the code is updated else same as code
+        }
+    }
+    """
+    if not is_import_to_fyle_enabled or len(categories_to_disable) == 0:
+        logger.info("Skipping disabling categories in Fyle | WORKSPACE_ID: %s", workspace_id)
+        return
+
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
+    use_code_in_naming = Configuration.objects.filter(workspace_id = workspace_id, import_code_fields__contains=['ACCOUNT'])
+
+    category_values = []
+    for category_map in categories_to_disable.values():
+        if not use_code_in_naming and category_map['value'] == category_map['updated_value']:
+            continue
+        elif use_code_in_naming and (category_map['value'] == category_map['updated_value'] and category_map['code'] == category_map['updated_code']):
+            continue
+
+        category_name = prepend_code_to_name(prepend_code_in_name=use_code_in_naming, value=category_map['value'], code=category_map['code'])
+        category_values.append(category_name)
+
+    filters = {
+        'workspace_id': workspace_id,
+        'attribute_type': 'CATEGORY',
+        'value__in': category_values,
+        'active': True
+    }
+
+    expense_attribute_value_map = {}
+    for destination_id, v in categories_to_disable.items():
+        category_name = v['value']
+        category_name = prepend_code_to_name(prepend_code_in_name=use_code_in_naming, value=v['value'], code=v['code'])
+        expense_attribute_value_map[category_name] = destination_id
+
+    bulk_payload = []
+
+    expense_attributes = ExpenseAttribute.objects.filter(**filters)
+
+    for expense_attribute in expense_attributes:
+        code = expense_attribute_value_map.get(expense_attribute.value, None)
+        if code:
+            payload = {
+                'name': expense_attribute.value,
+                'code': code,
+                'is_enabled': False,
+                'id': expense_attribute.source_id
+            }
+        else:
+            logger.error(f"Category with value {expense_attribute.value} not found | WORKSPACE_ID: {workspace_id}")
+
+        bulk_payload.append(payload)
+
+    if bulk_payload:
+        logger.info(f"Disabling Category in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_payload)}")
+        platform.categories.post_bulk(bulk_payload)
+    else:
+        logger.info(f"No Category to Disable in Fyle | WORKSPACE_ID: {workspace_id}")
+
+    return bulk_payload

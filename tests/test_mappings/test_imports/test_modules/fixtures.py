@@ -1808,6 +1808,23 @@ category_data = {
             'ALTERNATIVEACCOUNT':'None'
         }
     ],
+    "create_fyle_category_payload_with_code_create_new_case":[
+        {
+            'name': 'Internet',
+            'code': 'Internet',
+            'is_enabled': True
+        },
+        {
+            'name': 'Meals',
+            'code': 'Meals',
+            'is_enabled': True
+        },
+        {
+            'name': '123: SageIntacct',
+            'code': '10085',
+            'is_enabled': True
+        }
+    ],
     'get_categories_destination_attributes_expense_type':[
         {
             'RECORDNO':'199',
@@ -4359,6 +4376,18 @@ cost_center_data = {
         {
             'NAME':'Killua Class',
             'CLASSID':'9903'
+        }
+    ],
+    "create_fyle_cost_center_payload_with_code_create_new_case":[
+        {
+            "name": "123: CRE Platform",
+            "is_enabled": True,
+            "description": "Cost Center - 123: CRE Platform, Id - 10065"
+        },
+        {
+            "name": "123: Integrations CRE",
+            "is_enabled": True,
+            "description": "Cost Center - 123: Integrations CRE, Id - 10082"
         }
     ],
     'create_new_auto_create_cost_centers_destination_attributes_subsequent_run' : [

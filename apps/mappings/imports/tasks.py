@@ -14,7 +14,7 @@ SOURCE_FIELD_CLASS_MAP = {
     'MERCHANT': Merchant
 }
 
-def trigger_import_via_schedule(workspace_id: int, destination_field: str, source_field: str, is_custom: bool = False):
+def trigger_import_via_schedule(workspace_id: int, destination_field: str, source_field: str, is_custom: bool = False, prepend_code_to_name: bool = False):
     """
     Trigger import via schedule
     :param workspace_id: Workspace id
@@ -25,9 +25,12 @@ def trigger_import_via_schedule(workspace_id: int, destination_field: str, sourc
     sync_after = import_log.last_successful_run_at if import_log else None
 
     if is_custom:
-        item = ExpenseCustomField(workspace_id, source_field, destination_field, sync_after)
+        item = ExpenseCustomField(workspace_id, source_field, destination_field, sync_after, prepend_code_to_name)
         item.trigger_import()
     else:
         module_class = SOURCE_FIELD_CLASS_MAP[source_field]
-        item = module_class(workspace_id, destination_field, sync_after)
+        if source_field in ['PROJECT', 'CATEGORY', 'COST_CENTER']:
+            item = module_class(workspace_id, destination_field, sync_after, prepend_code_to_name)
+        else:
+            item = module_class(workspace_id, destination_field, sync_after)
         item.trigger_import()

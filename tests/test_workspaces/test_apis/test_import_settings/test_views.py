@@ -3,7 +3,8 @@ from django_q.models import Schedule
 
 from tests.helper import dict_compare_keys
 
-from apps.workspaces.models import Workspace
+from apps.workspaces.models import Workspace, Configuration
+from apps.mappings.models import ImportLog
 from fyle_accounting_mappings.models import MappingSetting
 from .fixtures import data
 
@@ -105,3 +106,84 @@ def test_import_settings(mocker, api_client, test_connection):
         format='json'
     )
     assert response.status_code == 400
+
+
+def test_import_settings_validate(db, api_client, test_connection):
+    workspace_id = 1
+
+    url = '/api/v2/workspaces/{}/import_settings/'.format(workspace_id)
+
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    # with code import PROJECT and DEPARTMENT
+    configurations_object = Configuration.objects.get(workspace_id=workspace_id)
+    configurations_object.import_categories = False
+    configurations_object.import_code_fields = ['PROJECT', 'DEPARTMENT']
+    configurations_object.save()
+
+    response = api_client.put(
+        url,
+        data=data['import_setting_validation_payload'],
+        format='json'
+    )
+
+    assert response.status_code == 200
+
+    assert dict_compare_keys(json.loads(response.content), data['import_setting_validation_response']) == [], 'import settings api returns a diff in the keys'
+
+    # with removing DEPARTMENT from import_code_fields
+
+    payload_data = data['import_setting_validation_payload']
+    payload_data['configurations']['import_code_fields'] = ['PROJECT']
+
+    response = api_client.put(
+        url,
+        data=payload_data,
+        format='json'
+    )
+
+    assert response.status_code == 400
+
+    # with importing ACCOUNT
+    payload_data = data['import_setting_validation_payload']
+    payload_data['configurations']['import_code_fields'] = ['ACCOUNT', 'PROJECT', 'DEPARTMENT']
+
+    response = api_client.put(
+        url,
+        data=payload_data,
+        format='json'
+    )
+
+    assert response.status_code == 200
+
+    response_data = data['import_setting_validation_response']
+    response_data['configurations']['import_code_fields'] = ['PROJECT', 'DEPARTMENT', 'ACCOUNT']
+    assert dict_compare_keys(json.loads(response.content), response_data) == [], 'import settings api returns a diff in the keys'
+
+    # adding _ACCOUNT to import_code_fields even though we have ACCOUNT
+    payload_data = data['import_setting_validation_payload']
+    payload_data['configurations']['import_code_fields'] = ['_ACCOUNT', 'PROJECT', 'DEPARTMENT']
+
+    response = api_client.put(
+        url,
+        data=payload_data,
+        format='json'
+    )
+
+    assert response.status_code == 400
+
+    # importing EXPENSE_TYPE without code
+    payload_data = data['import_setting_validation_payload']
+    payload_data['configurations']['import_code_fields'] = ['PROJECT', 'DEPARTMENT', 'ACCOUNT']
+
+    response = api_client.put(
+        url,
+        data=payload_data,
+        format='json'
+    )
+
+    assert response.status_code == 200
+
+    response_data = data['import_setting_validation_response']
+    response_data['configurations']['import_code_fields'] = ['PROJECT', 'DEPARTMENT', 'ACCOUNT', '_EXPENSE_TYPE']
+    assert dict_compare_keys(json.loads(response.content), response_data) == [], 'import settings api returns a diff in the keys'

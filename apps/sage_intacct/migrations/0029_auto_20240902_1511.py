@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('sage_intacct', '0027_journalentrylineitem_allocation_id'),
+        ('sage_intacct', '0028_add_billable_field_to_cct'),
     ]
 
     operations = [
