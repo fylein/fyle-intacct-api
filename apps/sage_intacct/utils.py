@@ -30,9 +30,16 @@ logger.level = logging.INFO
 
 SYNC_UPPER_LIMIT = {
     'projects': 25000,
-    'customers': 15000,
-    'items': 15000,
-    'classes': 15000
+    'customers': 10000,
+    'items': 5000,
+    'classes': 1000,
+    'accounts': 2000,
+    'expense_types': 1000,
+    'locations': 1000,
+    'departments': 1000,
+    'vendors': 20000,
+    'tax_details': 200,
+    'cost_types': 500000
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
@@ -98,162 +105,193 @@ class SageIntacctConnector:
 
         return tax_exclusive_amount, tax_amount
 
+    
+    def is_sync_under_limit(self, attribute_type, attribute_count):
+        
+        workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
+        if workspace_created_at > datetime(2023, 9, 25) and attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
+            return False
+        
+        return True
+
     def sync_accounts(self):
         """
         Get accounts
         """
-        accounts = self.connection.accounts.get_all()
-        is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
+        
+        attribute_count = self.connection.accounts.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'accounts', attribute_count=attribute_count)
+        if is_sync_under_limit:
+            accounts = self.connection.accounts.get_all()
+            is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
-        account_attributes = {
-            'account': [],
-            'ccc_account': []
-        }
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, 
-                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail', 'code')
-        disabled_fields_map = {}
-
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail'],
-                'code': destination_attribute['code']
+            account_attributes = {
+                'account': [],
+                'ccc_account': []
             }
+            destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, 
+                    attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail', 'code')
+            disabled_fields_map = {}
 
-        for account in accounts:
-            if account['STATUS'] == 'active':
+            for destination_attribute in destination_attributes:
+                disabled_fields_map[destination_attribute['destination_id']] = {
+                    'value': destination_attribute['value'],
+                    'detail': destination_attribute['detail'],
+                    'code': destination_attribute['code']
+                }
+
+            for account in accounts:
+                if account['STATUS'] == 'active':
+                    account_attributes['account'].append({
+                        'attribute_type': 'ACCOUNT',
+                        'display_name': 'account',
+                        'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
+                        'destination_id': account['ACCOUNTNO'],
+                        'active': True,
+                        'detail': {
+                            'account_type': account['ACCOUNTTYPE']
+                        },
+                        'code': account['ACCOUNTNO']
+                    })
+                    if account['ACCOUNTNO'] in disabled_fields_map:
+                        disabled_fields_map.pop(account['ACCOUNTNO'])
+
+            # For setting active to False
+            # During the initial run we only pull in the active ones.
+            # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
+                # If yes then we pop the item from the disable_field_map else we set the active = True.
+            # This should take care of delete as well as inactive case since we are checking the status=Active case.
+            for destination_id in disabled_fields_map:
                 account_attributes['account'].append({
                     'attribute_type': 'ACCOUNT',
                     'display_name': 'account',
-                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
-                    'destination_id': account['ACCOUNTNO'],
-                    'active': True,
-                    'detail': {
-                        'account_type': account['ACCOUNTTYPE']
-                    },
-                    'code': account['ACCOUNTNO']
+                    'value': disabled_fields_map[destination_id]['value'],
+                    'destination_id': destination_id,
+                    'active': False,
+                    'detail': disabled_fields_map[destination_id]['detail'],
+                    'code': disabled_fields_map[destination_id]['code']
                 })
-                if account['ACCOUNTNO'] in disabled_fields_map:
-                    disabled_fields_map.pop(account['ACCOUNTNO'])
 
-        # For setting active to False
-        # During the initial run we only pull in the active ones.
-        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-            # If yes then we pop the item from the disable_field_map else we set the active = True.
-        # This should take care of delete as well as inactive case since we are checking the status=Active case.
-        for destination_id in disabled_fields_map:
-            account_attributes['account'].append({
-                'attribute_type': 'ACCOUNT',
-                'display_name': 'account',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail'],
-                'code': disabled_fields_map[destination_id]['code']
-            })
-
-        for attribute_type, account_attribute in account_attributes.items():
-            if account_attribute:
-                DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    account_attribute,
-                    attribute_type.upper(),
-                    self.workspace_id,
-                    True,
-                    attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
-                    is_import_to_fyle_enabled=is_account_import_enabled
-                )
+            for attribute_type, account_attribute in account_attributes.items():
+                if account_attribute:
+                    DestinationAttribute.bulk_create_or_update_destination_attributes(
+                        account_attribute,
+                        attribute_type.upper(),
+                        self.workspace_id,
+                        True,
+                        attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
+                        is_import_to_fyle_enabled=is_account_import_enabled
+                    )
+            return []
+        
+        logger.info('Skipping sync of accounts for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
 
     def sync_departments(self):
         """
         Get departments
         """
-        departments = self.connection.departments.get_all(field='STATUS', value='active')
-        is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
+        attribute_count = self.connection.departments.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'departments', attribute_count = attribute_count)
 
-        department_attributes = []
+        if is_sync_under_limit:
+            departments = self.connection.departments.get_all(field='STATUS', value='active')
+            is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
 
-        for department in departments:
-            department_attributes.append({
-                'attribute_type': 'DEPARTMENT',
-                'display_name': 'department',
-                'value': department['TITLE'],
-                'destination_id': department['DEPARTMENTID'],
-                'code': department['DEPARTMENTID'],
-                'active': True
-            })
+            department_attributes = []
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            department_attributes,
-            'DEPARTMENT',
-            self.workspace_id,
-            True,
-            attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT'),
-            is_import_to_fyle_enabled=is_import_enabled
-        )
+            for department in departments:
+                department_attributes.append({
+                    'attribute_type': 'DEPARTMENT',
+                    'display_name': 'department',
+                    'value': department['TITLE'],
+                    'destination_id': department['DEPARTMENTID'],
+                    'code': department['DEPARTMENTID'],
+                    'active': True
+                })
 
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                department_attributes,
+                'DEPARTMENT',
+                self.workspace_id,
+                True,
+                attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT'),
+                is_import_to_fyle_enabled=is_import_enabled
+            )
+
+            return []
+        
+        logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
+
 
     def sync_expense_types(self):
         """
         Get expense types
         """
-        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
-        expense_types = self.connection.expense_types.get_all()
+        attribute_count = self.connection.expense_types.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'expense_types', attribute_count = attribute_count)
 
-        expense_types_attributes = []
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail', 'code')
-        disabled_fields_map = {}
+        if is_sync_under_limit:
+            is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
+            expense_types = self.connection.expense_types.get_all()
 
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail'],
-                'code': destination_attribute['code']
-            }
+            expense_types_attributes = []
+            destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
+                    attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail', 'code')
+            disabled_fields_map = {}
 
-        for expense_type in expense_types:
-            if expense_type['STATUS'] == 'active':
+            for destination_attribute in destination_attributes:
+                disabled_fields_map[destination_attribute['destination_id']] = {
+                    'value': destination_attribute['value'],
+                    'detail': destination_attribute['detail'],
+                    'code': destination_attribute['code']
+                }
+
+            for expense_type in expense_types:
+                if expense_type['STATUS'] == 'active':
+                    expense_types_attributes.append({
+                        'attribute_type': 'EXPENSE_TYPE',
+                        'display_name': 'Expense Types',
+                        'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
+                        'destination_id': expense_type['ACCOUNTLABEL'],
+                        'active': True,
+                        'detail': {
+                            'gl_account_no': expense_type['GLACCOUNTNO'],
+                            'gl_account_title': expense_type['GLACCOUNTTITLE']
+                        },
+                        'code': expense_type['ACCOUNTLABEL']
+                    })
+                    if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
+                        disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
+            
+            # For setting active to False
+            # During the initial run we only pull in the active ones.
+            # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
+                # If yes then we pop the item from the disable_field_map else we set the active = True.
+            # This should take care of delete as well as inactive case since we are checking the status=Active case.
+            for destination_id in disabled_fields_map:
                 expense_types_attributes.append({
                     'attribute_type': 'EXPENSE_TYPE',
                     'display_name': 'Expense Types',
-                    'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
-                    'destination_id': expense_type['ACCOUNTLABEL'],
-                    'active': True,
-                    'detail': {
-                        'gl_account_no': expense_type['GLACCOUNTNO'],
-                        'gl_account_title': expense_type['GLACCOUNTTITLE']
-                    },
-                    'code': expense_type['ACCOUNTLABEL']
+                    'value': disabled_fields_map[destination_id]['value'],
+                    'destination_id': destination_id,
+                    'active': False,
+                    'detail': disabled_fields_map[destination_id]['detail'],
+                    'code': disabled_fields_map[destination_id]['code']
                 })
-                if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
-                    disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
-        
-        # For setting active to False
-        # During the initial run we only pull in the active ones.
-        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-            # If yes then we pop the item from the disable_field_map else we set the active = True.
-        # This should take care of delete as well as inactive case since we are checking the status=Active case.
-        for destination_id in disabled_fields_map:
-            expense_types_attributes.append({
-                'attribute_type': 'EXPENSE_TYPE',
-                'display_name': 'Expense Types',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail'],
-                'code': disabled_fields_map[destination_id]['code']
-            })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            expense_types_attributes,
-            'EXPENSE_TYPE',
-            self.workspace_id,
-            True,
-            attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
-            is_import_to_fyle_enabled=is_expense_type_import_enabled
-        )
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                expense_types_attributes,
+                'EXPENSE_TYPE',
+                self.workspace_id,
+                True,
+                attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
+                is_import_to_fyle_enabled=is_expense_type_import_enabled
+            )
+            return []
+        
+        logger.info('Skipping sync of expense_type for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
 
     def sync_charge_card_accounts(self):
@@ -304,25 +342,32 @@ class SageIntacctConnector:
         """
         Sync of Sage Intacct Cost Types
         """
-        args = {
-            'field': 'STATUS',
-            'value': 'active'
-        }
 
-        dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id).first()
+        attribute_count = self.connection.cost_types.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'cost_types', attribute_count = attribute_count)
+        if is_sync_under_limit:
+            args = {
+                'field': 'STATUS',
+                'value': 'active'
+            }
 
-        if dependent_field_setting and dependent_field_setting.last_synced_at:
-            # subtracting 1 day from the last_synced_at since time is not involved
-            latest_synced_timestamp = dependent_field_setting.last_synced_at - timedelta(days=1)
-            args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
+            dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id).first()
 
-        cost_types_generator = self.connection.cost_types.get_all_generator(**args)
+            if dependent_field_setting and dependent_field_setting.last_synced_at:
+                # subtracting 1 day from the last_synced_at since time is not involved
+                latest_synced_timestamp = dependent_field_setting.last_synced_at - timedelta(days=1)
+                args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
 
-        for cost_types in cost_types_generator:
-            CostType.bulk_create_or_update(cost_types, self.workspace_id)
+            cost_types_generator = self.connection.cost_types.get_all_generator(**args)
 
-        dependent_field_setting.last_synced_at = datetime.now()
-        dependent_field_setting.save()
+            for cost_types in cost_types_generator:
+                CostType.bulk_create_or_update(cost_types, self.workspace_id)
+
+            dependent_field_setting.last_synced_at = datetime.now()
+            dependent_field_setting.save()
+        
+        else:
+            logger.info('Skipping sync of cost_types for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
 
 
     def sync_projects(self):
@@ -330,8 +375,9 @@ class SageIntacctConnector:
         Get projects
         """
 
-        projects_count = self.connection.projects.count()
-        if projects_count < SYNC_UPPER_LIMIT['projects']:
+        attribute_count = self.connection.projects.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'projects', attribute_count = attribute_count)
+        if is_sync_under_limit:
             is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
             projects = self.connection.projects.get_all()
 
@@ -391,14 +437,18 @@ class SageIntacctConnector:
                 is_import_to_fyle_enabled=is_project_import_enabled
             )
 
+            return []
+        
+        logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
 
     def sync_items(self):
         """
         Get items
         """
-        count = self.connection.items.count()
-        if count <= SYNC_UPPER_LIMIT['items']:
+        attribute_count = self.connection.items.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'items', attribute_count = attribute_count)
+        if is_sync_under_limit:
             items = self.connection.items.get_all(field='STATUS', value='active')
 
             item_attributes = []
@@ -417,28 +467,39 @@ class SageIntacctConnector:
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 item_attributes, 'ITEM', self.workspace_id, True)
 
+            return []
+
+        logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
+
 
     def sync_locations(self):
         """
         Get locations
         """
-        locations = self.connection.locations.get_all(field='STATUS', value='active')
 
-        location_attributes = []
+        attribute_count = self.connection.locations.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'locations', attribute_count = attribute_count)
+        if is_sync_under_limit:
+            locations = self.connection.locations.get_all(field='STATUS', value='active')
 
-        for location in locations:
-            location_attributes.append({
-                'attribute_type': 'LOCATION',
-                'display_name': 'location',
-                'value': location['NAME'],
-                'destination_id': location['LOCATIONID'],
-                'active': True
-            })
+            location_attributes = []
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            location_attributes, 'LOCATION', self.workspace_id, True)
+            for location in locations:
+                location_attributes.append({
+                    'attribute_type': 'LOCATION',
+                    'display_name': 'location',
+                    'value': location['NAME'],
+                    'destination_id': location['LOCATIONID'],
+                    'active': True
+                })
 
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                location_attributes, 'LOCATION', self.workspace_id, True)
+
+            return []
+        
+        logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
 
     def __get_entity_slide_preference(self):
@@ -616,8 +677,9 @@ class SageIntacctConnector:
         """
         Get classes
         """
-        count = self.connection.classes.count()
-        if count <= SYNC_UPPER_LIMIT['classes']:
+        attribute_count = self.connection.classes.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'classes', attribute_count = attribute_count)
+        if is_sync_under_limit:
             classes = self.connection.classes.get_all(field='STATUS', value='active', fields=['NAME', 'CLASSID'])
             class_attributes = []
 
@@ -633,14 +695,19 @@ class SageIntacctConnector:
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 class_attributes, 'CLASS', self.workspace_id, True)
 
+            return []
+        
+        logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
+    
 
     def sync_customers(self):
         """
         Get Customers
         """
-        customers_count = self.connection.customers.count()
-        if customers_count < SYNC_UPPER_LIMIT['customers']:
+        attribute_count = self.connection.customers.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'customers', attribute_count = attribute_count)
+        if is_sync_under_limit:
             customers = self.connection.customers.get_all(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'])
 
             customer_attributes = []
@@ -657,31 +724,41 @@ class SageIntacctConnector:
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 customer_attributes, 'CUSTOMER', self.workspace_id, True)
 
+            return []
+
+        logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
+
 
     def sync_tax_details(self):
         """
         Get and Sync Tax Details
         """
-        attributes = []
-        tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
-        for tax_detail in tax_details:
-            if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
-                attributes.append({
-                    'attribute_type': 'TAX_DETAIL',
-                    'display_name': 'Tax Detail',
-                    'value': tax_detail['DETAILID'],
-                    'destination_id': tax_detail['DETAILID'],
-                    'active': True,
-                    'detail': {
-                        'tax_rate': float(tax_detail['VALUE']),
-                        'tax_solution_id': tax_detail['TAXSOLUTIONID']
-                    }
-                })
+        attribute_count = self.connection.tax_details.count()
+        is_sync_under_limit = self.is_sync_under_limit(attribute_type = 'tax_details', attribute_count = attribute_count)
+        if is_sync_under_limit:
+            attributes = []
+            tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
+            for tax_detail in tax_details:
+                if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
+                    attributes.append({
+                        'attribute_type': 'TAX_DETAIL',
+                        'display_name': 'Tax Detail',
+                        'value': tax_detail['DETAILID'],
+                        'destination_id': tax_detail['DETAILID'],
+                        'active': True,
+                        'detail': {
+                            'tax_rate': float(tax_detail['VALUE']),
+                            'tax_solution_id': tax_detail['TAXSOLUTIONID']
+                        }
+                    })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-                attributes, 'TAX_DETAIL', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                    attributes, 'TAX_DETAIL', self.workspace_id, True)
 
+            return []
+        
+        logger.info('Skipping sync of tax_details for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
         return []
 
     def create_destination_attribute(self, attribute: str, name: str, destination_id: str, email: str = None):
