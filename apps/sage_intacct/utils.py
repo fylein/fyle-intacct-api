@@ -1183,36 +1183,6 @@ class SageIntacctConnector:
         journal_entry_payload = []
 
         for lineitem in journal_entry_lineitems:
-            expense_link = self.get_expense_link(lineitem)
-            credit_line = {
-                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
-                'currency': journal_entry.currency,
-                'amount': lineitem.amount,
-                'tr_type': -1,
-                'description': lineitem.memo,
-                'department': lineitem.department_id,
-                'location': lineitem.location_id,
-                'projectid': lineitem.project_id,
-                'customerid': lineitem.customer_id,
-                'vendorid': lineitem.vendor_id,
-                'employeeid': lineitem.employee_id,
-                'itemid': lineitem.item_id,
-                'classid': lineitem.class_id,
-                'itemid': lineitem.item_id,
-                'taskid': lineitem.task_id,
-                'costtypeid': lineitem.cost_type_id,
-                'billable': lineitem.billable if configuration.is_journal_credit_billable else None,
-                'customfields': {
-                   'customfield': [
-                    {
-                        'customfieldname': 'FYLE_EXPENSE_URL',
-                        'customfieldvalue': expense_link
-                    },
-                   ]
-                }
-            }
-
-            tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
             dimensions_values = {
                     'project_id': lineitem.project_id,
@@ -1246,6 +1216,36 @@ class SageIntacctConnector:
 
                 allocation_dimensions = set(allocation_detail.keys())
                 lineitem.user_defined_dimensions = [user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
+                
+            expense_link = self.get_expense_link(lineitem)
+            credit_line = { 
+                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
+                'currency': journal_entry.currency,
+                'amount': lineitem.amount,
+                'tr_type': -1,
+                'description': lineitem.memo,
+                'department': dimensions_values['department_id'],
+                'location': dimensions_values['location_id'],
+                'projectid': dimensions_values['project_id'],
+                'customerid': dimensions_values['customer_id'],
+                'vendorid': lineitem.vendor_id,
+                'employeeid': lineitem.employee_id,
+                'classid': dimensions_values['class_id'],
+                'itemid': dimensions_values['item_id'],
+                'taskid': dimensions_values['task_id'],
+                'costtypeid': dimensions_values['cost_type_id'],
+                'billable': lineitem.billable if configuration.is_journal_credit_billable else None,
+                'allocation':lineitem.allocation_id,
+                'customfields': {
+                   'customfield': [
+                    {
+                        'customfieldname': 'FYLE_EXPENSE_URL',
+                        'customfieldvalue': expense_link
+                    },
+                   ]
+                }
+            }
+            tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
             debit_line = {
                 'accountno': lineitem.gl_account_number,
