@@ -109,6 +109,17 @@ class SageIntacctConnector:
         return None
 
 
+    def generate_params(self, fields, latest_updated_at):
+        params = {'fields': fields}
+
+        if latest_updated_at:
+            params['updated_at'] = latest_updated_at
+        else:
+            params['field'] = 'STATUS'
+            params['value'] = 'active'
+
+        return params
+
     def sync_accounts(self):
         """
         Get accounts
@@ -117,13 +128,7 @@ class SageIntacctConnector:
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
 
-        params = {'fields': fields}
-
-        if latest_updated_at:
-            params['updated_at'] = latest_updated_at
-        else:
-            params['field'] = 'STATUS'
-            params['value'] = 'active'
+        params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
     
         account_generator = self.connection.accounts.get_all_generator(**params)
         is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
@@ -199,13 +204,7 @@ class SageIntacctConnector:
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
 
-        params = {'fields': fields}
-
-        if latest_updated_at:
-            params['updated_at'] = latest_updated_at
-        else:
-            params['field'] = 'STATUS'
-            params['value'] = 'active'
+        params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
 
         expense_type_generator = self.connection.expense_types.get_all_generator(**params)
         is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
@@ -317,14 +316,7 @@ class SageIntacctConnector:
         if projects_count < SYNC_UPPER_LIMIT['projects']:
             fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
             latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-            params = {'fields': fields}
-            if latest_updated_at:
-                params['updated_at'] = latest_updated_at
-            else:
-                params['field'] = 'STATUS'
-                params['value'] = 'active'
-
-            print(params)
+            params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
             project_generator = self.connection.projects.get_all_generator(**params)
             is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
@@ -839,46 +831,25 @@ class SageIntacctConnector:
         """
         Get vendors
         """
-        vendor_generator = self.connection.vendors.get_all_generator()
+        fields = ['DISPLAYCONTACT.EMAIL1', 'NAME', 'VENDORID', 'STATUS']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
+        params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
+        vendor_generator = self.connection.vendors.get_all_generator(**params)
         vendor_attributes = []
-
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'VENDOR', display_name='vendor').values('destination_id', 'value', 'detail')
-        disabled_fields_map = {}
-
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail']
-            }
 
         for vendors in vendor_generator:
             for vendor in vendors:
-                if vendor['STATUS'] == 'active':
-                    detail = {
-                        'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
-                    }
-                    vendor_attributes.append({
-                        'attribute_type': 'VENDOR',
-                        'display_name': 'vendor',
-                        'value': vendor['NAME'],
-                        'destination_id': vendor['VENDORID'],
-                        'detail': detail,
-                        'active': True
-                    })
-
-                    if vendor['VENDORID'] in disabled_fields_map:
-                        disabled_fields_map.pop(vendor['VENDORID'])
-
-        for destination_id in disabled_fields_map:
-            vendor_attributes.append({
-                'attribute_type': 'VENDOR',
-                'display_name': 'vendor',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail']
-            })
+                detail = {
+                    'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
+                }
+                vendor_attributes.append({
+                    'attribute_type': 'VENDOR',
+                    'display_name': 'vendor',
+                    'value': vendor['NAME'],
+                    'destination_id': vendor['VENDORID'],
+                    'detail': detail,
+                    'active': True
+                })
 
         if vendor_attributes:
             DestinationAttribute.bulk_create_or_update_destination_attributes(
