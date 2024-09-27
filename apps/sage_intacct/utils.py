@@ -317,7 +317,6 @@ class SageIntacctConnector:
         if projects_count < SYNC_UPPER_LIMIT['projects']:
             fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
             latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-
             params = {'fields': fields}
             if latest_updated_at:
                 params['updated_at'] = latest_updated_at
@@ -325,6 +324,7 @@ class SageIntacctConnector:
                 params['field'] = 'STATUS'
                 params['value'] = 'active'
 
+            print(params)
             project_generator = self.connection.projects.get_all_generator(**params)
             is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
@@ -345,7 +345,8 @@ class SageIntacctConnector:
                         'active': project['STATUS'] == 'active',
                         'detail': detail
                     })
-
+            
+            print(project_attributes)
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes,
                 'PROJECT',
@@ -655,20 +656,23 @@ class SageIntacctConnector:
         Get and Sync Tax Details
         """
         attributes = []
-        tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
-        for tax_detail in tax_details:
-            if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
-                attributes.append({
-                    'attribute_type': 'TAX_DETAIL',
-                    'display_name': 'Tax Detail',
-                    'value': tax_detail['DETAILID'],
-                    'destination_id': tax_detail['DETAILID'],
-                    'active': True,
-                    'detail': {
-                        'tax_rate': float(tax_detail['VALUE']),
-                        'tax_solution_id': tax_detail['TAXSOLUTIONID']
-                    }
-                })
+        fields = ['DETAILID', 'VALUE', 'TAXSOLUTIONID']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='TAX_DETAIL')
+        tax_details_generator = self.connection.tax_details.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        for tax_details in tax_details_generator:
+            for tax_detail in tax_details:
+                if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
+                    attributes.append({
+                        'attribute_type': 'TAX_DETAIL',
+                        'display_name': 'Tax Detail',
+                        'value': tax_detail['DETAILID'],
+                        'destination_id': tax_detail['DETAILID'],
+                        'active': True,
+                        'detail': {
+                            'tax_rate': float(tax_detail['VALUE']),
+                            'tax_solution_id': tax_detail['TAXSOLUTIONID']
+                        }
+                    })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
                 attributes, 'TAX_DETAIL', self.workspace_id, True)
