@@ -69,7 +69,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
     use_cost_code_in_naming = 'COST_CODE' in configuration.import_code_fields
 
     BATCH_SIZE = 200
-    posted_cost_codes = []
+    posted_cost_codes = set()
     total_batches = 0
     processed_batches = 0
     is_errored = False
@@ -126,7 +126,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
 def process_cost_code_batch(
     platform: PlatformConnector,
     cost_type_ids: List[int],
-    posted_cost_codes: List[str],
+    posted_cost_codes: set[str],
     use_job_code_in_naming: bool,
     use_cost_code_in_naming: bool,
     dependent_field_setting: DependentFieldSetting,
@@ -166,7 +166,7 @@ def process_cost_code_batch(
 
     for project in projects_batch:
         payload = []
-        cost_code_names = []
+        cost_code_names = set()
         project_name = prepend_code_to_name(use_job_code_in_naming, project['project_name'], project['project_id'])
 
         if project_name in existing_projects_in_fyle:
@@ -179,14 +179,14 @@ def process_cost_code_batch(
                     'expense_field_value': cost_code_name,
                     'is_enabled': is_enabled
                 })
-                cost_code_names.append(cost_code['cost_code_name'])
+                cost_code_names.add(cost_code['cost_code_name'])
 
             if payload:
                 sleep(0.2)
                 try:
                     total_batches += 1
                     platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
-                    posted_cost_codes.extend(cost_code_names)
+                    posted_cost_codes.update(cost_code_names)
                     processed_batches += 1
                 except Exception as exception:
                     is_errored = True
@@ -321,7 +321,7 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
 
     posted_cost_types, is_cost_code_errored = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters)
     if posted_cost_types:
-        filters['task_name__in'] = posted_cost_types
+        filters['task_name__in'] = list(set(posted_cost_types))
 
     if cost_code_import_log.status in ['FAILED', 'FATAL']:
         cost_type_import_log.status = 'FAILED'
