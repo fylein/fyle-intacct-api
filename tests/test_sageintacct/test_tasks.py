@@ -961,6 +961,22 @@ def test_create_ap_payment(mocker, db):
     assert task_log.status == 'COMPLETE'
 
 
+def test_validate_for_skipping_payment(mocker, db):
+    mock_task_log = mocker.Mock(spec=TaskLog)
+    mock_task_log.created_at = datetime.now().replace(tzinfo=timezone.utc) - relativedelta(months=3)
+    mock_task_log.updated_at = datetime.now().replace(tzinfo=timezone.utc) - relativedelta(months=3)
+
+    mock_queryset = mocker.Mock()
+    mock_queryset.first.return_value = mock_task_log
+
+    mocker.patch('apps.tasks.models.TaskLog.objects.filter', return_value=mock_queryset)
+
+    mock_export_module = mocker.Mock(spec=Bill)
+    mock_export_module.expense_group.id = 1
+
+    result = validate_for_skipping_payment(mock_export_module, workspace_id=1, type='BILL')
+    assert result is True
+
 def test_post_ap_payment_exceptions(mocker, db):
     mocker.patch(
         'sageintacctsdk.apis.Bills.post',
