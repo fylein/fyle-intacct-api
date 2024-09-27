@@ -92,7 +92,7 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     posted_cost_types, is_errored = post_dependent_cost_code(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
     assert mock.call_count == 1
-    assert posted_cost_types == ['task']
+    assert posted_cost_types == {'task'}
     assert is_errored is False
     assert import_log.status == 'COMPLETE'
     assert import_log.total_batches_count == 1
