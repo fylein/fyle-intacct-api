@@ -207,7 +207,7 @@ def test_create_or_update_employee_mapping(mocker, db):
     )
     mocker.patch(
         'sageintacctsdk.apis.Employees.post',
-        return_value={'data': {'employee': data['get_employees'][0]}}
+        return_value={'data': {'employee': data['get_employee'][0]}}
     )
     workspace_id = 1
 

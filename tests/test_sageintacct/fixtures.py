@@ -313,7 +313,7 @@ data = {
             'Version': 'GLOBAL'
         }
     ],
-    'get_projects':[
+    'get_projects':[[
         {
             'RECORDNO':'111',
             'PROJECTID':'10064',
@@ -337,8 +337,8 @@ data = {
             'MEGAENTITYID':'600',
             'MEGAENTITYNAME':'Australia'
         }
-    ],
-    'get_departments':[
+    ]],
+    'get_departments':[[
         {
             'RECORDNO':'3',
             'DEPARTMENTID':'300',
@@ -349,7 +349,7 @@ data = {
             'STATUS':'active',
             'CUSTTITLE':'None'
         }
-    ],
+    ]],
     'get_charge_card_accounts':[
         {
             'RECORDNO':'3',
@@ -367,13 +367,13 @@ data = {
             'OUTSOURCECARD':'None'
         }
     ],
-    'get_classes':[
+    'get_classes':[[
         {
             'NAME':'Small Business',
             'CLASSID':'400'
         }
-    ],
-    'get_expense_payment_types':[
+    ]],
+    'get_expense_payment_types':[[
         {
             'RECORDNO':'1',
             'NAME':'Company Credit Card',
@@ -390,8 +390,8 @@ data = {
             'MEGAENTITYID':'None',
             'MEGAENTITYNAME':'None'
         }
-    ],
-    'get_location_entities':[
+    ]],
+    'get_location_entities':[[
         {
             'RECORDNO':'9',
             'LOCATIONID':'600',
@@ -424,8 +424,8 @@ data = {
             'ADDRESSCOUNTRYDEFAULT':'Australia',
             'RECORD_URL':'https://www-p02.intacct.com/ia/acct/ur.phtml?.r=5jqUgbnTPWSyfcQt2WN8R_O-Kf-mmZi3S99kptb_bT0'
         }
-    ],
-    'get_locations':[
+    ]],
+    'get_locations':[[
         {
             'RECORDNO':'9',
             'LOCATIONID':'600',
@@ -434,8 +434,8 @@ data = {
             'STATUS':'active',
             'CURRENCY':'AUD'
         }
-    ],
-    'get_payment_accounts':[
+    ]],
+    'get_payment_accounts':[[
         {
             'BANKACCOUNTID':'500_CHK',
             'BANKACCOUNTNO':'525751035443',
@@ -451,8 +451,8 @@ data = {
             'ACHBANKID':'None',
             'COMPANYNAME':'None'
         }
-    ],
-    'get_tax_details':[
+    ]],
+    'get_tax_details':[[
         {
             'RECORDNO':'78',
             'DETAILID':'UK Import Services Zero Rate',
@@ -475,7 +475,7 @@ data = {
             'MEGAENTITYID':'None',
             'MEGAENTITYNAME':'None'
         }
-    ],
+    ]],
     'get_dimensions':[
         {
             'objectName':'DEPARTMENT',
@@ -485,7 +485,7 @@ data = {
             'enabledInGL':'true'
         }
     ],
-    'get_accounts':[
+    'get_accounts':[[
         {
             'RECORDNO':'287',
             'ACCOUNTNO':'16200',
@@ -497,8 +497,58 @@ data = {
             'CATEGORY':'Patents',
             'ALTERNATIVEACCOUNT':'None'
         }
-    ],
-    'get_employees':[
+    ]],
+    'get_employees':[[
+        {
+            'RECORDNO':'6',
+            'EMPLOYEEID':'1005',
+            'SSN':'246602649',
+            'TITLE':'Project Manager',
+            'LOCATIONID':'None',
+            'DEPARTMENTID':'100',
+            'BIRTHDATE':'11/11/1982',
+            'STARTDATE':'08/17/2014',
+            'ENDDATE':'None',
+            'STATUS':'active',
+            'EMPLOYEETYPE':'Full Time',
+            'EMPLOYEETYPE1099TYPE':'None',
+            'GENDER':'male',
+            'TERMINATIONTYPE':'None',
+            'CONTACT_NAME':'Franco, Ryan',
+            'CONTACT.CONTACTNAME':'Franco, Ryan',
+            'CONTACT.PREFIX':'None',
+            'CONTACT.FIRSTNAME':'Ryan',
+            'CONTACT.INITIAL':'None',
+            'CONTACT.LASTNAME':'Franco',
+            'CONTACT.COMPANYNAME':'None',
+            'CONTACT.PRINTAS':'Franco, Ryan',
+            'CONTACT.PHONE1':'415-468-5786',
+            'CONTACT.PHONE2':'None',
+            'CONTACT.CELLPHONE':'None',
+            'CONTACT.PAGER':'None',
+            'CONTACT.FAX':'None',
+            'CONTACT.EMAIL1':'ryan@demo.com',
+            'CONTACT.EMAIL2':'None',
+            'CONTACT.URL1':'None',
+            'CONTACT.URL2':'None',
+            'CONTACT.MAILADDRESS.ADDRESS1':'12401 Clinton Ave',
+            'CONTACT.MAILADDRESS.ADDRESS2':'None',
+            'CONTACT.MAILADDRESS.CITY':'NY',
+            'CONTACT.MAILADDRESS.STATE':'NY',
+            'CONTACT.MAILADDRESS.ZIP':'10010',
+            'CONTACT.MAILADDRESS.COUNTRY':'United States',
+            'CONTACT.MAILADDRESS.COUNTRYCODE':'US',
+            'CURRENCY':'None',
+            'WHENCREATED':'02/10/2020 19:57:41',
+            'WHENMODIFIED':'03/03/2020 19:03:33',
+            'PAYMETHODKEY':'None',
+            'CONTACTKEY':'31',
+            'MEGAENTITYKEY':'None',
+            'MEGAENTITYID':'None',
+            'MEGAENTITYNAME':'None'
+        }
+    ]],
+    'get_employee':[
         {
             'RECORDNO':'6',
             'EMPLOYEEID':'1005',
@@ -548,13 +598,40 @@ data = {
             'MEGAENTITYNAME':'None'
         }
     ],
-    'get_customers':[
+    'get_customers':[[
         {
             'NAME':'AB SQUARE',
             'CUSTOMERID':'10001'
         }
-    ],
-    'get_vendors':[
+    ]],
+    'get_vendors':[[
+        {
+            'RECORDNO':'51',
+            'NAME':'Ashwin',
+            'VENDORID':'Ashwin',
+            'PARENTKEY':'None',
+            'PARENTID':'None',
+            'PARENTNAME':'None',
+            'DISPLAYCONTACT.CONTACTNAME':'Ashwin(VAshwin)',
+            'DISPLAYCONTACT.COMPANYNAME':'Ashwin',
+            'DISPLAYCONTACT.FIRSTNAME':'FyleT',
+            'DISPLAYCONTACT.LASTNAME':'FyleT',
+            'DISPLAYCONTACT.INITIAL':'None',
+            'DISPLAYCONTACT.PRINTAS':'Ashwin',
+            'DISPLAYCONTACT.PHONE1':'None',
+            'DISPLAYCONTACT.PHONE2':'None',
+            'DISPLAYCONTACT.EMAIL1':'ashwin.t@fyle.in',
+            'DISPLAYCONTACT.EMAIL2':'None',
+            'VENDORACCOUNTNO':'None',
+            'WHENMODIFIED':'03/03/2020 19:03:33',
+            'VENDTYPE':'None',
+            'ACCOUNTLABEL':'None',
+            'APACCOUNT':'None',
+            'APACCOUNTTITLE':'None',
+            'STATUS':'active'
+        }
+    ]],
+    'get_vendor':[
         {
             'RECORDNO':'51',
             'NAME':'Ashwin',
@@ -609,7 +686,7 @@ data = {
             }
         }
     },
-    'get_expense_types':[
+    'get_expense_types':[[
         {
             'RECORDNO':'1',
             'ACCOUNTLABEL':'Airfare',
@@ -619,10 +696,10 @@ data = {
             'STATUS':'active',
             'ITEMID':'1004'
         }
-    ],
+    ]],
     'get_user_defined_dimensions': [{'objectName': 'DEPARTMENT', 'objectLabel': 'Department', 'termLabel': 'Department', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'LOCATION', 'objectLabel': 'Location', 'termLabel': 'Location', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'PROJECT', 'objectLabel': 'Project', 'termLabel': 'Project', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'CUSTOMER', 'objectLabel': 'Customer', 'termLabel': 'Customer', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'VENDOR', 'objectLabel': 'Vendor', 'termLabel': 'Vendor', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'EMPLOYEE', 'objectLabel': 'Employee', 'termLabel': 'Employee', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'ITEM', 'objectLabel': 'Item', 'termLabel': 'Item', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'CLASS', 'objectLabel': 'Class', 'termLabel': 'Class', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'CONTRACT', 'objectLabel': 'Contract', 'termLabel': 'Contract', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'TASK', 'objectLabel': 'Task', 'termLabel': 'Task', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'WAREHOUSE', 'objectLabel': 'Warehouse', 'termLabel': 'Warehouse', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'COSTTYPE', 'objectLabel': 'Cost type', 'termLabel': 'Cost type', 'userDefinedDimension': 'false', 'enabledInGL': 'false'}, {'objectName': 'FIXEDASSET', 'objectLabel': 'Asset', 'termLabel': 'Asset', 'userDefinedDimension': 'false', 'enabledInGL': 'false'}, {'objectName': 'PLACE', 'objectLabel': 'Place', 'termLabel': 'Place', 'userDefinedDimension': 'true', 'enabledInGL': 'true'}, {'objectName': 'TEAM', 'objectLabel': 'Team', 'termLabel': 'Team', 'userDefinedDimension': 'true', 'enabledInGL': 'true'}],
     'get_dimension_value': [{'createdBy': '10', 'name': 'CCC', 'id': '10003', 'updatedBy': '10'}, {'createdBy': '10', 'name': 'Integrations', 'id': '10002', 'updatedBy': '10'}],
-    'get_items': [{'RECORDNO': '59', 'ITEMID': '1011', 'STATUS': 'active', 'MRR': 'false', 'NAME': 'New item to be added', 'EXTENDED_DESCRIPTION': None, 'PRODUCTLINEID': None, 'GLGROUP': None, 'ITEMTYPE': 'Non-Inventory'}],
+    'get_items': [[{'RECORDNO': '59', 'ITEMID': '1011', 'STATUS': 'active', 'MRR': 'false', 'NAME': 'New item to be added', 'EXTENDED_DESCRIPTION': None, 'PRODUCTLINEID': None, 'GLGROUP': None, 'ITEMTYPE': 'Non-Inventory'}]],
 
     'allocations': [
         {
