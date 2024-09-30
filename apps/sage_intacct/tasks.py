@@ -603,7 +603,10 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
         
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
         logger.info('Updated Expense Group %s successfully', expense_group.id)
 
         if last_export:
@@ -739,7 +742,10 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
 
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
         logger.info('Updated Expense Group %s successfully', expense_group.id)
 
         if last_export:
@@ -869,7 +875,10 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
         
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
         if last_export:
             update_last_export_details(expense_group.workspace_id)
 
@@ -997,7 +1006,10 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
 
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
@@ -1174,7 +1186,7 @@ def create_ap_payment(workspace_id):
                         bill.expense_group
                     )
                     detail = {
-                        'expense_group_id': bill.expense_group,
+                        'expense_group_id': bill.expense_group.id,
                         'message': 'Sage-Intacct Account not connected'
                     }
                     task_log.status = 'FAILED'
