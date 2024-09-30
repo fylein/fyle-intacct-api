@@ -1186,7 +1186,7 @@ def create_ap_payment(workspace_id):
                         bill.expense_group
                     )
                     detail = {
-                        'expense_group_id': bill.expense_group,
+                        'expense_group_id': bill.expense_group.id,
                         'message': 'Sage-Intacct Account not connected'
                     }
                     task_log.status = 'FAILED'
