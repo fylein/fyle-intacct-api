@@ -109,7 +109,7 @@ class SageIntacctConnector:
         return None
 
 
-    def generate_params(self, fields, latest_updated_at):
+    def construct_get_all_generator_params(self, fields, latest_updated_at):
         params = {'fields': fields}
 
         if latest_updated_at:
@@ -128,7 +128,7 @@ class SageIntacctConnector:
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
 
-        params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
     
         account_generator = self.connection.accounts.get_all_generator(**params)
         is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
@@ -204,7 +204,7 @@ class SageIntacctConnector:
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
 
-        params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
 
         expense_type_generator = self.connection.expense_types.get_all_generator(**params)
         is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
@@ -316,7 +316,7 @@ class SageIntacctConnector:
         if projects_count < SYNC_UPPER_LIMIT['projects']:
             fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
             latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-            params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
+            params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
             project_generator = self.connection.projects.get_all_generator(**params)
             is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
@@ -833,7 +833,7 @@ class SageIntacctConnector:
         """
         fields = ['DISPLAYCONTACT.EMAIL1', 'NAME', 'VENDORID', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
-        params = self.generate_params(fields=fields, latest_updated_at=latest_updated_at)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         vendor_generator = self.connection.vendors.get_all_generator(**params)
         vendor_attributes = []
 
@@ -848,7 +848,7 @@ class SageIntacctConnector:
                     'value': vendor['NAME'],
                     'destination_id': vendor['VENDORID'],
                     'detail': detail,
-                    'active': True
+                    'active': vendor['STATUS'] == 'active'
                 })
 
         if vendor_attributes:
