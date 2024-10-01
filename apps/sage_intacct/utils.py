@@ -355,7 +355,7 @@ class SageIntacctConnector:
         """
         count = self.connection.items.count()
         if count <= SYNC_UPPER_LIMIT['items']:
-            fields = ['NAME', 'ITEMID']
+            fields = ['NAME', 'ITEMID', 'ITEMTYPE']
             latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
             item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
