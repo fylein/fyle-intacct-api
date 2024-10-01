@@ -338,7 +338,6 @@ class SageIntacctConnector:
                         'detail': detail
                     })
             
-            print(project_attributes)
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes,
                 'PROJECT',
@@ -356,7 +355,7 @@ class SageIntacctConnector:
         """
         count = self.connection.items.count()
         if count <= SYNC_UPPER_LIMIT['items']:
-            fields = ['NAME', 'ITEMID']
+            fields = ['NAME', 'ITEMID', 'ITEMTYPE']
             latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
             item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
@@ -488,7 +487,7 @@ class SageIntacctConnector:
         """
         Get employees
         """
-        fields = ['CONTACT.EMAIL1', 'CONTACT.PRINTAS', 'DEPARTMENTID', 'CONTACT.CONTACTNAME', 'EMPLOYEEID']
+        fields = ['CONTACT.EMAIL1', 'CONTACT.PRINTAS', 'DEPARTMENTID', 'CONTACT.CONTACTNAME', 'EMPLOYEEID', 'LOCATIONID']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EMPLOYEE')
         employee_generator = self.connection.employees.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
@@ -648,7 +647,7 @@ class SageIntacctConnector:
         Get and Sync Tax Details
         """
         attributes = []
-        fields = ['DETAILID', 'VALUE', 'TAXSOLUTIONID']
+        fields = ['DETAILID', 'VALUE', 'TAXSOLUTIONID', 'TAXTYPE']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='TAX_DETAIL')
         tax_details_generator = self.connection.tax_details.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
         for tax_details in tax_details_generator:
