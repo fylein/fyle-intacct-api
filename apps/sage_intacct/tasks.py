@@ -1,7 +1,9 @@
 import logging
 import traceback
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from django.utils import timezone
 
 from django.db import transaction
 from django.db.models import Q, F
@@ -601,7 +603,10 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
         
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
         logger.info('Updated Expense Group %s successfully', expense_group.id)
 
         if last_export:
@@ -737,7 +742,10 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
 
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
         logger.info('Updated Expense Group %s successfully', expense_group.id)
 
         if last_export:
@@ -867,7 +875,10 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
         
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
         if last_export:
             update_last_export_details(expense_group.workspace_id)
 
@@ -995,7 +1006,10 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
 
-        generate_export_url_and_update_expense(expense_group)
+        try:
+            generate_export_url_and_update_expense(expense_group)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
@@ -1081,6 +1095,29 @@ def check_expenses_reimbursement_status(expenses, workspace_id, platform, filter
     return is_paid
 
 
+def validate_for_skipping_payment(export_module: Bill | ExpenseReport, workspace_id: int, type: str):
+    task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(export_module.expense_group.id), workspace_id=workspace_id, type=type).first()
+    if task_log:
+        now = timezone.now()
+
+        if now - relativedelta(months=2) > task_log.created_at:
+            export_module.is_retired = True
+            export_module.save()
+            return True
+
+        elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
+            # if updated_at is within 1 months will be skipped
+            if task_log.updated_at > now - relativedelta(months=1):
+                return True
+        
+        # If created is within 1 month
+        elif now - relativedelta(months=1) < task_log.created_at:
+            # Skip if updated within the last week
+            if task_log.updated_at > now - relativedelta(weeks=1):
+                return True
+    
+    return False
+
 def create_ap_payment(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
@@ -1088,7 +1125,7 @@ def create_ap_payment(workspace_id):
 
     bills: List[Bill] = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
-        expense_group__fund_source='PERSONAL'
+        expense_group__fund_source='PERSONAL', is_retired=False
     ).all()
 
     if bills:
@@ -1096,6 +1133,11 @@ def create_ap_payment(workspace_id):
             expense_group_reimbursement_status = check_expenses_reimbursement_status(
                 bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
             if expense_group_reimbursement_status:
+                
+                skip_payment = validate_for_skipping_payment(export_module=bill, workspace_id=workspace_id, type='CREATING_AP_PAYMENT')
+                if skip_payment:
+                    continue
+                
                 task_log, _ = TaskLog.objects.update_or_create(
                     workspace_id=workspace_id,
                     task_id='PAYMENT_{}'.format(bill.expense_group.id),
@@ -1144,7 +1186,7 @@ def create_ap_payment(workspace_id):
                         bill.expense_group
                     )
                     detail = {
-                        'expense_group_id': bill.expense_group,
+                        'expense_group_id': bill.expense_group.id,
                         'message': 'Sage-Intacct Account not connected'
                     }
                     task_log.status = 'FAILED'
@@ -1212,13 +1254,18 @@ def create_sage_intacct_reimbursement(workspace_id):
 
     expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
-        expense_group__fund_source='PERSONAL'
+        expense_group__fund_source='PERSONAL', is_retired=False
     ).all()
 
     for expense_report in expense_reports:
         expense_group_reimbursement_status = check_expenses_reimbursement_status(
             expense_report.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
         if expense_group_reimbursement_status:
+
+            skip_reimbursement = validate_for_skipping_payment(export_module=expense_report, workspace_id=workspace_id, type='CREATING_REIMBURSEMENT')
+            if skip_reimbursement:
+                continue
+
             task_log, _ = TaskLog.objects.update_or_create(
                 workspace_id=workspace_id,
                 task_id='PAYMENT_{}'.format(expense_report.expense_group.id),

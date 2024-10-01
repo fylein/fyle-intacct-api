@@ -12,7 +12,8 @@ from fyle_accounting_mappings.models import (
 )
 from unittest import mock
 from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import FyleCredential, Workspace
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
 from apps.mappings.imports.modules.projects import Project
 from apps.mappings.imports.modules.categories import Category
 from apps.mappings.models import ImportLog
@@ -25,7 +26,7 @@ def test_sync_destination_attributes(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all',
+        'sageintacctsdk.apis.Projects.get_all_generator',
         return_value=destination_attributes_data['get_projects_destination_attributes']
     )
     mocker.patch(
@@ -160,7 +161,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=18
         )
         mocker.patch(
-            'sageintacctsdk.apis.Projects.get_all',
+            'sageintacctsdk.apis.Projects.get_all_generator',
             return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes']
         )
         mock_call.side_effect = [
@@ -194,7 +195,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=18
         )
         mocker.patch(
-            'sageintacctsdk.apis.Projects.get_all',
+            'sageintacctsdk.apis.Projects.get_all_generator',
             return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_disable_case']
         )
         mocker.patch(
@@ -247,7 +248,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=18
         )
         mocker.patch(
-            'sageintacctsdk.apis.Projects.get_all',
+            'sageintacctsdk.apis.Projects.get_all_generator',
             return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_re_enable_case']
         )
         mocker.patch(
@@ -261,7 +262,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         pre_run_destination_attribute_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
         
-        assert pre_run_destination_attribute_count == 2
+        assert pre_run_destination_attribute_count == 7
 
         pre_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
 
@@ -328,7 +329,7 @@ def test_auto_create_destination_attributes(mocker, db):
         return_value=0
     )
     mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all',
+        'sageintacctsdk.apis.Projects.get_all_generator',
         return_value=[]
     )
 
@@ -413,3 +414,55 @@ def test_resolve_expense_attribute_errors(db):
 
     category.resolve_expense_attribute_errors()
     assert Error.objects.get(id=error.id).is_resolved == True
+
+
+def test_create_disable_attributes(mocker, db):
+
+    mocker.patch(
+            'sageintacctsdk.apis.Projects.get_all_generator',
+            return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_active']
+        )
+    
+    mocker.patch(
+        'sageintacctsdk.apis.Projects.count',
+        return_value=13
+    )
+
+    project = Project(1, 'PROJECT', None)
+    project.sync_after = None
+    workspace_id=1
+
+    Workspace.objects.filter(id=1).update(fyle_org_id='orqjgyJ21uge')
+    # delete all destination attributes, expense attributes and mappings
+    Mapping.objects.filter(workspace_id=1, source_type='PROJECT', destination_type='PROJECT').delete()
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()
+    ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    sage_intacct_connection.sync_projects()
+
+    new_projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
+    assert new_projects == 13
+
+    new_projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', active=True).count()
+    assert new_projects == 13
+
+    project = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', value='Mobile App Redesign').first()
+    assert project.active == True
+
+    mocker.patch(
+            'sageintacctsdk.apis.Projects.get_all_generator',
+            return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_inactive_active']
+        )
+    
+    sage_intacct_connection.sync_projects()
+    project = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', value='Mobile App Redesign').first()
+    assert project.active == False
+
+    new_projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
+    assert new_projects == 14
+
+    new_projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', active=True).count()
+    assert new_projects == 13
