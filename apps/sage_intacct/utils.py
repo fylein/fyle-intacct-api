@@ -2,6 +2,7 @@ import re
 import logging
 from typing import List, Dict
 from datetime import datetime, timedelta
+from django.utils import timezone
 import unidecode
 from django.conf import settings
 
@@ -114,7 +115,7 @@ class SageIntacctConnector:
             bool: True
         """
         workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
-        if workspace_created_at > datetime(2024, 10, 1) and attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
+        if workspace_created_at > timezone.make_aware(datetime(2024, 10, 1), timezone.get_current_timezone()) and attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
             return False
 
         return True

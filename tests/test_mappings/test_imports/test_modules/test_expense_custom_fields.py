@@ -60,6 +60,10 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=[]
         )
         mocker.patch(
+            'sageintacctsdk.apis.Locations.count',
+            return_value=21
+        )
+        mocker.patch(
             'sageintacctsdk.apis.Locations.get_all_generator',
             return_value=expense_custom_field_data['create_new_auto_create_expense_custom_fields_destination_attributes']
         )

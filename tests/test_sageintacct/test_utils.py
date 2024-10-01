@@ -76,7 +76,10 @@ def test_sync_vendors(mocker, db):
 
 def test_sync_departments(mocker, db):
     workspace_id = 1
-
+    mocker.patch(
+        'sageintacctsdk.apis.Departments.count',
+        return_value=2
+    )
     mocker.patch(
         'sageintacctsdk.apis.Departments.get_all_generator',
         return_value=data['get_departments']
@@ -95,6 +98,11 @@ def test_sync_departments(mocker, db):
 
 def test_sync_expense_types(mocker, db):
     workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.ExpenseTypes.count',
+        return_value=5
+    )
 
     mocker.patch(
         'sageintacctsdk.apis.ExpenseTypes.get_all_generator',
@@ -210,7 +218,10 @@ def test_sync_items(mocker, db):
 
 def test_sync_locations(mocker, db):
     workspace_id = 1
-
+    mocker.patch(
+        'sageintacctsdk.apis.Locations.count',
+        return_value=5
+    )
     mocker.patch(
         'sageintacctsdk.apis.Locations.get_all_generator',
         return_value=data['get_locations']
@@ -439,7 +450,10 @@ def test_get_tax_exclusive_amount(db):
 
 def test_sync_tax_details(mocker, db):
     workspace_id = 1
-
+    mocker.patch(
+        'sageintacctsdk.apis.TaxDetails.count',
+        return_value=5
+    )
     mocker.patch(
         'sageintacctsdk.apis.TaxDetails.get_all_generator',
         return_value=data['get_tax_details']
@@ -459,6 +473,10 @@ def test_sync_tax_details(mocker, db):
 def tests_sync_accounts(mocker, db):
     workspace_id = 1
 
+    mocker.patch(
+        'sageintacctsdk.apis.Accounts.count',
+        return_value=5
+    )
     mocker.patch(
         'sageintacctsdk.apis.Accounts.get_all_generator',
         return_value=data['get_accounts']
