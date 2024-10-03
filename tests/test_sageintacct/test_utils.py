@@ -4,8 +4,9 @@ from datetime import datetime
 import pytest
 import logging
 from unittest import mock
+from apps.sage_intacct.models import CostType
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, Mapping, CategoryMapping
 from apps.sage_intacct.utils import SageIntacctConnector, SageIntacctCredential, Configuration, Workspace
 from apps.mappings.models import GeneralMapping
 from .fixtures import data
@@ -934,36 +935,117 @@ def test_sync_allocations(mocker, db):
 
 
 def test_skip_sync_attributes(mocker, db):
-    workspace_id = 1
-
-    mocker.patch(
-        'sageintacctsdk.apis.Classes.count',
-        return_value=2000
-    )
-
     mocker.patch(
         'sageintacctsdk.apis.Projects.count',
-        return_value=30000
+        return_value=25001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Classes.count',
+        return_value=1001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Accounts.count',
+        return_value=2001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Locations.count',
+        return_value=1001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Departments.count',
+        return_value=1001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Customers.count',
+        return_value=10001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.count',
+        return_value=20001
     )
 
-    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    mocker.patch(
+        'sageintacctsdk.apis.TaxDetails.count',
+        return_value=201
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.CostTypes.count',
+        return_value=500001
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.ExpenseTypes.count',
+        return_value=1001
+    )
 
     today = datetime.today()
-    Workspace.objects.filter(id=workspace_id).update(created_at=today)
+    Workspace.objects.filter(id=1).update(created_at=today)
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=1)
 
-    class_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CLASS').count()
-    assert class_count == 6
+    Mapping.objects.filter(workspace_id=1).delete()
+    CategoryMapping.objects.filter(workspace_id=1).delete()
 
-    sage_intacct_connection.sync_classes()
-
-    new_class_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CLASS').count()
-    assert new_class_count == 6
-
-    project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
-    assert project_count == 16
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()
 
     sage_intacct_connection.sync_projects()
 
-    project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
-    assert project_count == 16
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CLASS').delete()
+
+    sage_intacct_connection.sync_classes()
+
+    classifications = DestinationAttribute.objects.filter(attribute_type='CLASS', workspace_id=1).count()
+    assert classifications == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='ACCOUNT').delete()
+
+    sage_intacct_connection.sync_accounts()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='ACCOUNT').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='LOCATION').delete()
+
+    sage_intacct_connection.sync_locations()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='LOCATION').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='DEPARTMENT').delete()
+
+    sage_intacct_connection.sync_departments()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='DEPARTMENT').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CUSTOMER').delete()
+
+    sage_intacct_connection.sync_customers()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CUSTOMER').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='TAX_DETAIL').delete()
+
+    sage_intacct_connection.sync_tax_details()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='TAX_DETAIL').count()
+    assert new_project_count == 0
+    
+    CostType.objects.filter(workspace_id=1).delete()
+
+    sage_intacct_connection.sync_cost_types()
+
+    new_project_count = CostType.objects.filter(workspace_id=1).count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').delete()
+
+    sage_intacct_connection.sync_expense_types()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').count()
+    assert new_project_count == 0
