@@ -114,9 +114,13 @@ class SageIntacctConnector:
         Returns:
             bool: True
         """
-        workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
-        if workspace_created_at > timezone.make_aware(datetime(2024, 10, 1), timezone.get_current_timezone()) and attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
-            return False
+        if attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
+            workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
+            print(workspace_created_at)
+            if workspace_created_at > timezone.make_aware(datetime(2024, 10, 1), timezone.get_current_timezone()):
+                return False
+            else:
+                return True
 
         return True
 
@@ -381,14 +385,14 @@ class SageIntacctConnector:
                     'detail': detail
                 })
         
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            project_attributes,
-            'PROJECT',
-            self.workspace_id,
-            True,
-            attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT'),
-            is_import_to_fyle_enabled=is_project_import_enabled
-        )
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                project_attributes,
+                'PROJECT',
+                self.workspace_id,
+                True,
+                attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT'),
+                is_import_to_fyle_enabled=is_project_import_enabled
+            )
 
         return []
 
@@ -419,8 +423,8 @@ class SageIntacctConnector:
                         'active': True
                     })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            item_attributes, 'ITEM', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                item_attributes, 'ITEM', self.workspace_id, True)
 
         return []
 
@@ -647,6 +651,7 @@ class SageIntacctConnector:
         Get classes
         """
         attribute_count = self.connection.classes.count()
+        print(attribute_count)
         if not self.is_sync_allowed(attribute_type = 'classes', attribute_count = attribute_count):
             logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
@@ -665,8 +670,8 @@ class SageIntacctConnector:
                     'active': True
                 })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            class_attributes, 'CLASS', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                class_attributes, 'CLASS', self.workspace_id, True)
 
         return []
 
@@ -694,8 +699,8 @@ class SageIntacctConnector:
                     'active': True
                 })
 
-        DestinationAttribute.bulk_create_or_update_destination_attributes(
-            customer_attributes, 'CUSTOMER', self.workspace_id, True)
+            DestinationAttribute.bulk_create_or_update_destination_attributes(
+                customer_attributes, 'CUSTOMER', self.workspace_id, True)
 
         return []
 

@@ -1,5 +1,6 @@
 import ast
 import json
+from datetime import datetime
 import pytest
 import logging
 from unittest import mock
@@ -930,3 +931,39 @@ def test_sync_allocations(mocker, db):
             assert set(allocation_attribute.detail.keys()) == {'LOCATIONID'}
         else:
             assert set(allocation_attribute.detail.keys()) == {'LOCATIONID', 'GLDIMWHAT_IS_NILESH_PANT'}
+
+
+def test_skip_sync_attributes(mocker, db):
+    workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.Classes.count',
+        return_value=2000
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Projects.count',
+        return_value=30000
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    today = datetime.today()
+    Workspace.objects.filter(id=workspace_id).update(created_at=today)
+
+    class_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CLASS').count()
+    assert class_count == 6
+
+    sage_intacct_connection.sync_classes()
+
+    new_class_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CLASS').count()
+    assert new_class_count == 6
+
+    project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
+    assert project_count == 16
+
+    sage_intacct_connection.sync_projects()
+
+    project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
+    assert project_count == 16
