@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 import sys
 import os
+from logging.config import dictConfig
+from .logging_middleware import WorkerIDFilter
 
 import dj_database_url
 
@@ -119,67 +121,50 @@ SERVICE_NAME = os.environ.get('SERVICE_NAME')
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'formatters': {
+        'standard': {
+            'format': '{levelname} %s {asctime} {name} {worker_id} {message}' % SERVICE_NAME, 'style': '{'
+        },
         'verbose': {
-            'format': '{levelname} %s {asctime} {module} {message} ' % SERVICE_NAME,
-            'style': '{',
+            'format': '{levelname} %s {asctime} {module} {message} ' % SERVICE_NAME, 'style': '{'
         },
         'requests': {
-            'format': 'request {levelname} %s {asctime} {message}' % SERVICE_NAME,
-            'style': '{'
+            'format': 'request {levelname} %s {asctime} {message}' % SERVICE_NAME, 'style': '{'
         }
     },
+    'filters': {
+        'worker_id': {
+            '()': WorkerIDFilter,
+        },
+    },
     'handlers': {
-        'debug_logs': {
+        'console': {
             'class': 'logging.StreamHandler',
-            'stream': sys.stdout,
-            'formatter': 'verbose'
+            'formatter': 'standard',
+            'filters': ['worker_id'],
         },
         'request_logs': {
             'class': 'logging.StreamHandler',
             'stream': sys.stdout,
             'formatter': 'requests'
         },
+        'debug_logs': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,
+            'formatter': 'verbose'
+        }
     },
     'loggers': {
-        'django': {
-            'handlers': ['request_logs'],
+        '': {
+            'handlers': ['console'],
             'level': 'INFO',
-            'propagate': True,
         },
-        'django.request': {
-            'handlers': ['request_logs'],
-            'level': 'INFO',
-            'propagate': False
-        },
-        'fyle_intacct_api': {
-            'handlers': ['debug_logs'],
-            'level': 'INFO',
-            'propagate': False
-        },
-        'apps': {
-            'handlers': ['debug_logs'],
-            'level': 'INFO',
-            'propagate': False
-        },
-         'django_q': {
-            'handlers': ['debug_logs'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'fyle_integrations_platform_connector': {
-            'handlers': ['debug_logs'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'gunicorn': {
-            'handlers': ['request_logs'],
-            'level': 'INFO',
-            'propagate': False
-        }
-    }
+        'django.request': {'handlers': ['request_logs'], 'propagate': False},
+    },
 }
+
+dictConfig(LOGGING)
 
 CACHES = {
     'default': {
