@@ -2,6 +2,7 @@ import re
 import logging
 from typing import List, Dict
 from datetime import datetime, timedelta
+from django.utils import timezone
 import unidecode
 from django.conf import settings
 
@@ -30,9 +31,16 @@ logger.level = logging.INFO
 
 SYNC_UPPER_LIMIT = {
     'projects': 25000,
-    'customers': 15000,
-    'items': 15000,
-    'classes': 15000
+    'customers': 10000,
+    'items': 5000,
+    'classes': 1000,
+    'accounts': 2000,
+    'expense_types': 1000,
+    'locations': 1000,
+    'departments': 1000,
+    'vendors': 20000,
+    'tax_details': 200,
+    'cost_types': 500000
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
@@ -97,7 +105,23 @@ class SageIntacctConnector:
             tax_amount = round((amount - tax_exclusive_amount), 2)
 
         return tax_exclusive_amount, tax_amount
+    
 
+    def is_sync_allowed(self, attribute_type: str, attribute_count: int):
+        """
+        Checks if the sync is allowed
+
+        Returns:
+            bool: True
+        """
+        if attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
+            workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
+            if workspace_created_at > timezone.make_aware(datetime(2024, 10, 1), timezone.get_current_timezone()):
+                return False
+            else:
+                return True
+
+        return True
 
     def get_latest_sync(self, workspace_id, attribute_type):
 
@@ -124,6 +148,11 @@ class SageIntacctConnector:
         """
         Get accounts
         """
+
+        attribute_count = self.connection.accounts.count()
+        if not self.is_sync_allowed(attribute_type = 'accounts', attribute_count=attribute_count):
+            logger.info('Skipping sync of accounts for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
 
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
@@ -168,6 +197,11 @@ class SageIntacctConnector:
         """
         Get departments
         """
+        attribute_count = self.connection.departments.count()
+        if not self.is_sync_allowed(attribute_type = 'departments', attribute_count = attribute_count):
+            logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
         fields = ['TITLE', 'DEPARTMENTID']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='DEPARTMENT')
         department_generator = self.connection.departments.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
@@ -200,7 +234,11 @@ class SageIntacctConnector:
         """
         Get expense types
         """
-
+        attribute_count = self.connection.expense_types.count()
+        if not self.is_sync_allowed(attribute_type = 'expense_types', attribute_count = attribute_count):
+            logger.info('Skipping sync of expense_type for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
 
@@ -286,6 +324,11 @@ class SageIntacctConnector:
         """
         Sync of Sage Intacct Cost Types
         """
+        attribute_count = self.connection.cost_types.count()
+        if not self.is_sync_allowed(attribute_type = 'cost_types', attribute_count = attribute_count):
+            logger.info('Skipping sync of cost_types for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
         args = {
             'field': 'STATUS',
             'value': 'active'
@@ -312,32 +355,35 @@ class SageIntacctConnector:
         Get projects
         """
 
-        projects_count = self.connection.projects.count()
-        if projects_count < SYNC_UPPER_LIMIT['projects']:
-            fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
-            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-            params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
-            project_generator = self.connection.projects.get_all_generator(**params)
-            is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
+        attribute_count = self.connection.projects.count()
+        if not self.is_sync_allowed(attribute_type = 'projects', attribute_count = attribute_count):
+            logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        project_generator = self.connection.projects.get_all_generator(**params)
+        is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
-            project_attributes = []
+        project_attributes = []
 
-            for projects in project_generator:
-                for project in projects:
-                    detail = {
-                        'customer_id': project['CUSTOMERID'],
-                        'customer_name': project['CUSTOMERNAME']
-                    }
+        for projects in project_generator:
+            for project in projects:
+                detail = {
+                    'customer_id': project['CUSTOMERID'],
+                    'customer_name': project['CUSTOMERNAME']
+                }
 
-                    project_attributes.append({
-                        'attribute_type': 'PROJECT',
-                        'display_name': 'project',
-                        'value': project['NAME'],
-                        'destination_id': project['PROJECTID'],
-                        'active': project['STATUS'] == 'active',
-                        'detail': detail
-                    })
-            
+                project_attributes.append({
+                    'attribute_type': 'PROJECT',
+                    'display_name': 'project',
+                    'value': project['NAME'],
+                    'destination_id': project['PROJECTID'],
+                    'active': project['STATUS'] == 'active',
+                    'detail': detail
+                })
+        
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes,
                 'PROJECT',
@@ -353,25 +399,28 @@ class SageIntacctConnector:
         """
         Get items
         """
-        count = self.connection.items.count()
-        if count <= SYNC_UPPER_LIMIT['items']:
-            fields = ['NAME', 'ITEMID', 'ITEMTYPE']
-            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
-            item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        attribute_count = self.connection.items.count()
+        if not self.is_sync_allowed(attribute_type = 'items', attribute_count = attribute_count):
+            logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        fields = ['NAME', 'ITEMID', 'ITEMTYPE']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
+        item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
-            item_attributes = []
+        item_attributes = []
 
-            for items in item_generator:
-                for item in items:
-                    # remove this check when we are mapping Fyle Categories with Sage Intacct Items
-                    if item['ITEMTYPE'] == 'Non-Inventory':
-                        item_attributes.append({
-                            'attribute_type': 'ITEM',
-                            'display_name': 'item',
-                            'value': item['NAME'],
-                            'destination_id': item['ITEMID'],
-                            'active': True
-                        })
+        for items in item_generator:
+            for item in items:
+                # remove this check when we are mapping Fyle Categories with Sage Intacct Items
+                if item['ITEMTYPE'] == 'Non-Inventory':
+                    item_attributes.append({
+                        'attribute_type': 'ITEM',
+                        'display_name': 'item',
+                        'value': item['NAME'],
+                        'destination_id': item['ITEMID'],
+                        'active': True
+                    })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 item_attributes, 'ITEM', self.workspace_id, True)
@@ -382,6 +431,11 @@ class SageIntacctConnector:
         """
         Get locations
         """
+
+        attribute_count = self.connection.locations.count()
+        if not self.is_sync_allowed(attribute_type = 'locations', attribute_count = attribute_count):
+            logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
         fields = ['NAME', 'LOCATIONID']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION')
         location_generator = self.connection.locations.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
@@ -595,21 +649,24 @@ class SageIntacctConnector:
         """
         Get classes
         """
-        count = self.connection.classes.count()
-        if count <= SYNC_UPPER_LIMIT['classes']:
-            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
-            class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at if latest_updated_at else None)
-            class_attributes = []
+        attribute_count = self.connection.classes.count()
+        if not self.is_sync_allowed(attribute_type = 'classes', attribute_count = attribute_count):
+            logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
+        class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at if latest_updated_at else None)
+        class_attributes = []
 
-            for _classes in class_generator:
-                for _class in _classes:
-                    class_attributes.append({
-                        'attribute_type': 'CLASS',
-                        'display_name': 'class',
-                        'value': _class['NAME'],
-                        'destination_id': _class['CLASSID'],
-                        'active': True
-                    })
+        for _classes in class_generator:
+            for _class in _classes:
+                class_attributes.append({
+                    'attribute_type': 'CLASS',
+                    'display_name': 'class',
+                    'value': _class['NAME'],
+                    'destination_id': _class['CLASSID'],
+                    'active': True
+                })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 class_attributes, 'CLASS', self.workspace_id, True)
@@ -620,22 +677,25 @@ class SageIntacctConnector:
         """
         Get Customers
         """
-        customers_count = self.connection.customers.count()
-        if customers_count < SYNC_UPPER_LIMIT['customers']:
-            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
-            customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at if latest_updated_at else None)
+        attribute_count = self.connection.customers.count()
+        if not self.is_sync_allowed(attribute_type = 'customers', attribute_count = attribute_count):
+            logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
+        customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at if latest_updated_at else None)
 
-            customer_attributes = []
+        customer_attributes = []
 
-            for customers in customer_generator:
-                for customer in customers:
-                    customer_attributes.append({
-                        'attribute_type': 'CUSTOMER',
-                        'display_name': 'customer',
-                        'value': customer['NAME'],
-                        'destination_id': customer['CUSTOMERID'],
-                        'active': True
-                    })
+        for customers in customer_generator:
+            for customer in customers:
+                customer_attributes.append({
+                    'attribute_type': 'CUSTOMER',
+                    'display_name': 'customer',
+                    'value': customer['NAME'],
+                    'destination_id': customer['CUSTOMERID'],
+                    'active': True
+                })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 customer_attributes, 'CUSTOMER', self.workspace_id, True)
@@ -646,6 +706,11 @@ class SageIntacctConnector:
         """
         Get and Sync Tax Details
         """
+        attribute_count = self.connection.tax_details.count()
+        if not self.is_sync_allowed(attribute_type = 'tax_details', attribute_count = attribute_count):
+            logger.info('Skipping sync of tax_details for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
         attributes = []
         fields = ['DETAILID', 'VALUE', 'TAXSOLUTIONID', 'TAXTYPE']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='TAX_DETAIL')

@@ -138,6 +138,14 @@ def test_schedule_auto_map_employees(db):
 def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting, create_cost_type):
     workspace_id = 1
     mocker.patch(
+        'sageintacctsdk.apis.Locations.count',
+        return_value=1
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Departments.count',
+        return_value=1
+    )
+    mocker.patch(
         'sageintacctsdk.apis.Locations.get_all_generator',
         return_value=intacct_data['get_locations']
     )
@@ -162,6 +170,11 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         'sageintacctsdk.apis.CostTypes.get_all_generator',
         return_value=[]
     )
+    mocker.patch(
+        'sageintacctsdk.apis.CostTypes.count',
+        return_value=0
+    )
+
 
     mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
