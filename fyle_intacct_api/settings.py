@@ -62,6 +62,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'request_logging.middleware.LoggingMiddleware',
+    'fyle_intacct_api.logging_middleware.LogPostRequestMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'corsheaders.middleware.CorsPostCsrfMiddleware',
