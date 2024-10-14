@@ -9,7 +9,7 @@ from django.http import HttpResponse
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
-
+logger.level = logging.INFO
 
 class ErrorHandlerMiddleware:
 
