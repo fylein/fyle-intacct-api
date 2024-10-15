@@ -161,6 +161,11 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'INFO',
         },
+        'sageintacctsdk.apis.api_base': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True
+        },
         'django.request': {'handlers': ['request_logs'], 'propagate': False},
     },
 }
