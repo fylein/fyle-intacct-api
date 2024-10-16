@@ -1,6 +1,8 @@
 """
 Workspace Signals
 """
+import logging
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -11,7 +13,9 @@ from apps.sage_intacct.helpers import schedule_payment_sync
 from apps.mappings.helpers import schedule_or_delete_auto_mapping_tasks
 
 from .models import Configuration
-from ..fyle.models import ExpenseGroupSettings
+
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 @receiver(post_save, sender=Configuration)
@@ -21,6 +25,7 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
     :param instance: Row Instance of Sender Class
     :return: None
     """
+    logger.info('Running post configuration triggers for workspace_id: %s', instance.workspace_id)
 
     if instance.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
         add_expense_id_to_expense_group_settings(int(instance.workspace_id))
@@ -34,7 +39,7 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
                 'is_custom': False
             }
         )
-    
+
     if instance.corporate_credit_card_expenses_object != 'CHARGE_CARD_TRANSACTION' :
         mapping_setting = MappingSetting.objects.filter(
             workspace_id=instance.workspace_id,
@@ -44,6 +49,16 @@ def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
 
         if mapping_setting:
             mapping_setting.delete()
+
+    if (
+        not instance.reimbursable_expenses_object
+        and instance.auto_create_destination_entity
+        and not instance.auto_map_employees
+    ):
+        # doing this to avoid signal recursion
+        Configuration.objects.filter(
+            workspace_id=instance.workspace_id
+        ).update(auto_map_employees='NAME')
 
     schedule_or_delete_auto_mapping_tasks(configuration=instance)
     schedule_payment_sync(configuration=instance)
