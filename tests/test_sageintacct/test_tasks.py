@@ -207,7 +207,7 @@ def test_create_or_update_employee_mapping(mocker, db):
     )
     mocker.patch(
         'sageintacctsdk.apis.Employees.post',
-        return_value={'data': {'employee': data['get_employees'][0]}}
+        return_value={'data': {'employee': data['get_employee'][0]}}
     )
     workspace_id = 1
 
@@ -960,6 +960,88 @@ def test_create_ap_payment(mocker, db):
     create_ap_payment(workspace_id)
     assert task_log.status == 'COMPLETE'
 
+
+def test_create_ap_payment_exceptions(mocker, db):
+    # Mock necessary functions and classes
+    mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
+    mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
+    mocker.patch('sageintacctsdk.apis.APPayments.post', return_value=data['reimbursements'])
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=['sdfgh'])
+    mocker.patch('sageintacctsdk.apis.Reimbursements.post', return_value=data['reimbursements'])
+    mocker.patch('fyle_integrations_platform_connector.apis.Reimbursements.sync', return_value=None)
+    mocker.patch('sageintacctsdk.apis.Bills.update_attachment', return_value=data['bill_response'])
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+    task_log = TaskLog.objects.filter(expense_group__workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+    
+    create_bill(expense_group, task_log.id, True)
+
+    bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
+    bill.payment_synced = False
+    bill.save()
+
+    for expense in bill.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    # Mock exceptions to be raised during the `create_ap_payment` call
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_ap_payment', side_effect=SageIntacctCredential.DoesNotExist)
+    # Test SageIntacctCredential.DoesNotExist
+    create_ap_payment(workspace_id)
+    task_log = TaskLog.objects.filter(
+                    workspace_id=workspace_id,
+                    task_id='PAYMENT_{}'.format(bill.expense_group.id)
+                ).first()
+    assert task_log.status == 'FAILED'
+    assert 'Sage-Intacct Account not connected' in task_log.detail['message']
+
+    # Test BulkError
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_ap_payment', side_effect=BulkError(msg="Bulk error", response="Bulk error occurred"))
+    create_ap_payment(workspace_id)
+    task_log = TaskLog.objects.filter(
+                    workspace_id=workspace_id,
+                    task_id='PAYMENT_{}'.format(bill.expense_group.id)
+                ).first()
+    assert task_log.status == 'FAILED'
+
+    # Test WrongParamsError
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_ap_payment', side_effect=WrongParamsError(msg="Invalid Parameters", response="Invalid parameters"))
+    create_ap_payment(workspace_id)
+    task_log.refresh_from_db()
+    assert task_log.status == 'FAILED'
+
+    # Test InvalidTokenError
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_ap_payment', side_effect=InvalidTokenError(msg="Invalid token", response="Invalid token"))
+    create_ap_payment(workspace_id)
+    task_log.refresh_from_db()
+    assert task_log.status == 'FAILED'
+
+    # Test NoPrivilegeError
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_ap_payment', side_effect=NoPrivilegeError(msg="No privilege", response="No privilege"))
+    create_ap_payment(workspace_id)
+    task_log.refresh_from_db()
+    assert task_log.status == 'FAILED'
+
+
+def test_validate_for_skipping_payment(mocker, db):
+    mock_task_log = mocker.Mock(spec=TaskLog)
+    mock_task_log.created_at = datetime.now().replace(tzinfo=timezone.utc) - relativedelta(months=3)
+    mock_task_log.updated_at = datetime.now().replace(tzinfo=timezone.utc) - relativedelta(months=3)
+
+    mock_queryset = mocker.Mock()
+    mock_queryset.first.return_value = mock_task_log
+
+    mocker.patch('apps.tasks.models.TaskLog.objects.filter', return_value=mock_queryset)
+
+    mock_export_module = mocker.Mock(spec=Bill)
+    mock_export_module.expense_group.id = 1
+
+    result = validate_for_skipping_payment(mock_export_module, workspace_id=1, type='BILL')
+    assert result is True
 
 def test_post_ap_payment_exceptions(mocker, db):
     mocker.patch(

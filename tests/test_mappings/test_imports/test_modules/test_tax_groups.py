@@ -13,7 +13,11 @@ from .fixtures import tax_groups_data
 
 def test_sync_destination_atrributes(mocker, db):
     mocker.patch(
-        'sageintacctsdk.apis.TaxDetails.get_all',
+        'sageintacctsdk.apis.TaxDetails.count',
+        return_value=100
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.TaxDetails.get_all_generator',
         return_value=tax_groups_data['get_tax_details_destination_attributes']
     )
     workspace_id = 1
@@ -81,7 +85,11 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.TaxDetails.get_all',
+            'sageintacctsdk.apis.TaxDetails.count',
+            return_value=100
+        )
+        mocker.patch(
+            'sageintacctsdk.apis.TaxDetails.get_all_generator',
             return_value=tax_groups_data['get_tax_details_destination_attributes']
         )
 
@@ -115,7 +123,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.TaxDetails.get_all',
+            'sageintacctsdk.apis.TaxDetails.get_all_generator',
             return_value=tax_groups_data['get_tax_details_destination_attributes_subsequent_run']
         )
 

@@ -2,6 +2,7 @@ import re
 import logging
 from typing import List, Dict
 from datetime import datetime, timedelta
+from django.utils import timezone
 import unidecode
 from django.conf import settings
 
@@ -30,9 +31,16 @@ logger.level = logging.INFO
 
 SYNC_UPPER_LIMIT = {
     'projects': 25000,
-    'customers': 15000,
-    'items': 15000,
-    'classes': 15000
+    'customers': 10000,
+    'items': 5000,
+    'classes': 1000,
+    'accounts': 2000,
+    'expense_types': 1000,
+    'locations': 1000,
+    'departments': 1000,
+    'vendors': 20000,
+    'tax_details': 200,
+    'cost_types': 500000
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
@@ -97,60 +105,81 @@ class SageIntacctConnector:
             tax_amount = round((amount - tax_exclusive_amount), 2)
 
         return tax_exclusive_amount, tax_amount
+    
+
+    def is_sync_allowed(self, attribute_type: str, attribute_count: int):
+        """
+        Checks if the sync is allowed
+
+        Returns:
+            bool: True
+        """
+        if attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
+            workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
+            if workspace_created_at > timezone.make_aware(datetime(2024, 10, 1), timezone.get_current_timezone()):
+                return False
+            else:
+                return True
+
+        return True
+
+    def get_latest_sync(self, workspace_id, attribute_type):
+
+        latest_sync = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type=attribute_type).order_by('-updated_at').first()
+        if latest_sync:
+            latest_synced_timestamp = latest_sync.updated_at - timedelta(days=1)
+            return latest_synced_timestamp.strftime('%m/%d/%Y')
+        
+        return None
+
+
+    def construct_get_all_generator_params(self, fields, latest_updated_at):
+        params = {'fields': fields}
+
+        if latest_updated_at:
+            params['updated_at'] = latest_updated_at
+        else:
+            params['field'] = 'STATUS'
+            params['value'] = 'active'
+
+        return params
 
     def sync_accounts(self):
         """
         Get accounts
         """
-        accounts = self.connection.accounts.get_all()
+
+        attribute_count = self.connection.accounts.count()
+        if not self.is_sync_allowed(attribute_type = 'accounts', attribute_count=attribute_count):
+            logger.info('Skipping sync of accounts for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+
+        fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
+
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+    
+        account_generator = self.connection.accounts.get_all_generator(**params)
         is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
         account_attributes = {
             'account': [],
             'ccc_account': []
         }
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, 
-                attribute_type= 'ACCOUNT', display_name='account').values('destination_id', 'value', 'detail', 'code')
-        disabled_fields_map = {}
 
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail'],
-                'code': destination_attribute['code']
-            }
-
-        for account in accounts:
-            if account['STATUS'] == 'active':
+        for accounts in account_generator:
+            for account in accounts:
                 account_attributes['account'].append({
                     'attribute_type': 'ACCOUNT',
                     'display_name': 'account',
                     'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO'],
-                    'active': True,
+                    'active': account['STATUS'] == 'active',
                     'detail': {
                         'account_type': account['ACCOUNTTYPE']
                     },
                     'code': account['ACCOUNTNO']
                 })
-                if account['ACCOUNTNO'] in disabled_fields_map:
-                    disabled_fields_map.pop(account['ACCOUNTNO'])
-
-        # For setting active to False
-        # During the initial run we only pull in the active ones.
-        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-            # If yes then we pop the item from the disable_field_map else we set the active = True.
-        # This should take care of delete as well as inactive case since we are checking the status=Active case.
-        for destination_id in disabled_fields_map:
-            account_attributes['account'].append({
-                'attribute_type': 'ACCOUNT',
-                'display_name': 'account',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail'],
-                'code': disabled_fields_map[destination_id]['code']
-            })
 
         for attribute_type, account_attribute in account_attributes.items():
             if account_attribute:
@@ -168,20 +197,27 @@ class SageIntacctConnector:
         """
         Get departments
         """
-        departments = self.connection.departments.get_all(field='STATUS', value='active')
+        attribute_count = self.connection.departments.count()
+        if not self.is_sync_allowed(attribute_type = 'departments', attribute_count = attribute_count):
+            logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        fields = ['TITLE', 'DEPARTMENTID']
+        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='DEPARTMENT')
+        department_generator = self.connection.departments.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
         is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
 
         department_attributes = []
 
-        for department in departments:
-            department_attributes.append({
-                'attribute_type': 'DEPARTMENT',
-                'display_name': 'department',
-                'value': department['TITLE'],
-                'destination_id': department['DEPARTMENTID'],
-                'code': department['DEPARTMENTID'],
-                'active': True
-            })
+        for departments in department_generator:
+            for department in departments:
+                department_attributes.append({
+                    'attribute_type': 'DEPARTMENT',
+                    'display_name': 'department',
+                    'value': department['TITLE'],
+                    'destination_id': department['DEPARTMENTID'],
+                    'active': True
+                })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             department_attributes,
@@ -198,53 +234,34 @@ class SageIntacctConnector:
         """
         Get expense types
         """
+        attribute_count = self.connection.expense_types.count()
+        if not self.is_sync_allowed(attribute_type = 'expense_types', attribute_count = attribute_count):
+            logger.info('Skipping sync of expense_type for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
+        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
+
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+
+        expense_type_generator = self.connection.expense_types.get_all_generator(**params)
         is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
-        expense_types = self.connection.expense_types.get_all()
 
         expense_types_attributes = []
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'EXPENSE_TYPE', display_name='Expense Types').values('destination_id', 'value', 'detail', 'code')
-        disabled_fields_map = {}
 
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail'],
-                'code': destination_attribute['code']
-            }
-
-        for expense_type in expense_types:
-            if expense_type['STATUS'] == 'active':
-                expense_types_attributes.append({
-                    'attribute_type': 'EXPENSE_TYPE',
-                    'display_name': 'Expense Types',
-                    'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
-                    'destination_id': expense_type['ACCOUNTLABEL'],
-                    'active': True,
-                    'detail': {
-                        'gl_account_no': expense_type['GLACCOUNTNO'],
-                        'gl_account_title': expense_type['GLACCOUNTTITLE']
-                    },
-                    'code': expense_type['ACCOUNTLABEL']
-                })
-                if expense_type['ACCOUNTLABEL'] in disabled_fields_map:
-                    disabled_fields_map.pop(expense_type['ACCOUNTLABEL'])
-        
-        # For setting active to False
-        # During the initial run we only pull in the active ones.
-        # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-            # If yes then we pop the item from the disable_field_map else we set the active = True.
-        # This should take care of delete as well as inactive case since we are checking the status=Active case.
-        for destination_id in disabled_fields_map:
-            expense_types_attributes.append({
-                'attribute_type': 'EXPENSE_TYPE',
-                'display_name': 'Expense Types',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail'],
-                'code': disabled_fields_map[destination_id]['code']
-            })
+        for expense_types in expense_type_generator:
+            for expense_type in expense_types:
+                    expense_types_attributes.append({
+                        'attribute_type': 'EXPENSE_TYPE',
+                        'display_name': 'Expense Types',
+                        'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
+                        'destination_id': expense_type['ACCOUNTLABEL'],
+                        'active': expense_type['STATUS'] == 'active',
+                        'detail': {
+                            'gl_account_no': expense_type['GLACCOUNTNO'],
+                            'gl_account_title': expense_type['GLACCOUNTTITLE']
+                        }
+                    })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             expense_types_attributes,
@@ -282,18 +299,21 @@ class SageIntacctConnector:
         """
         Get Payment accounts
         """
-        payment_accounts = self.connection.checking_accounts.get_all(field='STATUS', value='active') 
+        fields = ['BANKNAME', 'BANKACCOUNTID']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PAYMENT_ACCOUNT')
+        payment_account_generator = self.connection.checking_accounts.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         payment_accounts_attributes = []
 
-        for payment_account in payment_accounts:
-            payment_accounts_attributes.append({
-                'attribute_type': 'PAYMENT_ACCOUNT',
-                'display_name': 'Payment Account',
-                'value': '{} - {}'.format(payment_account['BANKNAME'], payment_account['BANKACCOUNTID']),
-                'destination_id': payment_account['BANKACCOUNTID'],
-                'active': True
-            })
+        for payment_accounts in payment_account_generator:
+            for payment_account in payment_accounts:
+                payment_accounts_attributes.append({
+                    'attribute_type': 'PAYMENT_ACCOUNT',
+                    'display_name': 'Payment Account',
+                    'value': '{} - {}'.format(payment_account['BANKNAME'], payment_account['BANKACCOUNTID']),
+                    'destination_id': payment_account['BANKACCOUNTID'],
+                    'active': True
+                })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             payment_accounts_attributes, 'PAYMENT_ACCOUNT', self.workspace_id, True)
@@ -304,6 +324,11 @@ class SageIntacctConnector:
         """
         Sync of Sage Intacct Cost Types
         """
+        attribute_count = self.connection.cost_types.count()
+        if not self.is_sync_allowed(attribute_type = 'cost_types', attribute_count = attribute_count):
+            logger.info('Skipping sync of cost_types for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
         args = {
             'field': 'STATUS',
             'value': 'active'
@@ -330,58 +355,35 @@ class SageIntacctConnector:
         Get projects
         """
 
-        projects_count = self.connection.projects.count()
-        if projects_count < SYNC_UPPER_LIMIT['projects']:
-            is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
-            projects = self.connection.projects.get_all()
+        attribute_count = self.connection.projects.count()
+        if not self.is_sync_allowed(attribute_type = 'projects', attribute_count = attribute_count):
+            logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        project_generator = self.connection.projects.get_all_generator(**params)
+        is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
-            project_attributes = []
-            destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'PROJECT', display_name='project').values('destination_id', 'value', 'detail', 'code')
-            disabled_fields_map = {}
+        project_attributes = []
 
-            for destination_attribute in destination_attributes:
-                disabled_fields_map[destination_attribute['destination_id']] = {
-                    'value': destination_attribute['value'],
-                    'detail': destination_attribute['detail'],
-                    'code': destination_attribute['code']
+        for projects in project_generator:
+            for project in projects:
+                detail = {
+                    'customer_id': project['CUSTOMERID'],
+                    'customer_name': project['CUSTOMERNAME']
                 }
 
-            for project in projects:
-                if project['STATUS'] == 'active':
-                    detail = {
-                        'customer_id': project['CUSTOMERID'],
-                        'customer_name': project['CUSTOMERNAME']
-                    }
-
-                    project_attributes.append({
-                        'attribute_type': 'PROJECT',
-                        'display_name': 'project',
-                        'value': project['NAME'],
-                        'destination_id': project['PROJECTID'],
-                        'active': True,
-                        'detail': detail,
-                        'code': project['PROJECTID']
-                    })
-                    if project['PROJECTID'] in disabled_fields_map:
-                        disabled_fields_map.pop(project['PROJECTID'])
-
-            # For setting active to False
-            # During the initial run we only pull in the active ones.
-            # In the concurrent runs we get all the destination_attributes and store it in disable_field_map check if in the SDK call we get status = Active or not .
-                # If yes then we pop the item from the disable_field_map else we set the active = True.
-            # This should take care of delete as well as inactive case since we are checking the status=Active case.
-            for destination_id in disabled_fields_map:
                 project_attributes.append({
                     'attribute_type': 'PROJECT',
                     'display_name': 'project',
-                    'value': disabled_fields_map[destination_id]['value'],
-                    'destination_id': destination_id,
-                    'active': False,
-                    'detail': disabled_fields_map[destination_id]['detail'],
-                    'code': disabled_fields_map[destination_id]['code']
+                    'value': project['NAME'],
+                    'destination_id': project['PROJECTID'],
+                    'active': project['STATUS'] == 'active',
+                    'detail': detail
                 })
-
+        
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes,
                 'PROJECT',
@@ -397,12 +399,18 @@ class SageIntacctConnector:
         """
         Get items
         """
-        count = self.connection.items.count()
-        if count <= SYNC_UPPER_LIMIT['items']:
-            items = self.connection.items.get_all(field='STATUS', value='active')
+        attribute_count = self.connection.items.count()
+        if not self.is_sync_allowed(attribute_type = 'items', attribute_count = attribute_count):
+            logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        fields = ['NAME', 'ITEMID', 'ITEMTYPE']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
+        item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
-            item_attributes = []
+        item_attributes = []
 
+        for items in item_generator:
             for item in items:
                 # remove this check when we are mapping Fyle Categories with Sage Intacct Items
                 if item['ITEMTYPE'] == 'Non-Inventory':
@@ -423,18 +431,26 @@ class SageIntacctConnector:
         """
         Get locations
         """
-        locations = self.connection.locations.get_all(field='STATUS', value='active')
+
+        attribute_count = self.connection.locations.count()
+        if not self.is_sync_allowed(attribute_type = 'locations', attribute_count = attribute_count):
+            logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        fields = ['NAME', 'LOCATIONID']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION')
+        location_generator = self.connection.locations.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         location_attributes = []
 
-        for location in locations:
-            location_attributes.append({
-                'attribute_type': 'LOCATION',
-                'display_name': 'location',
-                'value': location['NAME'],
-                'destination_id': location['LOCATIONID'],
-                'active': True
-            })
+        for locations in location_generator:
+            for location in locations:
+                location_attributes.append({
+                    'attribute_type': 'LOCATION',
+                    'display_name': 'location',
+                    'value': location['NAME'],
+                    'destination_id': location['LOCATIONID'],
+                    'active': True
+                })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             location_attributes, 'LOCATION', self.workspace_id, True)
@@ -468,21 +484,24 @@ class SageIntacctConnector:
         Get location entities
         """
         if not self.__get_entity_slide_preference():
-            location_entities = self.connection.location_entities.get_all(field='STATUS', value='active')
+            fields = ['NAME', 'LOCATIONID', 'OPCOUNTRY']
+            latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION_ENTITY')
+            location_entity_generator = self.connection.location_entities.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
             location_entities_attributes = []
 
-            for location_entity in location_entities:
-                location_entities_attributes.append({
-                    'attribute_type': 'LOCATION_ENTITY',
-                    'display_name': 'location entity',
-                    'value': location_entity['NAME'],
-                    'destination_id': location_entity['LOCATIONID'],
-                    'detail': {
-                        'country': location_entity['OPCOUNTRY']
-                    },
-                    'active': True
-                })
+            for location_entities in location_entity_generator:
+                for location_entity in location_entities:
+                    location_entities_attributes.append({
+                        'attribute_type': 'LOCATION_ENTITY',
+                        'display_name': 'location entity',
+                        'value': location_entity['NAME'],
+                        'destination_id': location_entity['LOCATIONID'],
+                        'detail': {
+                            'country': location_entity['OPCOUNTRY']
+                        },
+                        'active': True
+                    })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 location_entities_attributes, 'LOCATION_ENTITY', self.workspace_id, True)
@@ -494,21 +513,24 @@ class SageIntacctConnector:
         """
         Get Expense Payment Types
         """
-        expense_payment_types = self.connection.expense_payment_types.get_all(field='STATUS', value='active')
+        fields = ['NAME', 'RECORDNO', 'NONREIMBURSABLE']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_PAYMENT_TYPE')
+        expense_payment_type_generator = self.connection.expense_payment_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         expense_payment_type_attributes = []
 
-        for expense_payment_type in expense_payment_types:
-            expense_payment_type_attributes.append({
-                'attribute_type': 'EXPENSE_PAYMENT_TYPE',
-                'display_name': 'expense payment type',
-                'value': expense_payment_type['NAME'],
-                'destination_id': expense_payment_type['RECORDNO'],
-                'detail': {
-                    'is_reimbursable': True if expense_payment_type['NONREIMBURSABLE'] == 'false' else False
-                },
-                'active': True
-            })
+        for expense_payment_types in expense_payment_type_generator:
+            for expense_payment_type in expense_payment_types:
+                expense_payment_type_attributes.append({
+                    'attribute_type': 'EXPENSE_PAYMENT_TYPE',
+                    'display_name': 'expense payment type',
+                    'value': expense_payment_type['NAME'],
+                    'destination_id': expense_payment_type['RECORDNO'],
+                    'detail': {
+                        'is_reimbursable': expense_payment_type['NONREIMBURSABLE'] == 'false'
+                    },
+                    'active': True
+                })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             expense_payment_type_attributes, 'EXPENSE_PAYMENT_TYPE', self.workspace_id, True)
@@ -519,26 +541,29 @@ class SageIntacctConnector:
         """
         Get employees
         """
-        employees = self.connection.employees.get_all(field='STATUS', value='active')
+        fields = ['CONTACT.EMAIL1', 'CONTACT.PRINTAS', 'DEPARTMENTID', 'CONTACT.CONTACTNAME', 'EMPLOYEEID', 'LOCATIONID']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EMPLOYEE')
+        employee_generator = self.connection.employees.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
         employee_attributes = []
 
-        for employee in employees:
-            detail = {
-                'email': employee['CONTACT.EMAIL1'] if employee['CONTACT.EMAIL1'] else None,
-                'full_name': employee['CONTACT.PRINTAS'] if employee['CONTACT.PRINTAS'] else None,
-                'location_id': employee['LOCATIONID'] if employee['LOCATIONID'] else None,
-                'department_id': employee['DEPARTMENTID'] if employee['DEPARTMENTID'] else None
-            }
+        for employees in employee_generator:
+            for employee in employees:
+                detail = {
+                    'email': employee['CONTACT.EMAIL1'] if employee['CONTACT.EMAIL1'] else None,
+                    'full_name': employee['CONTACT.PRINTAS'] if employee['CONTACT.PRINTAS'] else None,
+                    'location_id': employee['LOCATIONID'] if employee['LOCATIONID'] else None,
+                    'department_id': employee['DEPARTMENTID'] if employee['DEPARTMENTID'] else None
+                }
 
-            employee_attributes.append({
-                'attribute_type': 'EMPLOYEE',
-                'display_name': 'employee',
-                'value': employee['CONTACT.CONTACTNAME'],
-                'destination_id': employee['EMPLOYEEID'],
-                'detail': detail,
-                'active': True
-            })
+                employee_attributes.append({
+                    'attribute_type': 'EMPLOYEE',
+                    'display_name': 'employee',
+                    'value': employee['CONTACT.CONTACTNAME'],
+                    'destination_id': employee['EMPLOYEEID'],
+                    'detail': detail,
+                    'active': True
+                })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             employee_attributes, 'EMPLOYEE', self.workspace_id, True)
@@ -551,7 +576,14 @@ class SageIntacctConnector:
         """
 
         allocation_attributes = []
-        allocations_generator = self.connection.allocations.get_all_generator(field='STATUS', value='active')
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
+        params = {}
+        if latest_updated_at:
+            params['updated_at'] = latest_updated_at
+        else:
+            params['field'] = 'STATUS'
+            params['value'] = 'active'
+        allocations_generator = self.connection.allocations.get_all_generator(**params)
 
         for allocations in allocations_generator:
             for allocation in allocations:
@@ -560,6 +592,7 @@ class SageIntacctConnector:
                     detail = {}
                     for allocation_entry in allocation_entries:
                         value = allocation_entry['ALLOCATIONID']
+                        status = allocation['STATUS']
                         destination_id = allocation_entry['ALLOCATIONKEY']
                         for field_name in allocation_entry.keys():
                             if allocation_entry[field_name] is not None and field_name not in detail:
@@ -575,7 +608,7 @@ class SageIntacctConnector:
                         'display_name': 'allocation',
                         'value': value,
                         'destination_id': destination_id,
-                        'active': True,
+                        'active': status=='active',
                         'detail': detail
                     })
 
@@ -616,12 +649,17 @@ class SageIntacctConnector:
         """
         Get classes
         """
-        count = self.connection.classes.count()
-        if count <= SYNC_UPPER_LIMIT['classes']:
-            classes = self.connection.classes.get_all(field='STATUS', value='active', fields=['NAME', 'CLASSID'])
-            class_attributes = []
+        attribute_count = self.connection.classes.count()
+        if not self.is_sync_allowed(attribute_type = 'classes', attribute_count = attribute_count):
+            logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
+        class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at if latest_updated_at else None)
+        class_attributes = []
 
-            for _class in classes:
+        for _classes in class_generator:
+            for _class in _classes:
                 class_attributes.append({
                     'attribute_type': 'CLASS',
                     'display_name': 'class',
@@ -639,12 +677,17 @@ class SageIntacctConnector:
         """
         Get Customers
         """
-        customers_count = self.connection.customers.count()
-        if customers_count < SYNC_UPPER_LIMIT['customers']:
-            customers = self.connection.customers.get_all(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'])
+        attribute_count = self.connection.customers.count()
+        if not self.is_sync_allowed(attribute_type = 'customers', attribute_count = attribute_count):
+            logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
+        customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at if latest_updated_at else None)
 
-            customer_attributes = []
+        customer_attributes = []
 
+        for customers in customer_generator:
             for customer in customers:
                 customer_attributes.append({
                     'attribute_type': 'CUSTOMER',
@@ -663,21 +706,29 @@ class SageIntacctConnector:
         """
         Get and Sync Tax Details
         """
+        attribute_count = self.connection.tax_details.count()
+        if not self.is_sync_allowed(attribute_type = 'tax_details', attribute_count = attribute_count):
+            logger.info('Skipping sync of tax_details for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+        
         attributes = []
-        tax_details = self.connection.tax_details.get_all(field='STATUS', value='active')
-        for tax_detail in tax_details:
-            if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
-                attributes.append({
-                    'attribute_type': 'TAX_DETAIL',
-                    'display_name': 'Tax Detail',
-                    'value': tax_detail['DETAILID'],
-                    'destination_id': tax_detail['DETAILID'],
-                    'active': True,
-                    'detail': {
-                        'tax_rate': float(tax_detail['VALUE']),
-                        'tax_solution_id': tax_detail['TAXSOLUTIONID']
-                    }
-                })
+        fields = ['DETAILID', 'VALUE', 'TAXSOLUTIONID', 'TAXTYPE']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='TAX_DETAIL')
+        tax_details_generator = self.connection.tax_details.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        for tax_details in tax_details_generator:
+            for tax_detail in tax_details:
+                if float(tax_detail['VALUE']) >= 0 and tax_detail['TAXTYPE'] == 'Purchase':
+                    attributes.append({
+                        'attribute_type': 'TAX_DETAIL',
+                        'display_name': 'Tax Detail',
+                        'value': tax_detail['DETAILID'],
+                        'destination_id': tax_detail['DETAILID'],
+                        'active': True,
+                        'detail': {
+                            'tax_rate': float(tax_detail['VALUE']),
+                            'tax_solution_id': tax_detail['TAXSOLUTIONID']
+                        }
+                    })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
                 attributes, 'TAX_DETAIL', self.workspace_id, True)
@@ -844,21 +895,14 @@ class SageIntacctConnector:
         """
         Get vendors
         """
-        vendors = self.connection.vendors.get_all()
+        fields = ['DISPLAYCONTACT.EMAIL1', 'NAME', 'VENDORID', 'STATUS']
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        vendor_generator = self.connection.vendors.get_all_generator(**params)
         vendor_attributes = []
 
-        destination_attributes = DestinationAttribute.objects.filter(workspace_id=self.workspace_id,
-                attribute_type= 'VENDOR', display_name='vendor').values('destination_id', 'value', 'detail')
-        disabled_fields_map = {}
-
-        for destination_attribute in destination_attributes:
-            disabled_fields_map[destination_attribute['destination_id']] = {
-                'value': destination_attribute['value'],
-                'detail': destination_attribute['detail']
-            }
-
-        for vendor in vendors:
-            if vendor['STATUS'] == 'active':
+        for vendors in vendor_generator:
+            for vendor in vendors:
                 detail = {
                     'email': vendor['DISPLAYCONTACT.EMAIL1'] if vendor['DISPLAYCONTACT.EMAIL1'] else None
                 }
@@ -868,21 +912,8 @@ class SageIntacctConnector:
                     'value': vendor['NAME'],
                     'destination_id': vendor['VENDORID'],
                     'detail': detail,
-                    'active': True
+                    'active': vendor['STATUS'] == 'active'
                 })
-
-                if vendor['VENDORID'] in disabled_fields_map:
-                    disabled_fields_map.pop(vendor['VENDORID'])
-
-        for destination_id in disabled_fields_map:
-            vendor_attributes.append({
-                'attribute_type': 'VENDOR',
-                'display_name': 'vendor',
-                'value': disabled_fields_map[destination_id]['value'],
-                'destination_id': destination_id,
-                'active': False,
-                'detail': disabled_fields_map[destination_id]['detail']
-            })
 
         if vendor_attributes:
             DestinationAttribute.bulk_create_or_update_destination_attributes(

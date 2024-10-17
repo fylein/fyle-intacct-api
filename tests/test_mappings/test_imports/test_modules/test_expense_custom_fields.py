@@ -60,7 +60,11 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.Locations.get_all',
+            'sageintacctsdk.apis.Locations.count',
+            return_value=21
+        )
+        mocker.patch(
+            'sageintacctsdk.apis.Locations.get_all_generator',
             return_value=expense_custom_field_data['create_new_auto_create_expense_custom_fields_destination_attributes']
         )
         mock_call.side_effect = [
@@ -96,7 +100,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=expense_custom_field_data['create_new_auto_create_expense_custom_fields_get_by_id']
         )
         mocker.patch(
-            'sageintacctsdk.apis.Locations.get_all',
+            'sageintacctsdk.apis.Locations.get_all_generator',
             return_value=expense_custom_field_data['create_new_auto_create_expense_custom_fields_destination_attributes_subsequent_run']
         )
         mock_call.side_effect = [
@@ -115,7 +119,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'LUKE').count()
 
-        assert expense_attributes_count == 21 + 2 
+        assert expense_attributes_count == 21 + 2
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='LUKE', destination_type='LOCATION').count()
         

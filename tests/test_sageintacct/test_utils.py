@@ -1,10 +1,12 @@
 import ast
 import json
+from datetime import datetime
 import pytest
 import logging
 from unittest import mock
+from apps.sage_intacct.models import CostType
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, Mapping, CategoryMapping
 from apps.sage_intacct.utils import SageIntacctConnector, SageIntacctCredential, Configuration, Workspace
 from apps.mappings.models import GeneralMapping
 from .fixtures import data
@@ -18,7 +20,7 @@ def test_sync_employees(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Employees.get_all',
+        'sageintacctsdk.apis.Employees.get_all_generator',
         return_value=data['get_employees']
     )
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -59,7 +61,7 @@ def test_sync_vendors(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Vendors.get_all',
+        'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=data['get_vendors']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -76,9 +78,12 @@ def test_sync_vendors(mocker, db):
 
 def test_sync_departments(mocker, db):
     workspace_id = 1
-
     mocker.patch(
-        'sageintacctsdk.apis.Departments.get_all',
+        'sageintacctsdk.apis.Departments.count',
+        return_value=2
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Departments.get_all_generator',
         return_value=data['get_departments']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -97,7 +102,12 @@ def test_sync_expense_types(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.ExpenseTypes.get_all',
+        'sageintacctsdk.apis.ExpenseTypes.count',
+        return_value=5
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.ExpenseTypes.get_all_generator',
         return_value=data['get_expense_types']
     )
 
@@ -140,7 +150,7 @@ def test_sync_payment_accounts(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.CheckingAccounts.get_all',
+        'sageintacctsdk.apis.CheckingAccounts.get_all_generator',
         return_value=data['get_payment_accounts']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -159,7 +169,7 @@ def test_sync_projects(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all',
+        'sageintacctsdk.apis.Projects.get_all_generator',
         return_value=data['get_projects']
     )
     mocker.patch(
@@ -187,7 +197,7 @@ def test_sync_items(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Items.get_all',
+        'sageintacctsdk.apis.Items.get_all_generator',
         return_value=data['get_items']
     )
 
@@ -210,9 +220,12 @@ def test_sync_items(mocker, db):
 
 def test_sync_locations(mocker, db):
     workspace_id = 1
-
     mocker.patch(
-        'sageintacctsdk.apis.Locations.get_all',
+        'sageintacctsdk.apis.Locations.count',
+        return_value=5
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Locations.get_all_generator',
         return_value=data['get_locations']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -231,7 +244,7 @@ def test_sync_location_entities(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.LocationEntities.get_all',
+        'sageintacctsdk.apis.LocationEntities.get_all_generator',
         return_value=data['get_location_entities']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -250,7 +263,7 @@ def test_sync_expense_payment_types(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.ExpensePaymentTypes.get_all',
+        'sageintacctsdk.apis.ExpensePaymentTypes.get_all_generator',
         return_value=data['get_expense_payment_types']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -439,9 +452,12 @@ def test_get_tax_exclusive_amount(db):
 
 def test_sync_tax_details(mocker, db):
     workspace_id = 1
-
     mocker.patch(
-        'sageintacctsdk.apis.TaxDetails.get_all',
+        'sageintacctsdk.apis.TaxDetails.count',
+        return_value=5
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.TaxDetails.get_all_generator',
         return_value=data['get_tax_details']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -460,7 +476,11 @@ def tests_sync_accounts(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Accounts.get_all',
+        'sageintacctsdk.apis.Accounts.count',
+        return_value=5
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Accounts.get_all_generator',
         return_value=data['get_accounts']
     )
 
@@ -483,7 +503,7 @@ def test_sync_classes(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Classes.get_all',
+        'sageintacctsdk.apis.Classes.get_all_generator',
         return_value=data['get_classes']
     )
 
@@ -512,7 +532,7 @@ def test_sync_customers(mocker, db):
         return_value=5
     )
     mocker.patch(
-        'sageintacctsdk.apis.Customers.get_all',
+        'sageintacctsdk.apis.Customers.get_all_generator',
         return_value=data['get_customers']
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -710,7 +730,7 @@ def test_get_or_create_vendor(mocker, db):
     workspace_id = 1
     get_call_mock = mocker.patch(
         'sageintacctsdk.apis.Vendors.get',
-        return_value={'vendor': data['get_vendors'], '@totalcount': 2}
+        return_value={'vendor': data['get_vendor'], '@totalcount': 2}
     )
     post_call_mock = mocker.patch(
         'sageintacctsdk.apis.Vendors.post',
@@ -741,7 +761,7 @@ def test_get_or_create_vendor(mocker, db):
     assert vendor.id == new_vendor.id
     assert vendor.value == 'Already existing vendor in DB'
 
-    get_call_mock.return_value = {'VENDOR': data['get_vendors'], '@totalcount': 2}
+    get_call_mock.return_value = {'VENDOR': data['get_vendor'], '@totalcount': 2}
 
     vendor = sage_intacct_connection.get_or_create_vendor('Non existing vendor in DB', 'ashwin.t@fyle.in', False)
 
@@ -761,9 +781,9 @@ def test_get_or_create_vendor(mocker, db):
     assert vendor.id == vendor_from_db.id
 
     # case insensitive not found in db -> search in intacct and found
-    data['get_vendors'][0]['NAME'] = 'Non existing vendor in DB use all cases'
+    data['get_vendor'][0]['NAME'] = 'Non existing vendor in DB use all cases'
 
-    get_call_mock.return_value = {'VENDOR': data['get_vendors'], '@totalcount': 2}
+    get_call_mock.return_value = {'VENDOR': data['get_vendor'], '@totalcount': 2}
 
     vendor = sage_intacct_connection.get_or_create_vendor('non exiSting VENDOR iN Db UsE aLl CaSeS', create=True)
 
@@ -787,11 +807,11 @@ def test_get_or_create_employee(mocker, db):
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Employees.get',
-        return_value={'employee': data['get_employees'], '@totalcount': 2}
+        return_value={'employee': data['get_employee'], '@totalcount': 2}
     )
     mocker.patch(
         'sageintacctsdk.apis.Employees.post',
-        return_value={'data': {'employee': data['get_employees'][0]}}
+        return_value={'data': {'employee': data['get_employee'][0]}}
     )
 
     employee_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EMPLOYEE').count()
@@ -885,7 +905,7 @@ def test_sync_allocations(mocker, db):
             if allocation_entry_list and allocation_entry_list[0]['ALLOCATIONID'] == value:
                 yield allocation_entry_list
 
-    def mock_allocations_generator(field, value):
+    def mock_allocations_generator(field, value, updated_at=None):
         yield data['allocations']
  
     mocker.patch(
@@ -912,3 +932,120 @@ def test_sync_allocations(mocker, db):
             assert set(allocation_attribute.detail.keys()) == {'LOCATIONID'}
         else:
             assert set(allocation_attribute.detail.keys()) == {'LOCATIONID', 'GLDIMWHAT_IS_NILESH_PANT'}
+
+
+def test_skip_sync_attributes(mocker, db):
+    mocker.patch(
+        'sageintacctsdk.apis.Projects.count',
+        return_value=25001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Classes.count',
+        return_value=1001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Accounts.count',
+        return_value=2001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Locations.count',
+        return_value=1001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Departments.count',
+        return_value=1001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Customers.count',
+        return_value=10001
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.count',
+        return_value=20001
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.TaxDetails.count',
+        return_value=201
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.CostTypes.count',
+        return_value=500001
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.ExpenseTypes.count',
+        return_value=1001
+    )
+
+    today = datetime.today()
+    Workspace.objects.filter(id=1).update(created_at=today)
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=1)
+
+    Mapping.objects.filter(workspace_id=1).delete()
+    CategoryMapping.objects.filter(workspace_id=1).delete()
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()
+
+    sage_intacct_connection.sync_projects()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CLASS').delete()
+
+    sage_intacct_connection.sync_classes()
+
+    classifications = DestinationAttribute.objects.filter(attribute_type='CLASS', workspace_id=1).count()
+    assert classifications == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='ACCOUNT').delete()
+
+    sage_intacct_connection.sync_accounts()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='ACCOUNT').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='LOCATION').delete()
+
+    sage_intacct_connection.sync_locations()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='LOCATION').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='DEPARTMENT').delete()
+
+    sage_intacct_connection.sync_departments()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='DEPARTMENT').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CUSTOMER').delete()
+
+    sage_intacct_connection.sync_customers()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CUSTOMER').count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='TAX_DETAIL').delete()
+
+    sage_intacct_connection.sync_tax_details()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='TAX_DETAIL').count()
+    assert new_project_count == 0
+    
+    CostType.objects.filter(workspace_id=1).delete()
+
+    sage_intacct_connection.sync_cost_types()
+
+    new_project_count = CostType.objects.filter(workspace_id=1).count()
+    assert new_project_count == 0
+
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').delete()
+
+    sage_intacct_connection.sync_expense_types()
+
+    new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').count()
+    assert new_project_count == 0

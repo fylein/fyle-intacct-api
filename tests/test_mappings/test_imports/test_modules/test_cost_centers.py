@@ -62,7 +62,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.Classes.get_all',
+            'sageintacctsdk.apis.Classes.get_all_generator',
             return_value=cost_center_data['create_new_auto_create_cost_centers_destination_attributes']
         )
         mocker.patch(
@@ -99,7 +99,7 @@ def test_auto_create_destination_attributes(mocker, db):
             return_value=[]
         )
         mocker.patch(
-            'sageintacctsdk.apis.Classes.get_all',
+            'sageintacctsdk.apis.Classes.get_all_generator',
             return_value=cost_center_data['create_new_auto_create_cost_centers_destination_attributes_subsequent_run']
         )
         mocker.patch(
