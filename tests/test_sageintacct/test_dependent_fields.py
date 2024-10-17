@@ -70,11 +70,10 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
 
     cost_types = CostType.objects.filter(workspace_id=workspace_id, is_imported=True).update(is_imported=False)
 
-    mocker.patch('apps.sage_intacct.dependent_fields.process_cost_type_batch', side_effect=Exception('Something went wrong'))
+    mocker.patch('apps.sage_intacct.dependent_fields.post_dependent_cost_code', side_effect=Exception('Something went wrong'))
     post_dependent_cost_type(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
-    assert import_log.status == 'FATAL'
-    assert import_log.error_log['message'] == 'Something went wrong'
+    assert import_log.status == 'PARTIALLY_FAILED'
 
 
 def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent_field_setting):
@@ -109,11 +108,10 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     import_log.status = 'IN_PROGRESS'
     import_log.save()
 
-    mocker.patch('apps.sage_intacct.dependent_fields.process_cost_code_batch', side_effect=Exception('Something went wrong'))
+    mocker.patch('apps.sage_intacct.dependent_fields.sync_sage_intacct_attributes', side_effect=Exception('Something went wrong'))
     post_dependent_cost_code(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
 
-    assert import_log.status == 'FATAL'
-    assert import_log.error_log['message'] == 'Something went wrong'
+    assert import_log.status == 'PARTIALLY_FAILED'
 
 
 def test_post_dependent_expense_field_values(db, mocker, create_cost_type, create_dependent_field_setting):
