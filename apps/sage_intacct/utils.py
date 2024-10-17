@@ -216,7 +216,8 @@ class SageIntacctConnector:
                     'display_name': 'department',
                     'value': department['TITLE'],
                     'destination_id': department['DEPARTMENTID'],
-                    'active': True
+                    'active': True,
+                    'code': department['DEPARTMENTID']
                 })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -260,7 +261,8 @@ class SageIntacctConnector:
                         'detail': {
                             'gl_account_no': expense_type['GLACCOUNTNO'],
                             'gl_account_title': expense_type['GLACCOUNTTITLE']
-                        }
+                        },
+                        'code': expense_type['ACCOUNTLABEL']
                     })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -381,7 +383,8 @@ class SageIntacctConnector:
                     'value': project['NAME'],
                     'destination_id': project['PROJECTID'],
                     'active': project['STATUS'] == 'active',
-                    'detail': detail
+                    'detail': detail,
+                    'code': project['PROJECTID']
                 })
         
             DestinationAttribute.bulk_create_or_update_destination_attributes(
