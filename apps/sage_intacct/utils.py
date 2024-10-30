@@ -630,13 +630,13 @@ class SageIntacctConnector:
         for dimension in dimensions:
             if dimension['userDefinedDimension'] == 'true':
                 dimension_attributes = []
-                dimension_name = dimension['objectLabel']
+                dimension_name = dimension['objectLabel'].upper().replace(" ", "_")
                 dimension_values = self.connection.dimension_values.get_all(dimension_name)
 
                 for value in dimension_values:
                     dimension_attributes.append({
                         'attribute_type': dimension_name,
-                        'display_name': dimension_name,
+                        'display_name': dimension['objectLabel'],
                         'value': value['name'],
                         'destination_id': value['id'],
                         'active': True
