@@ -1511,6 +1511,11 @@ class CostType(models.Model):
     class Meta:
         unique_together = ('record_number', 'workspace_id')
         db_table = 'cost_types'
+        indexes = [
+            models.Index(fields=['project_id']),
+            models.Index(fields=['task_id']),
+            models.Index(fields=['task_name']),
+        ]
 
     @staticmethod
     def bulk_create_or_update(cost_types: List[Dict], workspace_id: int):
