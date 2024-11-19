@@ -129,6 +129,7 @@ class Expense(models.Model):
     approved_at = models.DateTimeField(null=True, help_text='Expense approved at')
     posted_at = models.DateTimeField(null=True, help_text='Date when the money is taken from the bank')
     expense_created_at = models.DateTimeField(help_text='Expense created at')
+    is_posted_at_null = models.BooleanField(default=False, help_text='Flag check if posted at is null or not')
     expense_updated_at = models.DateTimeField(help_text='Expense updated at')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')

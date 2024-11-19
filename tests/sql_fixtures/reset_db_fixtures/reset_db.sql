@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.6 (Debian 15.6-1.pgdg120+2)
+-- Dumped from database version 15.9 (Debian 15.9-1.pgdg120+1)
 -- Dumped by pg_dump version 15.8 (Debian 15.8-1.pgdg120+1)
 
 SET statement_timeout = 0;
@@ -1164,7 +1164,8 @@ CREATE TABLE public.expenses (
     previous_export_state character varying(255),
     workspace_id integer,
     paid_on_fyle boolean NOT NULL,
-    bank_transaction_id character varying(255)
+    bank_transaction_id character varying(255),
+    is_posted_at_null boolean NOT NULL
 );
 
 
@@ -4130,6 +4131,10 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 193	fyle_accounting_mappings	0026_destinationattribute_code	2024-08-12 10:38:36.247956+00
 194	workspaces	0038_alter_configuration_import_code_fields	2024-09-04 11:00:27.611651+00
 195	sage_intacct	0029_auto_20240902_1511	2024-09-02 15:12:18.555335+00
+196	fyle	0034_expense_is_posted_at_null	2024-11-18 04:59:52.076432+00
+197	sage_intacct	0030_auto_20241112_0425	2024-11-18 04:59:52.138056+00
+198	tasks	0010_alter_tasklog_expense_group	2024-11-18 04:59:52.206781+00
+199	workspaces	0039_alter_configuration_change_accounting_period	2024-11-18 05:05:10.975057+00
 \.
 
 
@@ -7566,10 +7571,10 @@ COPY public.expense_reports (id, employee_id, description, supdoc_id, created_at
 -- Data for Name: expenses; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped, report_title, posted_at, employee_name, accounting_export_summary, previous_export_state, workspace_id, paid_on_fyle, bank_transaction_id) FROM stdin;
-1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f	\N	\N	\N	{}	\N	\N	f	\N
-2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f	\N	\N	\N	{}	\N	\N	f	\N
-3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f	\N	\N	\N	{}	\N	\N	f	\N
+COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped, report_title, posted_at, employee_name, accounting_export_summary, previous_export_state, workspace_id, paid_on_fyle, bank_transaction_id, is_posted_at_null) FROM stdin;
+1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f
+2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f
+3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f
 \.
 
 
@@ -8137,7 +8142,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 195, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 199, true);
 
 
 --
@@ -9030,6 +9035,14 @@ ALTER TABLE ONLY public.sage_intacct_reimbursements
 
 
 --
+-- Name: task_logs task_logs_expense_group_id_f19c75f9_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.task_logs
+    ADD CONSTRAINT task_logs_expense_group_id_f19c75f9_uniq UNIQUE (expense_group_id);
+
+
+--
 -- Name: task_logs tasks_tasklog_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9239,6 +9252,27 @@ CREATE INDEX category_mappings_workspace_id_222ea301 ON public.category_mappings
 --
 
 CREATE INDEX charge_card_transaction_li_charge_card_transaction_id_508bf6be ON public.charge_card_transaction_lineitems USING btree (charge_card_transaction_id);
+
+
+--
+-- Name: cost_types_project_04e2f5_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX cost_types_project_04e2f5_idx ON public.cost_types USING btree (project_id);
+
+
+--
+-- Name: cost_types_task_id_085813_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX cost_types_task_id_085813_idx ON public.cost_types USING btree (task_id);
+
+
+--
+-- Name: cost_types_task_na_17ecec_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX cost_types_task_na_17ecec_idx ON public.cost_types USING btree (task_name);
 
 
 --
@@ -9484,13 +9518,6 @@ CREATE INDEX task_logs_bill_id_f4fc5218 ON public.task_logs USING btree (bill_id
 --
 
 CREATE INDEX task_logs_charge_card_transaction_id_0a86b771 ON public.task_logs USING btree (charge_card_transaction_id);
-
-
---
--- Name: task_logs_expense_group_id_f19c75f9; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX task_logs_expense_group_id_f19c75f9 ON public.task_logs USING btree (expense_group_id);
 
 
 --
