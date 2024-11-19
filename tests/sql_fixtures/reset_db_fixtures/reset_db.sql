@@ -4134,6 +4134,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 196	fyle	0034_expense_is_posted_at_null	2024-11-18 04:59:52.076432+00
 197	sage_intacct	0030_auto_20241112_0425	2024-11-18 04:59:52.138056+00
 198	tasks	0010_alter_tasklog_expense_group	2024-11-18 04:59:52.206781+00
+199	workspaces	0039_alter_configuration_change_accounting_period	2024-11-18 05:05:10.975057+00
 \.
 
 
@@ -8141,7 +8142,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 198, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 199, true);
 
 
 --
