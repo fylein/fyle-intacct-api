@@ -61,7 +61,8 @@ data = {
                 'Custom Expense Field':'None'
             },
             'paid_on_qbo':False,
-            'payment_number':'P/2022/05/R/7'
+            'payment_number':'P/2022/05/R/7',
+            'is_posted_at_null': True
         }
     ],
     'workspace_schedule': {'id': 1, 'enabled': True, 'start_datetime': '2022-09-26T13:08:16.281604Z', 'interval_hours': 1, 'error_count': None, 'additional_email_options': [], 'emails_selected': ['ashwin.t@fyle.in'], 'workspace': 1, 'schedule': 9}
