@@ -290,6 +290,7 @@ data = {
                   'Vehicle Type': '',
                   'Fyle Categories': '',
             },
+            'is_posted_at_null': True
         },
     ],
     'eliminated_expenses': [
@@ -335,6 +336,7 @@ data = {
                   'Vehicle Type': '',
                   'Fyle Categories': '',
             },
+            'is_posted_at_null': True
         }
     ],
     'positive_expenses': [
@@ -380,6 +382,7 @@ data = {
                   'Vehicle Type': '',
                   'Fyle Categories': '',
             },
+            'is_posted_at_null': True
         }, 
         {
             'id': 'tx4ziVSAyIsy',
@@ -423,6 +426,7 @@ data = {
                   'Vehicle Type': '',
                   'Fyle Categories': '',
             },
+            'is_posted_at_null': True
         },            
     ],
     'negative_expenses': [
@@ -468,6 +472,7 @@ data = {
                   'Vehicle Type': '',
                   'Fyle Categories': '',
             },
+            'is_posted_at_null': True
         }, 
         {
             'id': 'tx4ziVSAyIsy',
@@ -511,6 +516,7 @@ data = {
                   'Vehicle Type': '',
                   'Fyle Categories': '',
             },
+            'is_posted_at_null': True
         },            
     ],
     'ccc_expenses_split_no_bank_transaction_id': [
@@ -560,7 +566,8 @@ data = {
             'paid_on_fyle': False,
             'paid_on_qbo': False,
             'created_at': '2024-06-18T19:12:17.003409+00:00',
-            'updated_at': '2024-06-18T19:12:17.003421+00:00'
+            'updated_at': '2024-06-18T19:12:17.003421+00:00',
+            'is_posted_at_null': True
         },
         {
             'id': '24009',
@@ -611,7 +618,8 @@ data = {
             'paid_on_fyle': False,
             'paid_on_qbo': False,
             'created_at': '2024-06-18T19:12:17.020617+00:00',
-            'updated_at': '2024-06-18T19:12:17.020627+00:00'
+            'updated_at': '2024-06-18T19:12:17.020627+00:00',
+            'is_posted_at_null': True
         }
     ],
     'ccc_expenses_split_same_bank_transaction_id': [
@@ -661,7 +669,8 @@ data = {
             'paid_on_qbo': False,
             'created_at': '2024-06-18T19:12:17.003409+00:00',
             'updated_at': '2024-06-18T19:12:17.003421+00:00',
-            'bank_transaction_id': 'anish'
+            'bank_transaction_id': 'anish',
+            'is_posted_at_null': True
         },
         {
             'id': '24009',
@@ -712,7 +721,8 @@ data = {
             'paid_on_qbo': False,
             'created_at': '2024-06-18T19:12:17.020617+00:00',
             'updated_at': '2024-06-18T19:12:17.020627+00:00',
-            'bank_transaction_id': 'anish'
+            'bank_transaction_id': 'anish',
+            'is_posted_at_null': True
         }
     ],
     'ccc_expenses_split_diff_bank_transaction_id': [
@@ -763,7 +773,8 @@ data = {
             'created_at': '2024-06-18T19:12:17.003409+00:00',
             'updated_at': '2024-06-18T19:12:17.003421+00:00',
             'bank_transaction_id': 'Arkham',
-            'fund_source': 'CCC'
+            'fund_source': 'CCC',
+            'is_posted_at_null': True
         },
         {
             'id': '24004',
@@ -815,7 +826,8 @@ data = {
             'created_at': '2024-06-18T19:12:17.003409+00:00',
             'updated_at': '2024-06-18T19:12:17.003421+00:00',
             'bank_transaction_id': 'Arkham',
-            'fund_source': 'CCC'
+            'fund_source': 'CCC',
+            'is_posted_at_null': True
         },
         {
             'id': '24008',
@@ -864,7 +876,8 @@ data = {
             'created_at': '2024-06-18T19:12:17.003409+00:00',
             'updated_at': '2024-06-18T19:12:17.003421+00:00',
             'bank_transaction_id': 'Anish',
-            'fund_source': 'CCC'
+            'fund_source': 'CCC',
+            'is_posted_at_null': True
         },
         {
             'id': '24009',
@@ -916,7 +929,8 @@ data = {
             'created_at': '2024-06-18T19:12:17.003409+00:00',
             'updated_at': '2024-06-18T19:12:17.003421+00:00',
             'bank_transaction_id': 'Anish',
-            'fund_source': 'CCC'
+            'fund_source': 'CCC',
+            'is_posted_at_null': True
         }
     ],
     'expense_group_id': {
