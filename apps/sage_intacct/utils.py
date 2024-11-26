@@ -969,11 +969,13 @@ class SageIntacctConnector:
             expense_link = self.get_expense_link(lineitem)
 
             tax_exclusive_amount, _ = self.get_tax_exclusive_amount(lineitem.amount, general_mappings.default_tax_code_id)
+            amount = lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount
+            amount = round(amount, 2)
 
             expense = {
                 'expensetype' if lineitem.expense_type_id else 'glaccountno': lineitem.expense_type_id \
                 if lineitem.expense_type_id else lineitem.gl_account_number,
-                'amount': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
+                'amount': amount,
                 'expensedate': {
                     'year': transaction_date.year,
                     'month': transaction_date.month,
