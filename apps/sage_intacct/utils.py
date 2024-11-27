@@ -1,4 +1,5 @@
 import re
+import json
 import logging
 from typing import List, Dict
 from datetime import datetime, timedelta
@@ -1750,3 +1751,33 @@ class SageIntacctConnector:
                 is_enabled = True
 
         return is_enabled
+
+    def get_exported_entry(self, resource_type: str, export_id: str):
+        """
+        Retrieve a specific resource by internal ID.
+
+        Args:
+            resource_type (str): The type of resource to fetch.
+            export_id (str): The internal ID of the resource.
+        """
+        response = getattr(self, 'get_{}'.format(resource_type))(export_id)
+        return json.loads(json.dumps(response, default=str))
+
+    def get_accounting_fields(self, resource_type: str):
+        """
+        Retrieve accounting fields for a specific resource type and internal ID.
+
+        Args:
+            resource_type (str): The type of resource to fetch.
+
+        Returns:
+            list or dict: Parsed JSON representation of the resource data.
+        """
+        module = getattr(self.connection, resource_type)
+        method = 'get_all' if resource_type == 'dimensions' else 'get_all_generator'
+
+        generator = getattr(module, method)()
+
+        response = [row for responses in generator for row in responses] if resource_type != 'dimensions' else generator
+
+        return json.loads(json.dumps(response, default=str))

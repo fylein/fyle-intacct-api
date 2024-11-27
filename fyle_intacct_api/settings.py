@@ -33,6 +33,7 @@ DEBUG = True if os.environ.get('DEBUG') == 'True' else False
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',')
 
 ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+E2E_TESTS_CLIENT_SECRET = os.environ.get('E2E_TESTS_CLIENT_SECRET')
 
 # Application definition
 
@@ -57,7 +58,8 @@ INSTALLED_APPS = [
     'apps.fyle',
     'apps.sage_intacct',
     'apps.tasks',
-    'apps.mappings'
+    'apps.mappings',
+    'apps.internal'
 ]
 
 MIDDLEWARE = [
