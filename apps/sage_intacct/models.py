@@ -372,7 +372,7 @@ def get_memo(expense_group: ExpenseGroup,
         return memo
 
     expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' \
-        else 'Corporate Credit Card expense'
+        else 'Corporate Card expense'
     unique_number = None
     count = 0
 
@@ -402,12 +402,12 @@ def get_memo(expense_group: ExpenseGroup,
             workspace_id=expense_group.workspace_id
         )
         if expense_group.fund_source == 'CCC':
-            if expense_group_settings.ccc_export_date_type != 'current_date':
+            if expense_group_settings.ccc_export_date_type not in ('current_date', 'last_spent_at'):
                 date = get_transaction_date(expense_group)
                 date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
                 memo = '{} - {}'.format(memo, date)
         else:
-            if expense_group_settings.reimbursable_export_date_type != 'current_date':
+            if expense_group_settings.reimbursable_export_date_type not in ('current_date', 'last_spent_at'):
                 date = get_transaction_date(expense_group)
                 date = (datetime.strptime(date, '%Y-%m-%dT%H:%M:%S')).strftime('%d/%m/%Y')
                 memo = '{} - {}'.format(memo, date)
@@ -450,6 +450,8 @@ def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configur
 
     details = {
         'employee_email': lineitem.employee_email,
+        'employee_name': lineitem.employee_name,
+        'card_number': '{0}'.format(lineitem.masked_corporate_card_number) if lineitem.masked_corporate_card_number else '',
         'merchant': '{0}'.format(lineitem.vendor) if lineitem.vendor else '',
         'category': '{0}'.format(category) if lineitem.category else '',
         'purpose': '{0}'.format(lineitem.purpose) if lineitem.purpose else '',
