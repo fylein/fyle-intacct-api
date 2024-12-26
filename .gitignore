@@ -164,3 +164,5 @@ cache.db
 fyle_integrations_platform_connector/
 fyle_accounting_mappings/
 ./fyle
+commits.csv
+misc/
