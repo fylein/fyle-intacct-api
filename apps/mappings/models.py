@@ -6,6 +6,8 @@ from django.db.models import JSONField
 
 from apps.workspaces.models import Workspace
 
+from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
+
 
 IMPORT_STATUS_CHOICES= (
     ('FATAL', 'FATAL'),
@@ -29,7 +31,7 @@ class LocationEntityMapping(models.Model):
     class Meta:
         db_table = 'location_entity_mappings'
 
-class GeneralMapping(models.Model):
+class GeneralMapping(AutoAddCreateUpdateInfoMixin, models.Model):
     """
     General Mappings
     """

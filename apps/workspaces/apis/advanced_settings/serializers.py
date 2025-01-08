@@ -131,6 +131,9 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
         return instance.id
 
     def update(self, instance, validated):
+        request = self.context.get('request')
+        user = request.user if request and hasattr(request, 'user') else None
+
         configurations = validated.pop('configurations')
         general_mappings = validated.pop('general_mappings')
         workspace_schedules = validated.pop('workspace_schedules')
@@ -144,7 +147,8 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
                 'change_accounting_period': configurations.get('change_accounting_period'),
                 'memo_structure': configurations.get('memo_structure'),
                 'auto_create_merchants_as_vendors': configurations.get('auto_create_merchants_as_vendors')
-            }
+            },
+            user=user
         )
 
         GeneralMapping.objects.update_or_create(
@@ -164,7 +168,8 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
                 'default_item_name': general_mappings.get('default_item').get('name'),
                 'use_intacct_employee_departments': general_mappings.get('use_intacct_employee_departments'),
                 'use_intacct_employee_locations': general_mappings.get('use_intacct_employee_locations')
-            }
+            },
+            user=user
         )
 
         AdvancedConfigurationsTriggers.run_post_configurations_triggers(instance.id, workspace_schedules)
