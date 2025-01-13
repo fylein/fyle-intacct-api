@@ -13,6 +13,8 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_rest_auth.helpers import get_fyle_admin
 
+from rabbitmq.connector import RabbitMQ
+
 from apps.fyle.tasks import create_expense_groups
 from apps.fyle.helpers import post_request
 from .actions import export_to_intacct
@@ -245,3 +247,14 @@ def async_update_workspace_name(workspace: Workspace, access_token: str):
 
     workspace.name = org_name
     workspace.save()
+
+
+def sync_dimension_active_workspaces():
+    """
+    Sync dimension active workspaces
+    """
+    rabbitmq = RabbitMQ()
+    # TODO: update this
+    active_workspaces = Workspace.objects.filter(id__in=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    for workspace in active_workspaces:
+        rabbitmq.publish('maintenance.sync.both', {'workspace_id': str(workspace.id)})
