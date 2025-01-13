@@ -1,5 +1,5 @@
 from apps.fyle.models import get_default_expense_state, get_default_expense_group_fields, ExpenseGroupSettings, Expense, Reimbursement, \
-    ExpenseGroup, _group_expenses, _format_date, get_default_ccc_expense_state
+    ExpenseGroup, _group_expenses, _format_date, get_default_ccc_expense_state, Workspace
 from apps.workspaces.models import Configuration
 from .fixtures import data
 from dateutil import parser
@@ -43,8 +43,10 @@ def test_expense_group_settings(create_temp_workspace, db):
     workspace_id = 98
     payload = data['expense_group_settings_payload']
 
+    user = Workspace.objects.get(id=1).user
+
     ExpenseGroupSettings.update_expense_group_settings(
-        payload, workspace_id
+        payload, workspace_id, user
     )
 
     settings = ExpenseGroupSettings.objects.last()
