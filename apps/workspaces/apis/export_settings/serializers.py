@@ -140,6 +140,9 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
     
 
     def update(self, instance, validated):
+        request = self.context.get('request')
+        user = request.user if request and hasattr(request, 'user') else None
+
         configurations = validated.pop('configurations')
         expense_group_settings = validated.pop('expense_group_settings')
         general_mappings = validated.pop('general_mappings')
@@ -153,7 +156,8 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
                 'corporate_credit_card_expenses_object': configurations['corporate_credit_card_expenses_object'],
                 'employee_field_mapping': configurations['employee_field_mapping'],
                 'use_merchant_in_journal_line': configurations['use_merchant_in_journal_line'] if 'use_merchant_in_journal_line' in configurations else False
-            }
+            },
+            user=user
         )
 
         export_trigger = ExportSettingsTrigger(
@@ -175,7 +179,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         if not expense_group_settings['ccc_export_date_type']:
             expense_group_settings['ccc_export_date_type'] = 'current_date'
 
-        ExpenseGroupSettings.update_expense_group_settings(expense_group_settings, workspace_id=workspace_id)
+        ExpenseGroupSettings.update_expense_group_settings(expense_group_settings, workspace_id=workspace_id, user=user)
 
         GeneralMapping.objects.update_or_create(
             workspace=instance,
@@ -192,7 +196,8 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
                 'default_ccc_expense_payment_type_name': general_mappings['default_ccc_expense_payment_type']['name'],
                 'default_ccc_vendor_id': general_mappings['default_ccc_vendor']['id'],
                 'default_ccc_vendor_name': general_mappings['default_ccc_vendor']['name']
-            }
+            },
+            user=user
         )
 
         if instance.onboarding_state == 'EXPORT_SETTINGS':

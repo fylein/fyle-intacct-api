@@ -13,6 +13,7 @@ from django.db import models
 from django.db.models import Count, Q, JSONField
 
 from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
 
 from apps.workspaces.models import Workspace, Configuration
 
@@ -224,7 +225,7 @@ class Expense(models.Model):
         return expense_objects
 
 
-class ExpenseGroupSettings(models.Model):
+class ExpenseGroupSettings(AutoAddCreateUpdateInfoMixin, models.Model):
     """
     ExpenseGroupCustomizationSettings
     """
@@ -258,7 +259,7 @@ class ExpenseGroupSettings(models.Model):
         db_table = 'expense_group_settings'
 
     @staticmethod
-    def update_expense_group_settings(expense_group_settings: Dict, workspace_id: int):
+    def update_expense_group_settings(expense_group_settings: Dict, workspace_id: int, user):
         settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
         current_reimbursable_settings = list(settings.reimbursable_expense_group_fields)
         current_ccc_settings = list(settings.corporate_credit_card_expense_group_fields)
@@ -348,7 +349,8 @@ class ExpenseGroupSettings(models.Model):
                 'reimbursable_export_date_type': expense_group_settings['reimbursable_export_date_type'],
                 'ccc_export_date_type': expense_group_settings['ccc_export_date_type'],
                 'split_expense_grouping': expense_group_settings['split_expense_grouping']
-            }
+            },
+            user=user
         )
 
 
