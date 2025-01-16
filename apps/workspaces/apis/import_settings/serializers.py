@@ -130,6 +130,9 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         return instance.id
 
     def update(self, instance, validated):
+        request = self.context.get('request')
+        user = request.user if request and hasattr(request, 'user') else None
+
         configurations = validated.pop('configurations')
         general_mappings = validated.pop('general_mappings')
         mapping_settings = validated.pop('mapping_settings')
@@ -143,7 +146,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                     'import_tax_codes': configurations.get('import_tax_codes'),
                     'import_vendors_as_merchants': configurations.get('import_vendors_as_merchants'),
                     'import_code_fields': configurations.get('import_code_fields')
-                }
+                },
+                user=user
             )
 
             GeneralMapping.objects.update_or_create(
@@ -151,7 +155,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                 defaults={
                     'default_tax_code_name': general_mappings.get('default_tax_code').get('name'),
                     'default_tax_code_id': general_mappings.get('default_tax_code').get('id')
-                }
+                },
+                user=user
             )
 
             trigger: ImportSettingsTrigger = ImportSettingsTrigger(
@@ -178,7 +183,8 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                         'import_to_fyle': setting['import_to_fyle'] if 'import_to_fyle' in setting else False,
                         'is_custom': setting['is_custom'] if 'is_custom' in setting else False,
                         'source_placeholder': setting['source_placeholder'] if 'source_placeholder' in setting else None
-                    }
+                    },
+                    user=user
                 )
 
             project_mapping = MappingSetting.objects.filter(workspace_id=instance.id, destination_field='PROJECT').first()

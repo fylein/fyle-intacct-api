@@ -989,7 +989,9 @@ data = {
         "split_expense_grouping": 'SINGLE_LINE_ITEM',
         'created_at': '2021-11-15T08:46:16.069944Z',
         'updated_at': '2021-11-15T08:46:16.069986Z',
-        'workspace': 1
+        'workspace': 1,
+        'created_by': 'ashuthb@skanfk.com',
+        'updated_by': 'asbdjabs@jksbf.com'
     },
     'reimbursements': [
         {
