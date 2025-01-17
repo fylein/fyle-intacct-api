@@ -10,6 +10,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import Count, Q, JSONField
+from django.db.models.fields.json import KeyTextTransform
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
@@ -365,7 +366,7 @@ def _group_expenses(expenses, group_fields, workspace_id):
             field = ExpenseAttribute.objects.filter(workspace_id=workspace_id,
                                                     attribute_type=field.upper()).first()
             if field:
-                custom_fields[field.attribute_type.lower()] = f'custom_properties__{field.display_name}'
+                custom_fields[field.attribute_type.lower()] = KeyTextTransform(field.display_name, 'custom_properties')
 
     expense_groups = list(expenses.values(*group_fields, **custom_fields).annotate(
         total=Count('*'), expense_ids=ArrayAgg('id')))
