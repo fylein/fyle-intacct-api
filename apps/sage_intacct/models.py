@@ -523,10 +523,11 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
             workspace_id=expense_group.workspace_id
         ).order_by('-updated_at').first()
 
-        if employee and employee.detail[object_type]:
+        if employee and employee.detail.get(object_type):
             default_employee_object = employee.detail[object_type]
             return default_employee_object
-    
+
+
 def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, description: str):
     card_mapping = Mapping.objects.filter(
         source_type='CORPORATE_CARD',
