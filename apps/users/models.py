@@ -1,12 +1,13 @@
-# Create your models here.
 from django.db import models
-from django.contrib.auth.models import (
-    BaseUserManager, AbstractBaseUser
-)
+from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, full_name, password=None):
+    """
+    Custom user model manager where email is the unique identifiers
+    for authentication instead of usernames.
+    """
+    def create_user(self, email: str, full_name: str, password: str = None) -> 'User':
         """
         Creates and saves a User with the given email and password.
         """
@@ -22,7 +23,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_staffuser(self, email, full_name, password):
+    def create_staffuser(self, email: str, full_name: str, password: str) -> 'User':
         """
         Creates and saves a staff user with the given email and password.
         """
@@ -35,7 +36,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, full_name, password):
+    def create_superuser(self, email: str, full_name: str, password: str) -> 'User':
         """
         Creates and saves a superuser with the given email and password.
         """
@@ -51,6 +52,9 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser):
+    """
+    Custom user model
+    """
     id = models.AutoField(primary_key=True)
     email = models.EmailField(
         verbose_name='email address',
@@ -70,29 +74,53 @@ class User(AbstractBaseUser):
     class Meta:
         db_table = 'users'
 
-    def has_module_perms(self, app_label):
+    def has_module_perms(self, app_label: any) -> bool:
+        """
+        Does the user have permissions to view the app
+        """
         return True
 
-    def has_perm(self, perm, obj=None):
+    def has_perm(self, perm: any, obj: any = None) -> bool:
+        """
+        Does the user have a specific permission?
+        """
         return True
 
-    def get_full_name(self):
+    def get_full_name(self) -> str:
+        """
+        The user is identified by their email address
+        """
         return self.full_name
 
-    def get_short_name(self):
+    def get_short_name(self) -> str:
+        """
+        The user is identified by their email address
+        """
         return self.email
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns a string representation of the user
+        """
         return self.user_id
 
     @property
-    def is_staff(self):
+    def is_staff(self) -> bool:
+        """
+        Is the user a member of staff?
+        """
         return self.staff
 
     @property
-    def is_admin(self):
+    def is_admin(self) -> bool:
+        """
+        Is the user an admin member?
+        """
         return self.admin
 
     @property
-    def is_active(self):
+    def is_active(self) -> bool:
+        """
+        Is the user active?
+        """
         return self.active

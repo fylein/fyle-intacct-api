@@ -1,33 +1,46 @@
 import json
-import traceback
-import requests
-from datetime import datetime, timezone
-from fyle_integrations_platform_connector import PlatformConnector
 import logging
-from typing import List, Union
+import traceback
+from typing import List, Optional, Union
+from datetime import datetime, timezone
 
+import requests
+import django_filters
 from django.conf import settings
 from django.db.models import Q
+from django.db import models
 from django_q.tasks import Chain
-from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from rest_framework.exceptions import ValidationError
 
-from apps.fyle.models import ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, Expense
+from fyle_integrations_platform_connector import PlatformConnector
+from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
+
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import FyleCredential, Workspace, Configuration
-
-from typing import List
-
-import django_filters
+from apps.workspaces.models import (
+    FyleCredential,
+    Workspace,
+    Configuration
+)
+from apps.fyle.models import (
+    ExpenseFilter,
+    ExpenseGroup,
+    ExpenseGroupSettings,
+    Expense
+)
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 SOURCE_ACCOUNT_MAP = {'PERSONAL': 'PERSONAL_CASH_ACCOUNT', 'CCC': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT'}
 
 
-def post_request(url, body, refresh_token=None):
+def post_request(url: str, body: dict, refresh_token: str = None) -> Optional[dict]:
     """
     Create a HTTP post request.
+    :param url: URL
+    :param body: Body
+    :param refresh_token: Refresh token
+    :return: dict
     """
     access_token = None
     api_headers = {}
@@ -49,9 +62,13 @@ def post_request(url, body, refresh_token=None):
         raise Exception(response.text)
 
 
-def get_request(url, params, refresh_token):
+def get_request(url: str, params: dict, refresh_token: str) -> Optional[dict]:
     """
     Create a HTTP get request.
+    :param url: URL
+    :param params: Params
+    :param refresh_token: Refresh token
+    :return: dict
     """
     access_token = get_access_token(refresh_token)
     api_headers = {
@@ -86,6 +103,8 @@ def get_request(url, params, refresh_token):
 def get_access_token(refresh_token: str) -> str:
     """
     Get access token from fyle
+    :param refresh_token: Refresh token
+    :return: Access token
     """
     api_data = {
         'grant_type': 'refresh_token',
@@ -93,12 +112,16 @@ def get_access_token(refresh_token: str) -> str:
         'client_id': settings.FYLE_CLIENT_ID,
         'client_secret': settings.FYLE_CLIENT_SECRET
     }
+
     return post_request(settings.FYLE_TOKEN_URI, body=api_data)['access_token']
 
 
-def get_fyle_orgs(refresh_token: str, cluster_domain: str):
+def get_fyle_orgs(refresh_token: str, cluster_domain: str) -> dict:
     """
     Get fyle orgs of a user
+    :param refresh_token: (str)
+    :param cluster_domain: (str)
+    :return: fyle_orgs (dict)
     """
     api_url = '{0}/api/orgs/'.format(cluster_domain)
 
@@ -116,7 +139,7 @@ def get_cluster_domain(refresh_token: str) -> str:
     return post_request(cluster_api_url, {}, refresh_token)['cluster_domain']
 
 
-def add_expense_id_to_expense_group_settings(workspace_id: int):
+def add_expense_id_to_expense_group_settings(workspace_id: int) -> None:
     """
     Add Expense id to card expense grouping
     :param workspace_id: Workspace id
@@ -130,12 +153,13 @@ def add_expense_id_to_expense_group_settings(workspace_id: int):
     expense_group_settings.save()
 
 
-def check_interval_and_sync_dimension(workspace_id, **kwargs) -> bool:
+def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> None:
     """
     Check sync interval and sync dimension
     :param workspace_id: Workspace ID
+    :param kwargs: Keyword arguments
+    :return: None
     """
-
     workspace = Workspace.objects.get(pk=workspace_id)
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
 
@@ -147,7 +171,14 @@ def check_interval_and_sync_dimension(workspace_id, **kwargs) -> bool:
         workspace.source_synced_at = datetime.now()
         workspace.save(update_fields=['source_synced_at'])
 
-def sync_dimensions(fyle_credentials, is_export: bool = False):
+
+def sync_dimensions(fyle_credentials: FyleCredential, is_export: bool = False) -> None:
+    """
+    Sync dimensions
+    :param fyle_credentials: Fyle credentials
+    :param is_export: Is export
+    :return: None
+    """
     platform = PlatformConnector(fyle_credentials)
     platform.import_fyle_dimensions(
         import_taxes=True,
@@ -173,7 +204,13 @@ def sync_dimensions(fyle_credentials, is_export: bool = False):
         if projects_count != projects_expense_attribute_count:
             platform.projects.sync()
 
-def handle_refresh_dimensions(workspace_id):
+
+def handle_refresh_dimensions(workspace_id: int) -> None:
+    """
+    Handle refresh dimensions
+    :param workspace_id: Workspace ID
+    :return: None
+    """
     workspace = Workspace.objects.get(id=workspace_id)
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
     configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
@@ -232,9 +269,14 @@ def handle_refresh_dimensions(workspace_id):
     workspace.save(update_fields=['source_synced_at'])
 
 
-def construct_expense_filter(expense_filter):
+def construct_expense_filter(expense_filter: ExpenseFilter) -> Q:
+    """
+    Construct the expense filter
+    :param expense_filter: Expense filter
+    :return: Constructed expense filter
+    """
     constructed_expense_filter = {}
-    # If the expense filter is a custom field 
+    # If the expense filter is a custom field
     if expense_filter.is_custom:
         # If the operator is not isnull
         if expense_filter.operator != 'isnull':
@@ -302,15 +344,22 @@ def construct_expense_filter(expense_filter):
     # Return the constructed expense filter
     return constructed_expense_filter
 
-def construct_expense_filter_query(expense_filters: List[ExpenseFilter]):
+
+def construct_expense_filter_query(expense_filters: List[ExpenseFilter]) -> Q:
+    """
+    Construct the expense filter query
+    :param expense_filters: Expense filters
+    :return: Constructed expense filter query
+    """
     final_filter = None
+    join_by = None
     for expense_filter in expense_filters:
         constructed_expense_filter = construct_expense_filter(expense_filter)
-        
+
         # If this is the first filter, set it as the final filter
         if expense_filter.rank == 1:
             final_filter = (constructed_expense_filter)
-        
+
         # If join by is AND, OR
         elif expense_filter.rank != 1:
             if join_by == 'AND':
@@ -323,13 +372,25 @@ def construct_expense_filter_query(expense_filters: List[ExpenseFilter]):
 
     return final_filter
 
+
 def connect_to_platform(workspace_id: int) -> PlatformConnector:
+    """
+    Connect to platform
+    :param workspace_id: Workspace ID
+    :return: Platform connector
+    """
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
 
     return PlatformConnector(fyle_credentials=fyle_credentials)
 
+
 def get_updated_accounting_export_summary(
-        expense_id: str, state: str, error_type: Union[str, None], url: Union[str, None], is_synced: bool) -> dict:
+    expense_id: str,
+    state: str,
+    error_type: Union[str, None],
+    url: Union[str, None],
+    is_synced: bool
+) -> dict:
     """
     Get updated accounting export summary
     :param expense_id: expense id
@@ -346,6 +407,7 @@ def get_updated_accounting_export_summary(
         'url': url,
         'synced': is_synced
     }
+
 
 def get_batched_expenses(batched_payload: List[dict], workspace_id: int) -> List[Expense]:
     """
@@ -369,7 +431,6 @@ def get_source_account_type(fund_source: List[str]) -> List[str]:
         source_account_type.append(SOURCE_ACCOUNT_MAP[source])
 
     return source_account_type
-
 
 
 def get_fund_source(workspace_id: int) -> List[str]:
@@ -401,10 +462,13 @@ def handle_import_exception(task_log: TaskLog) -> None:
     logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def assert_valid_request(workspace_id:int, fyle_org_id:str):
+def assert_valid_request(workspace_id:int, fyle_org_id:str) -> None:
     """
     Assert if the request is valid by checking
     the url_workspace_id and fyle_org_id workspace
+    :param workspace_id: Workspace ID
+    :param fyle_org_id: Fyle Org ID
+    :return: None
     """
     workspace = Workspace.objects.get(fyle_org_id=fyle_org_id)
     if workspace.id != workspace_id:
@@ -412,7 +476,15 @@ def assert_valid_request(workspace_id:int, fyle_org_id:str):
 
 
 class AdvanceSearchFilter(django_filters.FilterSet):
-    def filter_queryset(self, queryset):
+    """
+    Advance search filter
+    """
+    def filter_queryset(self, queryset: models.QuerySet) -> models.QuerySet:
+        """
+        Filter queryset
+        :param queryset: Queryset
+        :return: Filtered queryset
+        """
         or_filtered_queryset = queryset.none()
         or_filter_fields = getattr(self.Meta, 'or_fields', [])
         or_field_present = False
@@ -441,6 +513,9 @@ class AdvanceSearchFilter(django_filters.FilterSet):
 
 
 class ExpenseGroupSearchFilter(AdvanceSearchFilter):
+    """
+    Expense group search filter
+    """
     exported_at__gte = django_filters.DateTimeFilter(lookup_expr='gte', field_name='exported_at')
     exported_at__lte = django_filters.DateTimeFilter(lookup_expr='lte', field_name='exported_at')
     tasklog__status = django_filters.CharFilter()
@@ -456,6 +531,9 @@ class ExpenseGroupSearchFilter(AdvanceSearchFilter):
 
 
 class ExpenseSearchFilter(AdvanceSearchFilter):
+    """
+    Expense search filter
+    """
     org_id = django_filters.CharFilter()
     is_skipped = django_filters.BooleanFilter()
     updated_at__gte = django_filters.DateTimeFilter(lookup_expr='gte', field_name='updated_at')

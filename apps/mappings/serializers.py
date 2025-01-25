@@ -11,6 +11,7 @@ class GeneralMappingSerializer(serializers.ModelSerializer):
         model = GeneralMapping
         fields = '__all__'
 
+
 class LocationEntityMappingSerializer(serializers.ModelSerializer):
     """
     Location Entity Mappings group serializer
