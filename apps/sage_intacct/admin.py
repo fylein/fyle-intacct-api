@@ -3,7 +3,7 @@ Registering models in Django Admin
 """
 from django.contrib import admin
 
-from .models import Bill, BillLineitem
+from apps.sage_intacct.models import Bill, BillLineitem
 
 
 admin.site.register(Bill)

@@ -1,25 +1,26 @@
 import logging
-import traceback
-from typing import List
 from datetime import datetime, timedelta, timezone
 
 from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
 
-
-from fyle_intacct_api.exceptions import BulkError
-from apps.fyle.models import ExpenseGroup, Reimbursement, Expense
 from apps.tasks.models import TaskLog, Error
-from apps.workspaces.models import FyleCredential
+from apps.fyle.models import ExpenseGroup, Expense
+from apps.workspaces.models import Configuration, FyleCredential
 from apps.mappings.models import GeneralMapping
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def __create_chain_and_run(fyle_credentials: FyleCredential, in_progress_expenses: List[Expense],
-        workspace_id: int, chain_tasks: List[dict], fund_source: str) -> None:
+def __create_chain_and_run(
+    fyle_credentials: FyleCredential,
+    in_progress_expenses: list[Expense],
+    workspace_id: int,
+    chain_tasks: list[dict],
+    fund_source: str
+) -> None:
     """
     Create chain and run
     :param fyle_credentials: Fyle credentials
@@ -41,7 +42,13 @@ def __create_chain_and_run(fyle_credentials: FyleCredential, in_progress_expense
     chain.run()
 
 
-def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List[str], is_auto_export: bool, fund_source: str, interval_hours: int):
+def schedule_journal_entries_creation(
+    workspace_id: int,
+    expense_group_ids: list[str],
+    is_auto_export: bool,
+    fund_source: str,
+    interval_hours: int
+) -> None:
     """
     Schedule journal entries creation
     :param expense_group_ids: List of expense group ids
@@ -78,17 +85,17 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
                 task_log.save()
-            
+
             last_export = False
             if expense_groups.count() == index + 1:
                 last_export = True
 
             chain_tasks.append({
-                    'target': 'apps.sage_intacct.tasks.create_journal_entry',
-                    'expense_group': expense_group,
-                    'task_log_id': task_log.id,
-                    'last_export': last_export
-                    })
+                'target': 'apps.sage_intacct.tasks.create_journal_entry',
+                'expense_group': expense_group,
+                'task_log_id': task_log.id,
+                'last_export': last_export
+            })
             if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
                 in_progress_expenses.extend(expense_group.expenses.all())
 
@@ -97,7 +104,7 @@ def schedule_journal_entries_creation(workspace_id: int, expense_group_ids: List
             __create_chain_and_run(fyle_credentials, in_progress_expenses, workspace_id, chain_tasks, fund_source)
 
 
-def validate_failing_export(is_auto_export: bool, interval_hours: int, error: Error):
+def validate_failing_export(is_auto_export: bool, interval_hours: int, error: Error) -> bool:
     """
     Validate failing export
     :param is_auto_export: Is auto export
@@ -108,7 +115,7 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, error: Er
     return is_auto_export and interval_hours and error and error.repetition_count > 100 and datetime.now().replace(tzinfo=timezone.utc) - error.updated_at <= timedelta(hours=24)
 
 
-def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List[str], is_auto_export: bool, fund_source: str, interval_hours: int):
+def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, fund_source: str, interval_hours: int) -> None:
     """
     Schedule expense reports creation
     :param expense_group_ids: List of expense group ids
@@ -151,11 +158,11 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
                 last_export = True
 
             chain_tasks.append({
-                    'target': 'apps.sage_intacct.tasks.create_expense_report',
-                    'expense_group': expense_group,
-                    'task_log_id': task_log.id,
-                    'last_export': last_export
-                    })
+                'target': 'apps.sage_intacct.tasks.create_expense_report',
+                'expense_group': expense_group,
+                'task_log_id': task_log.id,
+                'last_export': last_export
+            })
             if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
                 in_progress_expenses.extend(expense_group.expenses.all())
 
@@ -164,7 +171,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: List
             __create_chain_and_run(fyle_credentials, in_progress_expenses, workspace_id, chain_tasks, fund_source)
 
 
-def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], is_auto_export: bool, fund_source: str, interval_hours: int):
+def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, fund_source: str, interval_hours: int) -> None:
     """
     Schedule bill creation
     :param expense_group_ids: List of expense group ids
@@ -200,17 +207,17 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], is_
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
                 task_log.save()
-            
+
             last_export = False
             if expense_groups.count() == index + 1:
                 last_export = True
 
             chain_tasks.append({
-                    'target': 'apps.sage_intacct.tasks.create_bill',
-                    'expense_group': expense_group,
-                    'task_log_id': task_log.id,
-                    'last_export': last_export
-                    })
+                'target': 'apps.sage_intacct.tasks.create_bill',
+                'expense_group': expense_group,
+                'task_log_id': task_log.id,
+                'last_export': last_export
+            })
             if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
                 in_progress_expenses.extend(expense_group.expenses.all())
 
@@ -219,7 +226,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: List[str], is_
             __create_chain_and_run(fyle_credentials, in_progress_expenses, workspace_id, chain_tasks, fund_source)
 
 
-def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: List[str], is_auto_export: bool, fund_source: str, interval_hours: int):
+def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, fund_source: str, interval_hours: int) -> None:
     """
     Schedule charge card transaction creation
     :param expense_group_ids: List of expense group ids
@@ -256,17 +263,17 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
                 task_log.save()
-            
+
             last_export = False
             if expense_groups.count() == index + 1:
                 last_export = True
 
             chain_tasks.append({
-                    'target': 'apps.sage_intacct.tasks.create_charge_card_transaction',
-                    'expense_group': expense_group,
-                    'task_log_id': task_log.id,
-                    'last_export': last_export
-                    })
+                'target': 'apps.sage_intacct.tasks.create_charge_card_transaction',
+                'expense_group': expense_group,
+                'task_log_id': task_log.id,
+                'last_export': last_export
+            })
             if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
                 in_progress_expenses.extend(expense_group.expenses.all())
 
@@ -275,7 +282,13 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             __create_chain_and_run(fyle_credentials, in_progress_expenses, workspace_id, chain_tasks, fund_source)
 
 
-def schedule_ap_payment_creation(configuration, workspace_id):
+def schedule_ap_payment_creation(configuration: Configuration, workspace_id: int) -> None:
+    """
+    Schedule AP payment creation
+    :param configuration: Configuration
+    :param workspace_id: workspace id
+    :return: None
+    """
     general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
 
     if general_mappings:
@@ -301,7 +314,13 @@ def schedule_ap_payment_creation(configuration, workspace_id):
             schedule.delete()
 
 
-def schedule_sage_intacct_reimbursement_creation(configuration, workspace_id):
+def schedule_sage_intacct_reimbursement_creation(configuration: Configuration, workspace_id: int) -> None:
+    """
+    Schedule Sage Intacct reimbursement creation
+    :param configuration: Configuration
+    :param workspace_id: workspace id
+    :return: None
+    """
     general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
 
     if general_mappings:
@@ -316,7 +335,7 @@ def schedule_sage_intacct_reimbursement_creation(configuration, workspace_id):
                     'next_run': start_datetime
                 }
             )
-            return 
+            return
 
         schedule: Schedule = Schedule.objects.filter(
             func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
@@ -327,7 +346,13 @@ def schedule_sage_intacct_reimbursement_creation(configuration, workspace_id):
             schedule.delete()
 
 
-def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
+def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments: bool, workspace_id: int) -> None:
+    """
+    Schedule Sage Intacct objects status sync
+    :param sync_sage_intacct_to_fyle_payments: Sync Sage Intacct to Fyle payments
+    :param workspace_id: workspace id
+    :return
+    """
     if sync_sage_intacct_to_fyle_payments:
         start_datetime = datetime.now()
         schedule, _ = Schedule.objects.update_or_create(
@@ -349,7 +374,13 @@ def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments
             schedule.delete()
 
 
-def schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments, workspace_id):
+def schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments: bool, workspace_id: int) -> None:
+    """
+    Schedule Fyle reimbursements sync
+    :param sync_sage_intacct_to_fyle_payments: Sync Sage Intacct to Fyle payments
+    :param workspace_id: workspace id
+    :return None
+    """
     if sync_sage_intacct_to_fyle_payments:
         start_datetime = datetime.now() + timedelta(hours=12)
         schedule, _ = Schedule.objects.update_or_create(

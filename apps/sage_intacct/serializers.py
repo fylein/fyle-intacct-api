@@ -2,8 +2,14 @@ from rest_framework import serializers
 
 from fyle_accounting_mappings.models import DestinationAttribute
 
-from .models import Bill, BillLineitem, ExpenseReport, ExpenseReportLineitem, \
-    ChargeCardTransaction, ChargeCardTransactionLineitem
+from apps.workspaces.models import (
+    Bill,
+    BillLineitem,
+    ExpenseReport,
+    ExpenseReportLineitem,
+    ChargeCardTransaction,
+    ChargeCardTransactionLineitem
+)
 
 
 class BillSerializer(serializers.ModelSerializer):
