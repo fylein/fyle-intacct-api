@@ -17,15 +17,15 @@ from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import (
-    FyleCredential,
     Workspace,
+    FyleCredential,
     Configuration
 )
 from apps.fyle.models import (
+    Expense,
     ExpenseFilter,
     ExpenseGroup,
-    ExpenseGroupSettings,
-    Expense
+    ExpenseGroupSettings
 )
 
 logger = logging.getLogger(__name__)
