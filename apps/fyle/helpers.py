@@ -1,7 +1,7 @@
 import json
 import logging
 import traceback
-from typing import List, Optional, Union
+from typing import Optional, Union
 from datetime import datetime, timezone
 
 import requests
@@ -345,7 +345,7 @@ def construct_expense_filter(expense_filter: ExpenseFilter) -> Q:
     return constructed_expense_filter
 
 
-def construct_expense_filter_query(expense_filters: List[ExpenseFilter]) -> Q:
+def construct_expense_filter_query(expense_filters: list[ExpenseFilter]) -> Q:
     """
     Construct the expense filter query
     :param expense_filters: Expense filters
@@ -409,7 +409,7 @@ def get_updated_accounting_export_summary(
     }
 
 
-def get_batched_expenses(batched_payload: List[dict], workspace_id: int) -> List[Expense]:
+def get_batched_expenses(batched_payload: list[dict], workspace_id: int) -> list[Expense]:
     """
     Get batched expenses
     :param batched_payload: batched payload
@@ -420,7 +420,7 @@ def get_batched_expenses(batched_payload: List[dict], workspace_id: int) -> List
     return Expense.objects.filter(expense_id__in=expense_ids, workspace_id=workspace_id)
 
 
-def get_source_account_type(fund_source: List[str]) -> List[str]:
+def get_source_account_type(fund_source: list[str]) -> list[str]:
     """
     Get source account type
     :param fund_source: fund source
@@ -433,7 +433,7 @@ def get_source_account_type(fund_source: List[str]) -> List[str]:
     return source_account_type
 
 
-def get_fund_source(workspace_id: int) -> List[str]:
+def get_fund_source(workspace_id: int) -> list[str]:
     """
     Get fund source
     :param workspace_id: workspace id

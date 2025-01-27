@@ -47,17 +47,13 @@ data = {
             'MEGAENTITYNAME':'Australia'
         }
     ]],
-    'create_new_auto_create_projects_expense_attributes_0' : [
+    'create_new_auto_create_projects_expense_attributes_0': [
         {
             "count":3,
             "data":[
                 {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
+                    "approver_user_ids": [],
+                    "approver_users": [],
                     "category_ids":"None",
                     "code":"10086",
                     "created_at":"2023-07-31T10:52:39.443516+00:00",
@@ -70,14 +66,9 @@ data = {
                     "restricted_spender_user_ids":"None",
                     "sub_project": None,
                     "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
+                },{
+                    "approver_user_ids": [],
+                    "approver_users": [],
                     "category_ids":"None",
                     "code":"10088",
                     "created_at":"2023-08-01T12:47:24.128675+00:00",
@@ -90,14 +81,9 @@ data = {
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
                     "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
+                },{
+                    "approver_user_ids": [],
+                    "approver_users": [],
                     "category_ids":"None",
                     "code":"10087",
                     "created_at":"2023-08-01T12:38:20.406828+00:00",
@@ -113,234 +99,180 @@ data = {
                 }
             ],
             "offset":0
-            }
+        }
     ],
     "create_new_auto_create_projects_expense_attributes_1": [
         {
             'count':5,
-            'data':[
-                 {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
-                    "category_ids":"None",
-                    "code":"10086",
-                    "created_at":"2023-07-31T10:52:39.443516+00:00",
-                    "description":"Sage Intacct Project - openheimer, Id - 10086",
-                    "display_name":"openheimer",
-                    "id":322907,
-                    "is_enabled":False,
-                    "name":"openheimer",
-                    "org_id":"orqjgyJ21uge",
-                    "restricted_spender_user_ids":"None",
-                    "sub_project":None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
-                    "category_ids":"None",
-                    "code":"10088",
-                    "created_at":"2023-08-01T12:47:24.128675+00:00",
-                    "description":"Sage Intacct Project - Yujiro, Id - 10088",
-                    "display_name":"Yujiro",
-                    "id":322927,
-                    "is_enabled":True,
-                    "name":"Yujiro",
-                    "org_id":"orqjgyJ21uge",
-                    "restricted_spender_user_ids":"None",
-                    "sub_project":None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
-                    "category_ids":"None",
-                    "code":"10087",
-                    "created_at":"2023-08-01T12:38:20.406828+00:00",
-                    "description":"Sage Intacct Project - Pickle, Id - 10087",
-                    "display_name":"Pickle",
-                    "id":322926,
-                    "is_enabled":True,
-                    "name":"Pickle",
-                    "org_id":"orqjgyJ21uge",
-                    "restricted_spender_user_ids":"None",
-                    "sub_project":None,
-                    "updated_at":"2023-08-01T12:38:20.406828+00:00"
-                },
-                {
-                    'approver_user_ids':[
-                        
-                    ],
-                    'approver_users':[
-                        
-                    ],
-                    'category_ids':None,
-                    'code':'10089',
-                    'created_at':'2023-08-08T11:01:16.347801+00:00',
-                    'description':'Sage Intacct Project - Electro wizard, Id - 10089',
-                    'display_name':'Electro wizard',
-                    'id':323014,
-                    'is_enabled':True,
-                    'name':'Electro wizard',
-                    'org_id':'orqjgyJ21uge',
-                    'restricted_spender_user_ids':None,
-                    'sub_project':None,
-                    'updated_at':'2023-08-08T11:01:16.347801+00:00'
-                },
-                {
-                    'approver_user_ids':[
-                        
-                    ],
-                    'approver_users':[
-                        
-                    ],
-                    'category_ids':None,
-                    'code':'10090',
-                    'created_at':'2023-08-08T11:01:16.347801+00:00',
-                    'description':'Sage Intacct Project - Yujiro, Id - 10090',
-                    'display_name':'Yujiro 1',
-                    'id':323015,
-                    'is_enabled':True,
-                    'name':'Yujiro 1',
-                    'org_id':'orqjgyJ21uge',
-                    'restricted_spender_user_ids':None,
-                    'sub_project':None,
-                    'updated_at':'2023-08-08T11:01:16.347801+00:00'
-                }
+            'data':[{
+                "approver_user_ids": [],
+                "approver_users": [],
+                "category_ids":"None",
+                "code":"10086",
+                "created_at":"2023-07-31T10:52:39.443516+00:00",
+                "description":"Sage Intacct Project - openheimer, Id - 10086",
+                "display_name":"openheimer",
+                "id":322907,
+                "is_enabled":False,
+                "name":"openheimer",
+                "org_id":"orqjgyJ21uge",
+                "restricted_spender_user_ids":"None",
+                "sub_project":None,
+                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+            },{
+                "approver_user_ids": [],
+                "approver_users": [],
+                "category_ids":"None",
+                "code":"10088",
+                "created_at":"2023-08-01T12:47:24.128675+00:00",
+                "description":"Sage Intacct Project - Yujiro, Id - 10088",
+                "display_name":"Yujiro",
+                "id":322927,
+                "is_enabled":True,
+                "name":"Yujiro",
+                "org_id":"orqjgyJ21uge",
+                "restricted_spender_user_ids":"None",
+                "sub_project":None,
+                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+            },{
+                "approver_user_ids": [],
+                "approver_users": [],
+                "category_ids":"None",
+                "code":"10087",
+                "created_at":"2023-08-01T12:38:20.406828+00:00",
+                "description":"Sage Intacct Project - Pickle, Id - 10087",
+                "display_name":"Pickle",
+                "id":322926,
+                "is_enabled":True,
+                "name":"Pickle",
+                "org_id":"orqjgyJ21uge",
+                "restricted_spender_user_ids":"None",
+                "sub_project":None,
+                "updated_at":"2023-08-01T12:38:20.406828+00:00"
+            },{
+                'approver_user_ids': [],
+                'approver_users': [],
+                'category_ids':None,
+                'code':'10089',
+                'created_at':'2023-08-08T11:01:16.347801+00:00',
+                'description':'Sage Intacct Project - Electro wizard, Id - 10089',
+                'display_name':'Electro wizard',
+                'id':323014,
+                'is_enabled':True,
+                'name':'Electro wizard',
+                'org_id':'orqjgyJ21uge',
+                'restricted_spender_user_ids':None,
+                'sub_project':None,
+                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+            },{
+                'approver_user_ids': [],
+                'approver_users': [],
+                'category_ids':None,
+                'code':'10090',
+                'created_at':'2023-08-08T11:01:16.347801+00:00',
+                'description':'Sage Intacct Project - Yujiro, Id - 10090',
+                'display_name':'Yujiro 1',
+                'id':323015,
+                'is_enabled':True,
+                'name':'Yujiro 1',
+                'org_id':'orqjgyJ21uge',
+                'restricted_spender_user_ids':None,
+                'sub_project':None,
+                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+            }
             ],
             'offset':0
         }
     ],
-    "create_new_auto_create_projects_expense_attributes_3" : [
+    "create_new_auto_create_projects_expense_attributes_3": [
         {
             'count':0,
             'data':[{
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
-                    "category_ids":"None",
-                    "code":"10086",
-                    "created_at":"2023-07-31T10:52:39.443516+00:00",
-                    "description":"Sage Intacct Project - openheimer, Id - 10086",
-                    "display_name":"openheimer",
-                    "id":322907,
-                    "is_enabled":False,
-                    "name":"openheimer",
-                    "org_id":"orqjgyJ21uge",
-                    "restricted_spender_user_ids":"None",
-                    "sub_project":None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
-                    "category_ids":"None",
-                    "code":"10088",
-                    "created_at":"2023-08-01T12:47:24.128675+00:00",
-                    "description":"Sage Intacct Project - Yujiro, Id - 10088",
-                    "display_name":"Yujiro",
-                    "id":322927,
-                    "is_enabled":True,
-                    "name":"Yujiro",
-                    "org_id":"orqjgyJ21uge",
-                    "restricted_spender_user_ids":"None",
-                    "sub_project":None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
-                    "category_ids":"None",
-                    "code":"10087",
-                    "created_at":"2023-08-01T12:38:20.406828+00:00",
-                    "description":"Sage Intacct Project - Pickle, Id - 10087",
-                    "display_name":"Pickle",
-                    "id":322926,
-                    "is_enabled":True,
-                    "name":"Pickle",
-                    "org_id":"orqjgyJ21uge",
-                    "restricted_spender_user_ids":"None",
-                    "sub_project":None,
-                    "updated_at":"2023-08-01T12:38:20.406828+00:00"
-                },
-                {
-                    'approver_user_ids':[
-                        
-                    ],
-                    'approver_users':[
-                        
-                    ],
-                    'category_ids':None,
-                    'code':'10089',
-                    'created_at':'2023-08-08T11:01:16.347801+00:00',
-                    'description':'Sage Intacct Project - Electro wizard, Id - 10089',
-                    'display_name':'Electro wizard',
-                    'id':323014,
-                    'is_enabled':True,
-                    'name':'Electro wizard',
-                    'org_id':'orqjgyJ21uge',
-                    'restricted_spender_user_ids':None,
-                    'sub_project':None,
-                    'updated_at':'2023-08-08T11:01:16.347801+00:00'
-                },
-                {
-                    'approver_user_ids':[
-                        
-                    ],
-                    'approver_users':[
-                        
-                    ],
-                    'category_ids':None,
-                    'code':'10090',
-                    'created_at':'2023-08-08T11:01:16.347801+00:00',
-                    'description':'Sage Intacct Project - Yujiro, Id - 10090',
-                    'display_name':'Yujiro',
-                    'id':323015,
-                    'is_enabled':True,
-                    'name':'Yujiro',
-                    'org_id':'orqjgyJ21uge',
-                    'restricted_spender_user_ids':None,
-                    'sub_project':None,
-                    'updated_at':'2023-08-08T11:01:16.347801+00:00'
-                }
-            ],
+                "approver_user_ids": [],
+                "approver_users": [],
+                "category_ids":"None",
+                "code":"10086",
+                "created_at":"2023-07-31T10:52:39.443516+00:00",
+                "description":"Sage Intacct Project - openheimer, Id - 10086",
+                "display_name":"openheimer",
+                "id":322907,
+                "is_enabled":False,
+                "name":"openheimer",
+                "org_id":"orqjgyJ21uge",
+                "restricted_spender_user_ids":"None",
+                "sub_project":None,
+                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+            },{
+                "approver_user_ids": [],
+                "approver_users": [],
+                "category_ids":"None",
+                "code":"10088",
+                "created_at":"2023-08-01T12:47:24.128675+00:00",
+                "description":"Sage Intacct Project - Yujiro, Id - 10088",
+                "display_name":"Yujiro",
+                "id":322927,
+                "is_enabled":True,
+                "name":"Yujiro",
+                "org_id":"orqjgyJ21uge",
+                "restricted_spender_user_ids":"None",
+                "sub_project":None,
+                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+            },{
+                "approver_user_ids": [],
+                "approver_users": [],
+                "category_ids":"None",
+                "code":"10087",
+                "created_at":"2023-08-01T12:38:20.406828+00:00",
+                "description":"Sage Intacct Project - Pickle, Id - 10087",
+                "display_name":"Pickle",
+                "id":322926,
+                "is_enabled":True,
+                "name":"Pickle",
+                "org_id":"orqjgyJ21uge",
+                "restricted_spender_user_ids":"None",
+                "sub_project":None,
+                "updated_at":"2023-08-01T12:38:20.406828+00:00"
+            },{
+                'approver_user_ids': [],
+                'approver_users': [],
+                'category_ids':None,
+                'code':'10089',
+                'created_at':'2023-08-08T11:01:16.347801+00:00',
+                'description':'Sage Intacct Project - Electro wizard, Id - 10089',
+                'display_name':'Electro wizard',
+                'id':323014,
+                'is_enabled':True,
+                'name':'Electro wizard',
+                'org_id':'orqjgyJ21uge',
+                'restricted_spender_user_ids':None,
+                'sub_project':None,
+                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+            },{
+                'approver_user_ids': [],
+                'approver_users': [],
+                'category_ids':None,
+                'code':'10090',
+                'created_at':'2023-08-08T11:01:16.347801+00:00',
+                'description':'Sage Intacct Project - Yujiro, Id - 10090',
+                'display_name':'Yujiro',
+                'id':323015,
+                'is_enabled':True,
+                'name':'Yujiro',
+                'org_id':'orqjgyJ21uge',
+                'restricted_spender_user_ids':None,
+                'sub_project':None,
+                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+            }],
             'offset':0
         }
     ],
-    "create_new_auto_create_projects_expense_attributes_4" : [
+    "create_new_auto_create_projects_expense_attributes_4": [
         {
             'count':6,
             'data':[
                 {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
+                    "approver_user_ids": [],
+                    "approver_users": [],
                     "category_ids":"None",
                     "code":"10086",
                     "created_at":"2023-07-31T10:52:39.443516+00:00",
@@ -353,14 +285,9 @@ data = {
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
                     "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
+                },{
+                    "approver_user_ids": [],
+                    "approver_users": [],
                     "category_ids":"None",
                     "code":"10088",
                     "created_at":"2023-08-01T12:47:24.128675+00:00",
@@ -373,14 +300,9 @@ data = {
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
                     "updated_at":"2023-08-01T12:47:24.128675+00:00"
-                },
-                {
-                    "approver_user_ids":[
-                        
-                    ],
-                    "approver_users":[
-                        
-                    ],
+                },{
+                    "approver_user_ids": [],
+                    "approver_users": [],
                     "category_ids":"None",
                     "code":"10087",
                     "created_at":"2023-08-01T12:38:20.406828+00:00",
@@ -393,14 +315,9 @@ data = {
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
                     "updated_at":"2023-08-01T12:38:20.406828+00:00"
-                },
-                {
-                    'approver_user_ids':[
-                        
-                    ],
-                    'approver_users':[
-                        
-                    ],
+                },{
+                    'approver_user_ids': [],
+                    'approver_users':[],
                     'category_ids':None,
                     'code':'10089',
                     'created_at':'2023-08-08T11:01:16.347801+00:00',
@@ -2022,7 +1939,7 @@ data = {
             'is_enabled':True
         }
     ],
-    "create_fyle_project_payload_create_disable_case" : [
+    "create_fyle_project_payload_create_disable_case": [
         {
             'name':'Platform APIs',
             'code':'10081',
@@ -2120,14 +2037,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Train',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Fuel',
@@ -2141,14 +2055,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Fuel',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Office Supplies',
@@ -2162,14 +2073,11 @@ category_data = {
                         323490,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Office Supplies',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Utility',
@@ -2181,14 +2089,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Utility',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Entertainment',
@@ -2201,14 +2106,11 @@ category_data = {
                         323488,
                         323490
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Entertainment',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Others',
@@ -2221,14 +2123,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Others',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mileage',
@@ -2241,14 +2140,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mileage',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Food',
@@ -2261,14 +2157,11 @@ category_data = {
                         323489,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Food',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Bus',
@@ -2282,14 +2175,11 @@ category_data = {
                         323492,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Bus',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Taxi',
@@ -2302,14 +2192,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Taxi',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mail',
@@ -2323,14 +2210,11 @@ category_data = {
                         323492,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mail',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Lodging',
@@ -2342,14 +2226,11 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Lodging',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Airlines',
@@ -2363,14 +2244,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Airlines',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Software',
@@ -2384,14 +2262,11 @@ category_data = {
                         323489,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Software',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Parking',
@@ -2404,14 +2279,11 @@ category_data = {
                         323491,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Parking',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Unspecified',
@@ -2424,14 +2296,11 @@ category_data = {
                         323489,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Unspecified',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Per Diem',
@@ -2442,14 +2311,11 @@ category_data = {
                     'restricted_project_ids':[
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Per Diem',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Professional Services',
@@ -2461,14 +2327,11 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Professional Services',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Groceries',
@@ -2483,14 +2346,11 @@ category_data = {
                         323491,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Groceries',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Rental',
@@ -2502,16 +2362,14 @@ category_data = {
                         323486,
                         323489
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Rental',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
                 }
             ],
             'offset':0
-            }
+        }
     ],
     "create_new_auto_create_categories_expense_attributes_1":[
         {
@@ -2526,14 +2384,11 @@ category_data = {
                     'name':'Airfare',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Cell Phone',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Cell Phone',
@@ -2542,14 +2397,11 @@ category_data = {
                     'name':'Cell Phone',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Ground Transportation/Parking',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Ground Transportation-Parking',
@@ -2558,14 +2410,11 @@ category_data = {
                     'name':'Ground Transportation-Parking',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Hotel/Lodging',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Hotel-Lodging',
@@ -2574,14 +2423,11 @@ category_data = {
                     'name':'Hotel-Lodging',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Internet',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Internet',
@@ -2590,14 +2436,11 @@ category_data = {
                     'name':'Internet',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'labhvam',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'labhvam',
@@ -2606,14 +2449,11 @@ category_data = {
                     'name':'labhvam',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Meals',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Meals',
@@ -2622,14 +2462,11 @@ category_data = {
                     'name':'Meals',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Naruto',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Naruto',
@@ -2638,14 +2475,11 @@ category_data = {
                     'name':'Naruto',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Sasuke',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Sasuke',
@@ -2654,14 +2488,11 @@ category_data = {
                     'name':'Sasuke',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'subham',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'subham',
@@ -2670,14 +2501,11 @@ category_data = {
                     'name':'subham',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Train',
@@ -2691,14 +2519,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Train',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Fuel',
@@ -2712,14 +2537,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Fuel',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Office Supplies',
@@ -2733,14 +2555,11 @@ category_data = {
                         323490,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Office Supplies',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Utility',
@@ -2752,14 +2571,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Utility',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Entertainment',
@@ -2772,14 +2588,11 @@ category_data = {
                         323488,
                         323490
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Entertainment',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Others',
@@ -2792,14 +2605,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Others',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mileage',
@@ -2812,14 +2622,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mileage',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Food',
@@ -2832,14 +2639,11 @@ category_data = {
                         323489,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Food',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Bus',
@@ -2853,14 +2657,11 @@ category_data = {
                         323492,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Bus',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Taxi',
@@ -2873,14 +2674,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Taxi',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mail',
@@ -2894,14 +2692,11 @@ category_data = {
                         323492,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mail',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Lodging',
@@ -2913,14 +2708,11 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Lodging',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Airlines',
@@ -2934,14 +2726,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Airlines',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Software',
@@ -2955,14 +2744,11 @@ category_data = {
                         323489,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Software',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Parking',
@@ -2975,14 +2761,11 @@ category_data = {
                         323491,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Parking',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Unspecified',
@@ -2995,14 +2778,11 @@ category_data = {
                         323489,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Unspecified',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Per Diem',
@@ -3013,14 +2793,11 @@ category_data = {
                     'restricted_project_ids':[
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Per Diem',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Professional Services',
@@ -3032,14 +2809,11 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Professional Services',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Groceries',
@@ -3054,14 +2828,11 @@ category_data = {
                         323491,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Groceries',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Rental',
@@ -3073,9 +2844,7 @@ category_data = {
                         323486,
                         323489
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Rental',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
@@ -3097,14 +2866,11 @@ category_data = {
                     'name':'Airfare',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Cell Phone',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Cell Phone',
@@ -3113,14 +2879,11 @@ category_data = {
                     'name':'Cell Phone',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Ground Transportation/Parking',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Ground Transportation-Parking',
@@ -3129,14 +2892,11 @@ category_data = {
                     'name':'Ground Transportation-Parking',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Hotel/Lodging',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Hotel-Lodging',
@@ -3145,14 +2905,11 @@ category_data = {
                     'name':'Hotel-Lodging',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Internet',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Internet',
@@ -3161,14 +2918,11 @@ category_data = {
                     'name':'Internet',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'labhvam',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'labhvam',
@@ -3177,14 +2931,11 @@ category_data = {
                     'name':'labhvam',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Meals',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Meals',
@@ -3193,14 +2944,11 @@ category_data = {
                     'name':'Meals',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Naruto',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Naruto',
@@ -3209,14 +2957,11 @@ category_data = {
                     'name':'Naruto',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Sasuke',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Sasuke',
@@ -3225,14 +2970,11 @@ category_data = {
                     'name':'Sasuke',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'subham',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'subham',
@@ -3241,14 +2983,11 @@ category_data = {
                     'name':'subham',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Train',
@@ -3262,14 +3001,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Train',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Fuel',
@@ -3283,14 +3019,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Fuel',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Office Supplies',
@@ -3304,14 +3037,11 @@ category_data = {
                         323490,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Office Supplies',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Utility',
@@ -3323,14 +3053,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Utility',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Entertainment',
@@ -3343,14 +3070,11 @@ category_data = {
                         323488,
                         323490
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Entertainment',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Others',
@@ -3363,14 +3087,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Others',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mileage',
@@ -3383,14 +3104,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mileage',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Food',
@@ -3403,14 +3121,11 @@ category_data = {
                         323489,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Food',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Bus',
@@ -3424,14 +3139,11 @@ category_data = {
                         323492,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Bus',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Taxi',
@@ -3444,14 +3156,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Taxi',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mail',
@@ -3465,14 +3174,11 @@ category_data = {
                         323492,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mail',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Lodging',
@@ -3484,14 +3190,11 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Lodging',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Airlines',
@@ -3505,14 +3208,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Airlines',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Software',
@@ -3526,14 +3226,11 @@ category_data = {
                         323489,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Software',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Parking',
@@ -3546,14 +3243,11 @@ category_data = {
                         323491,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Parking',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Unspecified',
@@ -3566,14 +3260,11 @@ category_data = {
                         323489,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Unspecified',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Per Diem',
@@ -3584,14 +3275,11 @@ category_data = {
                     'restricted_project_ids':[
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Per Diem',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Professional Services',
@@ -3603,14 +3291,11 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Professional Services',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Groceries',
@@ -3625,14 +3310,11 @@ category_data = {
                         323491,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Groceries',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Rental',
@@ -3644,9 +3326,7 @@ category_data = {
                         323486,
                         323489
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Rental',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
@@ -3655,7 +3335,7 @@ category_data = {
             'offset':0
         }
     ],
-    "create_new_auto_create_categories_expense_attributes_3" : [
+    "create_new_auto_create_categories_expense_attributes_3": [
         {
             'count':30,
             'data':[
@@ -3668,14 +3348,11 @@ category_data = {
                     'name':'labhvam',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T17:58:21.568622+00:00'
-                },
-                {
+                },{
                     'code':'Naruto',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Naruto',
@@ -3684,14 +3361,11 @@ category_data = {
                     'name':'Naruto',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T17:58:21.568622+00:00'
-                },
-                {
+                },{
                     'code':'Airfare',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Airfare',
@@ -3700,14 +3374,11 @@ category_data = {
                     'name':'Airfare',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Cell Phone',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Cell Phone',
@@ -3716,14 +3387,11 @@ category_data = {
                     'name':'Cell Phone',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Ground Transportation/Parking',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Ground Transportation-Parking',
@@ -3732,14 +3400,11 @@ category_data = {
                     'name':'Ground Transportation-Parking',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Hotel/Lodging',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Hotel-Lodging',
@@ -3748,14 +3413,11 @@ category_data = {
                     'name':'Hotel-Lodging',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Internet',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Internet',
@@ -3764,14 +3426,11 @@ category_data = {
                     'name':'Internet',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'labhvam',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'labhvam',
@@ -3780,14 +3439,11 @@ category_data = {
                     'name':'labhvam',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Meals',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Meals',
@@ -3796,14 +3452,11 @@ category_data = {
                     'name':'Meals',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Naruto',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Naruto',
@@ -3812,14 +3465,11 @@ category_data = {
                     'name':'Naruto',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'Sasuke',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'Sasuke',
@@ -3828,14 +3478,11 @@ category_data = {
                     'name':'Sasuke',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':'subham',
                     'created_at':'2023-09-04T10:17:24.971507+00:00',
                     'display_name':'subham',
@@ -3844,14 +3491,11 @@ category_data = {
                     'name':'subham',
                     'org_id':'orwimNcVyYsp',
                     'restricted_project_ids':None,
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':None,
                     'updated_at':'2023-09-04T10:17:24.971507+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Train',
@@ -3865,14 +3509,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Train',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Fuel',
@@ -3886,14 +3527,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Fuel',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Office Supplies',
@@ -3907,14 +3545,11 @@ category_data = {
                         323490,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Office Supplies',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Utility',
@@ -3926,14 +3561,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Utility',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Entertainment',
@@ -3946,14 +3578,11 @@ category_data = {
                         323488,
                         323490
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Entertainment',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Others',
@@ -3966,14 +3595,11 @@ category_data = {
                         323493,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Others',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mileage',
@@ -3986,14 +3612,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mileage',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Food',
@@ -4006,14 +3629,11 @@ category_data = {
                         323489,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Food',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Bus',
@@ -4027,14 +3647,11 @@ category_data = {
                         323492,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Bus',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Taxi',
@@ -4047,14 +3664,11 @@ category_data = {
                         323490,
                         323491
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Taxi',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Mail',
@@ -4068,14 +3682,11 @@ category_data = {
                         323492,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Mail',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Lodging',
@@ -4087,14 +3698,11 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Lodging',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Airlines',
@@ -4108,14 +3716,11 @@ category_data = {
                         323491,
                         323492
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Airlines',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Software',
@@ -4129,14 +3734,11 @@ category_data = {
                         323489,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Software',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Parking',
@@ -4149,14 +3751,11 @@ category_data = {
                         323491,
                         323493
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Parking',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Unspecified',
@@ -4169,14 +3768,11 @@ category_data = {
                         323489,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Unspecified',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Per Diem',
@@ -4187,14 +3783,11 @@ category_data = {
                     'restricted_project_ids':[
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Per Diem',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-08-30T18:58:09.203161+00:00',
                     'display_name':'Professional Services',
@@ -4206,9 +3799,7 @@ category_data = {
                         323488,
                         323494
                     ],
-                    'restricted_spender_user_ids':[
-                        
-                    ],
+                    'restricted_spender_user_ids':[],
                     'sub_category':None,
                     'system_category':'Professional Services',
                     'updated_at':'2023-08-30T18:58:09.203161+00:00'
@@ -4327,7 +3918,7 @@ category_data = {
             'ITEMID':None
         }
     ]],
-    "create_new_auto_create_expense_type_destination_attributes_disable_case" : [[
+    "create_new_auto_create_expense_type_destination_attributes_disable_case": [[
         {
             'RECORDNO':'1',
             'ACCOUNTLABEL':'Airfare',
@@ -4605,7 +4196,7 @@ category_data = {
     ]
 }
 cost_center_data = {
-    'create_new_auto_create_cost_centers_destination_attributes' : [[
+    'create_new_auto_create_cost_centers_destination_attributes': [[
         {
             'NAME':'Small Business',
             'CLASSID':'400'
@@ -4647,7 +4238,7 @@ cost_center_data = {
             "description": "Cost Center - 123: Integrations CRE, Id - 10082"
         }
     ],
-    'create_new_auto_create_cost_centers_destination_attributes_subsequent_run' : [[
+    'create_new_auto_create_cost_centers_destination_attributes_subsequent_run': [[
         {
             'NAME':'Small Business',
             'CLASSID':'400'
@@ -4699,8 +4290,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Midsize Business, Id - 500',
@@ -4710,8 +4300,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Service Line 1, Id - 100',
@@ -4721,8 +4310,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Service Line 2, Id - 200',
@@ -4732,8 +4320,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Service Line 3, Id - 300',
@@ -4743,8 +4330,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Small Business, Id - 400',
@@ -4773,8 +4359,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Killua Class, Id - 9903',
@@ -4784,8 +4369,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Midsize Business, Id - 500',
@@ -4795,8 +4379,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Service Line 1, Id - 100',
@@ -4806,8 +4389,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Service Line 2, Id - 200',
@@ -4817,8 +4399,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Service Line 3, Id - 300',
@@ -4828,8 +4409,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Small Business, Id - 400',
@@ -4858,8 +4438,7 @@ cost_center_data = {
                     'org_id':'ortL3T2BabCW',
                     'restricted_spender_user_ids':None,
                     'updated_at':'2023-09-15T06:06:10.923262+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-15T06:06:10.923262+00:00',
                     'description':'Cost Center - Raikage, Id - 9904',
@@ -4954,8 +4533,7 @@ expense_custom_field_data = {
                     "seq": 1,
                     "type": "SELECT",
                     "updated_at": "2023-10-10T13:24:33.787371+00:00"
-                },
-                {
+                },{
                     "category_ids": [
                         259385,
                     ],
@@ -5041,8 +4619,7 @@ expense_custom_field_data = {
                     "seq": 1,
                     "type": "SELECT",
                     "updated_at": "2023-10-10T13:24:33.787371+00:00"
-                },
-                {
+                },{
                     "category_ids": [
                         259385,
                     ],
@@ -5499,36 +5076,12 @@ expense_custom_field_data = {
         'is_enabled':True,
         'is_mandatory':False,
         'placeholder':'Select Luke',
-        'options':[
-            'Australia',
-            'Bangalore',
-            'Canada',
-            'Elimination - Global',
-            'Elimination - NA',
-            'Elimination - Sub',
-            'Holding Company',
-            'Inactive loc',
-            'India',
-            'Leaf Village',
-            'London',
-            'Mist Village',
-            'New South Wales',
-            'Prod test',
-            'Sand village',
-            'South Africa',
-            'Testing',
-            'Testing Ash',
-            'United Kingdom',
-            'USA 1',
-            'USA 2'
-        ],
-        'code':None,
-        'id':229506
+        'options':['Australia', 'New South Wales'],
+        'code':None
     },
-    'create_fyle_expense_custom_fields_payload_create_new_case': {'field_name': 'Luke', 'type': 'SELECT', 'is_enabled': True, 'is_mandatory': False, 'placeholder': 'Select Luke', 'options': ['Australia', 'New South Wales'], 'code': None}
 }
-tax_groups_data={
-    'get_tax_details_destination_attributes' : [[
+tax_groups_data = {
+    'get_tax_details_destination_attributes': [[
         {
             'RECORDNO':'78',
             'DETAILID':'UK Import Services Zero Rate',
@@ -10485,8 +10038,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg151Bx7lDBPlol2',
@@ -10495,8 +10047,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg151Bx7lDBPlol3',
@@ -10517,8 +10068,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg1wZnj3PhQy',
@@ -10527,8 +10077,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tg3eLv7MwJMb',
@@ -10537,8 +10086,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.13,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg5BG4i9qqGm',
@@ -10547,8 +10095,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tg5tMXfCNSpE',
@@ -10557,8 +10104,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg5WzIlALGot',
@@ -10567,8 +10113,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg6HnNuOfKGz',
@@ -10577,8 +10122,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg6PHKzeyiBS',
@@ -10587,8 +10131,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tg74XjC4Pt1R',
@@ -10597,8 +10140,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg7eZ6RjaNIM',
@@ -10607,8 +10149,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg9Omx2NNyUa',
@@ -10617,8 +10158,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':1.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg9pYPIEJznb',
@@ -10627,8 +10167,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:38:41.144989+00:00',
                     'id':'tgaKncdysDve',
@@ -10637,8 +10176,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0,
                     'updated_at':'2023-04-06T07:38:41.144989+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgBMVf2pZqHb',
@@ -10647,8 +10185,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tgc9gJQvxUff',
@@ -10657,8 +10194,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgChvvSX1GW5',
@@ -10667,8 +10203,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgcrQ6vvtkQJ',
@@ -10677,8 +10212,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgdTqB5E0Plu',
@@ -10687,8 +10221,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tge5ksvBUcEj',
@@ -10697,8 +10230,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgEj3euHpTce',
@@ -10707,8 +10239,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgFJcY0mj2rS',
@@ -10717,8 +10248,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.17,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgfy8AIjbV3S',
@@ -10727,8 +10257,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgG84FpkqOh9',
@@ -10737,8 +10266,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgGSpEzXbfj7',
@@ -10747,8 +10275,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgheOguBAhxs',
@@ -10757,8 +10284,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgicxLomlC4I',
@@ -10767,8 +10293,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgIf1Q6xlOQi',
@@ -10777,8 +10302,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgIhGsa8mAeU',
@@ -10787,8 +10311,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgkF8zPIr74q',
@@ -10797,8 +10320,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgkGMojJjIPh',
@@ -10807,8 +10329,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tglfO6PGVtLR',
@@ -10817,8 +10338,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tglloo0dZlU0',
@@ -10827,8 +10347,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgLwwUDnMeR8',
@@ -10837,8 +10356,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tgmEQoLEoCQ4',
@@ -10847,8 +10365,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgmIVzjEeAND',
@@ -10857,8 +10374,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMmSoY46tJ7',
@@ -10867,8 +10383,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMUNJIONJh9',
@@ -10877,8 +10392,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMVklXyYWos',
@@ -10887,8 +10401,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tgoktHXscnNE',
@@ -10897,8 +10410,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgpnwYuxz1uF',
@@ -10907,8 +10419,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqHfLAAJKgX',
@@ -10917,8 +10428,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqhju1H6lCE',
@@ -10927,8 +10437,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqZME1gfcnF',
@@ -10937,8 +10446,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgRw2TN5ALm4',
@@ -10947,8 +10455,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgS21jSL9R1I',
@@ -10957,8 +10464,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgs6C54s5h8I',
@@ -10967,8 +10473,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgsci5ksvQ8Q',
@@ -10977,8 +10482,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgsIeIr2O37b',
@@ -10987,8 +10491,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgSP0jP6iyky',
@@ -10997,8 +10500,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgT4sftWCbWn',
@@ -11007,8 +10509,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-18T05:46:07.774901+00:00',
                     'id':'tguoTLOC0Sfs',
@@ -11017,8 +10518,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.09,
                     'updated_at':'2023-10-18T05:46:07.774901+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgV7eMp4uPVz',
@@ -11027,8 +10527,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgVZKXoq0lEG',
@@ -11037,8 +10536,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgX7i403LP6a',
@@ -11047,8 +10545,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxBcOgzDDcF',
@@ -11057,8 +10554,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxkqHB0DpXN',
@@ -11067,8 +10563,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxO7TCkL4UZ',
@@ -11077,8 +10572,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxTK6vERfPK',
@@ -11087,8 +10581,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgym7poxrsXU',
@@ -11097,8 +10590,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgYnsPj8rATE',
@@ -11107,8 +10599,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.18,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZFvQw8FovN',
@@ -11117,8 +10608,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZI4SKFDdpr',
@@ -11127,8 +10617,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZL5AWaFTEg',
@@ -11137,8 +10626,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZMW5gQDkJJ',
@@ -11176,8 +10664,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg151Bx7lDBPlol2',
@@ -11186,8 +10673,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg151Bx7lDBPlol3',
@@ -11208,8 +10694,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg1wZnj3PhQy',
@@ -11218,8 +10703,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tg3eLv7MwJMb',
@@ -11228,8 +10712,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.13,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg5BG4i9qqGm',
@@ -11238,8 +10721,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tg5tMXfCNSpE',
@@ -11248,8 +10730,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg5WzIlALGot',
@@ -11258,8 +10739,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg6HnNuOfKGz',
@@ -11268,8 +10748,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg6PHKzeyiBS',
@@ -11278,8 +10757,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tg74XjC4Pt1R',
@@ -11288,8 +10766,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg7eZ6RjaNIM',
@@ -11298,8 +10775,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg9Omx2NNyUa',
@@ -11308,8 +10784,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':1.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg9pYPIEJznb',
@@ -11318,8 +10793,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:38:41.144989+00:00',
                     'id':'tgaKncdysDve',
@@ -11328,8 +10802,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0,
                     'updated_at':'2023-04-06T07:38:41.144989+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgBMVf2pZqHb',
@@ -11338,8 +10811,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tgc9gJQvxUff',
@@ -11348,8 +10820,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgChvvSX1GW5',
@@ -11358,8 +10829,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgcrQ6vvtkQJ',
@@ -11368,8 +10838,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgdTqB5E0Plu',
@@ -11378,8 +10847,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tge5ksvBUcEj',
@@ -11388,8 +10856,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgEj3euHpTce',
@@ -11398,8 +10865,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgFJcY0mj2rS',
@@ -11408,8 +10874,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.17,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgfy8AIjbV3S',
@@ -11418,8 +10883,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgG84FpkqOh9',
@@ -11428,8 +10892,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgGSpEzXbfj7',
@@ -11438,8 +10901,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgheOguBAhxs',
@@ -11448,8 +10910,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgicxLomlC4I',
@@ -11458,8 +10919,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgIf1Q6xlOQi',
@@ -11468,8 +10928,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgIhGsa8mAeU',
@@ -11478,8 +10937,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgkF8zPIr74q',
@@ -11488,8 +10946,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgkGMojJjIPh',
@@ -11498,8 +10955,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tglfO6PGVtLR',
@@ -11508,8 +10964,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tglloo0dZlU0',
@@ -11518,8 +10973,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgLwwUDnMeR8',
@@ -11528,8 +10982,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tgmEQoLEoCQ4',
@@ -11538,8 +10991,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgmIVzjEeAND',
@@ -11548,8 +11000,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMmSoY46tJ7',
@@ -11558,8 +11009,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMUNJIONJh9',
@@ -11568,8 +11018,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMVklXyYWos',
@@ -11578,8 +11027,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tgoktHXscnNE',
@@ -11588,8 +11036,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgpnwYuxz1uF',
@@ -11598,8 +11045,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqHfLAAJKgX',
@@ -11608,8 +11054,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqhju1H6lCE',
@@ -11618,8 +11063,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqZME1gfcnF',
@@ -11628,8 +11072,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgRw2TN5ALm4',
@@ -11638,8 +11081,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgS21jSL9R1I',
@@ -11648,8 +11090,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgs6C54s5h8I',
@@ -11658,8 +11099,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgsci5ksvQ8Q',
@@ -11668,8 +11108,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgsIeIr2O37b',
@@ -11678,8 +11117,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgSP0jP6iyky',
@@ -11688,8 +11126,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgT4sftWCbWn',
@@ -11698,8 +11135,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-18T05:46:07.774901+00:00',
                     'id':'tguoTLOC0Sfs',
@@ -11708,8 +11144,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.09,
                     'updated_at':'2023-10-18T05:46:07.774901+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgV7eMp4uPVz',
@@ -11718,8 +11153,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgVZKXoq0lEG',
@@ -11728,8 +11162,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgX7i403LP6a',
@@ -11738,8 +11171,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxBcOgzDDcF',
@@ -11748,8 +11180,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxkqHB0DpXN',
@@ -11758,8 +11189,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxO7TCkL4UZ',
@@ -11768,8 +11198,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxTK6vERfPK',
@@ -11778,8 +11207,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgym7poxrsXU',
@@ -11788,8 +11216,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgYnsPj8rATE',
@@ -11798,8 +11225,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.18,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZFvQw8FovN',
@@ -11808,8 +11234,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZI4SKFDdpr',
@@ -11818,8 +11243,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZL5AWaFTEg',
@@ -11828,8 +11252,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZMW5gQDkJJ',
@@ -11838,8 +11261,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZMW5gQDkJJKI',
@@ -11877,8 +11299,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg151Bx7lDBPlol2',
@@ -11887,8 +11308,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg151Bx7lDBPlol3',
@@ -11909,8 +11329,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg1wZnj3PhQy',
@@ -11919,8 +11338,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tg3eLv7MwJMb',
@@ -11929,8 +11347,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.13,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg5BG4i9qqGm',
@@ -11939,8 +11356,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tg5tMXfCNSpE',
@@ -11949,8 +11365,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg5WzIlALGot',
@@ -11959,8 +11374,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg6HnNuOfKGz',
@@ -11969,8 +11383,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg6PHKzeyiBS',
@@ -11979,8 +11392,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tg74XjC4Pt1R',
@@ -11989,8 +11401,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg7eZ6RjaNIM',
@@ -11999,8 +11410,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg9Omx2NNyUa',
@@ -12009,8 +11419,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':1.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tg9pYPIEJznb',
@@ -12019,8 +11428,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:38:41.144989+00:00',
                     'id':'tgaKncdysDve',
@@ -12029,8 +11437,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0,
                     'updated_at':'2023-04-06T07:38:41.144989+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgBMVf2pZqHb',
@@ -12039,8 +11446,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-05-04T06:51:49.559067+00:00',
                     'id':'tgc9gJQvxUff',
@@ -12049,8 +11455,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-05-04T06:51:49.559067+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgChvvSX1GW5',
@@ -12059,8 +11464,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgcrQ6vvtkQJ',
@@ -12069,8 +11473,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgdTqB5E0Plu',
@@ -12079,8 +11482,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tge5ksvBUcEj',
@@ -12089,8 +11491,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgEj3euHpTce',
@@ -12099,8 +11500,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgFJcY0mj2rS',
@@ -12109,8 +11509,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.17,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgfy8AIjbV3S',
@@ -12119,8 +11518,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgG84FpkqOh9',
@@ -12129,8 +11527,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgGSpEzXbfj7',
@@ -12139,8 +11536,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgheOguBAhxs',
@@ -12149,8 +11545,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgicxLomlC4I',
@@ -12159,8 +11554,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgIf1Q6xlOQi',
@@ -12169,8 +11563,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgIhGsa8mAeU',
@@ -12179,8 +11572,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgkF8zPIr74q',
@@ -12189,8 +11581,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgkGMojJjIPh',
@@ -12199,8 +11590,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tglfO6PGVtLR',
@@ -12209,8 +11599,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tglloo0dZlU0',
@@ -12219,8 +11608,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgLwwUDnMeR8',
@@ -12229,8 +11617,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tgmEQoLEoCQ4',
@@ -12239,8 +11626,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgmIVzjEeAND',
@@ -12249,8 +11635,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMmSoY46tJ7',
@@ -12259,8 +11644,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMUNJIONJh9',
@@ -12269,8 +11653,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgMVklXyYWos',
@@ -12279,8 +11662,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-04-06T07:44:46.333143+00:00',
                     'id':'tgoktHXscnNE',
@@ -12289,8 +11671,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-04-06T07:44:46.333143+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgpnwYuxz1uF',
@@ -12299,8 +11680,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqHfLAAJKgX',
@@ -12309,8 +11689,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqhju1H6lCE',
@@ -12319,8 +11698,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgqZME1gfcnF',
@@ -12329,8 +11707,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgRw2TN5ALm4',
@@ -12339,8 +11716,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgS21jSL9R1I',
@@ -12349,8 +11725,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgs6C54s5h8I',
@@ -12359,8 +11734,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgsci5ksvQ8Q',
@@ -12369,8 +11743,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgsIeIr2O37b',
@@ -12379,8 +11752,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgSP0jP6iyky',
@@ -12389,8 +11761,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgT4sftWCbWn',
@@ -12399,8 +11770,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.15,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-18T05:46:07.774901+00:00',
                     'id':'tguoTLOC0Sfs',
@@ -12409,8 +11779,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.09,
                     'updated_at':'2023-10-18T05:46:07.774901+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgV7eMp4uPVz',
@@ -12419,8 +11788,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgVZKXoq0lEG',
@@ -12429,8 +11797,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgX7i403LP6a',
@@ -12439,8 +11806,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxBcOgzDDcF',
@@ -12449,8 +11815,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxkqHB0DpXN',
@@ -12459,8 +11824,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxO7TCkL4UZ',
@@ -12469,8 +11833,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgxTK6vERfPK',
@@ -12479,8 +11842,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.2,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgym7poxrsXU',
@@ -12489,8 +11851,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-10-24T05:45:53.349979+00:00',
                     'id':'tgYnsPj8rATE',
@@ -12499,8 +11860,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.18,
                     'updated_at':'2023-10-24T05:45:53.349979+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZFvQw8FovN',
@@ -12509,8 +11869,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZI4SKFDdpr',
@@ -12519,8 +11878,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.05,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZL5AWaFTEg',
@@ -12529,8 +11887,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.0,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZMW5gQDkJJ',
@@ -12539,8 +11896,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.1,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZMW5gQDkJJKI',
@@ -12549,8 +11905,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.09,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZMW5gQDkJJKIol',
@@ -12559,8 +11914,7 @@ tax_groups_data={
                     'org_id':'or79Cob97KSh',
                     'percentage':0.09,
                     'updated_at':'2023-09-14T05:46:05.968869+00:00'
-                },
-                {
+                },{
                     'code':None,
                     'created_at':'2023-09-14T05:46:05.968869+00:00',
                     'id':'tgZMW5gQDkJJKIpO',
@@ -12574,7 +11928,7 @@ tax_groups_data={
             'offset':0
         }
     ],
-    'create_fyle_tax_details_payload_create_new_case' :[
+    'create_fyle_tax_details_payload_create_new_case':[
         {
             'name':'UK Import Services Zero Rate',
             'is_enabled':True,
@@ -12845,9 +12199,9 @@ tax_groups_data={
             'is_enabled':True,
             'percentage':0.0
         }
-        ]
+    ]
 }
-merchants_data={
+merchants_data = {
     'get_vendors_destination_attributes': [[
         {
             'RECORDNO':'54',

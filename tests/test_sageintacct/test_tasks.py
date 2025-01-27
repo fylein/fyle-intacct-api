@@ -1,31 +1,71 @@
-from datetime import datetime
+import random
+import logging
+from unittest import mock
+from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 
-import logging
-import random
-from unittest import mock
-from django_q.models import Schedule
-from apps.tasks.models import TaskLog
-from apps.sage_intacct.models import *
-from apps.sage_intacct.tasks import __validate_expense_group, __validate_employee_mapping
-from apps.sage_intacct.tasks import *
-from apps.sage_intacct.queue import *
-from fyle_intacct_api.exceptions import BulkError
-from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
-from fyle_accounting_mappings.models import EmployeeMapping
-from apps.workspaces.models import Configuration, SageIntacctCredential
-from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping
-from apps.fyle.models import ExpenseGroup, Reimbursement
-from apps.sage_intacct.utils import SageIntacctConnector
-from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
-from .fixtures import data
 from django.conf import settings
+from django_q.models import Schedule
+
+from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute
+from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
+
+from fyle_intacct_api.exceptions import BulkError
+
+from apps.tasks.models import Error, TaskLog
+from apps.mappings.models import GeneralMapping
+from apps.fyle.models import Expense, ExpenseGroup, Reimbursement
+from apps.workspaces.models import Configuration, SageIntacctCredential
+from apps.sage_intacct.utils import (
+    SageIntacctConnector
+)
+from apps.sage_intacct.models import (
+    Bill,
+    BillLineitem,
+    JournalEntry,
+    ExpenseReport,
+    ChargeCardTransaction,
+    ExpenseReportLineitem,
+    SageIntacctReimbursement
+)
+from apps.sage_intacct.queue import (
+    schedule_bills_creation,
+    schedule_ap_payment_creation,
+    schedule_expense_reports_creation,
+    schedule_fyle_reimbursements_sync,
+    schedule_journal_entries_creation,
+    schedule_charge_card_transaction_creation,
+    schedule_sage_intacct_objects_status_sync,
+    schedule_sage_intacct_reimbursement_creation
+)
+from apps.sage_intacct.tasks import (
+    __validate_employee_mapping,
+    __validate_expense_group,
+    check_sage_intacct_object_status,
+    create_ap_payment,
+    create_bill,
+    create_charge_card_transaction,
+    create_expense_report,
+    create_journal_entry,
+    create_or_update_employee_mapping,
+    create_sage_intacct_reimbursement,
+    get_or_create_credit_card_vendor,
+    handle_sage_intacct_errors,
+    load_attachments,
+    process_fyle_reimbursements,
+    update_last_export_details,
+    validate_for_skipping_payment
+)
+from .fixtures import data
 
 logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 def test_handle_intacct_errors(db):
+    """
+    Test handle_intacct_errors
+    """
     task_log = TaskLog.objects.filter(workspace_id=1).first()
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -66,7 +106,7 @@ def test_handle_intacct_errors(db):
             msg='Some Parameters are wrong',
             response={
                 'error': {
-                    'errorno': 'invalidRequest', 
+                    'errorno': 'invalidRequest',
                     'description': 'Invalid Request'
                 }
             }
@@ -79,28 +119,27 @@ def test_handle_intacct_errors(db):
     assert task_log.sage_intacct_errors[0]['short_description'] == 'Invalid Request'
     assert task_log.status == 'FAILED'
 
-
     handle_sage_intacct_errors(
         exception=WrongParamsError(
             msg='Some Parameters are wrong',
             response={
                 'error': [
                     {
-                        'errorno': 'BL01001973', 
-                        'description': None, 
-                        'description2': "Invalid Project '10064' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]", 
+                        'errorno': 'BL01001973',
+                        'description': None,
+                        'description2': "Invalid Project '10064' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]",
                         'correction': None
-                    }, 
+                    },
                     {
                         'errorno': 'BL01001973',
-                        'description': None, 
-                        'description2': 'Could not create cctransaction record!', 
+                        'description': None,
+                        'description2': 'Could not create cctransaction record!',
                         'correction': None
-                    }, 
+                    },
                     {
                         'errorno': 'BL01001973',
-                        'description': None, 
-                        'description2': "Currently, we can't create the transaction", 
+                        'description': None,
+                        'description2': "Currently, we can't create the transaction",
                         'correction': 'Check the transaction for errors or inconsistencies, then try again.'
                     }
                 ]
@@ -110,13 +149,14 @@ def test_handle_intacct_errors(db):
         task_log=task_log,
         export_type='Bill'
     )
-    error: Error = Error.objects.filter(workspace_id=1).first()
+
+    error = Error.objects.filter(workspace_id=1).first()
 
     assert error.error_detail == "Invalid Project '10064 => Direct Mail Campaign' specified."
     assert error.is_parsed == True
     assert error.attribute_type == 'PROJECT'
     assert error.article_link == settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors'
-    
+
     assert len(task_log.sage_intacct_errors) == 3
     assert task_log.sage_intacct_errors[0]['short_description'] == 'Bill error'
     assert task_log.sage_intacct_errors[0]['long_description'] == 'Invalid Project \'10064\' specified. [Support ID: nHh88EB032~Y1JFVP0J5xA-qTZWkbX7zwAAAAY]'
@@ -137,6 +177,9 @@ def test_handle_intacct_errors(db):
 
 
 def test_get_or_create_credit_card_vendor(mocker, db):
+    """
+    Test get_or_create_credit_card_vendor
+    """
     workspace_id = 1
     mock_get_or_create_vendor = mocker.patch(
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor'
@@ -192,11 +235,14 @@ def test_get_or_create_credit_card_vendor(mocker, db):
 
             mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
             contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
-    except:
+    except Exception:
         logger.info('wrong parameters')
 
 
 def test_create_or_update_employee_mapping(mocker, db):
+    """
+    Test create_or_update_employee_mapping
+    """
     mocker.patch(
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
         return_value=DestinationAttribute.objects.get(value='Joanna')
@@ -215,7 +261,7 @@ def test_create_or_update_employee_mapping(mocker, db):
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
     expense_group = ExpenseGroup.objects.get(id=1)
-    
+
     expense_group.description.update({'employee_email': 'user4@fyleforgotham.in'})
     expense_group.save()
 
@@ -224,7 +270,7 @@ def test_create_or_update_employee_mapping(mocker, db):
     with mock.patch('fyle_accounting_mappings.models.DestinationAttribute.save') as mock_call:
         employee_mapping = EmployeeMapping.objects.get(source_employee__value='user4@fyleforgotham.in')
         employee_mapping.delete()
-    
+
         mock_call.side_effect = WrongParamsError(
             msg={
                 'Message': 'Invalid parametrs'
@@ -234,11 +280,14 @@ def test_create_or_update_employee_mapping(mocker, db):
             })
         try:
             create_or_update_employee_mapping(expense_group=expense_group, sage_intacct_connection=sage_intacct_connection, auto_map_employees_preference='NAME', employee_field_mapping = 'VENDOR')
-        except:
+        except Exception:
             logger.info('Employee mapping not found')
 
 
 def test_post_bill_success(mocker, create_task_logs, db):
+    """
+    Test post_bill success
+    """
     mocker.patch(
         'sageintacctsdk.apis.Bills.post',
         return_value=data['bill_response']
@@ -275,14 +324,14 @@ def test_post_bill_success(mocker, create_task_logs, db):
     for expense in expenses:
         expense.expense_group_id = expense_group.id
         expense.save()
-    
+
     expense_group.expenses.set(expenses)
-    
+
     create_bill(expense_group, task_log.id, True)
-    
+
     task_log = TaskLog.objects.get(pk=task_log.id)
     bill = Bill.objects.get(expense_group_id=expense_group.id)
-    assert task_log.status=='COMPLETE'
+    assert task_log.status == 'COMPLETE'
     assert bill.currency == 'USD'
     assert bill.vendor_id == 'Ashwin'
 
@@ -298,6 +347,9 @@ def test_post_bill_success(mocker, create_task_logs, db):
 
 
 def test_create_bill_exceptions(mocker, db, create_task_logs):
+    """
+    Test create_bill exceptions
+    """
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -369,6 +421,9 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
 
 
 def test_post_sage_intacct_reimbursements_success(mocker, create_task_logs, db, create_expense_report):
+    """
+    Test post_sage_intacct_reimbursements success
+    """
     mocker.patch(
         'sageintacctsdk.apis.Reimbursements.post',
         return_value=data['reimbursements']
@@ -405,7 +460,7 @@ def test_post_sage_intacct_reimbursements_success(mocker, create_task_logs, db, 
         reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
         reimbursement.state = 'COMPLETE'
         reimbursement.save()
-    
+
     expense_group.expenses.set(expenses)
     expense_group.save()
 
@@ -418,6 +473,9 @@ def test_post_sage_intacct_reimbursements_success(mocker, create_task_logs, db, 
 
 
 def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_report):
+    """
+    Test post_sage_intacct_reimbursements exceptions
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.Reimbursements.sync',
         return_value=None
@@ -445,15 +503,13 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
         reimbursement.state = 'COMPLETE'
         reimbursement.save()
-    
+
     with mock.patch('apps.workspaces.models.SageIntacctCredential.objects.get') as mock_call:
-        
         mock_call.side_effect = BulkError(msg='employess not found', response='mapping error')
         create_sage_intacct_reimbursement(workspace_id)
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
-
 
         now = datetime.now().replace(tzinfo=timezone.utc)
         updated_at = now - timedelta(days=10)
@@ -471,7 +527,9 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
@@ -484,7 +542,9 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
         create_sage_intacct_reimbursement(workspace_id)
 
@@ -511,7 +571,8 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': "exceeds total amount due ()", 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
 
         now = datetime.now().replace(tzinfo=timezone.utc)
         updated_at = now - timedelta(days=10)
@@ -522,7 +583,11 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
 
+
 def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
+    """
+    Test post_charge_card_transaction success
+    """
     mocker.patch(
         'sageintacctsdk.apis.ChargeCardTransactions.post',
         return_value=data['credit_card_response']
@@ -553,16 +618,16 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
     expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
     expense_group.save()
 
-    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
     general_mappings.default_charge_card_id = 'sample'
     general_mappings.save()
 
     create_charge_card_transaction(expense_group, task_log.id, True)
-    
+
     task_log = TaskLog.objects.get(pk=task_log.id)
     charge_card_transaction = ChargeCardTransaction.objects.get(expense_group_id=expense_group.id)
 
-    assert task_log.status=='COMPLETE'
+    assert task_log.status == 'COMPLETE'
     assert charge_card_transaction.currency == 'USD'
 
     with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.update_attachment') as mock_call:
@@ -574,6 +639,9 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
 
 
 def test_post_credit_card_exceptions(mocker, create_task_logs, db):
+    """
+    Test post_credit_card_transaction exceptions
+    """
     mocker.patch(
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
         return_value=DestinationAttribute.objects.get(id=633)
@@ -594,9 +662,9 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
     for expense in expenses:
         expense.expense_group_id = expense_group.id
         expense.save()
-    
+
     expense_group.expenses.set(expenses)
-    
+
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
     configuration.save()
@@ -626,7 +694,9 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         create_charge_card_transaction(expense_group, task_log.id, True)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -638,7 +708,9 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         create_charge_card_transaction(expense_group, task_log.id, True)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -647,7 +719,11 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
         create_charge_card_transaction(expense_group, task_log.id, True)
 
+
 def test_post_journal_entry_success(mocker, create_task_logs, db):
+    """
+    Test post_journal_entry success
+    """
     mocker.patch(
         'sageintacctsdk.apis.JournalEntries.post',
         return_value=data['journal_entry_response']
@@ -680,7 +756,7 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
     for expense in expenses:
         expense.expense_group_id = expense_group.id
         expense.save()
-    
+
     expense_group.expenses.set(expenses)
     expense_group.save()
 
@@ -688,16 +764,16 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
         expense.expense_group_id = expense_group.id
         expense.currency = 'GBP'
         expense.save()
-    
+
     expense_group.expenses.set(expenses)
     expense_group.save()
-    
+
     create_journal_entry(expense_group, task_log.id, True)
-    
+
     task_log = TaskLog.objects.get(id=task_log.id)
     journal_entry = JournalEntry.objects.get(expense_group_id=expense_group.id)
 
-    assert task_log.status=='COMPLETE'
+    assert task_log.status == 'COMPLETE'
     assert journal_entry.currency == 'GBP'
 
     task_log.status = 'READY'
@@ -712,6 +788,9 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
 
 
 def test_post_create_journal_entry_exceptions(create_task_logs, db):
+    """
+    Test post_create_journal_entry exceptions
+    """
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -727,7 +806,7 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
     for expense in expenses:
         expense.expense_group_id = expense_group.id
         expense.save()
-    
+
     expense_group.expenses.set(expenses)
     expense_group.save()
 
@@ -760,7 +839,9 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         create_journal_entry(expense_group, task_log.id, True)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -772,7 +853,9 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
             }, response={
                 'error': {'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''},
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         create_journal_entry(expense_group, task_log.id, True)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -783,6 +866,9 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
 
 
 def test_post_expense_report_success(mocker, create_task_logs, db):
+    """
+    Test post_expense_report success
+    """
     mocker.patch(
         'sageintacctsdk.apis.ExpenseReports.post',
         return_value=data['expense_report_post_response']
@@ -812,11 +898,11 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
 
     expense_group = ExpenseGroup.objects.get(id=1)
     create_expense_report(expense_group, task_log.id, True)
-    
+
     task_log = TaskLog.objects.get(id=task_log.id)
     expense_report = ExpenseReport.objects.get(expense_group_id=expense_group.id)
 
-    assert task_log.status=='COMPLETE'
+    assert task_log.status == 'COMPLETE'
     assert expense_report.currency == 'USD'
 
     task_log.status = 'READY'
@@ -831,6 +917,9 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
 
 
 def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
+    """
+    Test post_create_expense_report exceptions
+    """
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -846,7 +935,7 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
     for expense in expenses:
         expense.expense_group_id = expense_group.id
         expense.save()
-    
+
     expense_group.expenses.set(expenses)
     expense_group.save()
 
@@ -883,7 +972,9 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         create_expense_report(expense_group, task_log.id, True)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -895,7 +986,9 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         create_expense_report(expense_group, task_log.id, True)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -904,7 +997,11 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
         mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
         create_expense_report(expense_group, task_log.id, True)
 
+
 def test_create_ap_payment(mocker, db):
+    """
+    Test create_ap_payment
+    """
     mocker.patch(
         'sageintacctsdk.apis.Bills.post',
         return_value=data['bill_response']
@@ -940,7 +1037,7 @@ def test_create_ap_payment(mocker, db):
     task_log = TaskLog.objects.filter(expense_group__workspace_id=workspace_id).first()
     task_log.status = 'READY'
     task_log.save()
-    
+
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
@@ -948,7 +1045,7 @@ def test_create_ap_payment(mocker, db):
         reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
         reimbursement.state = 'COMPLETE'
         reimbursement.save()
-    
+
     create_bill(expense_group, task_log.id, True)
 
     bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
@@ -962,6 +1059,9 @@ def test_create_ap_payment(mocker, db):
 
 
 def test_create_ap_payment_exceptions(mocker, db):
+    """
+    Test create_ap_payment exceptions
+    """
     # Mock necessary functions and classes
     mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
     mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
@@ -977,7 +1077,7 @@ def test_create_ap_payment_exceptions(mocker, db):
     task_log = TaskLog.objects.filter(expense_group__workspace_id=workspace_id).first()
     task_log.status = 'READY'
     task_log.save()
-    
+
     create_bill(expense_group, task_log.id, True)
 
     bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
@@ -993,9 +1093,10 @@ def test_create_ap_payment_exceptions(mocker, db):
     # Test SageIntacctCredential.DoesNotExist
     create_ap_payment(workspace_id)
     task_log = TaskLog.objects.filter(
-                    workspace_id=workspace_id,
-                    task_id='PAYMENT_{}'.format(bill.expense_group.id)
-                ).first()
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(bill.expense_group.id)
+    ).first()
+
     assert task_log.status == 'FAILED'
     assert 'Sage-Intacct Account not connected' in task_log.detail['message']
 
@@ -1003,9 +1104,10 @@ def test_create_ap_payment_exceptions(mocker, db):
     mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_ap_payment', side_effect=BulkError(msg="Bulk error", response="Bulk error occurred"))
     create_ap_payment(workspace_id)
     task_log = TaskLog.objects.filter(
-                    workspace_id=workspace_id,
-                    task_id='PAYMENT_{}'.format(bill.expense_group.id)
-                ).first()
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(bill.expense_group.id)
+    ).first()
+
     assert task_log.status == 'FAILED'
 
     # Test WrongParamsError
@@ -1028,6 +1130,9 @@ def test_create_ap_payment_exceptions(mocker, db):
 
 
 def test_validate_for_skipping_payment(mocker, db):
+    """
+    Test validate_for_skipping_payment
+    """
     mock_task_log = mocker.Mock(spec=TaskLog)
     mock_task_log.created_at = datetime.now().replace(tzinfo=timezone.utc) - relativedelta(months=3)
     mock_task_log.updated_at = datetime.now().replace(tzinfo=timezone.utc) - relativedelta(months=3)
@@ -1043,7 +1148,11 @@ def test_validate_for_skipping_payment(mocker, db):
     result = validate_for_skipping_payment(mock_export_module, workspace_id=1, type='BILL')
     assert result is True
 
+
 def test_post_ap_payment_exceptions(mocker, db):
+    """
+    Test post_ap_payment exceptions
+    """
     mocker.patch(
         'sageintacctsdk.apis.Bills.post',
         return_value=data['bill_response']
@@ -1076,15 +1185,15 @@ def test_post_ap_payment_exceptions(mocker, db):
         reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
         reimbursement.state = 'COMPLETE'
         reimbursement.save()
-    
+
     expense_group.expenses.set(expenses)
     expense_group.save()
-    
+
     create_bill(expense_group, task_log.id, True)
 
     bill = Bill.objects.last()
     task_log = TaskLog.objects.get(id=task_log.id)
-    task_log.expense_group=bill.expense_group
+    task_log.expense_group = bill.expense_group
     task_log.save()
 
     with mock.patch('apps.sage_intacct.models.APPayment.create_ap_payment') as mock_call:
@@ -1100,7 +1209,9 @@ def test_post_ap_payment_exceptions(mocker, db):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
+
         create_ap_payment(workspace_id)
 
         mock_call.side_effect = InvalidTokenError(
@@ -1109,7 +1220,8 @@ def test_post_ap_payment_exceptions(mocker, db):
             }, response={
                 'error': {'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''},
                 'type': 'Invalid_params'
-        })
+            }
+        )
         create_ap_payment(workspace_id)
 
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
@@ -1118,7 +1230,7 @@ def test_post_ap_payment_exceptions(mocker, db):
         try:
             mock_call.side_effect = SageIntacctCredential.DoesNotExist()
             create_ap_payment(workspace_id)
-        except:
+        except Exception:
             logger.info('Intacct credentials not found')
 
     with mock.patch('apps.sage_intacct.models.APPayment.create_ap_payment') as mock_call:
@@ -1131,7 +1243,8 @@ def test_post_ap_payment_exceptions(mocker, db):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': "Oops, we can't find this transaction; enter a valid", 'correction': ''}],
                 'type': 'Invalid_params'
-        })
+            }
+        )
         create_ap_payment(workspace_id)
         bill = Bill.objects.get(id=bill.id)
 
@@ -1140,6 +1253,9 @@ def test_post_ap_payment_exceptions(mocker, db):
 
 
 def test_schedule_ap_payment_creation(db):
+    """
+    Test schedule_ap_payment_creation
+    """
     workspace_id = 1
     workspace_configuration = Configuration.objects.get(workspace_id=workspace_id)
 
@@ -1155,6 +1271,9 @@ def test_schedule_ap_payment_creation(db):
 
 
 def test_check_sage_intacct_object_status(mocker, db):
+    """
+    Test check_sage_intacct_object_status
+    """
     mocker.patch(
         'sageintacctsdk.apis.Bills.get',
         return_value=data['get_bill']
@@ -1164,12 +1283,11 @@ def test_check_sage_intacct_object_status(mocker, db):
         return_value=data['expense_report_response']['data']
     )
     workspace_id = 1
-    
     expense_group = ExpenseGroup.objects.get(id=1)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
 
     bill = Bill.create_bill(expense_group)
-    bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
+    _ = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
 
     task_log = TaskLog.objects.filter(expense_group_id=expense_group.id).first()
     task_log.expense_group = bill.expense_group
@@ -1181,12 +1299,12 @@ def test_check_sage_intacct_object_status(mocker, db):
     check_sage_intacct_object_status(workspace_id)
     bills = Bill.objects.filter(expense_group__workspace_id=workspace_id)
 
-    for bill in bills: 
+    for bill in bills:
         assert bill.paid_on_sage_intacct == True
         assert bill.payment_synced == True
-    
+
     expense_report = ExpenseReport.create_expense_report(expense_group)
-    expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
+    _ = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
     task_log = TaskLog.objects.filter(expense_group_id=expense_group.id).first()
     task_log.expense_group = expense_report.expense_group
@@ -1198,7 +1316,7 @@ def test_check_sage_intacct_object_status(mocker, db):
     check_sage_intacct_object_status(workspace_id)
     expense_reports = ExpenseReport.objects.filter(expense_group__workspace_id=workspace_id)
 
-    for expense_report in expense_reports: 
+    for expense_report in expense_reports:
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
 
@@ -1206,7 +1324,11 @@ def test_check_sage_intacct_object_status(mocker, db):
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         check_sage_intacct_object_status(workspace_id)
 
+
 def test_schedule_fyle_reimbursements_sync(db):
+    """
+    Test schedule_fyle_reimbursements_sync
+    """
     workspace_id = 1
 
     schedule = Schedule.objects.filter(func='apps.sage_intacct.tasks.process_fyle_reimbursements', args=workspace_id).count()
@@ -1224,7 +1346,9 @@ def test_schedule_fyle_reimbursements_sync(db):
 
 
 def test_process_fyle_reimbursements(db, mocker):
-
+    """
+    Test process_fyle_reimbursements
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.Reports.bulk_mark_as_paid',
         return_value=[]
@@ -1235,11 +1359,9 @@ def test_process_fyle_reimbursements(db, mocker):
     )
     workspace_id = 1
 
-    reimbursements = data['reimbursements']
-
     expenses = Expense.objects.filter(fund_source='PERSONAL')
     for expense in expenses:
-        expense.paid_on_sage_intacct=True
+        expense.paid_on_sage_intacct = True
         expense.save()
 
     reimbursement = Reimbursement.objects.filter(workspace_id=workspace_id).first()
@@ -1254,6 +1376,9 @@ def test_process_fyle_reimbursements(db, mocker):
 
 
 def test_schedule_sage_intacct_objects_status_sync(db):
+    """
+    Test schedule_sage_intacct_objects_status_sync
+    """
     workspace_id = 1
 
     schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments=True, workspace_id=workspace_id)
@@ -1268,6 +1393,9 @@ def test_schedule_sage_intacct_objects_status_sync(db):
 
 
 def test_schedule_journal_entries_creation(mocker, db):
+    """
+    Test schedule_journal_entries_creation
+    """
     workspace_id = 1
 
     schedule_journal_entries_creation(workspace_id, [1], False, 'PERSONAL', 1)
@@ -1276,6 +1404,9 @@ def test_schedule_journal_entries_creation(mocker, db):
 
 
 def test_schedule_expense_reports_creation(mocker, db):
+    """
+    Test schedule_expense_reports_creation
+    """
     workspace_id = 1
 
     schedule_expense_reports_creation(workspace_id, [1], False, 'PERSONAL', 1)
@@ -1284,6 +1415,9 @@ def test_schedule_expense_reports_creation(mocker, db):
 
 
 def test_schedule_bills_creation(mocker, db):
+    """
+    Test schedule_bills_creation
+    """
     workspace_id = 1
 
     schedule_bills_creation(workspace_id, [1], False, 'PERSONAL', 1)
@@ -1292,6 +1426,9 @@ def test_schedule_bills_creation(mocker, db):
 
 
 def test_schedule_charge_card_transaction_creation(mocker, db):
+    """
+    Test schedule_charge_card_transaction_creation
+    """
     workspace_id = 1
 
     schedule_charge_card_transaction_creation(workspace_id, [2], False, 'CCC', 1)
@@ -1300,6 +1437,9 @@ def test_schedule_charge_card_transaction_creation(mocker, db):
 
 
 def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
+    """
+    Test schedule_sage_intacct_reimbursement_creation
+    """
     workspace_id = 1
     workspace_configuration = Configuration.objects.get(workspace_id=workspace_id)
     workspace_configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
@@ -1316,6 +1456,9 @@ def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
 
 
 def test__validate_expense_group(mocker, db):
+    """
+    Test __validate_expense_group
+    """
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
@@ -1336,7 +1479,7 @@ def test__validate_expense_group(mocker, db):
 
     try:
         __validate_expense_group(expense_group, configuration)
-    except:
+    except Exception:
         logger.info('Mappings are missing')
 
     configuration.corporate_credit_card_expenses_object = 'BILL'
@@ -1344,7 +1487,7 @@ def test__validate_expense_group(mocker, db):
 
     try:
         __validate_expense_group(expense_group, configuration)
-    except:
+    except Exception:
         logger.info('Mappings are missing')
 
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
@@ -1354,7 +1497,7 @@ def test__validate_expense_group(mocker, db):
 
     try:
         __validate_expense_group(expense_group, configuration)
-    except:
+    except Exception:
         logger.info('Mappings are missing')
 
     configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
@@ -1362,7 +1505,7 @@ def test__validate_expense_group(mocker, db):
 
     try:
         __validate_expense_group(expense_group, configuration)
-    except:
+    except Exception:
         logger.info('Mappings are missing')
 
     configuration.employee_field_mapping = 'VENDOR'
@@ -1401,7 +1544,9 @@ def test__validate_expense_group(mocker, db):
 
 
 def test_load_attachments(mocker, db):
-
+    """
+    Test load_attachments
+    """
     mocker.patch(
         'sageintacctsdk.apis.Attachments.post',
         return_value=['sdfghj']
@@ -1422,7 +1567,7 @@ def test_load_attachments(mocker, db):
     for expense in expenses:
         expense.file_ids = ['sdfghjkl']
         expense.save()
-    
+
     expense_group.expenses.set(expenses)
     expense_group.save()
 
@@ -1433,17 +1578,23 @@ def test_load_attachments(mocker, db):
         with mock.patch('fyle_integrations_platform_connector.apis.Files.bulk_generate_file_urls') as mock_call:
             mock_call.side_effect = Exception()
             post_attachments = load_attachments(sage_intacct_connection, expense_group)
-    except:
+    except Exception:
         logger.info('wrong parameters')
 
 
 def test_update_last_export_details(db):
+    """
+    Test update_last_export_details
+    """
     workspace_id = 1
     last_export_detail = update_last_export_details(workspace_id)
     assert last_export_detail.export_mode == 'MANUAL'
 
 
 def test__validate_employee_mapping(mocker, db):
+    """
+    Test __validate_employee_mapping
+    """
     workspace_id = 1
 
     # Set up the expense group with necessary details
@@ -1466,7 +1617,7 @@ def test__validate_employee_mapping(mocker, db):
     mocker.patch('apps.sage_intacct.tasks.EmployeeMapping.objects.get', side_effect=EmployeeMapping.DoesNotExist)
     try:
         __validate_employee_mapping(expense_group, configuration)
-    except BulkError as exception:
+    except BulkError:
         logger.info('Employee mapping not found')
 
     # Case: EmployeeMapping exists, but entity is None
@@ -1488,7 +1639,7 @@ def test__validate_employee_mapping(mocker, db):
     configuration.save()
 
     mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.objects.get', side_effect=employee_mapping)
-    
+
     mocker.patch('fyle_accounting_mappings.models.EmployeeMapping.DoesNotExist', side_effect=EmployeeMapping.DoesNotExist)
 
     try:
@@ -1522,6 +1673,9 @@ def test__validate_employee_mapping(mocker, db):
 
 
 def test_skipping_create_ap_payment(mocker, db):
+    """
+    Test skipping create_ap_payment
+    """
     mocker.patch(
         'sageintacctsdk.apis.Bills.post',
         return_value=data['bill_response']
@@ -1557,7 +1711,7 @@ def test_skipping_create_ap_payment(mocker, db):
     task_log = TaskLog.objects.filter(expense_group__workspace_id=workspace_id).first()
     task_log.status = 'READY'
     task_log.save()
-    
+
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
@@ -1565,7 +1719,7 @@ def test_skipping_create_ap_payment(mocker, db):
         reimbursement = Reimbursement.objects.filter(settlement_id=expense.settlement_id).first()
         reimbursement.state = 'COMPLETE'
         reimbursement.save()
-    
+
     create_bill(expense_group, task_log.id, True)
 
     bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
@@ -1592,8 +1746,8 @@ def test_skipping_create_ap_payment(mocker, db):
 
     create_ap_payment(workspace_id)
     task_log.refresh_from_db()
+
     assert task_log.updated_at == updated_at
-    
 
     updated_at = now - timedelta(days=25)
     # Update created_at to between 1 and 2 months ago (between 30 and 60 days)

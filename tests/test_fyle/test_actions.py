@@ -1,25 +1,33 @@
 from unittest import mock
+
 from django.conf import settings
 from django.db.models import Q
 
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import InternalServerError, RetryException, WrongParamsError
+from fyle.platform.exceptions import (
+    InternalServerError,
+    RetryException,
+    WrongParamsError
+)
 
 from apps.fyle.models import Expense, ExpenseGroup
 from apps.workspaces.models import Workspace, FyleCredential
-from apps.fyle.actions import (
-    update_expenses_in_progress,
-    mark_expenses_as_skipped,
-    create_generator_and_post_in_batches,
-    mark_accounting_export_summary_as_synced,
-    update_complete_expenses,
-    bulk_post_accounting_export_summary,
-    update_failed_expenses
-)
 from apps.fyle.helpers import get_updated_accounting_export_summary
+from apps.fyle.actions import (
+    update_failed_expenses,
+    update_complete_expenses,
+    mark_expenses_as_skipped,
+    update_expenses_in_progress,
+    bulk_post_accounting_export_summary,
+    create_generator_and_post_in_batches,
+    mark_accounting_export_summary_as_synced
+)
 
 
 def test_update_expenses_in_progress(db):
+    """
+    Test update expenses in progress
+    """
     expenses = Expense.objects.filter(org_id='or79Cob97KSh')
     update_expenses_in_progress(expenses)
 
@@ -34,7 +42,11 @@ def test_update_expenses_in_progress(db):
         assert expense.accounting_export_summary['error_type'] == None
         assert expense.accounting_export_summary['id'] == expense.expense_id
 
+
 def test_update_failed_expenses(db):
+    """
+    Test update failed expenses
+    """
     expenses = Expense.objects.filter(org_id='or79Cob97KSh')
     update_failed_expenses(expenses, True)
 
@@ -49,7 +61,11 @@ def test_update_failed_expenses(db):
         )
         assert expense.accounting_export_summary['id'] == expense.expense_id
 
+
 def test_update_complete_expenses(db):
+    """
+    Test update complete expenses
+    """
     expenses = Expense.objects.filter(org_id='or79Cob97KSh')
 
     update_complete_expenses(expenses, 'https://intacct.google.com')
@@ -63,7 +79,11 @@ def test_update_complete_expenses(db):
         assert expense.accounting_export_summary['url'] == 'https://intacct.google.com'
         assert expense.accounting_export_summary['id'] == expense.expense_id
 
+
 def test_mark_expenses_as_skipped(db):
+    """
+    Test mark expenses as skipped
+    """
     expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
     expense_id = expense_group.expenses.first().id
     expense_group.expenses.remove(expense_id)
@@ -78,6 +98,9 @@ def test_mark_expenses_as_skipped(db):
 
 
 def test_create_generator_and_post_in_batches(db):
+    """
+    Test create generator and post in batches
+    """
     fyle_credentails = FyleCredential.objects.get(workspace_id=1)
     platform = PlatformConnector(fyle_credentails)
 
@@ -96,6 +119,9 @@ def test_create_generator_and_post_in_batches(db):
 
 
 def test_handle_post_accounting_export_summary_exception(db):
+    """
+    Test handle post accounting export summary exception
+    """
     fyle_credentails = FyleCredential.objects.get(workspace_id=1)
     platform = PlatformConnector(fyle_credentails)
     expense = Expense.objects.filter(org_id='or79Cob97KSh').first()
@@ -129,6 +155,9 @@ def test_handle_post_accounting_export_summary_exception(db):
 
 
 def test_mark_accounting_export_summary_as_synced(db):
+    """
+    Test mark accounting export summary as synced
+    """
     expenses = Expense.objects.filter(org_id='or79Cob97KSh')
     for expense in expenses:
         expense.accounting_export_summary = get_updated_accounting_export_summary(
@@ -149,7 +178,11 @@ def test_mark_accounting_export_summary_as_synced(db):
     for expense in expenses:
         assert expense.accounting_export_summary['synced'] == True
 
+
 def test_bulk_post_accounting_export_summary(db):
+    """
+    Test bulk post accounting export summary
+    """
     fyle_credentails = FyleCredential.objects.get(workspace_id=1)
     platform = PlatformConnector(fyle_credentails)
 

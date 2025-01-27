@@ -1,8 +1,11 @@
-from apps.internal.actions import get_accounting_fields, get_exported_entry
 from tests.test_sageintacct.fixtures import data
+from apps.internal.actions import get_accounting_fields, get_exported_entry
 
 
 def test_get_accounting_fields(db, mocker):
+    """
+    Test get_accounting_fields function
+    """
     query_params = {
         'org_id': 'or79Cob97KSh',
         'resource_type': 'employees',
@@ -17,6 +20,9 @@ def test_get_accounting_fields(db, mocker):
 
 
 def test_get_exported_entry(db, mocker):
+    """
+    Test get_exported_entry function
+    """
     query_params = {
         'org_id': 'or79Cob97KSh',
         'resource_type': 'bill',

@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from fyle_accounting_mappings.models import DestinationAttribute
 
-from apps.workspaces.models import (
+from apps.sage_intacct.models import (
     Bill,
     BillLineitem,
     ExpenseReport,

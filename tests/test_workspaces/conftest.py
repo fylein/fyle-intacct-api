@@ -1,7 +1,10 @@
 import pytest
+
+from datetime import datetime,timezone
+
 from fyle_intacct_api import settings
 from apps.workspaces.models import Workspace, SageIntacctCredential, FyleCredential
-from datetime import datetime,timezone
+
 
 @pytest.fixture
 def add_workspace_to_database():
@@ -26,6 +29,9 @@ def add_workspace_to_database():
 
 @pytest.fixture()
 def add_sage_intacct_credentials(db):
+    """
+    Add Sage Intacct credentials to database fixture
+    """
     workspace_id = 2
 
     SageIntacctCredential.objects.create(
@@ -36,6 +42,9 @@ def add_sage_intacct_credentials(db):
 
 @pytest.fixture()
 def add_fyle_credentials(db):
+    """
+    Add Fyle credentials to database fixture
+    """
     workspace_id = 2
 
     FyleCredential.objects.create(

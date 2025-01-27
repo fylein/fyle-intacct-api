@@ -111,6 +111,8 @@ def update_failed_expenses(failed_expenses: list[Expense], is_mapping_error: boo
     """
     Update failed expenses
     :param failed_expenses: Failed expenses
+    :param is_mapping_error: Is mapping error
+    :return: None
     """
     expense_to_be_updated = []
     for expense in failed_expenses:
