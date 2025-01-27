@@ -1,31 +1,34 @@
-from apps.workspaces.models import Workspace, Configuration
 from rest_framework import serializers
 
-
-from apps.workspaces.models import Configuration
+from apps.workspaces.models import Workspace, Configuration
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroupSettings
 from apps.workspaces.apis.export_settings.triggers import ExportSettingsTrigger
+
 
 class ReadWriteSerializerMethodField(serializers.SerializerMethodField):
     """
     Serializer Method Field to Read and Write from values
     Inherits serializers.SerializerMethodField
     """
-
-    def __init__(self, method_name=None, **kwargs):
+    def __init__(self, method_name: any = None, **kwargs):
         self.method_name = method_name
         kwargs['source'] = '*'
         super(serializers.SerializerMethodField, self).__init__(**kwargs)
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: dict) -> dict:
+        """
+        Method to convert the data to internal value
+        """
         return {
             self.field_name: data
         }
 
 
 class ConfigurationSerializer(serializers.ModelSerializer):
-    
+    """
+    Configuration Serializer
+    """
     class Meta:
         model = Configuration
         fields = [
@@ -41,6 +44,9 @@ class ConfigurationSerializer(serializers.ModelSerializer):
 
 
 class GeneralMappingsSerializer(serializers.ModelSerializer):
+    """
+    General Mappings Serializer
+    """
     default_gl_account = ReadWriteSerializerMethodField()
     default_credit_card = ReadWriteSerializerMethodField()
     default_charge_card = ReadWriteSerializerMethodField()
@@ -59,37 +65,55 @@ class GeneralMappingsSerializer(serializers.ModelSerializer):
             'default_ccc_vendor'
         ]
 
-    def get_default_gl_account(self, instance):
+    def get_default_gl_account(self, instance: GeneralMapping) -> dict:
+        """
+        Get Default GL Account
+        """
         return {
             'id': instance.default_gl_account_id,
             'name': instance.default_gl_account_name
         }
 
-    def get_default_credit_card(self, instance):
+    def get_default_credit_card(self, instance: GeneralMapping) -> dict:
+        """
+        Get Default Credit Card
+        """
         return {
             'id': instance.default_credit_card_id,
             'name': instance.default_credit_card_name
         }
-    
-    def get_default_charge_card(self, instance):
+
+    def get_default_charge_card(self, instance: GeneralMapping) -> dict:
+        """
+        Get Default Charge Card
+        """
         return {
             'id': instance.default_charge_card_id,
             'name': instance.default_charge_card_name
         }
-    
-    def get_default_reimbursable_expense_payment_type(self, instance):
+
+    def get_default_reimbursable_expense_payment_type(self, instance: GeneralMapping) -> dict:
+        """
+        Get Default Reimbursable Expense Payment Type
+        """
         return {
             'id': instance.default_reimbursable_expense_payment_type_id,
             'name': instance.default_reimbursable_expense_payment_type_name
         }
-    
-    def get_default_ccc_expense_payment_type(self, instance):
+
+    def get_default_ccc_expense_payment_type(self, instance: GeneralMapping) -> dict:
+        """
+        Get Default CCC Expense Payment Type
+        """
         return {
             'id': instance.default_ccc_expense_payment_type_id,
             'name': instance.default_ccc_expense_payment_type_name
         }
-    
-    def get_default_ccc_vendor(self, instance):
+
+    def get_default_ccc_vendor(self, instance: GeneralMapping) -> dict:
+        """
+        Get Default CCC Vendor
+        """
         return {
             'id': instance.default_ccc_vendor_id,
             'name': instance.default_ccc_vendor_name
@@ -97,11 +121,14 @@ class GeneralMappingsSerializer(serializers.ModelSerializer):
 
 
 class ExpenseGroupSettingsSerializer(serializers.ModelSerializer):
+    """
+    Expense Group Settings Serializer
+    """
     reimbursable_expense_group_fields = serializers.ListField(allow_null=True, required=False)
     reimbursable_export_date_type = serializers.CharField(allow_null=True, allow_blank=True, required=False)
     expense_state = serializers.CharField(allow_null=True, allow_blank=True, required=False)
     corporate_credit_card_expense_group_fields = serializers.ListField(allow_null=True, required=False)
-    ccc_export_date_type = serializers.CharField(allow_null=True, allow_blank=True, required=False) 
+    ccc_export_date_type = serializers.CharField(allow_null=True, allow_blank=True, required=False)
     ccc_expense_state = serializers.CharField(allow_null=True, allow_blank=True, required=False)
     split_expense_grouping = serializers.CharField(allow_null=False, allow_blank=False, required=True)
 
@@ -119,6 +146,9 @@ class ExpenseGroupSettingsSerializer(serializers.ModelSerializer):
 
 
 class ExportSettingsSerializer(serializers.ModelSerializer):
+    """
+    Export Settings Serializer
+    """
     configurations = ConfigurationSerializer()
     expense_group_settings = ExpenseGroupSettingsSerializer()
     general_mappings = GeneralMappingsSerializer()
@@ -134,12 +164,16 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['workspace_id']
 
-
-    def get_workspace_id(self, instance):
+    def get_workspace_id(self, instance: Workspace) -> int:
+        """
+        Get Workspace ID
+        """
         return instance.id
-    
 
-    def update(self, instance, validated):
+    def update(self, instance: Configuration, validated: dict) -> Configuration:
+        """
+        Update Configuration
+        """
         request = self.context.get('request')
         user = request.user if request and hasattr(request, 'user') else None
 
@@ -152,7 +186,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
             workspace_id=workspace_id,
             defaults={
                 'auto_map_employees': configurations['auto_map_employees'],
-                'reimbursable_expenses_object': configurations['reimbursable_expenses_object'], 
+                'reimbursable_expenses_object': configurations['reimbursable_expenses_object'],
                 'corporate_credit_card_expenses_object': configurations['corporate_credit_card_expenses_object'],
                 'employee_field_mapping': configurations['employee_field_mapping'],
                 'use_merchant_in_journal_line': configurations['use_merchant_in_journal_line'] if 'use_merchant_in_journal_line' in configurations else False
@@ -205,16 +239,18 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
             instance.save()
 
         return instance
-    
-    def validate(self, data):
-        # We dont need to validate confiugurations and general mappings as they validations for individual fields
 
+    def validate(self, data: dict) -> dict:
+        """
+        Validate Export Settings
+        """
+        # We dont need to validate confiugurations and general mappings as they validations for individual fields
         if not data.get('expense_group_settings'):
             raise serializers.ValidationError('Expense group settings are required')
-        
+
         if not data.get('configurations'):
             raise serializers.ValidationError('Configurations settings are required')
-            
+
         if not data.get('general_mappings'):
             raise serializers.ValidationError('General mappings are required')
 

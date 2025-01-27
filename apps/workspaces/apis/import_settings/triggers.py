@@ -1,20 +1,20 @@
-from typing import Dict, List
 from django.db.models import Q
+
+from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
 
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import Configuration
-from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
 
 
 class ImportSettingsTrigger:
     """
     All the post save actions of Import Settings API
     """
-    def __init__(self, mapping_settings: List[Dict], workspace_id):
+    def __init__(self, mapping_settings: list[dict], workspace_id: int):
         self.__mapping_settings = mapping_settings
         self.__workspace_id = workspace_id
 
-    def __unset_auto_mapped_flag(self, current_mapping_settings: List[MappingSetting], new_mappings_settings: List[Dict]):
+    def __unset_auto_mapped_flag(self, current_mapping_settings: list[MappingSetting], new_mappings_settings: list[dict]) -> None:
         """
         Set the auto_mapped flag to false for the expense_attributes for the attributes
         whose mapping is changed.
@@ -30,7 +30,7 @@ class ImportSettingsTrigger:
 
         ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type__in=changed_source_fields).update(auto_mapped=False)
 
-    def pre_save_mapping_settings(self):
+    def pre_save_mapping_settings(self) -> None:
         """
         Pre save action for mapping settings
         """
@@ -39,7 +39,7 @@ class ImportSettingsTrigger:
         current_mapping_settings = MappingSetting.objects.filter(workspace_id=self.__workspace_id).all()
         self.__unset_auto_mapped_flag(current_mapping_settings, mapping_settings)
 
-    def post_save_mapping_settings(self, configurations_instance: Configuration):
+    def post_save_mapping_settings(self, configurations_instance: Configuration) -> None:
         """
         Post save actions for mapping settings
         Here we need to clear out the data from the mapping-settings table for consecutive runs.

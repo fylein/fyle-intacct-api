@@ -1,18 +1,22 @@
-import pytest
 from unittest import mock
-from apps.mappings.imports.modules.merchants import Merchant
+
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute,
     Mapping
 )
-from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import FyleCredential
-from .fixtures import merchants_data
+
 from tests.helper import dict_compare_keys
+from apps.workspaces.models import FyleCredential
+from apps.mappings.imports.modules.merchants import Merchant
+from .fixtures import merchants_data
 
 
 def test_sync_expense_atrributes(mocker, db):
+    """
+    Test sync expense attributes
+    """
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
@@ -33,7 +37,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert merchants_count == 0
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.expense_fields.list_all',   
+        'fyle.platform.apis.v1beta.admin.expense_fields.list_all',
         return_value=merchants_data['create_new_auto_create_merchants_expense_attributes_0']
     )
 
@@ -43,7 +47,11 @@ def test_sync_expense_atrributes(mocker, db):
     # NOTE : we are not using cost_center_data['..'][0]['count'] because some duplicates where present in the data
     assert merchants_count == 72
 
+
 def test_sync_destination_atrributes(mocker, db):
+    """
+    Test sync destination attributes
+    """
     mocker.patch(
         'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=merchants_data['get_vendors_destination_attributes']
@@ -59,7 +67,11 @@ def test_sync_destination_atrributes(mocker, db):
     vendors_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
     assert vendors_count == 75
 
+
 def test_auto_create_destination_attributes(mocker, db):
+    """
+    Test auto create destination attributes
+    """
     workspace_id = 1
     merchant = Merchant(workspace_id, 'VENDOR', None)
     merchant.sync_after = None
@@ -82,7 +94,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         mock_call.side_effect = [
             merchants_data['create_new_auto_create_merchants_expense_attributes_0'],
-            merchants_data['create_new_auto_create_merchants_expense_attributes_1'] 
+            merchants_data['create_new_auto_create_merchants_expense_attributes_1']
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'MERCHANT').count()
@@ -90,7 +102,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 0
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='MERCHANT', destination_type='VENDOR').count()
-        
+
         assert mappings_count == 0
 
         merchant.trigger_import()
@@ -101,7 +113,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         # We dont create any mapping for VENDOR and MERCHANT, so this should be 0
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='MERCHANT', destination_type='VENDOR').count()
-        
+
         assert mappings_count == 0
 
     # create new tax-groups sub-sequent run (we will be adding 2 new tax-details)
@@ -117,7 +129,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         mock_call.side_effect = [
             merchants_data['create_new_auto_create_merchants_expense_attributes_1'],
-            merchants_data['create_new_auto_create_merchants_expense_attributes_2'] 
+            merchants_data['create_new_auto_create_merchants_expense_attributes_2']
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'MERCHANT').count()
@@ -125,22 +137,25 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 73
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='MERCHANT', destination_type='VENDOR').count()
-        
+
         assert mappings_count == 0
 
         merchant.trigger_import()
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'MERCHANT').count()
 
-        assert expense_attributes_count == 73+2
+        assert expense_attributes_count == 73 + 2
 
         # We dont create any mapping for VENDOR and MERCHANT, so this should be 0
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='MERCHANT', destination_type='VENDOR').count()
-        
+
         assert mappings_count == 0
 
 
 def test_construct_fyle_payload(db):
+    """
+    Test construct fyle payload
+    """
     workspace_id = 1
     merchant = Merchant(workspace_id, 'VENDOR', None)
     merchant.sync_after = None

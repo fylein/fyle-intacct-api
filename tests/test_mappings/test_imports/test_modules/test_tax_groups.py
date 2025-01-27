@@ -1,17 +1,21 @@
-import pytest
 from unittest import mock
-from apps.mappings.imports.modules.tax_groups import TaxGroup
+
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute,
     Mapping
 )
-from fyle_integrations_platform_connector import PlatformConnector
-from apps.workspaces.models import FyleCredential, Workspace
+
+from apps.workspaces.models import FyleCredential
+from apps.mappings.imports.modules.tax_groups import TaxGroup
 from .fixtures import tax_groups_data
 
 
 def test_sync_destination_atrributes(mocker, db):
+    """
+    Test sync destination attributes
+    """
     mocker.patch(
         'sageintacctsdk.apis.TaxDetails.count',
         return_value=100
@@ -33,6 +37,9 @@ def test_sync_destination_atrributes(mocker, db):
 
 
 def test_sync_expense_atrributes(mocker, db):
+    """
+    Test sync expense attributes
+    """
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
@@ -67,7 +74,11 @@ def test_sync_expense_atrributes(mocker, db):
     # NOTE : we are not using tax_groups_data['..'][0]['count'] because some duplicates where present in the data
     assert tax_group_count == 68
 
+
 def test_auto_create_destination_attributes(mocker, db):
+    """
+    Test auto create destination attributes
+    """
     workspace_id = 1
     tax_group = TaxGroup(workspace_id, 'TAX_DETAIL', None)
     tax_group.sync_after = None
@@ -95,7 +106,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         mock_call.side_effect = [
             tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_0'],
-            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_1'] 
+            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_1']
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type = 'TAX_GROUP').count()
@@ -103,7 +114,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 0
 
         mappings_count = Mapping.objects.filter(workspace_id=workspace_id, source_type='TAX_GROUP', destination_type='TAX_DETAIL').count()
-        
+
         assert mappings_count == 0
 
         tax_group.trigger_import()
@@ -113,7 +124,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 69
 
         mappings_count = Mapping.objects.filter(workspace_id=workspace_id, source_type='TAX_GROUP', destination_type='TAX_DETAIL').count()
-        
+
         assert mappings_count == 59
 
     # create new tax-groups sub-sequent run (we will be adding 2 new tax-details)
@@ -129,7 +140,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         mock_call.side_effect = [
             [],
-            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_2'] 
+            tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_2']
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type = 'TAX_GROUP').count()
@@ -137,21 +148,24 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 69
 
         mappings_count = Mapping.objects.filter(workspace_id=workspace_id, source_type='TAX_GROUP', destination_type='TAX_DETAIL').count()
-        
+
         assert mappings_count == 59
 
         tax_group.trigger_import()
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type = 'TAX_GROUP').count()
 
-        assert expense_attributes_count == 69+2
+        assert expense_attributes_count == 69 + 2
 
         mappings_count = Mapping.objects.filter(workspace_id=workspace_id, source_type='TAX_GROUP', destination_type='TAX_DETAIL').count()
-        
-        assert mappings_count == 59+2
+
+        assert mappings_count == 59 + 2
 
 
 def test_construct_fyle_payload(db):
+    """
+    Test construct fyle payload
+    """
     tax_group = TaxGroup(1, 'TAX_DETAIL', None)
     tax_group.sync_after = None
 

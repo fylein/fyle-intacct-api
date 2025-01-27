@@ -1,17 +1,58 @@
 import logging
 from datetime import datetime
+
+from fyle_accounting_mappings.models import (
+    Mapping,
+    MappingSetting,
+    EmployeeMapping,
+    ExpenseAttribute,
+    DestinationAttribute
+)
+
 from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.utils import Bill,BillLineitem
-from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings, ExpenseAttribute
+from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
 from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
 from apps.workspaces.models import Configuration, Workspace
-from fyle_accounting_mappings.models import MappingSetting
-from apps.sage_intacct.models import *
+from apps.sage_intacct.models import (
+    Bill,
+    APPayment,
+    CostType,
+    JournalEntry,
+    BillLineitem,
+    ExpenseReport,
+    APPaymentLineitem,
+    JournalEntryLineitem,
+    ExpenseReportLineitem,
+    ChargeCardTransaction,
+    SageIntacctReimbursement,
+    ChargeCardTransactionLineitem,
+    SageIntacctReimbursementLineitem,
+    get_memo,
+    get_ccc_account_id,
+    get_item_id_or_none,
+    get_expense_purpose,
+    get_task_id_or_none,
+    get_transaction_date,
+    get_class_id_or_none,
+    get_project_id_or_none,
+    get_customer_id_or_none,
+    get_location_id_or_none,
+    get_tax_code_id_or_none,
+    get_cost_type_id_or_none,
+    get_department_id_or_none,
+    get_allocation_id_or_none,
+    get_intacct_employee_object,
+    get_user_defined_dimension_object
+)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
+
 def test_create_bill(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    """
+    Test create bill
+    """
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -49,11 +90,14 @@ def test_create_bill(db, create_expense_group_expense, create_cost_type, create_
     try:
         general_mappings.delete()
         bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
-    except:
+    except Exception:
         logger.info('General mapping not found')
-        
+
 
 def test_expense_report(db):
+    """
+    Test create expense report
+    """
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
@@ -65,7 +109,7 @@ def test_expense_report(db):
     general_mappings.save()
 
     expense_report = ExpenseReport.create_expense_report(expense_group)
-    expense_report_lineitems  = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
+    expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
     for expense_report_lineitem in expense_report_lineitems:
         assert expense_report_lineitem.amount == 11.0
@@ -77,12 +121,15 @@ def test_expense_report(db):
 
     try:
         general_mappings.delete()
-        expense_report_lineitems  = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
-    except:
+        expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
+    except Exception:
         logger.info('General mapping not found')
 
 
 def test_create_journal_entry(db, mocker, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    """
+    Test create journal entry
+    """
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
@@ -96,7 +143,7 @@ def test_create_journal_entry(db, mocker, create_expense_group_expense, create_c
     journal_entry = JournalEntry.create_journal_entry(expense_group)
     sage_intacct_connection = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector')
     sage_intacct_connection.return_value = mocker.Mock()
-    journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
+    journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
 
     for journal_entry_lineitem in journal_entry_lineitems:
         assert journal_entry_lineitem.amount == 11.0
@@ -107,13 +154,15 @@ def test_create_journal_entry(db, mocker, create_expense_group_expense, create_c
 
     try:
         general_mappings.delete()
-        journal_entry_lineitems  = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
-    except:
+        journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
+    except Exception:
         logger.info('General mapping not found')
 
 
 def test_create_ap_payment(db):
-
+    """
+    Test create ap payment
+    """
     expense_group = ExpenseGroup.objects.get(id=1)
 
     ap_payment = APPayment.create_ap_payment(expense_group)
@@ -128,6 +177,9 @@ def test_create_ap_payment(db):
 
 
 def test_create_charge_card_transaction(mocker, db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    """
+    Test create charge card transaction
+    """
     mocker.patch(
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
         return_value=DestinationAttribute.objects.get(id=633)
@@ -140,7 +192,7 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
     expense_group.save()
 
-    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
     general_mappings.default_charge_card_id = 'sample'
     general_mappings.use_intacct_employee_locations = True
     general_mappings.use_intacct_employee_departments = True
@@ -155,7 +207,7 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
 
     for charge_card_transaction_lineitem in charge_card_transaction_lineitems:
         assert charge_card_transaction_lineitem.amount == 21.0
-        
+
     assert charge_card_transaction.currency == 'USD'
     assert charge_card_transaction.transaction_date.split('T')[0] == '2022-09-20'
 
@@ -182,7 +234,7 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
 
     for charge_card_transaction_lineitem in charge_card_transaction_lineitems:
         assert charge_card_transaction_lineitem.amount == 11.0
-        
+
     assert charge_card_transaction.currency == 'USD'
     assert charge_card_transaction.transaction_date.split('T')[0] == '2022-09-20'
 
@@ -220,12 +272,14 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     try:
         general_mappings.delete()
         charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
-    except:
+    except Exception:
         logger.info('General mapping not found')
 
 
 def test_create_sage_intacct_reimbursement(db):
-
+    """
+    Test create sage intacct reimbursement
+    """
     expense_group = ExpenseGroup.objects.get(id=1)
     sage_intacct_reimbursement = SageIntacctReimbursement.create_sage_intacct_reimbursement(expense_group)
 
@@ -233,11 +287,14 @@ def test_create_sage_intacct_reimbursement(db):
 
     for sage_intacct_reimbursement_lineitem in sage_intacct_reimbursement_lineitems:
         assert sage_intacct_reimbursement_lineitem.amount == 21.0
-        
+
     assert sage_intacct_reimbursement.payment_description == 'Payment for Expense Report by ashwin.t@fyle.in'
 
 
 def test_get_project_id_or_none(mocker, db):
+    """
+    Test get project id or none
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.get_by_id',
         return_value={'options': ['samp'], 'updated_at': '2020-06-11T13:14:55.201598+00:00', 'is_mandatory': False}
@@ -268,10 +325,10 @@ def test_get_project_id_or_none(mocker, db):
 
     assert project_id == '10061'
 
-    mapping_setting = MappingSetting.objects.filter( 
-        workspace_id=expense_group.workspace_id, 
-        destination_field='PROJECT' 
-    ).first() 
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='PROJECT'
+    ).first()
 
     mapping_setting.source_field = 'TEAM_2_POSTMAN'
     mapping_setting.save()
@@ -287,6 +344,9 @@ def test_get_project_id_or_none(mocker, db):
 
 
 def test_get_department_id_or_none(mocker, db):
+    """
+    Test get department id or none
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.get_by_id',
         return_value={'options': ['samp'], 'updated_at': '2020-06-11T13:14:55.201598+00:00', 'is_mandatory': False}
@@ -306,8 +366,8 @@ def test_get_department_id_or_none(mocker, db):
 
     general_mapping = GeneralMapping.objects.get(workspace_id=workspace_id)
 
-    mapping_setting = MappingSetting.objects.filter( 
-        workspace_id=expense_group.workspace_id, 
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
     ).first()
 
     mapping_setting.destination_field = 'DEPARTMENT'
@@ -328,7 +388,6 @@ def test_get_department_id_or_none(mocker, db):
         location_id = get_department_id_or_none(expense_group, lineitem, general_mapping)
         assert location_id == '10061'
 
-
     mapping_setting.source_field = 'TEAM_2_POSTMAN'
     mapping_setting.save()
     for lineitem in expenses:
@@ -343,6 +402,9 @@ def test_get_department_id_or_none(mocker, db):
 
 
 def test_get_tax_code_id_or_none(db):
+    """
+    Test get tax code id or none
+    """
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
@@ -352,6 +414,9 @@ def test_get_tax_code_id_or_none(db):
 
 
 def test_get_customer_id_or_none(mocker, db):
+    """
+    Test get customer id or none
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.get_by_id',
         return_value={'options': ['samp'], 'updated_at': '2020-06-11T13:14:55.201598+00:00', 'is_mandatory': False}
@@ -378,10 +443,10 @@ def test_get_customer_id_or_none(mocker, db):
     for lineitem in expenses:
         location_id = get_customer_id_or_none(expense_group, lineitem, general_mapping, '')
         assert location_id == None
-    
-    mapping_setting = MappingSetting.objects.filter( 
-        workspace_id=expense_group.workspace_id, 
-        destination_field='PROJECT' 
+
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='PROJECT'
     ).first()
 
     mapping_setting.destination_field = 'CUSTOMER'
@@ -392,7 +457,7 @@ def test_get_customer_id_or_none(mocker, db):
     for lineitem in expenses:
         location_id = get_customer_id_or_none(expense_group, lineitem, general_mapping, 10064)
         assert location_id == '10064'
-    
+
     for lineitem in expenses:
         mapping.destination_type = 'CUSTOMER'
         mapping.source = ExpenseAttribute.objects.get(value=lineitem.project)
@@ -414,6 +479,9 @@ def test_get_customer_id_or_none(mocker, db):
 
 
 def test_get_class_id_or_none(mocker, db):
+    """
+    Test get class id or none
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.get_by_id',
         return_value={'options': ['samp'], 'updated_at': '2020-06-11T13:14:55.201598+00:00', 'is_mandatory': False}
@@ -431,9 +499,9 @@ def test_get_class_id_or_none(mocker, db):
     expenses = expense_group.expenses.all()
 
     general_mapping = GeneralMapping.objects.get(workspace_id=workspace_id)
-    mapping_setting = MappingSetting.objects.filter( 
-        workspace_id=expense_group.workspace_id, 
-        destination_field='PROJECT' 
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='PROJECT'
     ).first()
 
     mapping_setting.destination_field = 'CLASS'
@@ -465,6 +533,9 @@ def test_get_class_id_or_none(mocker, db):
 
 
 def test_get_user_defined_dimension_object(mocker, db):
+    """
+    Test get user defined dimension object
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.get_by_id',
         return_value={'options': ['samp'], 'updated_at': '2020-06-11T13:14:55.201598+00:00', 'is_mandatory': False}
@@ -477,7 +548,6 @@ def test_get_user_defined_dimension_object(mocker, db):
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=None
     )
-    workspace_id = 1
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
@@ -518,6 +588,9 @@ def test_get_user_defined_dimension_object(mocker, db):
 
 
 def test_get_expense_purpose(db):
+    """
+    Test get expense purpose
+    """
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=2)
@@ -527,7 +600,7 @@ def test_get_expense_purpose(db):
     for lineitem in expenses:
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
-    
+
         expense_purpose = get_expense_purpose(workspace_id, lineitem, category, workspace_general_settings)
 
         assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
@@ -539,12 +612,15 @@ def test_get_expense_purpose(db):
     for lineitem in expenses:
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
-    
+
         expense_purpose = get_expense_purpose(workspace_id, lineitem, category, workspace_general_settings)
         assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
 
 def test_get_transaction_date(db):
+    """
+    Test get transaction date
+    """
     expense_group = ExpenseGroup.objects.get(id=1)
 
     approved_at = {'spent_at': '2000-09-14'}
@@ -577,6 +653,9 @@ def test_get_transaction_date(db):
 
 
 def test_get_location_id_or_none(mocker, db):
+    """
+    Test get location id or none
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.get_by_id',
         return_value={'options': ['samp'], 'updated_at': '2020-06-11T13:14:55.201598+00:00', 'is_mandatory': False}
@@ -596,12 +675,12 @@ def test_get_location_id_or_none(mocker, db):
 
     general_mapping = GeneralMapping.objects.get(workspace_id=workspace_id)
 
-    mapping_setting = MappingSetting.objects.filter( 
-        workspace_id=expense_group.workspace_id, 
-        destination_field='PROJECT' 
+    mapping_setting = MappingSetting.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        destination_field='PROJECT'
     ).first()
 
-    mapping_setting.destination_field='LOCATION'
+    mapping_setting.destination_field = 'LOCATION'
     mapping_setting.save()
 
     mapping = Mapping.objects.filter(
@@ -615,14 +694,14 @@ def test_get_location_id_or_none(mocker, db):
         mapping.save()
         location_id = get_location_id_or_none(expense_group, lineitem, general_mapping)
         assert location_id == '10061'
-    
+
     mapping_setting.source_field = 'TEAM_2_POSTMAN'
     mapping_setting.save()
 
     for lineitem in expenses:
         location_id = get_location_id_or_none(expense_group, lineitem, general_mapping)
         assert location_id == '600'
-    
+
     mapping_setting.source_field = 'COST_CENTER'
     mapping_setting.save()
     for lineitem in expenses:
@@ -631,20 +710,26 @@ def test_get_location_id_or_none(mocker, db):
 
 
 def test_get_intacct_employee_object(db):
+    """
+    Test get intacct employee object
+    """
     expense_group = ExpenseGroup.objects.get(id=1)
-    
+
     default_employee_object = get_intacct_employee_object('email', expense_group)
     assert default_employee_object == 'ashwin.t@fyle.in'
 
 
 def test_get_memo(db):
+    """
+    Test get memo
+    """
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
     expense_group.description.update({'settlement_id': 'setqwcKcC9q1k'})
 
-    expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get( 
-        workspace_id=expense_group.workspace_id 
+    expense_group_settings: ExpenseGroupSettings = ExpenseGroupSettings.objects.get(
+        workspace_id=expense_group.workspace_id
     )
     expense_group_settings.reimbursable_export_date_type = 'spent_at'
     expense_group_settings.save()
@@ -681,9 +766,12 @@ def test_get_memo(db):
 
 
 def test_get_item_id_or_none(db, mocker):
+    """
+    Test get item id or none
+    """
     workspace_id = 1
 
-    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
 
     expense_group = ExpenseGroup.objects.get(id=1)
 
@@ -704,10 +792,10 @@ def test_get_item_id_or_none(db, mocker):
     assert item_id == general_mappings.default_item_id
 
     item_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
-    item_setting.source_field='PROJECT'
-    item_setting.destination_field='ITEM'
+    item_setting.source_field = 'PROJECT'
+    item_setting.destination_field = 'ITEM'
     item_setting.save()
-    
+
     item_id = get_item_id_or_none(expense_group, expense, general_mappings)
 
     assert item_id == general_mappings.default_item_id
@@ -720,26 +808,26 @@ def test_get_item_id_or_none(db, mocker):
     mapping = Mapping.objects.first()
     mapping.destination_type = 'ITEM'
     mapping.source_type = 'PROJECT'
-    mapping.source=expense_attribute
-    mapping.workspace_id=general_mappings.workspace
+    mapping.source = expense_attribute
+    mapping.workspace_id = general_mappings.workspace
     mapping.save()
 
     source_value = expense.project
-    
-    mapping: Mapping = Mapping.objects.filter(
-            source_type=item_setting.source_field,
-            destination_type='ITEM',
-            source__value=source_value,
-            workspace_id=expense_group.workspace_id
-        ).first()
+
+    mapping = Mapping.objects.filter(
+        source_type=item_setting.source_field,
+        destination_type='ITEM',
+        source__value=source_value,
+        workspace_id=expense_group.workspace_id
+    ).first()
 
     item_id = get_item_id_or_none(expense_group, expense, general_mappings)
 
     assert item_id == mapping.destination.destination_id
 
     item_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
-    item_setting.source_field='COST_CENTER'
-    item_setting.destination_field='ITEM'
+    item_setting.source_field = 'COST_CENTER'
+    item_setting.destination_field = 'ITEM'
     item_setting.save()
 
     expense_attribute = ExpenseAttribute.objects.filter(
@@ -749,8 +837,8 @@ def test_get_item_id_or_none(db, mocker):
     mapping = Mapping.objects.first()
     mapping.destination_type = 'ITEM'
     mapping.source_type = 'COST_CENTER'
-    mapping.source=expense_attribute
-    mapping.workspace_id=general_mappings.workspace
+    mapping.source = expense_attribute
+    mapping.workspace_id = general_mappings.workspace
     mapping.save()
 
     expense.cost_center = expense_attribute.value
@@ -758,20 +846,20 @@ def test_get_item_id_or_none(db, mocker):
 
     source_value = expense.cost_center
 
-    mapping: Mapping = Mapping.objects.filter(
-            source_type=item_setting.source_field,
-            destination_type='ITEM',
-            source__value=source_value,
-            workspace_id=expense_group.workspace_id
-        ).first()
+    mapping = Mapping.objects.filter(
+        source_type=item_setting.source_field,
+        destination_type='ITEM',
+        source__value=source_value,
+        workspace_id=expense_group.workspace_id
+    ).first()
 
     item_id = get_item_id_or_none(expense_group, expense, general_mappings)
 
     assert item_id == mapping.destination.destination_id
 
     item_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
-    item_setting.source_field='EMPLOYEE'
-    item_setting.destination_field='ITEM'
+    item_setting.source_field = 'EMPLOYEE'
+    item_setting.destination_field = 'ITEM'
     item_setting.save()
 
     expense_attribute = ExpenseAttribute.objects.first()
@@ -783,8 +871,8 @@ def test_get_item_id_or_none(db, mocker):
     mapping = Mapping.objects.first()
     mapping.destination_type = 'ITEM'
     mapping.source_type = 'EMPLOYEE'
-    mapping.source=expense_attribute
-    mapping.workspace_id=general_mappings.workspace
+    mapping.source = expense_attribute
+    mapping.workspace_id = general_mappings.workspace
     mapping.save()
 
     expense.custom_properties[expense_attribute.display_name] = expense_attribute.value
@@ -792,28 +880,32 @@ def test_get_item_id_or_none(db, mocker):
 
     source_value = expense.custom_properties.get(expense_attribute.display_name, None)
 
-    mapping: Mapping = Mapping.objects.filter(
-            source_type=item_setting.source_field,
-            destination_type='ITEM',
-            source__value=source_value,
-            workspace_id=expense_group.workspace_id
-        ).first()
+    mapping = Mapping.objects.filter(
+        source_type=item_setting.source_field,
+        destination_type='ITEM',
+        source__value=source_value,
+        workspace_id=expense_group.workspace_id
+    ).first()
 
     item_id = get_item_id_or_none(expense_group, expense, general_mappings)
 
     assert item_id == mapping.destination.destination_id
 
+
 def test_get_ccc_account_id(db, mocker):
+    """
+    Test get ccc account id
+    """
     workspace_id = 1
-    
+
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
     configuration.save()
 
-    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id) 
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
 
     expense_group = ExpenseGroup.objects.get(id=1)
-    
+
     expense = expense_group.expenses.first()
     expense.corporate_card_id = 900
     expense.save()
@@ -824,17 +916,17 @@ def test_get_ccc_account_id(db, mocker):
 
     mapping = Mapping.objects.first()
     mapping.source_type = 'CORPORATE_CARD'
-    mapping.destination_type='CHARGE_CARD_NUMBER'
-    mapping.source=expense_attribute
-    mapping.workspace_id=general_mappings.workspace
+    mapping.destination_type = 'CHARGE_CARD_NUMBER'
+    mapping.source = expense_attribute
+    mapping.workspace_id = general_mappings.workspace
     mapping.save()
 
     cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
-    
+
     assert cct_id == mapping.destination.destination_id
 
     mapping.source_type = 'COST_CENTER'
-    mapping.destination_type='COST_CENTER'
+    mapping.destination_type = 'COST_CENTER'
     mapping.save()
 
     expense_attribute.value = expense_group.description.get('employee_email')
@@ -844,7 +936,7 @@ def test_get_ccc_account_id(db, mocker):
     destination_mapping.save()
 
     employee_mapping = EmployeeMapping.objects.first()
-    employee_mapping.workspace_id=general_mappings.workspace
+    employee_mapping.workspace_id = general_mappings.workspace
     employee_mapping.source_employee = expense_attribute
     employee_mapping.destination_card_account = destination_mapping
     employee_mapping.save()
@@ -864,11 +956,14 @@ def test_get_ccc_account_id(db, mocker):
     employee_mapping.save()
 
     cct_id = get_ccc_account_id(general_mappings, expense, expense_group.description)
-    
+
     assert cct_id == general_mappings.default_charge_card_id
-    
+
 
 def test_get_cost_type_id_or_none(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    """
+    Test get cost type id or none
+    """
     expense_group, expense = create_expense_group_expense
     cost_type_id = get_cost_type_id_or_none(expense_group, expense, create_dependent_field_setting, 'pro1', 'task1')
 
@@ -876,6 +971,9 @@ def test_get_cost_type_id_or_none(db, create_expense_group_expense, create_cost_
 
 
 def test_get_task_id_or_none(db, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
+    """
+    Test get task id or none
+    """
     expense_group, expense = create_expense_group_expense
     task_id = get_task_id_or_none(expense_group, expense, create_dependent_field_setting, 'pro1')
 
@@ -883,6 +981,9 @@ def test_get_task_id_or_none(db, create_expense_group_expense, create_cost_type,
 
 
 def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_field_setting):
+    """
+    Test cost type bulk create or update
+    """
     cost_types = [
         {
             'RECORDNO': '2342341',
@@ -921,6 +1022,9 @@ def test_cost_type_bulk_create_or_update(db, create_cost_type, create_dependent_
 
 
 def test_get_allocation_or_none(db, mocker):
+    """
+    Test get allocation or none
+    """
     workspace_id = 1
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
 
@@ -933,8 +1037,8 @@ def test_get_allocation_or_none(db, mocker):
     assert allocation_id == None
 
     allocation_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
-    allocation_setting.source_field='PROJECT'
-    allocation_setting.destination_field='ALLOCATION'
+    allocation_setting.source_field = 'PROJECT'
+    allocation_setting.destination_field = 'ALLOCATION'
     allocation_setting.save()
 
     expense_attribute = ExpenseAttribute.objects.filter(
@@ -956,18 +1060,18 @@ def test_get_allocation_or_none(db, mocker):
     mapping.destination_type = 'ALLOCATION'
     mapping.source_type = 'PROJECT'
     mapping.destination = destination_attribute
-    mapping.source=expense_attribute
-    mapping.workspace_id=general_mappings.workspace
+    mapping.source = expense_attribute
+    mapping.workspace_id = general_mappings.workspace
     mapping.save()
 
     source_value = expense.project
-    
-    mapping: Mapping = Mapping.objects.filter(
-            source_type=allocation_setting.source_field,
-            destination_type='ALLOCATION',
-            source__value=source_value,
-            workspace_id=expense_group.workspace_id
-        ).first()
+
+    mapping = Mapping.objects.filter(
+        source_type=allocation_setting.source_field,
+        destination_type='ALLOCATION',
+        source__value=source_value,
+        workspace_id=expense_group.workspace_id
+    ).first()
 
     allocation_id, _ = get_allocation_id_or_none(expense_group, expense)
 
@@ -975,6 +1079,9 @@ def test_get_allocation_or_none(db, mocker):
 
 
 def test_bill_with_allocation(db, mocker):
+    """
+    Test bill with allocation
+    """
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -986,8 +1093,8 @@ def test_bill_with_allocation(db, mocker):
     general_mappings.save()
 
     allocation_setting: MappingSetting = MappingSetting.objects.filter(workspace_id=workspace_id).first()
-    allocation_setting.source_field='PROJECT'
-    allocation_setting.destination_field='ALLOCATION'
+    allocation_setting.source_field = 'PROJECT'
+    allocation_setting.destination_field = 'ALLOCATION'
     allocation_setting.save()
 
     expense_attribute = ExpenseAttribute.objects.filter(
@@ -1009,8 +1116,8 @@ def test_bill_with_allocation(db, mocker):
     mapping.destination_type = 'ALLOCATION'
     mapping.source_type = 'PROJECT'
     mapping.destination = destination_attribute
-    mapping.source=expense_attribute
-    mapping.workspace_id=general_mappings.workspace
+    mapping.source = expense_attribute
+    mapping.workspace_id = general_mappings.workspace
     mapping.save()
 
     bill = Bill.create_bill(expense_group)
@@ -1024,7 +1131,6 @@ def test_bill_with_allocation(db, mocker):
         assert bill_lineitem.amount == 21.0
         assert bill_lineitem.billable == None
         assert bill_lineitem.allocation_id == 'RENT'
-        
 
     assert bill.currency == 'USD'
     assert bill.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
@@ -1032,6 +1138,9 @@ def test_bill_with_allocation(db, mocker):
 
 
 def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_group_for_allocation):
+    """
+    Test bill with allocation and user dimensions
+    """
     workspace_id = 1
 
     expense_group, expense = create_expense_group_for_allocation
@@ -1076,7 +1185,7 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
     mapping.destination_type = 'ALLOCATION'
     mapping.source_type = 'COST_CENTER'
     mapping.destination = destination_attribute
-    mapping.source=expense_attribute
+    mapping.source = expense_attribute
     mapping.save()
 
     mapping_setting = MappingSetting.objects.filter(
@@ -1099,8 +1208,8 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
 
     location_id = get_user_defined_dimension_object(expense_group, expense)
     assert location_id == [{'GLDIMPROJECT': '10061'}]
-    
-    bill = Bill.create_bill(expense_group)
+
+    _ = Bill.create_bill(expense_group)
     bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
 
     for bill_lineitem in bill_lineitems:

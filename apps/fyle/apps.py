@@ -2,8 +2,11 @@ from django.apps import AppConfig
 
 
 class FyleConfig(AppConfig):
+    """
+    Fyle app config
+    """
     name = 'apps.fyle'
 
-    def ready(self):
+    def ready(self) -> None:
         super(FyleConfig, self).ready()
-        import apps.fyle.signals
+        import apps.fyle.signals # noqa

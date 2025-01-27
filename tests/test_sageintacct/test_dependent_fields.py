@@ -1,30 +1,33 @@
 import logging
+from unittest import mock
 from datetime import datetime, timedelta, timezone
 
-from unittest import mock
-
-
-from fyle_integrations_platform_connector import PlatformConnector
-
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_integrations_platform_connector import PlatformConnector
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
 
+from apps.mappings.models import ImportLog
+from apps.sage_intacct.models import CostType
+from apps.workspaces.models import FyleCredential
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.dependent_fields import (
     create_dependent_custom_field_in_fyle,
-    post_dependent_cost_type, post_dependent_cost_code, post_dependent_expense_field_values,
+    post_dependent_cost_type,
+    post_dependent_cost_code,
     import_dependent_fields_to_fyle,
-    construct_custom_field_placeholder
+    construct_custom_field_placeholder,
+    post_dependent_expense_field_values
 )
-from apps.sage_intacct.models import CostType
-from apps.workspaces.models import FyleCredential
-from apps.mappings.models import ImportLog
+
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
 def test_create_dependent_custom_field_in_fyle(mocker, db):
+    """
+    Test create_dependent_custom_field_in_fyle
+    """
     mocker.patch(
         'fyle.platform.apis.v1beta.admin.ExpenseFields.post',
         return_value={'id': 123}
@@ -38,6 +41,9 @@ def test_create_dependent_custom_field_in_fyle(mocker, db):
 
 
 def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent_field_setting):
+    """
+    Test post_dependent_cost_type
+    """
     workspace_id = 1
     mock = mocker.patch(
         'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
@@ -77,6 +83,9 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
 
 
 def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent_field_setting):
+    """
+    Test post_dependent_cost_code
+    """
     workspace_id = 1
     mock = mocker.patch(
         'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
@@ -115,6 +124,9 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
 
 
 def test_post_dependent_expense_field_values(db, mocker, create_cost_type, create_dependent_field_setting):
+    """
+    Test post_dependent_expense_field_values
+    """
     workspace_id = 1
     mock = mocker.patch(
         'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
@@ -149,6 +161,9 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
 
 
 def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_dependent_field_setting):
+    """
+    Test import_dependent_fields_to_fyle
+    """
     workspace_id = 1
     with mock.patch('fyle_integrations_platform_connector.PlatformConnector') as mock_call:
         mock_call.side_effect = InvalidTokenError(msg='invalid params', response='invalid params')
@@ -181,6 +196,9 @@ def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_de
 
 
 def test_construct_custom_field_placeholder():
+    """
+    Test construct_custom_field_placeholder
+    """
     # Test case 1: Both source_placeholder and placeholder are None, fyle_attribute is provided
     new_placeholder = construct_custom_field_placeholder(None, "PROJECT_CUSTOM", None)
     assert new_placeholder == "Select PROJECT_CUSTOM"

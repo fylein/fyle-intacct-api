@@ -1,24 +1,18 @@
 import logging
 from datetime import datetime
 
-from typing import List
-
 from django_q.models import Schedule
-from fyle_integrations_platform_connector import PlatformConnector
 
+from fyle_accounting_mappings.models import EmployeeMapping
+from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
     InternalServerError
 )
 
-from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
-from fyle_accounting_mappings.models import (
-    EmployeeMapping
-)
-from sageintacctsdk.exceptions import (
-    InvalidTokenError,
-    NoPrivilegeError
-)
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
+
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.tasks.models import Error
@@ -27,15 +21,19 @@ from apps.workspaces.models import (
     FyleCredential,
     Configuration
 )
-from apps.mappings.models import ImportLog
-
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_type: str, errored_attribute_ids: List[int]):
-
+def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_type: str, errored_attribute_ids: list[int]) -> list[int]:
+    """
+    Get Mapped Attributes Ids
+    :param source_attribute_type: Source Attribute Type
+    :param destination_attribute_type: Destination Attribute Type
+    :param errored_attribute_ids: Errored Attribute Ids
+    :return: List of Mapped Attribute Ids
+    """
     mapped_attribute_ids = []
 
     if source_attribute_type == "EMPLOYEE":
@@ -47,7 +45,7 @@ def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_
             params['destination_employee_id__isnull'] = False
         else:
             params['destination_vendor_id__isnull'] = False
-        mapped_attribute_ids: List[int] = EmployeeMapping.objects.filter(
+        mapped_attribute_ids: list[int] = EmployeeMapping.objects.filter(
             **params
         ).values_list('source_employee_id', flat=True)
 
@@ -55,12 +53,18 @@ def get_mapped_attributes_ids(source_attribute_type: str, destination_attribute_
 
 
 def resolve_expense_attribute_errors(
-    source_attribute_type: str, workspace_id: int, destination_attribute_type: str = None):
+    source_attribute_type: str,
+    workspace_id: int,
+    destination_attribute_type: str = None
+) -> None:
     """
     Resolve Expense Attribute Errors
+    :param source_attribute_type: Source Attribute Type
+    :param workspace_id: Workspace Id
+    :param destination_attribute_type: Destination Attribute Type
     :return: None
     """
-    errored_attribute_ids: List[int] = Error.objects.filter(
+    errored_attribute_ids: list[int] = Error.objects.filter(
         is_resolved=False,
         workspace_id=workspace_id,
         type='{}_MAPPING'.format(source_attribute_type)
@@ -73,14 +77,18 @@ def resolve_expense_attribute_errors(
             Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
 
 
-def async_auto_map_employees(workspace_id: int):
+def async_auto_map_employees(workspace_id: int) -> None:
+    """
+    Async Auto Map Employees
+    :param workspace_id: Workspace Id
+    :return: None
+    """
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     employee_mapping_preference = configuration.auto_map_employees
 
     destination_type = configuration.employee_field_mapping
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-
 
     try:
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
@@ -103,7 +111,7 @@ def async_auto_map_employees(workspace_id: int):
 
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         logger.info('Invalid Token or Sage Intacct Credentials does not exist - %s', workspace_id)
-    
+
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
 
@@ -111,7 +119,13 @@ def async_auto_map_employees(workspace_id: int):
         logger.info('Insufficient permission to access the requested module')
 
 
-def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int):
+def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int) -> None:
+    """
+    Schedule Auto Map Employees
+    :param employee_mapping_preference: Employee Mapping Preference
+    :param workspace_id: Workspace Id
+    :return: None
+    """
     if employee_mapping_preference:
         start_datetime = datetime.now()
 
@@ -135,7 +149,12 @@ def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: 
             schedule.delete()
 
 
-def async_auto_map_charge_card_account(workspace_id: int):
+def async_auto_map_charge_card_account(workspace_id: int) -> None:
+    """
+    Async Auto Map Charge Card Account
+    :param workspace_id: Workspace Id
+    :return: None
+    """
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
     default_charge_card_id = general_mappings.default_charge_card_id
 
@@ -153,11 +172,18 @@ def async_auto_map_charge_card_account(workspace_id: int):
         logger.info('Fyle Internal Server Error in workspace - %s', workspace_id)
 
 
-def schedule_auto_map_charge_card_employees(workspace_id: int):
+def schedule_auto_map_charge_card_employees(workspace_id: int) -> None:
+    """
+    Schedule Auto Map Charge Card Employees
+    :param workspace_id: Workspace Id
+    :return: None
+    """
     configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-    if configuration.auto_map_employees and \
-        configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+    if (
+        configuration.auto_map_employees
+        and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+    ):
 
         start_datetime = datetime.now()
 
@@ -182,7 +208,13 @@ def schedule_auto_map_charge_card_employees(workspace_id: int):
             schedule.delete()
 
 
-def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int):
+def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int) -> None:
+    """
+    Sync Sage Intacct Attributes
+    :param sageintacct_attribute_type: Sage Intacct Attribute Type
+    :param workspace_id: Workspace Id
+    :return: None
+    """
     sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
     sage_intacct_connection = SageIntacctConnector(

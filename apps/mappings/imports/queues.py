@@ -1,15 +1,18 @@
 from django_q.tasks import Chain
+
 from fyle_accounting_mappings.models import MappingSetting
+
+from apps.mappings.models import ImportLog
 from apps.workspaces.models import Configuration
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.helpers import is_project_sync_allowed
-from apps.mappings.models import ImportLog
 
 
-def chain_import_fields_to_fyle(workspace_id):
+def chain_import_fields_to_fyle(workspace_id: int) -> None:
     """
     Chain import fields to Fyle
     :param workspace_id: Workspace Id
+    :return: None
     """
     mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
     configuration = Configuration.objects.get(workspace_id=workspace_id)

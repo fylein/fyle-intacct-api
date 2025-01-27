@@ -1,27 +1,34 @@
 import json
 from unittest import mock
+
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+
 from fyle_rest_auth.utils import AuthUtils
-from tests.helper import dict_compare_keys
-from sageintacctsdk import exceptions as sage_intacct_exc
 from fyle.platform import exceptions as fyle_exc
-from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail, Workspace
-from .fixtures import data
-from ..test_fyle.fixtures import data as fyle_data
-from apps.mappings.models import ImportLog
+from sageintacctsdk import exceptions as sage_intacct_exc
 from fyle_accounting_mappings.models import MappingSetting
+
+from tests.helper import dict_compare_keys
+
+from apps.mappings.models import ImportLog
+from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail, Workspace
+
+from .fixtures import data
+from tests.test_fyle.fixtures import data as fyle_data
 
 User = get_user_model()
 auth_utils = AuthUtils()
 
 
 def test_ready_view(api_client, test_connection):
-
+    """
+    Test Ready View
+    """
     url = '/api/workspaces/ready/'
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.get(url)
     assert response.status_code == 200
 
@@ -30,10 +37,13 @@ def test_ready_view(api_client, test_connection):
 
 
 def test_get_workspace(api_client, test_connection):
+    """
+    Test Get Workspace
+    """
     url = '/api/workspaces/'
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.get(url)
     assert response.status_code == 200
 
@@ -42,6 +52,9 @@ def test_get_workspace(api_client, test_connection):
 
 
 def test_get_workspace_by_id(api_client, test_connection):
+    """
+    Test Get Workspace By Id
+    """
     workspace_id = 1
 
     url = '/api/workspaces/{}/'.format(workspace_id)
@@ -63,7 +76,9 @@ def test_get_workspace_by_id(api_client, test_connection):
 
 
 def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
-
+    """
+    Test Post and Patch of Workspace
+    """
     url = '/api/workspaces/'
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
@@ -85,7 +100,7 @@ def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
     response = json.loads(response.content)
     assert dict_compare_keys(response, data['workspace']) == [], 'workspaces api returns a diff in the keys'
 
-    workspace_id=1
+    workspace_id = 1
     url = '/api/workspaces/{}/'.format(workspace_id)
     workspace = Workspace.objects.get(id=data['workspace']['id'])
 
@@ -102,28 +117,34 @@ def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
 
 
 def test_connect_fyle_view(api_client, test_connection):
+    """
+    Test Connect Fyle View
+    """
     workspace_id = 1
-    
+
     url = '/api/workspaces/{}/credentials/fyle/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.get(url)
     assert response.status_code == 200
-    
+
     url = '/api/workspaces/{}/credentials/fyle/delete/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.delete(url)
     assert response.status_code == 200
 
     url = '/api/workspaces/{}/credentials/fyle/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.get(url)
     assert response.status_code == 400
 
 
 def test_connect_fyle_view_post(mocker, api_client, test_connection):
+    """
+    Test Connect Fyle View Post
+    """
     mocker.patch(
         'fyle_rest_auth.utils.AuthUtils.generate_fyle_refresh_token',
         return_value={'refresh_token': 'asdfghjk', 'access_token': 'qwertyuio'}
@@ -144,59 +165,65 @@ def test_connect_fyle_view_post(mocker, api_client, test_connection):
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
 
     response = api_client.post(
-            url,
-            data={'code': code}    
-        )
+        url,
+        data={'code': code}
+    )
     assert response.status_code == 200
 
 
 def test_connect_fyle_view_exceptions(api_client, test_connection):
+    """
+    Test Connect Fyle View Exceptions
+    """
     workspace_id = 1
-    
+
     code = 'qwertyu'
     url = '/api/workspaces/{}/connect_fyle/authorization_code/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     with mock.patch('fyle_rest_auth.utils.AuthUtils.generate_fyle_refresh_token') as mock_call:
         mock_call.side_effect = fyle_exc.UnauthorizedClientError(msg='Invalid Authorization Code', response='Invalid Authorization Code')
-        
+
         response = api_client.post(
             url,
-            data={'code': code}    
+            data={'code': code}
         )
         assert response.status_code == 403
 
         mock_call.side_effect = fyle_exc.NotFoundClientError(msg='Fyle Application not found', response='Fyle Application not found')
-        
+
         response = api_client.post(
             url,
-            data={'code': code}    
+            data={'code': code}
         )
         assert response.status_code == 404
 
         mock_call.side_effect = fyle_exc.WrongParamsError(msg='Some of the parameters are wrong', response='Some of the parameters are wrong')
-        
+
         response = api_client.post(
             url,
-            data={'code': code}    
+            data={'code': code}
         )
         assert response.status_code == 400
 
         mock_call.side_effect = fyle_exc.InternalServerError(msg='Wrong/Expired Authorization code', response='Wrong/Expired Authorization code')
-        
+
         response = api_client.post(
             url,
-            data={'code': code}    
+            data={'code': code}
         )
         assert response.status_code == 401
 
 
 def test_connect_sageintacct_view(api_client, test_connection):
+    """
+    Test Connect Sage Intacct View
+    """
     workspace_id = 1
 
     url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.get(url)
     assert response.status_code == 200
 
@@ -204,18 +231,21 @@ def test_connect_sageintacct_view(api_client, test_connection):
 
     url = '/api/workspaces/{}/credentials/sage_intacct/delete/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.delete(url)
     assert response.status_code == 200
 
     url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     response = api_client.get(url)
     assert response.status_code == 400
 
 
 def test_connect_sageintacct_view_post(mocker, api_client, test_connection):
+    """
+    Test Connect Sage Intacct View Post
+    """
     mocker.patch(
         'sageintacctsdk.apis.Attachments.create_attachments_folder',
         return_value={}
@@ -241,7 +271,7 @@ def test_connect_sageintacct_view_post(mocker, api_client, test_connection):
             'si_user_id': 'sdfghj',
             'si_company_id': 'kjhgfz',
             'si_company_name': 'fghjk'
-        }    
+        }
     )
 
     assert response.status_code == 200
@@ -257,32 +287,35 @@ def test_connect_sageintacct_view_post(mocker, api_client, test_connection):
             'si_user_id': 'sdfghj',
             'si_company_id': 'kjhgfz',
             'si_company_name': 'fghjk'
-        }    
+        }
     )
     assert response.status_code == 200
 
 
 def test_connect_sageintacct_view_exceptions(api_client, test_connection):
+    """
+    Test Connect Sage Intacct View Exceptions
+    """
     workspace_id = 1
-    
+
     code = 'qwertyu'
     url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
 
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-    
+
     with mock.patch('apps.workspaces.models.SageIntacctCredential.objects.filter') as mock_call:
         mock_call.side_effect = sage_intacct_exc.NotFoundItemError(msg='Application not found', response=json.dumps({'message': 'Application not found'}))
-        
+
         response = api_client.post(
             url,
             data={
                 'code': code
-            }    
+            }
         )
         assert response.status_code == 404
 
         mock_call.side_effect = sage_intacct_exc.WrongParamsError(msg='invalid grant', response=json.dumps({'message': 'invalid grant'}))
-        
+
         response = api_client.post(
             url,
             data={
@@ -292,7 +325,7 @@ def test_connect_sageintacct_view_exceptions(api_client, test_connection):
         assert response.status_code == 400
 
         mock_call.side_effect = sage_intacct_exc.InvalidTokenError(msg='Invalid token', response='Invalid token')
-        
+
         response = api_client.post(
             url,
             data={
@@ -302,17 +335,20 @@ def test_connect_sageintacct_view_exceptions(api_client, test_connection):
         assert response.status_code == 401
 
         mock_call.side_effect = sage_intacct_exc.InternalServerError(msg='Wrong/Expired Authorization code', response='Wrong/Expired Authorization code')
-        
+
         response = api_client.post(
             url,
             data={
                 'code': code
-            }   
+            }
         )
         assert response.status_code == 401
 
 
 def test_workspace_schedule(api_client, test_connection):
+    """
+    Test Workspace Schedule
+    """
     workspace_id = 1
 
     url = '/api/workspaces/{}/schedule/'.format(workspace_id)
@@ -339,7 +375,7 @@ def test_workspace_schedule(api_client, test_connection):
                 "ashwin.t@fyle.in"
             ]
         },
-        format='json'    
+        format='json'
     )
     assert response.status_code == 200
 
@@ -348,6 +384,9 @@ def test_workspace_schedule(api_client, test_connection):
 
 
 def test_general_settings_detail(api_client, test_connection):
+    """
+    Test General Settings Detail
+    """
     workspace_id = 1
 
     url = '/api/workspaces/{}/configuration/'.format(workspace_id)
@@ -369,7 +408,7 @@ def test_general_settings_detail(api_client, test_connection):
         format='json'
     )
 
-    assert response.status_code==201
+    assert response.status_code == 201
 
     response = api_client.patch(
         url,
@@ -383,7 +422,7 @@ def test_general_settings_detail(api_client, test_connection):
     configurations_object.delete()
 
     test_data = data['workspace_general_settings_payload']
-    test_data['auto_map_employees'] ='EMPLOYEE_CODE'
+    test_data['auto_map_employees'] = 'EMPLOYEE_CODE'
 
     response = api_client.post(
         url,
@@ -391,10 +430,13 @@ def test_general_settings_detail(api_client, test_connection):
         format='json'
     )
 
-    assert response.status_code==400
+    assert response.status_code == 400
 
 
 def test_workspace_admin_view(mocker, api_client, test_connection):
+    """
+    Test Workspace Admin View
+    """
     workspace_id = 1
 
     url = '/api/workspaces/{}/admins/'.format(workspace_id)
@@ -406,6 +448,9 @@ def test_workspace_admin_view(mocker, api_client, test_connection):
 
 
 def test_export_to_intacct(mocker, api_client, test_connection):
+    """
+    Test Export To Intacct
+    """
     mocker.patch(
         'apps.workspaces.views.export_to_intacct',
         return_value=None
@@ -420,7 +465,9 @@ def test_export_to_intacct(mocker, api_client, test_connection):
 
 
 def test_last_export_detail_view(mocker, db, api_client, test_connection):
-
+    """
+    Test Last Export Detail View
+    """
     workspace_id = 1
     url = '/api/workspaces/{}/export_detail/'.format(workspace_id)
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))

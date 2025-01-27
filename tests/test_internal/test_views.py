@@ -1,15 +1,19 @@
 import pytest
+
 from unittest.mock import patch
+
 from django.urls import reverse
 
 from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
-
 from tests.test_sageintacct.fixtures import data
 
 
 @pytest.mark.django_db(databases=['default'])
 @patch.object(IsAuthenticatedForInternalAPI, 'has_permission', return_value=True)
 def test_qbo_fields_view(db, api_client, mocker):
+    """
+    Test qbo_fields_view
+    """
     url = reverse('accounting-fields')
 
     response = api_client.get(url)
@@ -30,6 +34,9 @@ def test_qbo_fields_view(db, api_client, mocker):
 @pytest.mark.django_db(databases=['default'])
 @patch.object(IsAuthenticatedForInternalAPI, 'has_permission', return_value=True)
 def test_exported_entry_view(db, api_client, mocker):
+    """
+    Test exported_entry_view
+    """
     url = reverse('exported-entry')
 
     response = api_client.get(url)

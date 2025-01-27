@@ -1,9 +1,13 @@
+import pytest
+
+from unittest import mock
 from asyncio.log import logger
 from datetime import datetime, timedelta, timezone
-import pytest
-from unittest import mock
+
 from django.db import transaction
 from django_q.models import Schedule
+
+from fyle.platform.exceptions import WrongParamsError
 from fyle_accounting_mappings.models import (
     MappingSetting,
     Mapping,
@@ -11,20 +15,22 @@ from fyle_accounting_mappings.models import (
     EmployeeMapping,
     CategoryMapping
 )
+
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, Workspace
 from apps.mappings.models import LocationEntityMapping, ImportLog
-from fyle.platform.exceptions import WrongParamsError
-from ..test_fyle.fixtures import data as fyle_data
 
+from tests.test_fyle.fixtures import data as fyle_data
 
 
 def test_pre_save_category_mappings(test_connection, mocker, db):
-
+    """
+    Test pre save category mappings
+    """
     category_mapping, _ = CategoryMapping.objects.update_or_create(
-       source_category_id=106,
-       destination_expense_head_id=926,
-       workspace_id=1
+        source_category_id=106,
+        destination_expense_head_id=926,
+        workspace_id=1
     )
 
     assert category_mapping.destination_expense_head_id == 926
@@ -32,19 +38,22 @@ def test_pre_save_category_mappings(test_connection, mocker, db):
 
     category_mapping.destination_expense_head_id = None
     category_mapping.save()
-    
+
     category_mapping, _ = CategoryMapping.objects.update_or_create(
         source_category_id=106,
         destination_account_id=796,
         workspace_id=1
     )
-    
+
     assert category_mapping.destination_account_id == 796
     assert category_mapping.destination_expense_head_id == None
 
 
 @pytest.mark.django_db()
 def test_resolve_post_employees_mapping_errors(test_connection):
+    """
+    Test resolve post employees mapping errors
+    """
     source_employee = ExpenseAttribute.objects.filter(
         value='user2@fyleforgotham.in',
         workspace_id=1,
@@ -62,9 +71,9 @@ def test_resolve_post_employees_mapping_errors(test_connection):
         }
     )
     employee_mapping, _ = EmployeeMapping.objects.update_or_create(
-       source_employee_id=3,
-       destination_employee_id=719,
-       workspace_id=1
+        source_employee_id=3,
+        destination_employee_id=719,
+        workspace_id=1
     )
 
     error = Error.objects.filter(expense_attribute_id=employee_mapping.source_employee_id).first()
@@ -74,6 +83,9 @@ def test_resolve_post_employees_mapping_errors(test_connection):
 
 @pytest.mark.django_db()
 def test_resolve_post_category_mapping_errors(test_connection):
+    """
+    Test resolve post category mapping errors
+    """
     source_category = ExpenseAttribute.objects.filter(
         id=106,
         workspace_id=1,
@@ -91,17 +103,20 @@ def test_resolve_post_category_mapping_errors(test_connection):
         }
     )
     category_mapping, _ = CategoryMapping.objects.update_or_create(
-       source_category_id=106,
-       destination_account_id=791,
-       destination_expense_head_id=791,
-       workspace_id=1
+        source_category_id=106,
+        destination_account_id=791,
+        destination_expense_head_id=791,
+        workspace_id=1
     )
 
     error = Error.objects.filter(expense_attribute_id=category_mapping.source_category_id).first()
     assert error.is_resolved == True
 
-def test_run_post_location_entity_mappings(db, mocker, test_connection):
 
+def test_run_post_location_entity_mappings(db, mocker, test_connection):
+    """
+    Test run post location entity mappings
+    """
     workspace = Workspace.objects.get(id=1)
     assert workspace.onboarding_state == 'IMPORT_SETTINGS'
     LocationEntityMapping.objects.update_or_create(
@@ -113,7 +128,11 @@ def test_run_post_location_entity_mappings(db, mocker, test_connection):
     workspace = Workspace.objects.get(id=1)
     assert workspace.onboarding_state == 'EXPORT_SETTINGS'
 
+
 def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
+    """
+    Test run post mapping settings triggers
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
         return_value=[]
@@ -180,7 +199,6 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
-
     mapping_setting = MappingSetting.objects.filter(
         source_field='PROJECT',
         workspace_id=workspace_id
@@ -208,6 +226,9 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
 
 
 def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
+    """
+    Test run pre mapping settings triggers
+    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
         return_value=[]
@@ -230,11 +251,11 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
             import_to_fyle=True,
             is_custom=True
         )
-    except:
+    except Exception:
         logger.info('Duplicate custom field name')
 
     custom_mappings = Mapping.objects.last()
-    
+
     custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTS').count()
     assert custom_mappings == 0
 
@@ -252,7 +273,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
 
     ImportLog.objects.filter(workspace_id=1, attribute_type='CUSTOM_INTENTS').delete()
 
-    # case where error will occur but we reach the case where there are no destination attributes 
+    # case where error will occur but we reach the case where there are no destination attributes
     # so we mark the import as complete
     with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
         mock_call.side_effect = WrongParamsError(msg='invalid params', response={'code': 400, 'message': 'duplicate key value violates unique constraint '
@@ -269,7 +290,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
         try:
             with transaction.atomic():
                 mapping_setting.save()
-        except:
+        except Exception:
             logger.info('duplicate key value violates unique constraint')
 
     with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
@@ -285,7 +306,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
 
         try:
             mapping_setting.save()
-        except:
+        except Exception:
             logger.info('text_column cannot be added as it exceeds the maximum limit(15) of columns of a single type')
 
     with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
@@ -301,5 +322,5 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
 
         try:
             mapping_setting.save()
-        except:
+        except Exception:
             logger.info('The values ("or79Cob97KSh", "text_column15", "1") already exists')

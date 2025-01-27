@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import List
-from apps.mappings.imports.modules.base import Base
+
 from fyle_accounting_mappings.models import DestinationAttribute
+
+from apps.mappings.imports.modules.base import Base
 
 
 class TaxGroup(Base):
@@ -17,7 +18,7 @@ class TaxGroup(Base):
             sync_after=sync_after
         )
 
-    def trigger_import(self):
+    def trigger_import(self) -> None:
         """
         Trigger import for TaxGroups module
         """
@@ -26,10 +27,10 @@ class TaxGroup(Base):
     # remove the is_auto_sync_status_allowed parameter
     def construct_fyle_payload(
         self,
-        paginated_destination_attributes: List[DestinationAttribute],
+        paginated_destination_attributes: list[DestinationAttribute],
         existing_fyle_attributes_map: object,
         is_auto_sync_status_allowed: bool
-    ):
+    ) -> list[dict]:
         """
         Construct Fyle payload for TaxGroup module
         :param paginated_destination_attributes: List of paginated destination attributes
@@ -43,7 +44,7 @@ class TaxGroup(Base):
             tax_group = {
                 'name': attribute.value,
                 'is_enabled': True,
-                'percentage': round((attribute.detail['tax_rate']/100), 2)
+                'percentage': round((attribute.detail['tax_rate'] / 100), 2)
             }
 
             # Create a new tax-group if it does not exist in Fyle

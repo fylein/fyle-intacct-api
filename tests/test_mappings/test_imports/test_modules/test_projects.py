@@ -1,12 +1,16 @@
-from apps.workspaces.models import Configuration
-from apps.mappings.imports.modules.projects import Project, disable_projects
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+
+from apps.workspaces.models import Configuration
 from apps.sage_intacct.models import CostType, DependentFieldSetting
 from apps.sage_intacct.dependent_fields import update_and_disable_cost_code
+from apps.mappings.imports.modules.projects import Project, disable_projects
 from .fixtures import data
 
 
 def test_construct_fyle_payload(db):
+    """
+    Test construct fyle payload
+    """
     project = Project(1, 'PROJECT', None)
 
     # create new case
@@ -49,6 +53,9 @@ def test_disable_projects(
     add_project_mappings,
     add_configuration
 ):
+    """
+    Test disable projects
+    """
     workspace_id = 1
 
     projects_to_disable = {
@@ -139,6 +146,9 @@ def test_update_and_disable_cost_code(
     add_cost_type,
     add_configuration
 ):
+    """
+    Test update and disable cost code
+    """
     workspace_id = 1
 
     projects_to_disable = {

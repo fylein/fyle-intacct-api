@@ -1,21 +1,27 @@
 from rest_framework import generics
+from rest_framework.request import Request
 from rest_framework.views import Response, status
 
-from apps.workspaces.models import Workspace, Configuration
-
-from .serializers import ImportSettingsSerializer
+from fyle_accounting_mappings.models import MappingSetting
 
 from apps.mappings.models import ImportLog
-from fyle_accounting_mappings.models import MappingSetting
+from apps.workspaces.models import Workspace, Configuration
+from apps.workspaces.apis.import_settings.serializers import ImportSettingsSerializer
 
 
 class ImportSettingsView(generics.RetrieveUpdateAPIView):
+    """
+    Import Settings View
+    """
     serializer_class = ImportSettingsSerializer
 
-    def get_object(self):
+    def get_object(self) -> Workspace:
+        """
+        Get workspace object
+        """
         return Workspace.objects.filter(id=self.kwargs['workspace_id']).first()
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict:
         """
         Override to include the request in the serializer context.
         This allows serializers to access the current user.
@@ -24,11 +30,15 @@ class ImportSettingsView(generics.RetrieveUpdateAPIView):
         context['request'] = self.request
         return context
 
+
 class ImportCodeFieldView(generics.GenericAPIView):
     """
     Import Code Field View
     """
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Get import code fields
+        """
         workspace_id = kwargs['workspace_id']
         import_log_attributes = ImportLog.objects.filter(workspace_id=workspace_id).values_list('attribute_type', flat=True)
         configuration = Configuration.objects.filter(workspace_id=workspace_id).first()

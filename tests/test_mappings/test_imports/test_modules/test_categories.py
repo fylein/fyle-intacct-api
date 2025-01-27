@@ -1,20 +1,24 @@
 from unittest import mock
 from apps.mappings.imports.modules.categories import Category, disable_categories
+
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute,
     CategoryMapping
 )
-from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import (
+    Workspace,
     FyleCredential,
-    Configuration,
-    Workspace
+    Configuration
 )
 from .fixtures import category_data
 
 
 def test_sync_destination_attributes_categories(mocker, db):
+    """
+    Test sync destination attributes for categories
+    """
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Accounts.count',
@@ -55,6 +59,9 @@ def test_sync_destination_attributes_categories(mocker, db):
 
 
 def test_sync_expense_atrributes(mocker, db):
+    """
+    Test sync expense attributes for categories
+    """
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.workspace.fyle_org_id = 'orwimNcVyYsp'
@@ -86,7 +93,11 @@ def test_sync_expense_atrributes(mocker, db):
     # NOTE : we are not using category_data['..'][0]['count'] because some duplicates where present in the data
     assert category_count == 630
 
+
 def test_auto_create_destination_attributes_categories(mocker, db):
+    """
+    Test auto create destination attributes for categories
+    """
     category = Category(1, 'EXPENSE_TYPE', None)
     category.sync_after = None
 
@@ -113,7 +124,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         )
         mock_call.side_effect = [
             category_data['create_new_auto_create_categories_expense_attributes_0'],
-            category_data['create_new_auto_create_categories_expense_attributes_1'] 
+            category_data['create_new_auto_create_categories_expense_attributes_1']
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='CATEGORY').count()
@@ -121,7 +132,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         assert expense_attributes_count == 0
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
-        
+
         assert mappings_count == 0
 
         category.trigger_import()
@@ -131,9 +142,8 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         assert expense_attributes_count == 30
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
-        
-        assert mappings_count == 12
 
+        assert mappings_count == 12
 
     # disable case for categories import
     with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
@@ -151,12 +161,11 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         )
         mock_call.side_effect = [
             category_data['create_new_auto_create_categories_expense_attributes_2'],
-            category_data['create_new_auto_create_categories_expense_attributes_3'] 
+            category_data['create_new_auto_create_categories_expense_attributes_3']
         ]
 
-        
         destination_attribute = DestinationAttribute.objects.filter(workspace_id=1, value='labhvam', attribute_type='EXPENSE_TYPE').first()
-        
+
         assert destination_attribute.active == True
 
         expense_attribute = ExpenseAttribute.objects.filter(workspace_id=1, value='labhvam', attribute_type='CATEGORY').first()
@@ -175,7 +184,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         category.trigger_import()
 
         destination_attribute = DestinationAttribute.objects.filter(workspace_id=1, value='labhvam', attribute_type='EXPENSE_TYPE').first()
-        
+
         assert destination_attribute.active == False
 
         expense_attribute = ExpenseAttribute.objects.filter(workspace_id=1, value='labhvam', attribute_type='CATEGORY').first()
@@ -184,10 +193,9 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         post_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='CATEGORY').count()
 
-        assert post_run_expense_attribute_disabled_count ==  pre_run_expense_attribute_disabled_count + 4
+        assert post_run_expense_attribute_disabled_count == pre_run_expense_attribute_disabled_count + 4
 
-
-    #not re-enable case for project import
+    # not re-enable case for project import
     with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
         mocker.patch(
             'sageintacctsdk.apis.ExpenseTypes.count',
@@ -204,11 +212,11 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         )
         mock_call.side_effect = [
             category_data['create_new_auto_create_categories_expense_attributes_3'],
-            category_data['create_new_auto_create_categories_expense_attributes_3'] 
+            category_data['create_new_auto_create_categories_expense_attributes_3']
         ]
 
         pre_run_destination_attribute_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type = 'EXPENSE_TYPE', active=False).count()
-        
+
         assert pre_run_destination_attribute_count == 2
 
         pre_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'CATEGORY', active=False).count()
@@ -224,7 +232,6 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         post_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'CATEGORY', active=False).count()
 
         assert pre_run_expense_attribute_count == post_run_expense_attribute_count
-
 
     category = Category(1, 'ACCOUNT', None)
     category.sync_after = None
@@ -245,7 +252,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         )
         mock_call.side_effect = [
             [],
-            [] 
+            []
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='CATEGORY').count()
@@ -253,7 +260,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         assert expense_attributes_count == 30
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
-        
+
         assert mappings_count == 12
 
         category.trigger_import()
@@ -263,10 +270,10 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         assert expense_attributes_count == 30
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
-        
+
         assert mappings_count == 13
 
-    # for 3D mapping case 
+    # for 3D mapping case
     configuration = Configuration.objects.get(workspace_id=1)
     configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
     configuration.corporate_credit_card_expenses_object = 'BILL'
@@ -287,21 +294,24 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         )
         mock_call.side_effect = [
             [],
-            [] 
+            []
         ]
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1, destination_account_id__isnull=True).count()
-        
+
         assert mappings_count == 12
 
         category.trigger_import()
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1, destination_account_id__isnull=True).count()
-        
+
         assert mappings_count == 0
 
 
 def test_construct_fyle_payload(db):
+    """
+    Test construct fyle payload for categories
+    """
     category = Category(1, 'EXPENSE_TYPE', None)
 
     # create new case
@@ -350,6 +360,9 @@ def test_get_existing_fyle_attributes(
     add_expense_destination_attributes_2,
     add_configuration
 ):
+    """
+    Test get existing fyle attributes for categories
+    """
     category = Category(98, 'ACCOUNT', None)
 
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT')
@@ -375,6 +388,9 @@ def test_construct_fyle_payload_with_code(
     add_expense_destination_attributes_2,
     add_configuration
 ):
+    """
+    Test construct fyle payload with code for categories
+    """
     category = Category(98, 'ACCOUNT', None, True)
 
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT')
@@ -407,6 +423,9 @@ def test_disable_categories(
     mocker,
     add_configuration
 ):
+    """
+    Test disable categories
+    """
     workspace_id = 1
 
     categories_to_disable = {

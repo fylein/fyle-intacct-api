@@ -1,7 +1,3 @@
-import pytest
-from apps.mappings.exceptions import handle_import_exceptions
-from apps.mappings.models import ImportLog
-from apps.mappings.imports.modules.projects import Project
 from fyle.platform.exceptions import (
     WrongParamsError,
     InvalidTokenError as FyleInvalidTokenError,
@@ -12,10 +8,17 @@ from sageintacctsdk.exceptions import (
     NoPrivilegeError,
     SageIntacctSDKError
 )
+
+from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
+from apps.mappings.imports.modules.projects import Project
+from apps.mappings.exceptions import handle_import_exceptions
 
 
 def test_handle_import_exceptions(db):
+    """
+    Test handle_import_exceptions decorator
+    """
     ImportLog.objects.create(
         workspace_id=1,
         status = 'IN_PROGRESS',
@@ -39,7 +42,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['message'] == 'This is WrongParamsError'
     assert import_log.error_log['alert'] == True
 
-    # FyleInvalidTokenError 
+    # FyleInvalidTokenError
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise FyleInvalidTokenError('This is FyleInvalidTokenError')
@@ -51,7 +54,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['message'] == 'Invalid Token for fyle'
     assert import_log.error_log['alert'] == False
 
-    # InternalServerError 
+    # InternalServerError
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InternalServerError('This is InternalServerError')
@@ -63,7 +66,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['message'] == 'Internal server error while importing to Fyle'
     assert import_log.error_log['alert'] == True
 
-    # InvalidTokenError 
+    # InvalidTokenError
     @handle_import_exceptions
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InvalidTokenError('This is InvalidTokenError')
