@@ -10,6 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('sage_intacct', '0001_initial'),
+        ('sage_intacct', '0002_charge_card_transactions'),
         ('workspaces', '0001_initial'),
         ('fyle', '0001_initial'),
     ]

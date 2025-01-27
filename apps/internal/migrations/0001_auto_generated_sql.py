@@ -55,5 +55,12 @@ sql_files = [
     'fyle-integrations-db-migrations/intacct/triggers/update_logs.sql',
 ]
 class Migration(migrations.Migration):
-    dependencies = []  # This is the first migration
+    dependencies = [
+        ('fyle', '0036_auto_20250108_0702'),
+        ('users', '0002_auto_20201228_0802'),
+        ('mappings', '0016_auto_20250108_0702'),
+        ('tasks', '0010_alter_tasklog_expense_group'),
+        ('workspaces','0041_auto_20250108_0702'),
+        ('sage_intacct', '0030_auto_20241112_0425'),
+    ]  # This is the first migration
     operations = safe_run_sql(sql_files)
