@@ -2,7 +2,11 @@ import logging
 from datetime import datetime, timedelta
 
 from apps.fyle.models import ExpenseGroup
-
+from apps.workspaces.models import (
+    LastExportDetail,
+    WorkspaceSchedule,
+    Configuration
+)
 from apps.sage_intacct.queue import (
     schedule_expense_reports_creation,
     schedule_bills_creation,
@@ -10,18 +14,18 @@ from apps.sage_intacct.queue import (
     schedule_journal_entries_creation
 )
 
-from apps.workspaces.models import (
-    LastExportDetail,
-    WorkspaceSchedule,
-    Configuration
-)
-
-
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
+def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group_ids: list = []) -> None:
+    """
+    Export expenses to Intacct
+    :param workspace_id: Workspace ID
+    :param export_mode: Export mode
+    :param expense_group_ids: Expense group IDs
+    :return: None
+    """
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
     workspace_schedule = WorkspaceSchedule.objects.filter(workspace_id=workspace_id, interval_hours__gt=0, enabled=True).first()
@@ -45,7 +49,7 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(
-                workspace_id=workspace_id, 
+                workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
                 fund_source='PERSONAL',
@@ -54,7 +58,7 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         elif configuration.reimbursable_expenses_object == 'BILL':
             schedule_bills_creation(
-                workspace_id=workspace_id, 
+                workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
                 fund_source='PERSONAL',
@@ -63,7 +67,7 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         elif configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
             schedule_journal_entries_creation(
-                workspace_id=workspace_id, 
+                workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
                 fund_source='PERSONAL',
@@ -79,7 +83,7 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
             schedule_charge_card_transaction_creation(
-                workspace_id=workspace_id, 
+                workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
                 fund_source='CCC',
@@ -88,7 +92,7 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         elif configuration.corporate_credit_card_expenses_object == 'BILL':
             schedule_bills_creation(
-                workspace_id=workspace_id, 
+                workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
                 fund_source='CCC',
@@ -97,7 +101,7 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
             schedule_expense_reports_creation(
-                workspace_id=workspace_id, 
+                workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
                 fund_source='CCC',
@@ -106,7 +110,7 @@ def export_to_intacct(workspace_id, export_mode=None, expense_group_ids=[]):
 
         elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
             schedule_journal_entries_creation(
-                workspace_id=workspace_id, 
+                workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
                 fund_source='CCC',

@@ -1,24 +1,32 @@
 import logging
 import traceback
-from rest_framework import generics
-from rest_framework.response import Response
-from rest_framework import status
 
-from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
+from rest_framework import generics
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from fyle_intacct_api.utils import assert_valid
 
-from .actions import get_accounting_fields, get_exported_entry
+from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
+
+from apps.internal.actions import get_accounting_fields, get_exported_entry
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
 class AccountingFieldsView(generics.GenericAPIView):
+    """
+    Get accounting fields
+    """
     authentication_classes = []
     permission_classes = [IsAuthenticatedForInternalAPI]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Get accounting fields
+        """
         try:
             params = request.query_params
 
@@ -43,10 +51,16 @@ class AccountingFieldsView(generics.GenericAPIView):
 
 
 class ExportedEntryView(generics.GenericAPIView):
+    """
+    Get exported entry
+    """
     authentication_classes = []
     permission_classes = [IsAuthenticatedForInternalAPI]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Get exported entry
+        """
         try:
             params = request.query_params
             assert_valid(params.get('org_id') is not None, 'Org ID is required')

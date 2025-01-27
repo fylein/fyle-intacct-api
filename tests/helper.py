@@ -1,6 +1,7 @@
 import json
 from os import path
 
+
 def dict_compare_keys(d1, d2, key_path=''):
     """
     Compare two dicts recursively and see if dict1 has any keys that dict2 does not
@@ -28,7 +29,11 @@ def dict_compare_keys(d1, d2, key_path=''):
                 res = res + res1
     return res
 
+
 def get_response_dict(filename):
+    """
+    Read a json file and return the dict
+    """
     basepath = path.dirname(__file__)
     filepath = path.join(basepath, filename)
     mock_json = open(filepath, 'r').read()

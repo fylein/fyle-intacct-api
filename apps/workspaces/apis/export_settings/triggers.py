@@ -1,7 +1,7 @@
-from apps.workspaces.models import Configuration, LastExportDetail
+from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog, Error
 from apps.sage_intacct.tasks import update_last_export_details
-from apps.fyle.models import ExpenseGroup
+from apps.workspaces.models import Configuration, LastExportDetail
 
 
 class ExportSettingsTrigger:
@@ -12,7 +12,7 @@ class ExportSettingsTrigger:
         self.__workspace_id = workspace_id
         self.__configuration = configuration
 
-    def post_save_configurations(self):
+    def post_save_configurations(self) -> None:
         """
         Run post save action for configurations
         """

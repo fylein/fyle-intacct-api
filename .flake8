@@ -1,0 +1,113 @@
+[flake8]
+extend-ignore =
+    # Comparison to true should be 'if cond is true:' or 'if cond:'
+    E712,
+    # Comparison to None should be 'cond is None:' (E711)
+    E711,
+    # Line break occurred before a binary operator (W503)
+    W503,
+    # Missing whitespace after ',', ';', or ':' (E231)
+    E231,
+    # Line too long (82 > 79 characters) (E501)
+    E501,
+    # E251 unexpected spaces around keyword / parameter equals
+    E251,
+    # E502 the backslash is redundant between brackets
+    E502,
+    # E128 continuation line under-indented for visual indent
+    E128,
+    # E125 continuation line with same indent as next logical line
+    E125,
+    # E131 continuation line unaligned for hanging indent
+    E131,
+    # E129 visually indented line with same indent as next logical line
+    E129,
+    # Multiple spaces after ',' (E241)
+    E241,
+    # Missing docstring in public package (D104)
+    D104
+    # Missing docstring in public module (D100)
+    D100,
+    # Missing docstring in public method (D102)
+    D102,
+    # Missing docstring in public nested class (D106)
+    D106,
+    # Missing Missing docstring in __init__(D107)
+    D107
+    # Multi-line docstring summary should start at the first line (D212)
+    D212,
+    # First line should end with a period, question mark, or exclamation point
+    D415
+    # 1 blank line required between summary line and description
+    D205,
+    # One line docstring should fit on one line with quotes
+    D200
+    # Missing type annotation for *args
+    ANN002,
+    # Missing type annotation for **kwargs
+    ANN003,
+    # Missing type annotation for self in method
+    ANN101,
+    # Missing type annotation for cls in class method
+    ANN102,
+    # Missing return type annotation for special method
+    ANN204,
+    # Too complex static method call
+    C901,
+
+
+
+
+
+max-line-length = 99
+max-complexity = 19
+ban-relative-imports = true
+
+# Select additional checks
+select = B,C,E,F,N,W,I25,D,ANN,D1
+
+# Docstring convention
+docstring-convention = google
+
+# Return type and parameter annotations
+# ANN201: Missing return type annotation for public function
+# ANN202: Missing return type annotation for private function 
+# ANN001-ANN003: Missing type annotations for arguments
+require-return-type = true
+require-parameter-type = true
+
+# Import order and spacing
+# I25: Import sorting
+# I100: Import statements are in wrong order
+# I201: Missing newline between import groups
+application-import-names = apps,tests
+import-order-style = pep8
+
+# Variable and operator spacing
+# E225: Missing whitespace around operator
+# E226: Missing whitespace around arithmetic operator
+# E251: Unexpected spaces around keyword parameter equals
+
+# Function spacing
+# E302: Expected 2 blank lines, found 0
+# E303: Too many blank lines
+# E305: Expected 2 blank lines after class or function definition
+
+# Unused imports and variables
+# F401: Module imported but unused
+# F841: Local variable name is assigned to but never used
+extend-select = 
+    E225,
+    E226,
+    E251,
+    E302,
+    E303,
+    E305,
+    F401,
+    F841
+
+# Ignore rules for specific directories (e.g., exclude from 'dir_name' directory)
+per-file-ignores =
+    tests/*: ANN001,ANN201
+
+exclude = *env, *.yml, .flake8, *.txt, *.yaml, gunicorn_config.py, apps/*/migrations/*, manage.py, fyle-integrations-db-migrations/*, fyle_intacct_api/*, create_sql_migration.py, scripts/*

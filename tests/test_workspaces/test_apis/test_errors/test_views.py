@@ -1,16 +1,21 @@
 import json
 from datetime import datetime,timezone
-from apps.tasks.models import Error
-from .fixtures import data
+
 from tests.helper import dict_compare_keys
+
+from apps.tasks.models import Error
+
+from .fixtures import data
 
 
 def test_errors(api_client, test_connection):
-
+    """
+    Test case to test the errors api
+    """
     Error.objects.create(
-        workspace_id=1, 
+        workspace_id=1,
         type = 'EMPLOYEE_MAPPING',
-        expense_attribute_id=8, 
+        expense_attribute_id=8,
         is_resolved = False,
         error_title = 'ashwin.t@fyle.in',
         error_detail = 'Employee mapping is missing',

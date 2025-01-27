@@ -1,10 +1,11 @@
 import logging
 
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
-from fyle.platform.exceptions import NoPrivilegeError
 from rest_framework.response import Response
 from rest_framework.views import status
 from rest_framework.exceptions import ValidationError
+
+from fyle.platform.exceptions import NoPrivilegeError
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
 from apps.fyle.models import ExpenseGroup
 from apps.mappings.models import GeneralMapping
@@ -14,9 +15,12 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def handle_view_exceptions():
-    def decorator(func):
-        def new_fn(*args, **kwargs):
+def handle_view_exceptions() -> callable:
+    """
+    Decorator to handle exceptions in views
+    """
+    def decorator(func: callable) -> callable:
+        def new_fn(*args, **kwargs) -> callable:
             try:
                 return func(*args, **kwargs)
             except ExpenseGroup.DoesNotExist:

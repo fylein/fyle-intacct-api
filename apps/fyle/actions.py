@@ -1,27 +1,22 @@
-from datetime import datetime, timezone
-from typing import List
 import logging
 
 from django.conf import settings
 from django.db.models import Q
 
-from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.internals.decorators import retry
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InternalServerError, RetryException
-from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
-from apps.fyle.models import ExpenseGroup, Expense
-from apps.workspaces.models import FyleCredential, Workspace
+from apps.fyle.models import Expense
+from apps.workspaces.models import Workspace
 
-from .helpers import get_updated_accounting_export_summary, get_batched_expenses
-
+from apps.fyle.helpers import get_updated_accounting_export_summary, get_batched_expenses
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def __bulk_update_expenses(expense_to_be_updated: List[Expense]) -> None:
+def __bulk_update_expenses(expense_to_be_updated: list[Expense]) -> None:
     """
     Bulk update expenses
     :param expense_to_be_updated: expenses to be updated
@@ -31,7 +26,7 @@ def __bulk_update_expenses(expense_to_be_updated: List[Expense]) -> None:
         Expense.objects.bulk_update(expense_to_be_updated, ['is_skipped', 'accounting_export_summary'], batch_size=50)
 
 
-def update_expenses_in_progress(in_progress_expenses: List[Expense]) -> None:
+def update_expenses_in_progress(in_progress_expenses: list[Expense]) -> None:
     """
     Update expenses in progress in bulk
     :param in_progress_expenses: in progress expenses
@@ -55,7 +50,7 @@ def update_expenses_in_progress(in_progress_expenses: List[Expense]) -> None:
     __bulk_update_expenses(expense_to_be_updated)
 
 
-def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: List, workspace: Workspace) -> None:
+def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspace: Workspace) -> None:
     """
     Mark expenses as skipped in bulk
     :param final_query: final query
@@ -90,7 +85,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: List, workspac
     __bulk_update_expenses(expense_to_be_updated)
 
 
-def mark_accounting_export_summary_as_synced(expenses: List[Expense]) -> None:
+def mark_accounting_export_summary_as_synced(expenses: list[Expense]) -> None:
     """
     Mark accounting export summary as synced in bulk
     :param expenses: List of expenses
@@ -112,10 +107,12 @@ def mark_accounting_export_summary_as_synced(expenses: List[Expense]) -> None:
     Expense.objects.bulk_update(expense_to_be_updated, ['accounting_export_summary', 'previous_export_state'], batch_size=50)
 
 
-def update_failed_expenses(failed_expenses: List[Expense], is_mapping_error: bool) -> None:
+def update_failed_expenses(failed_expenses: list[Expense], is_mapping_error: bool) -> None:
     """
     Update failed expenses
     :param failed_expenses: Failed expenses
+    :param is_mapping_error: Is mapping error
+    :return: None
     """
     expense_to_be_updated = []
     for expense in failed_expenses:
@@ -140,7 +137,7 @@ def update_failed_expenses(failed_expenses: List[Expense], is_mapping_error: boo
     __bulk_update_expenses(expense_to_be_updated)
 
 
-def update_complete_expenses(exported_expenses: List[Expense], url: str) -> None:
+def update_complete_expenses(exported_expenses: list[Expense], url: str) -> None:
     """
     Update complete expenses
     :param exported_expenses: Exported expenses
@@ -201,7 +198,7 @@ def __handle_post_accounting_export_summary_exception(exception: Exception, work
 
 
 @retry(n=3, backoff=1, exceptions=InternalServerError)
-def bulk_post_accounting_export_summary(platform: PlatformConnector, payload: List[dict]):
+def bulk_post_accounting_export_summary(platform: PlatformConnector, payload: list[dict]) -> None:
     """
     Bulk post accounting export summary with retry of 3 times and backoff of 1 second which handles InternalServerError
     :param platform: Platform connector object
@@ -211,7 +208,7 @@ def bulk_post_accounting_export_summary(platform: PlatformConnector, payload: Li
     platform.expenses.post_bulk_accounting_export_summary(payload)
 
 
-def create_generator_and_post_in_batches(accounting_export_summary_batches: List[dict], platform: PlatformConnector, workspace_id: int) -> None:
+def create_generator_and_post_in_batches(accounting_export_summary_batches: list[dict], platform: PlatformConnector, workspace_id: int) -> None:
     """
     Create generator and post in batches
     :param accounting_export_summary_batches: Accounting export summary batches

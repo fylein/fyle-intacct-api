@@ -1,23 +1,20 @@
-from django.conf import settings
-
-from django.contrib.auth import get_user_model
-from django.core.cache import cache
-
-from django_q.tasks import async_task
-
 from cryptography.fernet import Fernet
+
+from django.conf import settings
+from django.core.cache import cache
+from django_q.tasks import async_task
+from django.contrib.auth import get_user_model
+
+from rest_framework import viewsets
+from rest_framework import generics
+from rest_framework.views import status
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from sageintacctsdk import SageIntacctSDK, exceptions as sage_intacct_exc
 
-from rest_framework.response import Response
-from rest_framework.views import status
-from rest_framework import generics
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-
 from fyle.platform import exceptions as fyle_exc
-
-
 from fyle_rest_auth.utils import AuthUtils
 from fyle_rest_auth.models import AuthToken
 from fyle_rest_auth.helpers import get_fyle_admin
@@ -27,12 +24,24 @@ from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroupSettings
 from apps.fyle.helpers import get_cluster_domain
-
-from .models import Workspace, FyleCredential, SageIntacctCredential, Configuration, WorkspaceSchedule, LastExportDetail
-from .serializers import WorkspaceSerializer, FyleCredentialSerializer, SageIntacctCredentialSerializer, \
-    ConfigurationSerializer, WorkspaceScheduleSerializer, LastExportDetailSerializer
-from .actions import export_to_intacct
-from .tasks import schedule_sync
+from apps.workspaces.actions import export_to_intacct
+from apps.workspaces.tasks import schedule_sync
+from apps.workspaces.models import (
+    Workspace,
+    Configuration,
+    FyleCredential,
+    LastExportDetail,
+    WorkspaceSchedule,
+    SageIntacctCredential
+)
+from apps.workspaces.serializers import (
+    WorkspaceSerializer,
+    ConfigurationSerializer,
+    FyleCredentialSerializer,
+    LastExportDetailSerializer,
+    WorkspaceScheduleSerializer,
+    SageIntacctCredentialSerializer,
+)
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -42,14 +51,12 @@ class WorkspaceView(viewsets.ViewSet):
     """
     Sage Intacct Workspace
     """
-
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """
         Create a Workspace
         """
-
         access_token = request.META.get('HTTP_AUTHORIZATION')
         fyle_user = get_fyle_admin(access_token.split(' ')[1], None)
         org_name = fyle_user['data']['org']['name']
@@ -84,7 +91,7 @@ class WorkspaceView(viewsets.ViewSet):
             status=status.HTTP_200_OK
         )
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         """
         Get workspace
         """
@@ -105,7 +112,7 @@ class WorkspaceView(viewsets.ViewSet):
             status=status.HTTP_200_OK
         )
 
-    def get_by_id(self, request, **kwargs):
+    def get_by_id(self, request: Request, **kwargs) -> Response:
         """
         Get Workspace by id
         """
@@ -125,11 +132,10 @@ class WorkspaceView(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    def patch(self, request, **kwargs):
+    def patch(self, request: Request, **kwargs) -> Response:
         """
         PATCH workspace
         """
-
         workspace_instance = Workspace.objects.get(pk=kwargs['workspace_id'])
         serializer = WorkspaceSerializer(
             workspace_instance, data=request.data, partial=True
@@ -146,7 +152,7 @@ class ConnectFyleView(viewsets.ViewSet):
     """
     Fyle Connect Oauth View
     """
-    def post(self, request, **kwargs):
+    def post(self, request: Request, **kwargs) -> Response:
         """
         Post of Fyle Credentials
         """
@@ -211,8 +217,10 @@ class ConnectFyleView(viewsets.ViewSet):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-    def delete(self, request, **kwargs):
-        """Delete credentials"""
+    def delete(self, request: Request, **kwargs) -> Response:
+        """
+        Delete credentials
+        """
         workspace_id = kwargs['workspace_id']
         FyleCredential.objects.filter(workspace_id=workspace_id).delete()
 
@@ -221,7 +229,7 @@ class ConnectFyleView(viewsets.ViewSet):
             'message': 'Fyle credentials deleted'
         })
 
-    def get(self, request, **kwargs):
+    def get(self, request: Request, **kwargs) -> Response:
         """
         Get Fyle Credentials in Workspace
         """
@@ -247,7 +255,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
     """
     Sage Intacct Connect View
     """
-    def get_or_create_attachments_folder(self, sage_intacct_connection):
+    def get_or_create_attachments_folder(self, sage_intacct_connection: SageIntacctSDK) -> None:
         """
         Get or Create attachments folder in Sage Intacct
         """
@@ -258,7 +266,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             }
             sage_intacct_connection.attachments.create_attachments_folder(data)
 
-    def post(self, request, **kwargs):
+    def post(self, request: Request, **kwargs) -> Response:
         """
         Post of Sage Intacct Credentials
         """
@@ -346,7 +354,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-    def delete(self, request, **kwargs):
+    def delete(self, request: Request, **kwargs) -> Response:
         """
         Delete credentials
         """
@@ -358,10 +366,10 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             'message': 'Sage Intacct credentials deleted'
         })
 
-    def get(self, request, **kwargs):
+    def get(self, request: Request, **kwargs) -> Response:
         """
         Get Sage Intacct Credentials in Workspace
-        """ 
+        """
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace=workspace)
@@ -386,11 +394,10 @@ class ReadyView(viewsets.ViewSet):
     authentication_classes = []
     permission_classes = []
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
         """
         Ready call
         """
-
         Workspace.objects.raw('Select 1 from workspaces')
 
         return Response(
@@ -408,7 +415,7 @@ class ConfigurationsView(generics.ListCreateAPIView):
     serializer_class = ConfigurationSerializer
     queryset = Configuration.objects.all()
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs) -> Response:
         """
         Get workspace general settings
         """
@@ -426,7 +433,7 @@ class ConfigurationsView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    def patch(self, request, **kwargs):
+    def patch(self, request: Request, **kwargs) -> Response:
         """
         PATCH workspace configuration settings
         """
@@ -447,7 +454,7 @@ class ScheduleView(viewsets.ViewSet):
     """
     Schedule View
     """
-    def post(self, request, **kwargs):
+    def post(self, request: Request, **kwargs) -> Response:
         """
         Post Settings
         """
@@ -473,7 +480,7 @@ class ScheduleView(viewsets.ViewSet):
             status=status.HTTP_200_OK
         )
 
-    def get(self, *args, **kwargs):
+    def get(self, *args, **kwargs) -> Response:
         try:
             schedule = WorkspaceSchedule.objects.get(workspace_id=kwargs['workspace_id'])
 
@@ -481,7 +488,7 @@ class ScheduleView(viewsets.ViewSet):
                 data=WorkspaceScheduleSerializer(schedule).data,
                 status=status.HTTP_200_OK
             )
-            
+
         except WorkspaceSchedule.DoesNotExist:
             return Response(
                 data={
@@ -490,15 +497,17 @@ class ScheduleView(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-class WorkspaceAdminsView(viewsets.ViewSet):
 
-    def get(self, request, *args, **kwargs):
+class WorkspaceAdminsView(viewsets.ViewSet):
+    """
+    Workspace Admins View
+    """
+    def get(self, request: Request, *args, **kwargs) -> Response:
         """
         Get Admins for the workspaces
         """
-
         workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-        
+
         admin_email = []
         users = workspace.user.all()
         for user in users:
@@ -508,16 +517,15 @@ class WorkspaceAdminsView(viewsets.ViewSet):
                 admin_email.append({'name': employee.detail['full_name'], 'email': admin.email})
 
         return Response(
-                data=admin_email,
-                status=status.HTTP_200_OK
-            )
+            data=admin_email,
+            status=status.HTTP_200_OK
+        )
 
 
 class LastExportDetailView(generics.RetrieveAPIView):
     """
     Last Export Details
     """
- 
     lookup_field = 'workspace_id'
     lookup_url_kwarg = 'workspace_id'
 
@@ -529,8 +537,10 @@ class ExportToIntacctView(viewsets.ViewSet):
     """
     Export Expenses to Intacct
     """
-
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Export to Intacct
+        """
         export_to_intacct(workspace_id=kwargs['workspace_id'])
 
         return Response(
