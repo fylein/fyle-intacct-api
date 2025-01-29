@@ -3,10 +3,10 @@ from django.db import migrations
 from apps.internal.helpers import safe_run_sql
 
 sql_files = [
-    'fyle-integrations-db-migrations/intacct/functions/delete_workspace.sql'
+    'fyle-integrations-db-migrations/common/qbo_intacct_netsuite_xero/views/alerts/inactive_workspaces_view.sql'
 ]
 
 
 class Migration(migrations.Migration):
-    dependencies = [('internal', '0002_auto_generated_sql')]
+    dependencies = [('internal', '0003_auto_generated_sql')]
     operations = safe_run_sql(sql_files)
