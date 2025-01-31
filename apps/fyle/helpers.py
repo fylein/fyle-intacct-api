@@ -54,7 +54,7 @@ def post_request(url: str, body: dict, refresh_token: str = None) -> Optional[di
     response = requests.post(
         url,
         headers=api_headers,
-        data=body
+        data=json.dumps(body)
     )
 
     if response.status_code in [200, 201]:
