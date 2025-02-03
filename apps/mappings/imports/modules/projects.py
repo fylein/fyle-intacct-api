@@ -1,12 +1,11 @@
 import logging
 from datetime import datetime
-
+from typing import List, Dict
+from apps.mappings.imports.modules.base import Base
+from apps.workspaces.models import FyleCredential, Configuration
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
-
-from apps.mappings.imports.modules.base import Base
 from apps.mappings.helpers import prepend_code_to_name
-from apps.workspaces.models import FyleCredential, Configuration
 from apps.sage_intacct.dependent_fields import update_and_disable_cost_code
 
 logger = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ class Project(Base):
             prepend_code_to_name=prepend_code_to_name
         )
 
-    def trigger_import(self) -> None:
+    def trigger_import(self):
         """
         Trigger import for Projects module
         """
@@ -35,10 +34,10 @@ class Project(Base):
 
     def construct_fyle_payload(
         self,
-        paginated_destination_attributes: list[DestinationAttribute],
+        paginated_destination_attributes: List[DestinationAttribute],
         existing_fyle_attributes_map: object,
         is_auto_sync_status_allowed: bool
-    ) -> list:
+    ):
         """
         Construct Fyle payload for Projects module
         :param paginated_destination_attributes: List of paginated destination attributes
@@ -70,13 +69,7 @@ class Project(Base):
         return payload
 
 
-def disable_projects(
-    workspace_id: int,
-    projects_to_disable: dict,
-    is_import_to_fyle_enabled: bool = False,
-    *args,
-    **kwargs
-) -> list:
+def disable_projects(workspace_id: int, projects_to_disable: Dict, is_import_to_fyle_enabled: bool = False, *args, **kwargs):
     """
     Disable projects in Fyle when the projects are updated in Sage Intacct.
     This is a callback function that is triggered from accounting_mappings.

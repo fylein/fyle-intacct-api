@@ -1,7 +1,11 @@
-import math
 import logging
-from datetime import datetime, timedelta, timezone
-
+import math
+from typing import List
+from datetime import (
+    datetime,
+    timedelta,
+    timezone
+)
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     Mapping,
@@ -9,17 +13,14 @@ from fyle_accounting_mappings.models import (
     ExpenseAttribute,
     CategoryMapping
 )
-
-from apps.tasks.models import Error
+from apps.workspaces.models import FyleCredential
 from apps.mappings.models import ImportLog
+from apps.workspaces.models import SageIntacctCredential
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.exceptions import handle_import_exceptions
+from apps.tasks.models import Error
+from apps.workspaces.models import Configuration
 from apps.mappings.helpers import prepend_code_to_name
-from apps.workspaces.models import (
-    Configuration,
-    FyleCredential,
-    SageIntacctCredential
-)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -45,15 +46,16 @@ class Base:
         self.sync_after = sync_after
         self.prepend_code_to_name = prepend_code_to_name
 
-    def get_platform_class(self, platform: PlatformConnector) -> object:
+
+    def get_platform_class(self, platform: PlatformConnector):
         """
         Get the platform class
         :param platform: PlatformConnector object
         :return: platform class
         """
         return getattr(platform, self.platform_class_name)
-
-    def get_auto_sync_permission(self) -> bool:
+    
+    def get_auto_sync_permission(self):
         """
         Get the auto sync permission
         :return: bool
@@ -63,8 +65,8 @@ class Base:
             is_auto_sync_status_allowed = True
 
         return is_auto_sync_status_allowed
-
-    def construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: list[str] = []) -> dict:
+    
+    def construct_attributes_filter(self, attribute_type: str, paginated_destination_attribute_values: List[str] = []):
         """
         Construct the attributes filter
         :param attribute_type: attribute type
@@ -84,7 +86,7 @@ class Base:
 
         return filters
 
-    def remove_duplicate_attributes(self, destination_attributes: list[DestinationAttribute]) -> list[DestinationAttribute]:
+    def remove_duplicate_attributes(self, destination_attributes: List[DestinationAttribute]):
         """
         Remove duplicate attributes
         :param destination_attributes: destination attributes
@@ -104,7 +106,7 @@ class Base:
 
         return unique_attributes
 
-    def __get_mapped_attributes_ids(self, errored_attribute_ids: list[int]) -> list[int]:
+    def __get_mapped_attributes_ids(self, errored_attribute_ids: List[int]):
         """
         Get mapped attributes ids
         :param errored_attribute_ids: list[int]
@@ -119,20 +121,20 @@ class Base:
             if self.destination_field == 'EXPENSE_TYPE':
                 params['destination_expense_head_id__isnull'] = False
             else:
-                params['destination_account_id__isnull'] = False
+                params['destination_account_id__isnull'] =  False
 
-            mapped_attribute_ids: list[int] = CategoryMapping.objects.filter(
+            mapped_attribute_ids: List[int] = CategoryMapping.objects.filter(
                 **params
             ).values_list('source_category_id', flat=True)
 
         return mapped_attribute_ids
 
-    def resolve_expense_attribute_errors(self) -> None:
+    def resolve_expense_attribute_errors(self):
         """
         Resolve Expense Attribute Errors
         :return: None
         """
-        errored_attribute_ids: list[int] = Error.objects.filter(
+        errored_attribute_ids: List[int] = Error.objects.filter(
             is_resolved=False,
             workspace_id=self.workspace_id,
             type='{}_MAPPING'.format(self.source_field)
@@ -143,21 +145,19 @@ class Base:
             if mapped_attribute_ids:
                 Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True)
 
-    def create_ccc_category_mappings(self) -> None:
+    def create_ccc_category_mappings(self):
         """
         Create CCC Category Mappings
         :return: None
         """
         configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
-        if (
-            configuration.reimbursable_expenses_object == 'EXPENSE_REPORT'
-            and configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY')
-            and self.source_field == 'CATEGORY'
-        ):
+        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' and \
+            configuration.corporate_credit_card_expenses_object in ('BILL', 'CHARGE_CARD_TRANSACTION', 'JOURNAL_ENTRY') and\
+            self.source_field == 'CATEGORY':
             CategoryMapping.bulk_create_ccc_category_mappings(self.workspace_id)
 
     @handle_import_exceptions
-    def import_destination_attribute_to_fyle(self, import_log: ImportLog) -> None:
+    def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
         Import destiantion_attributes field to Fyle and Auto Create Mappings
         :param import_log: ImportLog object
@@ -166,14 +166,20 @@ class Base:
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
         self.sync_expense_attributes(platform)
+
         self.sync_destination_attributes(self.destination_field)
+
         self.construct_payload_and_import_to_fyle(platform, import_log)
+        
         self.sync_expense_attributes(platform)
+
         self.create_mappings()
+
         self.create_ccc_category_mappings()
+
         self.resolve_expense_attribute_errors()
 
-    def create_mappings(self) -> None:
+    def create_mappings(self):
         """
         Create mappings
         """
@@ -192,7 +198,7 @@ class Base:
                 self.workspace_id
             )
 
-    def sync_expense_attributes(self, platform: PlatformConnector) -> None:
+    def sync_expense_attributes(self, platform: PlatformConnector):
         """
         Sync expense attributes
         :param platform: PlatformConnector object
@@ -203,7 +209,7 @@ class Base:
         else:
             platform_class.sync(sync_after=self.sync_after if self.sync_after else None)
 
-    def sync_destination_attributes(self, sageintacct_attribute_type: str) -> None:
+    def sync_destination_attributes(self, sageintacct_attribute_type: str):
         """
         Sync destination attributes
         :param sageintacct_attribute_type: Sage Intacct attribute type
@@ -224,7 +230,7 @@ class Base:
             'EXPENSE_TYPE': sage_intacct_connection.sync_expense_types,
             'ACCOUNT': sage_intacct_connection.sync_accounts,
         }
-
+        
         sync_method = sync_methods.get(sageintacct_attribute_type, sage_intacct_connection.sync_user_defined_dimensions)
         sync_method()
 
@@ -232,7 +238,7 @@ class Base:
         self,
         platform: PlatformConnector,
         import_log: ImportLog
-    ) -> None:
+    ):
         """
         Construct Payload and Import to fyle in Batches
         """
@@ -252,7 +258,7 @@ class Base:
             import_log.save()
             return
         else:
-            import_log.total_batches_count = math.ceil(destination_attributes_count / 200)
+            import_log.total_batches_count = math.ceil(destination_attributes_count/200)
             import_log.save()
 
         destination_attributes_generator = self.get_destination_attributes_generator(destination_attributes_count, filters)
@@ -271,7 +277,7 @@ class Base:
                 import_log=import_log
             )
 
-    def get_destination_attributes_generator(self, destination_attributes_count: int, filters: dict) -> any:
+    def get_destination_attributes_generator(self, destination_attributes_count: int, filters: dict):
         """
         Get destination attributes generator
         :param destination_attributes_count: Destination attributes count
@@ -288,9 +294,9 @@ class Base:
 
     def setup_fyle_payload_creation(
         self,
-        paginated_destination_attributes: list[DestinationAttribute],
+        paginated_destination_attributes: List[DestinationAttribute],
         is_auto_sync_status_allowed: bool
-    ) -> list[object]:
+    ):
         """
         Setup Fyle Payload Creation
         :param paginated_destination_attributes: List of DestinationAttribute objects
@@ -302,7 +308,7 @@ class Base:
 
         return self.construct_fyle_payload(paginated_destination_attributes, existing_expense_attributes_map, is_auto_sync_status_allowed)
 
-    def get_existing_fyle_attributes(self, paginated_destination_attribute_values: list[str]) -> dict:
+    def get_existing_fyle_attributes(self, paginated_destination_attribute_values: List[str]):
         """
         Get Existing Fyle Attributes
         :param paginated_destination_attribute_values: List of DestinationAttribute values
@@ -312,8 +318,8 @@ class Base:
         existing_expense_attributes_values = ExpenseAttribute.objects.filter(**filters).values('value', 'source_id')
         # This is a map of attribute name to attribute source_id
         return {attribute['value'].lower(): attribute['source_id'] for attribute in existing_expense_attributes_values}
-
-    def post_to_fyle_and_sync(self, fyle_payload: list[object], resource_class: object, is_last_batch: bool, import_log: ImportLog) -> None:
+    
+    def post_to_fyle_and_sync(self, fyle_payload: List[object], resource_class, is_last_batch: bool, import_log: ImportLog):
         """
         Post to Fyle and Sync
         :param fyle_payload: List of Fyle Payload
@@ -322,15 +328,15 @@ class Base:
         :param import_log: ImportLog object
         """
         logger.info("| Importing {} to Fyle | Content : {{WORKSPACE_ID: {} Fyle Payload count: {} is_last_batch: {}}}".format(self.source_field, self.workspace_id, len(fyle_payload), is_last_batch))
-
+        
         if fyle_payload and self.platform_class_name in ['expense_custom_fields', 'merchants']:
             resource_class.post(fyle_payload)
         elif fyle_payload:
             resource_class.post_bulk(fyle_payload)
-
+        
         self.update_import_log_post_import(is_last_batch, import_log)
 
-    def update_import_log_post_import(self, is_last_batch: bool, import_log: ImportLog) -> None:
+    def update_import_log_post_import(self, is_last_batch: bool, import_log: ImportLog):
         """
         Update Import Log Post Import
         :param is_last_batch: bool
@@ -346,7 +352,7 @@ class Base:
 
         import_log.save()
 
-    def check_import_log_and_start_import(self) -> None:
+    def check_import_log_and_start_import(self):
         """
         Checks if the import is already in progress and if not, starts the import process
         """

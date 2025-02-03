@@ -1,25 +1,30 @@
-from fyle_intacct_api.utils import assert_valid
+from typing import Dict
 
-from apps.workspaces.models import Configuration
-from apps.mappings.models import GeneralMapping
-from apps.mappings.tasks import schedule_auto_map_charge_card_employees
 from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_intacct_reimbursement_creation
+from apps.workspaces.models import Configuration
+from fyle_intacct_api.utils import assert_valid
+from fyle_accounting_mappings.models import MappingSetting
+
+from .models import GeneralMapping
+from .tasks import schedule_auto_map_charge_card_employees
 
 
 class MappingUtils:
-    """
-    Mapping Utils
-    """
-    def __init__(self, workspace_id: int):
+    def __init__(self, workspace_id):
         self.__workspace_id = workspace_id
 
-    def create_or_update_general_mapping(self, general_mapping: dict) -> GeneralMapping:
+    def create_or_update_general_mapping(self, general_mapping: Dict):
         """
         Create or update general mapping
         :param general_mapping: general mapping payload
         :return:
         """
         configuration = Configuration.objects.get(workspace_id=self.__workspace_id)
+
+        project_setting: MappingSetting = MappingSetting.objects.filter(
+            workspace_id=self.__workspace_id,
+            destination_field='PROJECT'
+        ).first()
 
         if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
             assert_valid('default_charge_card_name' in general_mapping and general_mapping['default_charge_card_name'],
@@ -40,11 +45,11 @@ class MappingUtils:
                          'default ccc vendor id field is blank')
 
         elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-            assert_valid('default_ccc_expense_payment_type_name' in general_mapping
-                         and general_mapping['default_ccc_expense_payment_type_name'],
+            assert_valid('default_ccc_expense_payment_type_name' in general_mapping and
+                         general_mapping['default_ccc_expense_payment_type_name'],
                          'default ccc expense payment type name is blank')
-            assert_valid('default_ccc_expense_payment_type_id' in general_mapping
-                         and general_mapping['default_ccc_expense_payment_type_id'],
+            assert_valid('default_ccc_expense_payment_type_id' in general_mapping and
+                         general_mapping['default_ccc_expense_payment_type_id'],
                          'default ccc expense payment type id is blank')
 
         if configuration.sync_fyle_to_sage_intacct_payments:
@@ -52,7 +57,7 @@ class MappingUtils:
                          'payment account name field is blank')
             assert_valid('payment_account_id' in general_mapping and general_mapping['payment_account_id'],
                          'payment account id field is blank')
-
+        
         if configuration.import_tax_codes:
             assert_valid('default_tax_code_id' in general_mapping and general_mapping['default_tax_code_id'],
                         'default tax code id is blank')

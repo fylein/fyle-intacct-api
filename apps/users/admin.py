@@ -2,14 +2,12 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from apps.users.models import User
-from apps.users.forms import UserAdminCreationForm, UserAdminChangeForm
+
+from .forms import UserAdminCreationForm, UserAdminChangeForm
+from .models import User
 
 
 class UserAdmin(BaseUserAdmin):
-    """
-    Custom User Admin
-    """
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
 
@@ -22,11 +20,9 @@ class UserAdmin(BaseUserAdmin):
     )
 
     add_fieldsets = (
-        (
-            None, {
-                'classes': ('wide',),
-                'fields': ('email', 'full_name', 'password1', 'password2')
-            }
+        (None, {
+            'classes': ('wide',),
+            'fields': ('email', 'full_name', 'password1', 'password2')}
         ),
     )
     search_fields = ('email',)

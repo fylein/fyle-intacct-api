@@ -1,16 +1,11 @@
 import json
-
 from tests.helper import dict_compare_keys
-
-from apps.workspaces.models import Workspace
-
+from apps.workspaces.models import Workspace, Configuration
 from .fixtures import data
 
 
 def test_export_settings(api_client, test_connection):
-    """
-    Test the export settings api
-    """
+
     workspace = Workspace.objects.get(id=1)
     workspace.onboarding_state = 'EXPORT_SETTINGS'
     workspace.save()

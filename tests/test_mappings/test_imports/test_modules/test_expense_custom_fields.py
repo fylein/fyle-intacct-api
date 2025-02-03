@@ -1,23 +1,17 @@
 from unittest import mock
-
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import (
-    Mapping,
-    ExpenseAttribute,
-    DestinationAttribute
-)
-
-from apps.workspaces.models import Workspace, FyleCredential
 from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
-
+from fyle_accounting_mappings.models import (
+    DestinationAttribute,
+    ExpenseAttribute,
+    Mapping
+)
+from fyle_integrations_platform_connector import PlatformConnector
+from apps.workspaces.models import Workspace, FyleCredential
 from .fixtures import expense_custom_field_data
 from .helpers import get_platform_connection
 
 
 def test_sync_expense_atrributes(mocker, db):
-    """
-    Test sync expense attributes
-    """
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.workspace.fyle_org_id = 'orqjgyJ21uge'
@@ -48,11 +42,7 @@ def test_sync_expense_atrributes(mocker, db):
     expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='LUKE').count()
     assert expense_attribute_count == 21
 
-
 def test_auto_create_destination_attributes(mocker, db):
-    """
-    Test auto create destination attributes
-    """
     expense_custom_field = ExpenseCustomField(1, 'LUKE', 'LOCATION', None)
     expense_custom_field.sync_after = None
 
@@ -86,7 +76,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 0
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='LUKE', destination_type='LOCATION').count()
-
+        
         assert mappings_count == 0
 
         expense_custom_field.trigger_import()
@@ -96,7 +86,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 21
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='LUKE', destination_type='LOCATION').count()
-
+        
         assert mappings_count == 21
 
     # create new expense_custom_field mapping for sub-sequent run (we will be adding 2 new LOCATION)
@@ -122,7 +112,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 21
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='LUKE', destination_type='LOCATION').count()
-
+        
         assert mappings_count == 21
 
         expense_custom_field.trigger_import()
@@ -132,14 +122,11 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 21 + 2
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='LUKE', destination_type='LOCATION').count()
-
+        
         assert mappings_count == 21 + 2
 
 
 def test_construct_fyle_expense_custom_field_payload(db):
-    """
-    Test construct fyle expense custom field payload
-    """
     expense_custom_field = ExpenseCustomField(1, 'LUKE', 'LOCATION', None)
     expense_custom_field.sync_after = None
     platform = get_platform_connection(1)

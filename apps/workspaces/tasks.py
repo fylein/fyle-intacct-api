@@ -1,20 +1,24 @@
 import logging
 from datetime import datetime, timedelta, date
+from typing import List
+import json
 
-from django.db.models import Q
 from django.conf import settings
-from django_q.models import Schedule
-from django.template.loader import render_to_string
+from django.db.models import Q
 
-from fyle_rest_auth.helpers import get_fyle_admin
+from django.template.loader import render_to_string
+from django_q.models import Schedule
+
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
+from fyle_rest_auth.helpers import get_fyle_admin
 
-from apps.tasks.models import TaskLog
-from apps.workspaces.utils import send_email
 from apps.fyle.tasks import create_expense_groups
 from apps.fyle.helpers import post_request
-from apps.workspaces.actions import export_to_intacct
+from .actions import export_to_intacct
+
+from apps.tasks.models import TaskLog
+
 from apps.workspaces.models import (
     Workspace,
     WorkspaceSchedule,
@@ -23,17 +27,13 @@ from apps.workspaces.models import (
     FyleCredential
 )
 
+from .utils import send_email
+
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def schedule_email_notification(workspace_id: int, schedule_enabled: bool) -> None:
-    """
-    Schedule email notification
-    :param workspace_id: workspace id
-    :param schedule_enabled: schedule enabled
-    :return: None
-    """
+def schedule_email_notification(workspace_id: int, schedule_enabled: bool):
     if schedule_enabled:
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.workspaces.tasks.run_email_notification',
@@ -55,16 +55,7 @@ def schedule_email_notification(workspace_id: int, schedule_enabled: bool) -> No
             schedule.delete()
 
 
-def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_added: list, emails_selected: list) -> WorkspaceSchedule:
-    """
-    Schedule sync
-    :param workspace_id: workspace id
-    :param schedule_enabled: schedule enabled
-    :param hours: hours
-    :param email_added: email added
-    :param emails_selected: emails selected
-    :return: WorkspaceSchedule
-    """
+def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_added: List, emails_selected: List):
     ws_schedule, _ = WorkspaceSchedule.objects.get_or_create(
         workspace_id=workspace_id
     )
@@ -107,7 +98,7 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
     return ws_schedule
 
 
-def run_sync_schedule(workspace_id: int) -> None:
+def run_sync_schedule(workspace_id):
     """
     Run schedule
     :param workspace_id: workspace id
@@ -129,6 +120,7 @@ def run_sync_schedule(workspace_id: int) -> None:
     if configuration.reimbursable_expenses_object:
         fund_source.append('PERSONAL')
 
+
     create_expense_groups(
         workspace_id=workspace_id, fund_source=fund_source, task_log=task_log
     )
@@ -137,12 +129,8 @@ def run_sync_schedule(workspace_id: int) -> None:
         export_to_intacct(workspace_id, 'AUTO')
 
 
-def run_email_notification(workspace_id: int) -> None:
-    """
-    Run email notification
-    :param workspace_id: workspace id
-    :return: None
-    """
+def run_email_notification(workspace_id):
+
     ws_schedule, _ = WorkspaceSchedule.objects.get_or_create(
         workspace_id=workspace_id
     )
@@ -165,7 +153,7 @@ def run_email_notification(workspace_id: int) -> None:
         if ws_schedule.enabled:
             for admin_email in admin_data.emails_selected:
                 attribute = ExpenseAttribute.objects.filter(workspace_id=workspace_id, value=admin_email, attribute_type='EMPLOYEE').first()
-
+                
                 admin_name = 'Admin'
                 if attribute:
                     admin_name = attribute.detail['full_name']
@@ -209,25 +197,16 @@ def run_email_notification(workspace_id: int) -> None:
         logger.info('Error in sending email notification - %s', e)
 
 
-def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str) -> None:
-    """
-    Update fyle credentials
-    :param fyle_org_id: Fyle Org Id
-    :param refresh_token: Refresh Token
-    :return: None
-    """
+def async_update_fyle_credentials(fyle_org_id: str, refresh_token: str):
     fyle_credentials = FyleCredential.objects.filter(workspace__fyle_org_id=fyle_org_id).first()
     if fyle_credentials and refresh_token:
         fyle_credentials.refresh_token = refresh_token
         fyle_credentials.save()
 
 
-def post_to_integration_settings(workspace_id: int, active: bool) -> None:
+def post_to_integration_settings(workspace_id: int, active: bool):
     """
     Post to integration settings
-    :param workspace_id: workspace id
-    :param active: active
-    :return: None
     """
     refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token
     url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
@@ -260,13 +239,7 @@ def async_create_admin_subcriptions(workspace_id: int) -> None:
     platform.subscriptions.post(payload)
 
 
-def async_update_workspace_name(workspace: Workspace, access_token: str) -> None:
-    """
-    Update workspace name
-    :param workspace: Workspace
-    :param access_token: Access Token
-    :return: None
-    """
+def async_update_workspace_name(workspace: Workspace, access_token: str):
     fyle_user = get_fyle_admin(access_token.split(' ')[1], None)
     org_name = fyle_user['data']['org']['name']
 

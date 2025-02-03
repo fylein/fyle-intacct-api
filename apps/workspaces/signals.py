@@ -1,21 +1,25 @@
+"""
+Workspace Signals
+"""
 import logging
 
-from django.dispatch import receiver
 from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 from fyle_accounting_mappings.models import MappingSetting
 
-from apps.workspaces.models import Configuration
-from apps.sage_intacct.helpers import schedule_payment_sync
 from apps.fyle.helpers import add_expense_id_to_expense_group_settings
+from apps.sage_intacct.helpers import schedule_payment_sync
 from apps.mappings.helpers import schedule_or_delete_auto_mapping_tasks
+
+from .models import Configuration
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
 @receiver(post_save, sender=Configuration)
-def run_post_configration_triggers(sender: type[Configuration], instance: Configuration, **kwargs) -> None:
+def run_post_configration_triggers(sender, instance: Configuration, **kwargs):
     """
     :param sender: Sender Class
     :param instance: Row Instance of Sender Class
@@ -36,7 +40,7 @@ def run_post_configration_triggers(sender: type[Configuration], instance: Config
             }
         )
 
-    if instance.corporate_credit_card_expenses_object != 'CHARGE_CARD_TRANSACTION':
+    if instance.corporate_credit_card_expenses_object != 'CHARGE_CARD_TRANSACTION' :
         mapping_setting = MappingSetting.objects.filter(
             workspace_id=instance.workspace_id,
             source_field='CORPORATE_CARD',

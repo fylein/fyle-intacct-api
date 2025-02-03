@@ -1,15 +1,12 @@
-import pytest
-
 from datetime import datetime, timezone
-from apps.workspaces.models import Workspace
+import pytest
 from apps.fyle.models import ExpenseGroupSettings
+from apps.workspaces.models import Workspace
 
 
 @pytest.fixture
 def create_temp_workspace(db):
-    """
-    Create a workspace fixture
-    """
+
     workspace = Workspace.objects.create(
         id=98,
         name = 'Fyle for Testing',
@@ -22,7 +19,7 @@ def create_temp_workspace(db):
     )
 
     workspace.save()
-
+    
     ExpenseGroupSettings.objects.create(
         reimbursable_expense_group_fields='{employee_email,report_id,claim_number,fund_source}',
         corporate_credit_card_expense_group_fields='{fund_source,employee_email,claim_number,expense_id,report_id}',
@@ -31,3 +28,4 @@ def create_temp_workspace(db):
         reimbursable_export_date_type='current_date',
         ccc_export_date_type='current_date'
     )
+    

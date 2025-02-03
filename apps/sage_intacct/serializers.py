@@ -2,14 +2,8 @@ from rest_framework import serializers
 
 from fyle_accounting_mappings.models import DestinationAttribute
 
-from apps.sage_intacct.models import (
-    Bill,
-    BillLineitem,
-    ExpenseReport,
-    ExpenseReportLineitem,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem
-)
+from .models import Bill, BillLineitem, ExpenseReport, ExpenseReportLineitem, \
+    ChargeCardTransaction, ChargeCardTransactionLineitem
 
 
 class BillSerializer(serializers.ModelSerializer):

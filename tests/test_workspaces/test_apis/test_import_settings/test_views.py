@@ -1,24 +1,19 @@
 import json
-
 from django_q.models import Schedule
-
-from fyle_accounting_mappings.models import MappingSetting
 
 from tests.helper import dict_compare_keys
 
 from apps.workspaces.models import Workspace, Configuration
-
+from apps.mappings.models import ImportLog
+from fyle_accounting_mappings.models import MappingSetting
 from .fixtures import data
 
 
 def test_import_settings(mocker, api_client, test_connection):
-    """
-    Test import settings
-    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.get_by_id',
         return_value={
-            'options': ['samp'],
+            'options': ['samp'], 
             'updated_at': '2020-06-11T13:14:55.201598+00:00',
             'is_mandatory': False
         }
@@ -33,7 +28,7 @@ def test_import_settings(mocker, api_client, test_connection):
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=None
     )
-
+    
     mocker.patch(
         'fyle_integrations_platform_connector.apis.DependentFields.get_project_field_id',
         return_value=12
@@ -76,7 +71,7 @@ def test_import_settings(mocker, api_client, test_connection):
 
     mapping = MappingSetting.objects.filter(workspace_id=1, source_field='PROJECT').first()
 
-    assert mapping.import_to_fyle == True
+    assert mapping.import_to_fyle  == True
 
     schedule = Schedule.objects.filter(
         func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
@@ -114,9 +109,6 @@ def test_import_settings(mocker, api_client, test_connection):
 
 
 def test_import_settings_validate(db, api_client, test_connection):
-    """
-    Test import settings validate
-    """
     workspace_id = 1
 
     url = '/api/v2/workspaces/{}/import_settings/'.format(workspace_id)

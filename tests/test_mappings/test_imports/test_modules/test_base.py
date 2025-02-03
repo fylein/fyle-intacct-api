@@ -1,29 +1,28 @@
-from unittest import mock
-from datetime import datetime, timezone, timedelta
-
-from fyle_accounting_mappings.models import (
-    Mapping,
-    CategoryMapping,
-    ExpenseAttribute,
-    DestinationAttribute
+import pytest
+from datetime import (
+    datetime,
+    timezone,
+    timedelta
 )
+from fyle_accounting_mappings.models import (
+    DestinationAttribute, 
+    ExpenseAttribute,
+    Mapping,
+    CategoryMapping
+)
+from unittest import mock
 from fyle_integrations_platform_connector import PlatformConnector
-
-from apps.tasks.models import Error
-from apps.mappings.models import ImportLog
 from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
 from apps.mappings.imports.modules.projects import Project
 from apps.mappings.imports.modules.categories import Category
-from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
-
+from apps.mappings.models import ImportLog
 from .fixtures import data as destination_attributes_data
-from .helpers import get_base_class_instance, get_platform_connection
+from apps.tasks.models import Error
+from .helpers import *
 
 
 def test_sync_destination_attributes(mocker, db):
-    """
-    Test sync destination attributes
-    """
     workspace_id = 1
 
     mocker.patch(
@@ -46,9 +45,6 @@ def test_sync_destination_attributes(mocker, db):
 
 
 def test_sync_expense_atrributes(mocker, db):
-    """
-    Test sync expense attributes
-    """
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.workspace.fyle_org_id = 'orqjgyJ21uge'
@@ -80,11 +76,8 @@ def test_sync_expense_atrributes(mocker, db):
 
 
 def test_remove_duplicates(db):
-    """
-    Test remove duplicates
-    """
     attributes = DestinationAttribute.objects.filter(attribute_type='EMPLOYEE')
-
+    
     assert len(attributes) == 55
 
     for attribute in attributes:
@@ -104,11 +97,7 @@ def test_remove_duplicates(db):
     attributes = base.remove_duplicate_attributes(attributes)
     assert len(attributes) == 55
 
-
 def test_get_platform_class(db):
-    """
-    Test get platform class
-    """
     base = get_base_class_instance()
     platform = get_platform_connection(1)
 
@@ -120,11 +109,7 @@ def test_get_platform_class(db):
     base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', platform_class_name='cost_centers')
     assert base.get_platform_class(platform) == platform.cost_centers
 
-
 def test_get_auto_sync_permission(db):
-    """
-    Test get auto sync permission
-    """
     base = get_base_class_instance()
 
     assert base.get_auto_sync_permission() == True
@@ -137,17 +122,14 @@ def test_get_auto_sync_permission(db):
 
     assert base.get_auto_sync_permission() == False
 
-
 def test_construct_attributes_filter(db):
-    """
-    Test construct attributes filter
-    """
     base = get_base_class_instance()
 
     assert base.construct_attributes_filter('PROJECT') == {'attribute_type': 'PROJECT', 'workspace_id': 1}
 
     date_string = '2023-08-06 12:50:05.875029'
     sync_after = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S.%f')
+
 
     base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories', sync_after=sync_after)
 
@@ -159,9 +141,6 @@ def test_construct_attributes_filter(db):
 
 
 def test_auto_create_destination_attributes(mocker, db):
-    """
-    Test auto create destination attributes
-    """
     project = Project(1, 'PROJECT', None)
     project.sync_after = None
 
@@ -187,7 +166,7 @@ def test_auto_create_destination_attributes(mocker, db):
         )
         mock_call.side_effect = [
             destination_attributes_data['create_new_auto_create_projects_expense_attributes_0'],
-            destination_attributes_data['create_new_auto_create_projects_expense_attributes_1']
+            destination_attributes_data['create_new_auto_create_projects_expense_attributes_1'] 
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT').count()
@@ -195,7 +174,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 0
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='PROJECT', destination_type='PROJECT').count()
-
+        
         assert mappings_count == 0
 
         project.trigger_import()
@@ -205,8 +184,9 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 5
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='PROJECT', destination_type='PROJECT').count()
-
+        
         assert mappings_count == 2
+
 
     # disable case for project import
     with mock.patch('fyle.platform.apis.v1beta.admin.Projects.list_all') as mock_call:
@@ -225,11 +205,12 @@ def test_auto_create_destination_attributes(mocker, db):
 
         mock_call.side_effect = [
             destination_attributes_data['create_new_auto_create_projects_expense_attributes_3'],
-            destination_attributes_data['create_new_auto_create_projects_expense_attributes_4']
+            destination_attributes_data['create_new_auto_create_projects_expense_attributes_4'] 
         ]
 
+        
         destination_attribute = DestinationAttribute.objects.filter(workspace_id=1, value='Electro wizard').first()
-
+        
         assert destination_attribute.active == True
 
         expense_attribute = ExpenseAttribute.objects.filter(workspace_id=1, value='Electro wizard').first()
@@ -248,7 +229,7 @@ def test_auto_create_destination_attributes(mocker, db):
         project.trigger_import()
 
         destination_attribute = DestinationAttribute.objects.filter(workspace_id=1, value='Electro wizard').first()
-
+        
         assert destination_attribute.active == False
 
         expense_attribute = ExpenseAttribute.objects.filter(workspace_id=1, value='Electro wizard').first()
@@ -257,9 +238,10 @@ def test_auto_create_destination_attributes(mocker, db):
 
         post_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='PROJECT').count()
 
-        assert post_run_expense_attribute_disabled_count == 3
+        assert post_run_expense_attribute_disabled_count ==  3
 
-    # not re-enable case for project import
+
+    #not re-enable case for project import
     with mock.patch('fyle.platform.apis.v1beta.admin.Projects.list_all') as mock_call:
         mocker.patch(
             'sageintacctsdk.apis.Projects.count',
@@ -275,11 +257,11 @@ def test_auto_create_destination_attributes(mocker, db):
         )
         mock_call.side_effect = [
             destination_attributes_data['create_new_auto_create_projects_expense_attributes_3'],
-            destination_attributes_data['create_new_auto_create_projects_expense_attributes_3']
+            destination_attributes_data['create_new_auto_create_projects_expense_attributes_3'] 
         ]
 
         pre_run_destination_attribute_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
-
+        
         assert pre_run_destination_attribute_count == 7
 
         pre_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
@@ -296,6 +278,8 @@ def test_auto_create_destination_attributes(mocker, db):
 
         assert post_run_expense_attribute_count == 2
 
+
+    
     # Not creating the schedule part due to time diff
     current_time = datetime.now()
     sync_after = current_time.replace(tzinfo=timezone.utc)
@@ -361,11 +345,7 @@ def test_auto_create_destination_attributes(mocker, db):
     assert import_log.processed_batches_count == 0
     assert response == None
 
-
 def test_expense_attributes_sync_after(db):
-    """
-    Test expense attributes sync after
-    """
     project = Project(1, 'PROJECT', None)
 
     current_time = datetime.now() - timedelta(minutes=300)
@@ -383,17 +363,14 @@ def test_expense_attributes_sync_after(db):
         expense_attribute.save()
         paginated_expense_attribute_values.append(expense_attribute.value)
 
+
     filters = project.construct_attributes_filter('PROJECT', paginated_expense_attribute_values)
 
     expense_attributes = ExpenseAttribute.objects.filter(**filters)
 
     assert expense_attributes.count() == 100
 
-
 def test_resolve_expense_attribute_errors(db):
-    """
-    Test resolve expense attribute errors
-    """
     workspace_id = 1
     category = Category(1, 'EXPENSE_TYPE', None)
 
@@ -429,11 +406,10 @@ def test_resolve_expense_attribute_errors(db):
     category_list = []
     category_list.append(
         CategoryMapping(
-            workspace_id=1,
-            source_category_id=source_category.id,
-            destination_expense_head_id=destination_attribute.id
-        )
-    )
+        workspace_id=1,
+        source_category_id=source_category.id,
+        destination_expense_head_id=destination_attribute.id
+    ))
     CategoryMapping.objects.bulk_create(category_list)
 
     category.resolve_expense_attribute_errors()
@@ -441,14 +417,12 @@ def test_resolve_expense_attribute_errors(db):
 
 
 def test_create_disable_attributes(mocker, db):
-    """
-    Test create disable attributes
-    """
-    mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all_generator',
-        return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_active']
-    )
 
+    mocker.patch(
+            'sageintacctsdk.apis.Projects.get_all_generator',
+            return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_active']
+        )
+    
     mocker.patch(
         'sageintacctsdk.apis.Projects.count',
         return_value=13
@@ -456,7 +430,7 @@ def test_create_disable_attributes(mocker, db):
 
     project = Project(1, 'PROJECT', None)
     project.sync_after = None
-    workspace_id = 1
+    workspace_id=1
 
     Workspace.objects.filter(id=1).update(fyle_org_id='orqjgyJ21uge')
     # delete all destination attributes, expense attributes and mappings
@@ -479,10 +453,10 @@ def test_create_disable_attributes(mocker, db):
     assert project.active == True
 
     mocker.patch(
-        'sageintacctsdk.apis.Projects.get_all_generator',
-        return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_inactive_active']
-    )
-
+            'sageintacctsdk.apis.Projects.get_all_generator',
+            return_value=destination_attributes_data['create_new_auto_create_projects_destination_attributes_inactive_active']
+        )
+    
     sage_intacct_connection.sync_projects()
     project = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', value='Mobile App Redesign').first()
     assert project.active == False

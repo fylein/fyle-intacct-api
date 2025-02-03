@@ -1,18 +1,12 @@
 from django.db import models
 from django.db.models import JSONField
-
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.workspaces.models import Workspace
 from apps.fyle.models import ExpenseGroup
-from apps.sage_intacct.models import (
-    Bill,
-    APPayment,
-    JournalEntry,
-    ExpenseReport,
-    ChargeCardTransaction,
-    SageIntacctReimbursement
-)
+from apps.sage_intacct.models import Bill, ExpenseReport, ChargeCardTransaction, APPayment, SageIntacctReimbursement, JournalEntry
+
+
 
 ERROR_TYPE_CHOICES = (
     ('EMPLOYEE_MAPPING', 'EMPLOYEE_MAPPING'),
@@ -20,11 +14,7 @@ ERROR_TYPE_CHOICES = (
     ('INTACCT_ERROR', 'INTACCT_ERROR')
 )
 
-
-def get_default() -> dict:
-    """
-    Default value for JSONField
-    """
+def get_default():
     return {
         'default': 'default value'
     }
@@ -71,7 +61,7 @@ class Error(models.Model):
     type = models.CharField(max_length=50, choices=ERROR_TYPE_CHOICES, help_text='Error type')
     repetition_count = models.IntegerField(help_text='repetition count for the error', default=0)
     expense_group = models.ForeignKey(
-        ExpenseGroup, on_delete=models.PROTECT,
+        ExpenseGroup, on_delete=models.PROTECT, 
         null=True, help_text='Reference to Expense group'
     )
     expense_attribute = models.OneToOneField(
@@ -90,11 +80,9 @@ class Error(models.Model):
     class Meta:
         db_table = 'errors'
 
-    def increase_repetition_count_by_one(self, is_created: bool) -> None:
+    def increase_repetition_count_by_one(self, is_created: bool):
         """
         Increase the repetition count by 1.
-        :param is_created: Whether the error is created or not
-        :return: None
         """
         if not is_created:
             self.repetition_count += 1

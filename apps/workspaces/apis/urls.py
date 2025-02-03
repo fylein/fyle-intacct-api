@@ -1,9 +1,9 @@
 from django.urls import path
 
-from apps.workspaces.apis.errors.views import ErrorsView
-from apps.workspaces.apis.export_settings.views import ExportSettingsView
-from apps.workspaces.apis.advanced_settings.views import AdvancedConfigurationsView
-from apps.workspaces.apis.import_settings.views import ImportSettingsView, ImportCodeFieldView
+from .export_settings.views import ExportSettingsView
+from .import_settings.views import ImportSettingsView, ImportCodeFieldView
+from .advanced_settings.views import AdvancedConfigurationsView
+from .errors.views import ErrorsView
 
 
 urlpatterns = [

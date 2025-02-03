@@ -2,11 +2,8 @@ from django.apps import AppConfig
 
 
 class MappingsConfig(AppConfig):
-    """
-    This class is used to configure the mappings app.
-    """
     name = 'apps.mappings'
-
-    def ready(self) -> None:
+    
+    def ready(self):
         super(MappingsConfig, self).ready()
-        import apps.mappings.signals # noqa
+        import apps.mappings.signals

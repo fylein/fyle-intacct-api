@@ -1,17 +1,20 @@
+"""
+Mapping Models
+"""
 from django.db import models
 from django.db.models import JSONField
 
-from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
-
 from apps.workspaces.models import Workspace
 
-IMPORT_STATUS_CHOICES = (
+from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
+
+
+IMPORT_STATUS_CHOICES= (
     ('FATAL', 'FATAL'),
     ('COMPLETE', 'COMPLETE'),
     ('IN_PROGRESS', 'IN_PROGRESS'),
     ('FAILED', 'FAILED')
 )
-
 
 class LocationEntityMapping(models.Model):
     """
@@ -27,7 +30,6 @@ class LocationEntityMapping(models.Model):
 
     class Meta:
         db_table = 'location_entity_mappings'
-
 
 class GeneralMapping(AutoAddCreateUpdateInfoMixin, models.Model):
     """
@@ -103,12 +105,9 @@ class ImportLog(models.Model):
         unique_together = ('workspace', 'attribute_type')
 
     @classmethod
-    def update_or_create(self, attribute_type: str, workspace_id: int) -> 'ImportLog':
+    def update_or_create(self, attribute_type, workspace_id):
         """
         Create import logs set to IN_PROGRESS
-        :param attribute_type: Attribute type
-        :param workspace_id: Workspace id
-        :return: Import log object
         """
         import_log, _ = self.objects.update_or_create(
             workspace_id=workspace_id,

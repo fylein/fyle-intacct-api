@@ -1,15 +1,15 @@
+import math
 from datetime import datetime
-
-from fyle_integrations_platform_connector import PlatformConnector
+from typing import List, Dict
+from apps.mappings.imports.modules.base import Base
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute
 )
-
-from apps.mappings.models import ImportLog
-from apps.workspaces.models import FyleCredential
-from apps.mappings.imports.modules.base import Base
 from apps.mappings.exceptions import handle_import_exceptions
+from apps.mappings.models import ImportLog
+from fyle_integrations_platform_connector import PlatformConnector
+from apps.workspaces.models import FyleCredential
 from apps.mappings.constants import FYLE_EXPENSE_SYSTEM_FIELDS
 
 
@@ -27,13 +27,13 @@ class ExpenseCustomField(Base):
             prepend_code_to_name=prepend_code_to_name
         )
 
-    def trigger_import(self) -> None:
+    def trigger_import(self):
         """
         Trigger import for ExepenseCustomField module
         """
         self.check_import_log_and_start_import()
 
-    def construct_custom_field_placeholder(self, source_placeholder: str, fyle_attribute: str, existing_attribute: dict) -> str:
+    def construct_custom_field_placeholder(self, source_placeholder: str, fyle_attribute: str, existing_attribute: Dict):
         """
         Construct placeholder for custom field
         :param source_placeholder: Placeholder from mapping settings
@@ -68,10 +68,10 @@ class ExpenseCustomField(Base):
 
     def construct_fyle_expense_custom_field_payload(
         self,
-        sageintacct_attributes: list[DestinationAttribute],
+        sageintacct_attributes: List[DestinationAttribute],
         platform: PlatformConnector,
         source_placeholder: str = None
-    ) -> dict:
+    ):
         """
         Construct payload for expense custom fields
         :param sageintacct_attributes: List of destination attributes
@@ -112,12 +112,13 @@ class ExpenseCustomField(Base):
 
         return expense_custom_field_payload
 
+    # construct_payload_and_import_to_fyle method is overridden 
     def construct_payload_and_import_to_fyle(
         self,
         platform: PlatformConnector,
         import_log: ImportLog,
         source_placeholder: str = None
-    ) -> None:
+    ):
         """
         Construct Payload and Import to fyle in Batches
         """
@@ -155,16 +156,24 @@ class ExpenseCustomField(Base):
             import_log=import_log
         )
 
+   # import_destination_attribute_to_fyle method is overridden 
     @handle_import_exceptions
-    def import_destination_attribute_to_fyle(self, import_log: ImportLog) -> None:
+    def import_destination_attribute_to_fyle(self, import_log: ImportLog):
         """
         Import destiantion_attributes field to Fyle and Auto Create Mappings
         :param import_log: ImportLog object
         """
+
         fyle_credentials = FyleCredential.objects.get(workspace_id=self.workspace_id)
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
         self.sync_destination_attributes(self.destination_field)
-        self.construct_payload_and_import_to_fyle(platform=platform, import_log=import_log)
+
+        self.construct_payload_and_import_to_fyle(
+            platform=platform,
+            import_log=import_log
+        )
+
         self.sync_expense_attributes(platform)
+
         self.create_mappings()

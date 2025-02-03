@@ -5,21 +5,27 @@ data = {
             'name':'Advertising',
             'code':'7',
             'is_enabled':True,
-            'restricted_project_ids': []
+            'restricted_project_ids':[
+                
+            ]
         },
         {
             'id':2,
             'name':'Arizona Dept. of Revenue Payable',
             'code':'89',
             'is_enabled':True,
-            'restricted_project_ids': []
+            'restricted_project_ids':[
+                
+            ]
         },
         {
             'id':3,
             'name':'Automobile',
             'code':'55',
             'is_enabled':True,
-            'restricted_project_ids': []
+            'restricted_project_ids':[
+                
+            ]
         }
     ],
     'cost_center_payload': [

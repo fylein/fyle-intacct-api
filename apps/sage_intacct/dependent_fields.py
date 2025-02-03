@@ -1,42 +1,38 @@
 import logging
-from time import sleep
 from datetime import datetime, timezone
+from typing import Dict
+from time import sleep
 
-from django.db.models import F, Func, Value
 from django.contrib.postgres.fields import JSONField
+from django.db.models import F, Func, Value
+
 from django.contrib.postgres.aggregates import JSONBAgg
+from fyle_integrations_platform_connector import PlatformConnector
 
 from fyle_accounting_mappings.models import ExpenseAttribute
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
 from sageintacctsdk.exceptions import (
     InvalidTokenError,
     NoPrivilegeError,
     SageIntacctSDKError
 )
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
-from apps.mappings.models import ImportLog
-from apps.sage_intacct.models import CostType
-from apps.fyle.models import DependentFieldSetting
 from apps.fyle.helpers import connect_to_platform
-from apps.mappings.helpers import prepend_code_to_name
+from apps.fyle.models import DependentFieldSetting
 from apps.mappings.tasks import sync_sage_intacct_attributes
+from apps.sage_intacct.models import CostType
+from apps.workspaces.models import SageIntacctCredential
+from apps.mappings.models import ImportLog
 from apps.mappings.exceptions import handle_import_exceptions
-from apps.workspaces.models import Configuration, SageIntacctCredential
+from apps.workspaces.models import Configuration
+from apps.mappings.helpers import prepend_code_to_name
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: str, existing_attribute: dict) -> str:
-    """
-    Construct the placeholder for the custom field
-    :param source_placeholder: Placeholder filled by user in the custom field form
-    :param fyle_attribute: Fyle attribute for which the custom field is being created
-    :param existing_attribute: Existing attribute in Fyle
-    :return: Constructed placeholder
-    """
+def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: str, existing_attribute: Dict):
     new_placeholder = None
     placeholder = None
 
@@ -65,16 +61,7 @@ def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: 
 
 
 @handle_import_exceptions
-def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: dict, is_enabled: bool = True) -> tuple:
-    """
-    Post dependent cost code to Fyle
-    :param import_log: Import log object
-    :param dependent_field_setting: Dependent field setting object
-    :param platform: Platform connector object
-    :param filters: Filters to apply on the cost codes
-    :param is_enabled: Flag to enable/disable the cost code
-    :return: Tuple of posted cost codes and is_errored flag
-    """
+def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict, is_enabled: bool = True):
     configuration = Configuration.objects.filter(workspace_id=dependent_field_setting.workspace_id).first()
 
     last_successful_run_at = datetime.now(timezone.utc)
@@ -159,15 +146,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
 
 
 @handle_import_exceptions
-def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: dict) -> bool:
-    """
-    Post dependent cost type to Fyle
-    :param import_log: Import log object
-    :param dependent_field_setting: Dependent field setting object
-    :param platform: Platform connector object
-    :param filters: Filters to apply on the cost types
-    :return: is_errored flag
-    """
+def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: Dict):
     configuration = Configuration.objects.filter(workspace_id=dependent_field_setting.workspace_id).first()
 
     last_successful_run_at = datetime.now(timezone.utc)
@@ -235,16 +214,7 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
     return is_errored
 
 
-def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None, cost_code_import_log: ImportLog = None, cost_type_import_log: ImportLog = None) -> None:
-    """
-    Post dependent expense field values to Fyle
-    :param workspace_id: Workspace ID
-    :param dependent_field_setting: Dependent field setting object
-    :param platform: Platform connector object
-    :param cost_code_import_log: Cost code import log object
-    :param cost_type_import_log: Cost type import log object
-    :return: None
-    """
+def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None, cost_code_import_log: ImportLog = None, cost_type_import_log: ImportLog = None):
     if not platform:
         platform = connect_to_platform(workspace_id)
 
@@ -276,12 +246,7 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
             DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
 
 
-def import_dependent_fields_to_fyle(workspace_id: str) -> None:
-    """
-    Import dependent fields to Fyle
-    :param workspace_id: Workspace ID
-    :return: None
-    """
+def import_dependent_fields_to_fyle(workspace_id: str):
     dependent_field = DependentFieldSetting.objects.get(workspace_id=workspace_id)
     cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
     cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
@@ -320,16 +285,7 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
             cost_code_import_log.save()
 
 
-def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type: str, platform: PlatformConnector, parent_field_id: str, source_placeholder: str = None) -> dict:
-    """
-    Create dependent custom field in Fyle
-    :param workspace_id: Workspace ID
-    :param fyle_attribute_type: Fyle attribute type
-    :param platform: Platform connector object
-    :param parent_field_id: Parent field ID
-    :param source_placeholder: Placeholder filled by user in the custom field form
-    :return: Created custom field
-    """
+def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type: str, platform: PlatformConnector, parent_field_id: str, source_placeholder: str = None):
     existing_attribute = ExpenseAttribute.objects.filter(
         attribute_type=fyle_attribute_type,
         workspace_id=workspace_id
@@ -353,14 +309,9 @@ def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type
     return platform.expense_custom_fields.post(expense_custom_field_payload)
 
 
-def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, use_code_in_naming: bool) -> None:
+def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: Dict, platform: PlatformConnector, use_code_in_naming: bool):
     """
     Update the job_name in CostType and disable the old cost code in Fyle
-    :param workspace_id: Workspace ID
-    :param cost_codes_to_disable: Cost codes to disable
-    :param platform: Platform connector object
-    :param use_code_in_naming: Flag to use code in naming
-    :return: None
     """
     dependent_field_setting = DependentFieldSetting.objects.filter(is_import_enabled=True, workspace_id=workspace_id).first()
 

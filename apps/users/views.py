@@ -1,23 +1,21 @@
 from rest_framework import generics, status
-from rest_framework.request import Request
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from fyle_rest_auth.models import AuthToken
+
 from fyle_integrations_platform_connector import PlatformConnector
 
-from apps.workspaces.models import FyleCredential
+from apps.workspaces.models import FyleCredential, Workspace
 from apps.fyle.helpers import get_fyle_orgs
 from apps.users.helpers import get_cluster_domain_and_refresh_token
 
 
 class UserProfileView(generics.RetrieveAPIView):
-    """
-    User Profile View
-    """
+
     permission_classes = [IsAuthenticated]
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, request, *args, **kwargs):
         """
         Get User Details
         """
@@ -43,9 +41,10 @@ class FyleOrgsView(generics.ListCreateAPIView):
     """
     FyleOrgs view
     """
+
     permission_classes = [IsAuthenticated]
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, request, *args, **kwargs):
         """
         Get cluster domain from Fyle
         """

@@ -1,19 +1,16 @@
 import pytest
-
 import json
-
 from django_q.models import Schedule
-
-from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
+from apps.workspaces.models import Configuration
 from .fixtures import data
 
-
+    
 @pytest.mark.django_db(databases=['default'])
 def test_get_general_mappings(api_client, test_connection):
-    """
+    '''
     Test get of general mappings
-    """
+    '''
     workspace_id = 1
     url = '/api/workspaces/{}/mappings/general/'.format(workspace_id)
 
@@ -39,9 +36,9 @@ def test_get_general_mappings(api_client, test_connection):
 
 @pytest.mark.django_db(databases=['default'])
 def test_post_general_mappings(api_client, test_connection):
-    """
+    '''
     Test post of general mappings
-    """
+    '''
     workspace_id = 1
     url = '/api/workspaces/{}/mappings/general/'.format(workspace_id)
 
@@ -107,9 +104,6 @@ def test_post_general_mappings(api_client, test_connection):
 
 
 def test_auto_map_employee(api_client, test_connection):
-    """
-    Test auto map employee
-    """
     workspace_id = 1
 
     url = '/api/workspaces/{}/mappings/auto_map_employees/trigger/'.format(workspace_id)
@@ -141,9 +135,6 @@ def test_auto_map_employee(api_client, test_connection):
 
 
 def test_location_entity_mappings(api_client, test_connection):
-    """
-    Test location entity mappings
-    """
     workspace_id = 1
 
     url = '/api/workspaces/{}/mappings/location_entity/'.format(workspace_id)
@@ -152,7 +143,7 @@ def test_location_entity_mappings(api_client, test_connection):
 
     response = api_client.get(url)
     assert response.status_code == 200
-
+        
     response = api_client.delete(url)
     location_entity = LocationEntityMapping.objects.filter(workspace_id=1).first()
     assert response.status_code == 204

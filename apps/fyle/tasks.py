@@ -1,4 +1,5 @@
 import logging
+from typing import List, Dict
 import traceback
 from datetime import datetime
 
@@ -6,35 +7,24 @@ from django.db import transaction
 from django_q.tasks import async_task
 
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_integrations_platform_connector.apis.expenses import Expenses as FyleExpenses
 from fyle.platform.exceptions import (
     NoPrivilegeError,
     RetryException,
     InternalServerError,
     InvalidTokenError
 )
+from fyle_integrations_platform_connector.apis.expenses import Expenses as FyleExpenses
 
+
+from apps.workspaces.models import FyleCredential, Workspace, Configuration
 from apps.tasks.models import TaskLog
+
+from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+
+from .helpers import construct_expense_filter_query, get_source_account_type, get_fund_source, handle_import_exception
 from apps.workspaces.actions import export_to_intacct
-from apps.fyle.queue import async_post_accounting_export_summary
-from apps.workspaces.models import (
-    Workspace,
-    FyleCredential,
-    Configuration
-)
-from apps.fyle.models import (
-    Expense,
-    ExpenseFilter,
-    ExpenseGroup,
-    ExpenseGroupSettings
-)
-from apps.fyle.helpers import (
-    get_fund_source,
-    get_source_account_type,
-    handle_import_exception,
-    construct_expense_filter_query
-)
-from apps.fyle.actions import (
+from .queue import async_post_accounting_export_summary
+from .actions import (
     mark_expenses_as_skipped,
     create_generator_and_post_in_batches
 )
@@ -48,18 +38,12 @@ SOURCE_ACCOUNT_MAP = {
     'CCC': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT'
 }
 
-
-def get_task_log_and_fund_source(workspace_id: int) -> tuple[TaskLog, list[str]]:
-    """
-    Get task log and fund source
-    :param workspace_id: Workspace id
-    :return: Task log and fund source
-    """
+def get_task_log_and_fund_source(workspace_id: int):
     task_log, _ = TaskLog.objects.update_or_create(
         workspace_id=workspace_id,
         type='FETCHING_EXPENSES',
         defaults={
-            'status': 'IN_PROGRESS'
+           'status': 'IN_PROGRESS'
         }
     )
 
@@ -73,7 +57,7 @@ def get_task_log_and_fund_source(workspace_id: int) -> tuple[TaskLog, list[str]]
     return task_log, fund_source
 
 
-def schedule_expense_group_creation(workspace_id: int) -> None:
+def schedule_expense_group_creation(workspace_id: int):
     """
     Schedule Expense group creation
     :param workspace_id: Workspace id
@@ -84,14 +68,14 @@ def schedule_expense_group_creation(workspace_id: int) -> None:
     async_task('apps.fyle.tasks.create_expense_groups', workspace_id, fund_source, task_log)
 
 
-def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: TaskLog) -> None:
+def create_expense_groups(workspace_id: int, fund_source: List[str], task_log: TaskLog):
     """
     Create expense groups
     :param task_log: Task log object
     :param workspace_id: workspace id
     :param fund_source: expense fund source
     """
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration : Configuration = Configuration.objects.get(workspace_id=workspace_id)
     try:
         with transaction.atomic():
             workspace = Workspace.objects.get(pk=workspace_id)
@@ -140,7 +124,7 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
                 workspace.ccc_last_synced_at = datetime.now()
 
             workspace.save()
-
+            
             expense_objects = Expense.create_expense_objects(expenses, workspace_id)
 
             expense_filters = ExpenseFilter.objects.filter(workspace_id=workspace_id).order_by('rank')
@@ -154,15 +138,15 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
                     expensegroup__isnull=True,
                     org_id=workspace.fyle_org_id
                 ).update(is_skipped=True)
-
+                
                 filtered_expenses = Expense.objects.filter(
                     is_skipped=False,
                     id__in=expenses_object_ids,
                     expensegroup__isnull=True,
-                    org_id=workspace.fyle_org_id)
+                    org_id=workspace.fyle_org_id)   
 
             ExpenseGroup.create_expense_groups_by_report_id_fund_source(
-                filtered_expenses,
+                filtered_expenses, 
                 configuration,
                 workspace_id
             )
@@ -220,19 +204,11 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def group_expenses_and_save(expenses: list[dict], task_log: TaskLog, workspace: Workspace) -> None:
-    """
-    Group expenses and save
-    :param expenses: Expenses
-    :param task_log: Task log object
-    :param workspace: Workspace object
-    :return: None
-    """
+def group_expenses_and_save(expenses: List[Dict], task_log: TaskLog, workspace: Workspace):
     expense_objects = Expense.create_expense_objects(expenses, workspace.id)
     expense_filters = ExpenseFilter.objects.filter(workspace_id=workspace.id).order_by('rank')
-    configuration = Configuration.objects.get(workspace_id=workspace.id)
+    configuration : Configuration = Configuration.objects.get(workspace_id=workspace.id)
     filtered_expenses = expense_objects
-
     if expense_filters:
         expenses_object_ids = [expense_object.id for expense_object in expense_objects]
         final_query = construct_expense_filter_query(expense_filters)
@@ -343,11 +319,9 @@ def import_and_export_expenses(report_id: str, org_id: str) -> None:
         handle_import_exception(task_log)
 
 
-def update_non_exported_expenses(data: dict) -> None:
+def update_non_exported_expenses(data: Dict) -> None:
     """
     To update expenses not in COMPLETE, IN_PROGRESS state
-    :param data: data
-    :return: None
     """
     expense_state = None
     org_id = data['org_id']

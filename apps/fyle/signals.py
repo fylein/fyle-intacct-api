@@ -1,3 +1,6 @@
+"""
+Fyle Signal
+"""
 import logging
 
 from django.db.models.signals import pre_save
@@ -5,15 +8,16 @@ from django.dispatch import receiver
 
 from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
 
-from apps.fyle.helpers import connect_to_platform
-from apps.fyle.models import DependentFieldSetting
+from .helpers import connect_to_platform
+from .models import DependentFieldSetting
+
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
 @receiver(pre_save, sender=DependentFieldSetting)
-def run_pre_save_dependent_field_settings_triggers(sender: type[DependentFieldSetting], instance: DependentFieldSetting, **kwargs) -> None:
+def run_pre_save_dependent_field_settings_triggers(sender, instance: DependentFieldSetting, **kwargs):
     """
     :param sender: Sender Class
     :param instance: Row instance of Sender Class

@@ -1,7 +1,5 @@
 import logging
-
 from django_q.tasks import async_task
-
 from apps.fyle.helpers import assert_valid_request
 
 logger = logging.getLogger(__name__)
@@ -15,6 +13,7 @@ def async_post_accounting_export_summary(org_id: str, workspace_id: int) -> None
     :param workspace_id: workspace id
     :return: None
     """
+    # This function calls post_accounting_export_summary asynchrously
     async_task('apps.fyle.tasks.post_accounting_export_summary', org_id, workspace_id)
 
 

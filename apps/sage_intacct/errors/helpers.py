@@ -1,15 +1,9 @@
 import re
-from apps.sage_intacct.errors.errors import errors_ref
-
+from .errors import errors_ref
 from fyle_accounting_mappings.models import DestinationAttribute
 
 
-def remove_support_id(message: str) -> str:
-    """
-    Remove the Support ID from the given message
-    :param message: Original message containing the Support ID
-    :return: Message with the Support ID removed
-    """
+def remove_support_id(message):
     # Define the pattern for matching the Support ID
     pattern = r' \[Support ID: [^\]]+\]'
 
@@ -19,19 +13,14 @@ def remove_support_id(message: str) -> str:
     return cleaned_message
 
 
-def error_matcher(error_msg: str) -> dict:
-    """
-    Match the given error message with predefined errors in the reference dictionary
-    :param error_msg: Error message to be matched
-    :return: Dictionary with 'attribute_type', 'destination_id' and 'article_link' if found, otherwise None
-    """
+def error_matcher(error_msg):
     # Loop through each predefined error in the reference dictionary
     for attribute_type, error in errors_ref.items():
         # Check each pattern associated with the current error
         for pattern in error['patterns']:
             # Use regular expression to search for a match in the given error message
             match = re.search(pattern, error_msg)
-
+            
             # If a match is found
             if match:
                 # Create a dictionary to store information about the error
@@ -40,15 +29,15 @@ def error_matcher(error_msg: str) -> dict:
                     'destination_id': match.groups()[0],  # Extract specific information from the match
                     'article_link': error['article_link']
                 }
-
+                
                 # Return the error dictionary
                 return error_dict
-
+    
     # If no match is found, return None
     return None
 
-
-def get_entity_values(error_dict: dict, workspace_id: int) -> dict:
+    
+def get_entity_values(error_dict, workspace_id):
     """
     Get entity values from error dictionary
     :param error_dict: Error Dictionary containing information about the error
@@ -73,13 +62,14 @@ def get_entity_values(error_dict: dict, workspace_id: int) -> dict:
     return {}
 
 
-def replace_destination_id_with_values(input_string: str, replacement: str) -> str:
+def replace_destination_id_with_values(input_string, replacement):
     """
     Replace destination ID with corresponding values in the input string
     :param input_string: Original string containing destination ID placeholders
     :param replacement: Dictionary with 'destination_id' and 'value' to replace in the string
     :return: String with destination ID replaced by formatted 'destination_id => value'
     """
+
     # Extract destination ID and value from the replacement dictionary
     destination_id = replacement['destination_id']
     value = replacement['value']

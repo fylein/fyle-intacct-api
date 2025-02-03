@@ -1,21 +1,13 @@
 import pytest
+from fyle_accounting_mappings.models import MappingSetting, DestinationAttribute, ExpenseAttribute
 
-from fyle_accounting_mappings.models import (
-    MappingSetting,
-    ExpenseAttribute,
-    DestinationAttribute
-)
-
-from apps.sage_intacct.models import CostType
 from apps.fyle.models import DependentFieldSetting
+from apps.sage_intacct.models import CostType
 from apps.workspaces.models import Configuration, Workspace
 
 
 @pytest.fixture
 def create_mapping_setting(db):
-    """
-    Pytest fixture to create mapping setting
-    """
     workspace_id = 1
 
     MappingSetting.objects.update_or_create(
@@ -35,9 +27,6 @@ def create_mapping_setting(db):
 
 @pytest.fixture
 def create_dependent_field_setting(db):
-    """
-    Pytest fixture to create dependent field setting
-    """
     created_field, _ = DependentFieldSetting.objects.update_or_create(
         workspace_id=1,
         defaults={
@@ -55,9 +44,6 @@ def create_dependent_field_setting(db):
 
 @pytest.fixture
 def create_cost_type(db):
-    """
-    Pytest fixture to create cost type
-    """
     workspace_id = 1
     CostType.objects.update_or_create(
         workspace_id=workspace_id,
@@ -78,9 +64,6 @@ def create_cost_type(db):
 
 @pytest.fixture
 def add_configuration(db):
-    """
-    Pytest fixture to add configuration to a workspace
-    """
     workspace_id = [1, 98]
     for workspace_id in workspace_id:
         Configuration.objects.update_or_create(
@@ -94,9 +77,6 @@ def add_configuration(db):
 
 @pytest.fixture
 def add_project_mappings(db):
-    """
-    Pytest fixture to add project mappings to a workspace
-    """
     workspace_ids = [
         1
     ]
@@ -284,12 +264,8 @@ def add_expense_destination_attributes_1():
             active=True
         )
 
-
 @pytest.fixture()
 def add_expense_destination_attributes_2():
-    """
-    Pytest fixture to add expense & destination attributes to a workspace
-    """
     ExpenseAttribute.objects.create(
         workspace_id=98,
         attribute_type='CATEGORY',
@@ -310,7 +286,6 @@ def add_expense_destination_attributes_2():
         active=True,
         code='123'
     )
-
 
 @pytest.fixture()
 def add_cost_center_mappings(db):

@@ -1,13 +1,15 @@
+"""
+Mappings Signal
+"""
 import logging
+from django.db.models import Q
 from datetime import datetime, timedelta, timezone
 
-from django.db.models import Q
-from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save, post_delete
 from rest_framework.exceptions import ValidationError
 
-from fyle.platform.exceptions import WrongParamsError
-from fyle_integrations_platform_connector import PlatformConnector
+from django.db.models.signals import post_save, pre_save, post_delete
+from django.dispatch import receiver
+
 from fyle_accounting_mappings.models import (
     MappingSetting,
     Mapping,
@@ -15,22 +17,26 @@ from fyle_accounting_mappings.models import (
     CategoryMapping,
     DestinationAttribute
 )
+from fyle.platform.exceptions import WrongParamsError
 
-from apps.tasks.models import Error
-from apps.workspaces.models import Configuration, FyleCredential
-from apps.mappings.models import ImportLog, LocationEntityMapping
-from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
+from apps.workspaces.models import Configuration
 from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
+from apps.tasks.models import Error
+from apps.mappings.models import LocationEntityMapping
+from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
+from apps.mappings.models import ImportLog
+from fyle_integrations_platform_connector import PlatformConnector
+from apps.workspaces.models import FyleCredential
 
 logger = logging.getLogger(__name__)
-logger.level = logging.INFO
 
 
 @receiver(pre_save, sender=CategoryMapping)
-def pre_save_category_mappings(sender: type[CategoryMapping], instance: CategoryMapping, **kwargs) -> None:
+def pre_save_category_mappings(sender, instance: CategoryMapping, **kwargs):
     """
     Create CCC mapping if reimbursable type in ER and ccc in (bill, je, ccc)
     """
+    
     if instance.destination_expense_head:
         if instance.destination_expense_head.detail and 'gl_account_no' in instance.destination_expense_head.detail and \
             instance.destination_expense_head.detail['gl_account_no']:
@@ -42,26 +48,30 @@ def pre_save_category_mappings(sender: type[CategoryMapping], instance: Category
             ).first()
 
             instance.destination_account_id = destination_attribute.id
-
+         
 
 @receiver(post_save, sender=CategoryMapping)
-def resolve_post_category_mapping_errors(sender: type[CategoryMapping], instance: Mapping, **kwargs) -> None:
+def resolve_post_category_mapping_errors(sender, instance: Mapping, **kwargs):
     """
     Resolve errors after mapping is created
     """
-    Error.objects.filter(expense_attribute_id=instance.source_category_id).update(is_resolved=True)
+    Error.objects.filter(expense_attribute_id=instance.source_category_id).update(
+        is_resolved=True
+    )
 
 
 @receiver(post_save, sender=EmployeeMapping)
-def resolve_post_employees_mapping_errors(sender: type[EmployeeMapping], instance: Mapping, **kwargs) -> None:
+def resolve_post_employees_mapping_errors(sender, instance: Mapping, **kwargs):
     """
     Resolve errors after mapping is created
     """
-    Error.objects.filter(expense_attribute_id=instance.source_employee_id).update(is_resolved=True)
+    Error.objects.filter(expense_attribute_id=instance.source_employee_id).update(
+        is_resolved=True
+    )
 
 
 @receiver(post_save, sender=LocationEntityMapping)
-def run_post_location_entity_mappings(sender: type[LocationEntityMapping], instance: LocationEntityMapping, **kwargs) -> None:
+def run_post_location_entity_mappings(sender, instance: LocationEntityMapping, **kwargs):
     """
     :param sender: Sender Class
     :param instance: Row instance of Sender Class
@@ -73,12 +83,7 @@ def run_post_location_entity_mappings(sender: type[LocationEntityMapping], insta
 
 
 @receiver(post_delete, sender=LocationEntityMapping)
-def run_post_delete_location_entity_mappings(sender: type[LocationEntityMapping], instance: LocationEntityMapping, **kwargs) -> None:
-    """
-    :param sender: Sender Class
-    :param instance: Row instance of Sender Class
-    :return: None
-    """
+def run_post_delete_location_entity_mappings(sender, instance: LocationEntityMapping, **kwargs):
     workspace = instance.workspace
     if workspace.onboarding_state in ('CONNECTION', 'EXPORT_SETTINGS'):
         DestinationAttribute.objects.filter(~Q(attribute_type='LOCATION_ENTITY'), workspace_id=instance.workspace_id).delete()
@@ -87,7 +92,7 @@ def run_post_delete_location_entity_mappings(sender: type[LocationEntityMapping]
 
 
 @receiver(post_save, sender=MappingSetting)
-def run_post_mapping_settings_triggers(sender: type[MappingSetting], instance: MappingSetting, **kwargs) -> None:
+def run_post_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
     """
     :param sender: Sender Class
     :param instance: Row instance of Sender Class
@@ -100,7 +105,7 @@ def run_post_mapping_settings_triggers(sender: type[MappingSetting], instance: M
 
 
 @receiver(pre_save, sender=MappingSetting)
-def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: MappingSetting, **kwargs) -> None:
+def run_pre_mapping_settings_triggers(sender, instance: MappingSetting, **kwargs):
     """
     :param sender: Sender Class
     :param instance: Row instance of Sender Class
@@ -137,7 +142,8 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
 
                 # if the import_log is present and the last_successful_run_at is less than 30mins then we need to update it
                 # so that the schedule can run
-                if last_successful_run_at and offset_aware_time_difference and (offset_aware_time_difference < last_successful_run_at):
+                if last_successful_run_at and offset_aware_time_difference\
+                 and (offset_aware_time_difference < last_successful_run_at):
                     import_log.last_successful_run_at = offset_aware_time_difference
                     last_successful_run_at = offset_aware_time_difference
                     import_log.save()
@@ -161,8 +167,9 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
             expense_custom_field.construct_payload_and_import_to_fyle(platform, import_log)
             expense_custom_field.sync_expense_attributes(platform)
 
-            # NOTE: We are not setting the import_log status to COMPLETE
+            # NOTE: We are not setting the import_log status to COMPLETE 
             # since the post_save trigger will run the import again in async manner
+    
         except WrongParamsError as error:
             logger.error(
                 'Error while creating %s workspace_id - %s in Fyle %s %s',

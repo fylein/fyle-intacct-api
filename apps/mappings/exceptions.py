@@ -1,6 +1,5 @@
 import logging
 import traceback
-
 from sageintacctsdk.exceptions import (
     InvalidTokenError,
     NoPrivilegeError,
@@ -12,21 +11,16 @@ from fyle.platform.exceptions import (
     InternalServerError,
     RetryException as FyleRetryException
 )
-
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
+
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def handle_import_exceptions(func: callable) -> callable:
-    """
-    Decorator to handle exceptions while importing to Fyle
-    :param func: function
-    :return: function
-    """
-    def new_fn(expense_attribute_instance: any, *args, **kwargs) -> callable:
+def handle_import_exceptions(func):
+    def new_fn(expense_attribute_instance, *args, **kwargs):
         import_log = None
         if isinstance(expense_attribute_instance, ImportLog):
             import_log: ImportLog = expense_attribute_instance
@@ -57,7 +51,7 @@ def handle_import_exceptions(func: callable) -> callable:
             error['message'] = 'Invalid Token for fyle'
             error['alert'] = False
             import_log.status = 'FAILED'
-
+        
         except FyleRetryException:
             error['message'] = 'Fyle Retry Exception occured'
             error['alert'] = False

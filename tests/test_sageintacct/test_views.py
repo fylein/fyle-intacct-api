@@ -1,12 +1,15 @@
+from os import access
+from django.urls import reverse
+import pytest
 import json
-
+from unittest import mock
+from apps.tasks.models import TaskLog
 from apps.workspaces.models import SageIntacctCredential, Configuration
+from apps.fyle.models import Reimbursement, ExpenseGroup
+from .fixtures import data
 
 
 def test_sage_intacct_fields(api_client, test_connection):
-    """
-    Test Sage Intacct fields
-    """
     workspace_id = 1
 
     access_token = test_connection.access_token
@@ -19,9 +22,6 @@ def test_sage_intacct_fields(api_client, test_connection):
 
 
 def test_destination_attributes(api_client, test_connection):
-    """
-    Test Sage Intacct destination attributes
-    """
     workspace_id = 1
 
     access_token = test_connection.access_token
@@ -52,11 +52,7 @@ def test_destination_attributes(api_client, test_connection):
     response = json.loads(response.content)
     assert len(response) == 170
 
-
 def test_paginated_destination_attributes(api_client, test_connection):
-    """
-    Test Sage Intacct paginated destination attributes
-    """
     workspace_id = 1
 
     access_token = test_connection.access_token
@@ -78,9 +74,6 @@ def test_paginated_destination_attributes(api_client, test_connection):
 
 
 def test_destination_attributes_count(api_client, test_connection):
-    """
-    Test Sage Intacct destination attributes count
-    """
     workspace_id = 1
 
     access_token = test_connection.access_token
@@ -96,9 +89,6 @@ def test_destination_attributes_count(api_client, test_connection):
 
 
 def test_exports_trigger(api_client, test_connection):
-    """
-    Test Sage Intacct exports trigger
-    """
     workspace_id = 1
 
     access_token = test_connection.access_token
@@ -140,9 +130,6 @@ def test_exports_trigger(api_client, test_connection):
 
 
 def test_payments_trigger(api_client, test_connection, mocker):
-    """
-    Test Sage Intacct payments trigger
-    """
     mocker.patch(
         'fyle_integrations_platform_connector.apis.Reimbursements.sync',
         return_value=None
@@ -172,9 +159,6 @@ def test_payments_trigger(api_client, test_connection, mocker):
 
 
 def test_sync_dimensions(api_client, test_connection):
-    """
-    Test Sage Intacct sync dimensions
-    """
     workspace_id = 1
 
     access_token = test_connection.access_token
@@ -196,9 +180,6 @@ def test_sync_dimensions(api_client, test_connection):
 
 
 def test_refresh_dimensions(api_client, test_connection):
-    """
-    Test Sage Intacct refresh dimensions
-    """
     workspace_id = 1
 
     access_token = test_connection.access_token

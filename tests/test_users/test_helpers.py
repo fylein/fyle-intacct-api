@@ -1,18 +1,15 @@
 from datetime import datetime, timezone
-
-from fyle.platform import Platform
 from fyle_rest_auth.models import User
-
-from apps.workspaces.models import FyleCredential
 from apps.users.helpers import get_cluster_domain_and_refresh_token
-
 from fyle_intacct_api.tests import settings
+from fyle.platform import Platform
+from apps.workspaces.models import FyleCredential
 
 
 def test_get_cluster_domain_and_refresh_token(db, add_users_to_database):
-    """
+    '''
     Test Post of User Profile
-    """
+    '''
     client_id = settings.FYLE_CLIENT_ID
     client_secret = settings.FYLE_CLIENT_SECRET
     token_url = settings.FYLE_TOKEN_URI

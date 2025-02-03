@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.tasks.models import TaskLog
+from .models import TaskLog
 
 
 class TaskLogSerializer(serializers.ModelSerializer):

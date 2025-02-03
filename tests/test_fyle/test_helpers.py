@@ -1,33 +1,14 @@
 import pytest
-
 from unittest import mock
 from asyncio.log import logger
-
-from django.db.models import Q
-from django.conf import settings
-from rest_framework.views import status
 from rest_framework.response import Response
-
-from apps.workspaces.models import Configuration, Workspace
-from apps.fyle.models import Expense, ExpenseFilter
+from rest_framework.views import status
+from apps.fyle.helpers import *
 from apps.fyle.actions import __bulk_update_expenses
-from apps.fyle.helpers import (
-    get_updated_accounting_export_summary,
-    post_request,
-    get_request,
-    get_fyle_orgs,
-    get_fund_source,
-    construct_expense_filter,
-    handle_refresh_dimensions,
-    construct_expense_filter_query,
-    check_interval_and_sync_dimension
-)
 
+from apps.fyle.models import ExpenseFilter
 
 def test_post_request(mocker):
-    """
-    Test post request
-    """
     mocker.patch(
         'apps.fyle.helpers.requests.post',
         return_value=mock.MagicMock(status_code=200, text="{'key': 'dfghjk'}")
@@ -35,9 +16,9 @@ def test_post_request(mocker):
     try:
         response = post_request(url='sdfghjk', body={}, refresh_token='srtyu')
         assert response == {'key': 'dfghjk'}
-    except Exception:
+    except:
         logger.info('Error in post request')
-
+    
     mocker.patch(
         'apps.fyle.helpers.requests.post',
         return_value=Response(
@@ -49,14 +30,11 @@ def test_post_request(mocker):
     )
     try:
         post_request(url='sdfghjk', body={}, refresh_token='srtyu')
-    except Exception:
+    except:
         logger.info('Error in post request')
 
 
 def test_get_request(mocker):
-    """
-    Test get request
-    """
     mocker.patch(
         'apps.fyle.helpers.requests.get',
         return_value=mock.MagicMock(status_code=200, text="{'key': 'dfghjk'}")
@@ -64,9 +42,9 @@ def test_get_request(mocker):
     try:
         response = get_request(url='sdfghjk', params={'key': 'dfghjk'}, refresh_token='srtyu')
         assert response == {'key': 'dfghjk'}
-    except Exception:
+    except:
         logger.info('Error in post request')
-
+    
     mocker.patch(
         'apps.fyle.helpers.requests.get',
         return_value=Response(
@@ -78,14 +56,11 @@ def test_get_request(mocker):
     )
     try:
         get_request(url='sdfghjk', params={'sample': True}, refresh_token='srtyu')
-    except Exception:
+    except:
         logger.info('Error in post request')
 
 
 def test_get_fyle_orgs(mocker):
-    """
-    Test get Fyle orgs
-    """
     mocker.patch(
         'apps.fyle.helpers.requests.get',
         return_value=mock.MagicMock(status_code=200, text="{'orgs': 'dfghjk'}")
@@ -93,16 +68,13 @@ def test_get_fyle_orgs(mocker):
     try:
         response = get_fyle_orgs(refresh_token='srtyu', cluster_domain='erty')
         assert response == {'orgs': 'dfghjk'}
-    except Exception:
+    except:
         logger.info('Error in post request')
 
 
 @pytest.mark.django_db()
 def test_construct_expense_filter():
-    """
-    Test construct expense filter
-    """
-    # employee-email-is-equal
+    #employee-email-is-equal
     expense_filter = ExpenseFilter(
         condition = 'employee_email',
         operator = 'in',
@@ -116,7 +88,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # employee-email-is-equal-one-email-only
+    #employee-email-is-equal-one-email-only
     expense_filter = ExpenseFilter(
         condition = 'employee_email',
         operator = 'in',
@@ -130,7 +102,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # claim-number-is-equal
+    #claim-number-is-equal
     expense_filter = ExpenseFilter(
         condition = 'claim_number',
         operator = 'in',
@@ -144,7 +116,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # claim-number-is-equal-one-claim_number-only
+    #claim-number-is-equal-one-claim_number-only
     expense_filter = ExpenseFilter(
         condition = 'claim_number',
         operator = 'in',
@@ -158,7 +130,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # report-name-is-equal
+    #report-name-is-equal
     expense_filter = ExpenseFilter(
         condition = 'report_title',
         operator = 'iexact',
@@ -172,7 +144,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # report-name-contains
+    #report-name-contains
     expense_filter = ExpenseFilter(
         condition = 'report_title',
         operator = 'icontains',
@@ -186,7 +158,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # spent-at-is-before
+    #spent-at-is-before
     expense_filter = ExpenseFilter(
         condition = 'spent_at',
         operator = 'lt',
@@ -200,7 +172,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # spent-at-is-on-or-before
+    #spent-at-is-on-or-before
     expense_filter = ExpenseFilter(
         condition = 'spent_at',
         operator = 'lte',
@@ -214,7 +186,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # category_in
+    #category_in
     expense_filter = ExpenseFilter(
         condition = 'category',
         operator = 'in',
@@ -228,7 +200,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # category_not_in
+    #category_not_in
     expense_filter = ExpenseFilter(
         condition = 'category',
         operator = 'not_in',
@@ -242,7 +214,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-number-is-equal
+    #custom-properties-number-is-equal
     expense_filter = ExpenseFilter(
         condition = 'Gon Number',
         operator = 'in',
@@ -257,7 +229,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-number-is-not-empty
+    #custom-properties-number-is-not-empty
     expense_filter = ExpenseFilter(
         condition = 'Gon Number',
         operator = 'isnull',
@@ -272,7 +244,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-number-is--empty
+    #custom-properties-number-is--empty
     expense_filter = ExpenseFilter(
         condition = 'Gon Number',
         operator = 'isnull',
@@ -288,7 +260,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-text-is-equal
+    #custom-properties-text-is-equal
     expense_filter = ExpenseFilter(
         condition = 'Killua Text',
         operator = 'in',
@@ -303,7 +275,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-text-is-not-empty
+    #custom-properties-text-is-not-empty
     expense_filter = ExpenseFilter(
         condition = 'Killua Text',
         operator = 'isnull',
@@ -318,7 +290,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-text-is--empty
+    #custom-properties-text-is--empty
     expense_filter = ExpenseFilter(
         condition = 'Killua Text',
         operator = 'isnull',
@@ -334,7 +306,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-select-is-equal
+    #custom-properties-select-is-equal
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
         operator = 'in',
@@ -349,7 +321,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-select-is-equal-one-value
+    #custom-properties-select-is-equal-one-value
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
         operator = 'in',
@@ -364,7 +336,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-select-is-not-empty
+    #custom-properties-select-is-not-empty
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
         operator = 'isnull',
@@ -379,7 +351,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-select-is--empty
+    #custom-properties-select-is--empty
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
         operator = 'isnull',
@@ -395,7 +367,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-checkbok--yes
+    #custom-properties-checkbok--yes
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
         operator = 'exact',
@@ -412,7 +384,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-number
+    #custom-properties-number
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
         operator = 'exact',
@@ -429,7 +401,7 @@ def test_construct_expense_filter():
 
     assert constructed_expense_filter == response
 
-    # custom-properties-selete
+    #custom-properties-selete
     expense_filter = ExpenseFilter(
         condition = 'Kratos',
         operator = 'not_in',
@@ -449,10 +421,7 @@ def test_construct_expense_filter():
 
 @pytest.mark.django_db()
 def test_multiple_construct_expense_filter():
-    """
-    Test multiple construct expense filter
-    """
-    # employee-email-is-equal and claim-number-is-equal
+    #employee-email-is-equal and claim-number-is-equal
     expense_filters = [
         ExpenseFilter(
             condition = 'employee_email',
@@ -460,12 +429,12 @@ def test_multiple_construct_expense_filter():
             values = ['killua.z@fyle.in', 'naruto.u@fyle.in'],
             rank = 1,
             join_by = 'AND'
-        ),
+        ), 
         ExpenseFilter(
-            condition = 'claim_number',
-            operator = 'in',
-            values = ['ajdnwjnadw', 'ajdnwjnlol'],
-            rank = 2,
+        condition = 'claim_number',
+        operator = 'in',
+        values = ['ajdnwjnadw', 'ajdnwjnlol'],
+        rank = 2,
         )
     ]
 
@@ -477,7 +446,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # employee-email-is-equal or claim-number-is-equal
+    #employee-email-is-equal or claim-number-is-equal
     expense_filters = [
         ExpenseFilter(
             condition = 'employee_email',
@@ -485,12 +454,12 @@ def test_multiple_construct_expense_filter():
             values = ['killua.z@fyle.in', 'naruto.u@fyle.in'],
             rank = 1,
             join_by = 'OR'
-        ),
+        ), 
         ExpenseFilter(
-            condition = 'claim_number',
-            operator = 'in',
-            values = ['ajdnwjnadw', 'ajdnwjnlol'],
-            rank = 2,
+        condition = 'claim_number',
+        operator = 'in',
+        values = ['ajdnwjnadw', 'ajdnwjnlol'],
+        rank = 2,
         )
     ]
 
@@ -502,7 +471,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # employee-email-is-equal or report-title-contains
+    #employee-email-is-equal or report-title-contains
     expense_filters = [
         ExpenseFilter(
             condition = 'employee_email',
@@ -510,7 +479,7 @@ def test_multiple_construct_expense_filter():
             values = ['killua.z@fyle.in', 'naruto.u@fyle.in'],
             rank = 1,
             join_by = 'OR'
-        ),
+        ), 
         ExpenseFilter(
             condition = 'report_title',
             operator = 'icontains',
@@ -527,7 +496,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # custom-properties-number-is-empty and spent-at-less-than
+    #custom-properties-number-is-empty and spent-at-less-than
     expense_filters = [
         ExpenseFilter(
             condition = 'Gon Number',
@@ -554,7 +523,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # custom-properties-number-is-empty and custom-properties-select-is-not-empty
+    #custom-properties-number-is-empty and custom-properties-select-is-not-empty
     expense_filters = [
         ExpenseFilter(
             condition = 'Gon Number',
@@ -582,7 +551,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # report-name-is-equal or custom-properties-number-is-equal
+    #report-name-is-equal or custom-properties-number-is-equal  
     expense_filters = [
         ExpenseFilter(
             condition = 'report_title',
@@ -608,7 +577,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # custom-properties-number-is-equal and custom-properties-text-is-equal
+    #custom-properties-number-is-equal and custom-properties-text-is-equal
     expense_filters = [
         ExpenseFilter(
             condition = 'Gon Number',
@@ -635,7 +604,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # custom-properties-select-is-equal and custom-properties-text-is--empty
+    #custom-properties-select-is-equal and custom-properties-text-is--empty
     expense_filters = [
         ExpenseFilter(
             condition = 'Kratos',
@@ -663,7 +632,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # custom-properties-select-is-equal
+    #custom-properties-select-is-equal
     expense_filters = [
         ExpenseFilter(
             condition = 'Kratos',
@@ -681,7 +650,7 @@ def test_multiple_construct_expense_filter():
     response = (Q(**filter_1))
 
     assert final_filter == response
-    # custom-properties-text-is-null
+    #custom-properties-text-is-null
     expense_filters = [
         ExpenseFilter(
             condition = 'Killua Text',
@@ -700,7 +669,7 @@ def test_multiple_construct_expense_filter():
 
     assert final_filter == response
 
-    # custom-properties-checkbok--no with rank 2
+    #custom-properties-checkbok--no with rank 2
     expense_filters = [
         ExpenseFilter(
             condition = 'Kratos',
@@ -731,9 +700,6 @@ def test_multiple_construct_expense_filter():
 
 
 def test_bulk_update_expenses(db):
-    """
-    Test bulk update expenses
-    """
     expenses = Expense.objects.filter(org_id='or79Cob97KSh')
     for expense in expenses:
         expense.accounting_export_summary = get_updated_accounting_export_summary(
@@ -758,11 +724,7 @@ def test_bulk_update_expenses(db):
         )
         assert expense.accounting_export_summary['id'] == expense.expense_id
 
-
 def test_handle_refresh_dimensions(db, mocker):
-    """
-    Test handle refresh dimensions
-    """
     mocker.patch(
         'apps.fyle.helpers.sync_dimensions',
         return_value=None
@@ -774,11 +736,7 @@ def test_handle_refresh_dimensions(db, mocker):
     workspace = Workspace.objects.get(id=1)
     assert workspace.source_synced_at != None
 
-
 def test_check_interval_and_sync_dimension(db, mocker):
-    """
-    Test check interval and sync dimension
-    """
     mocker.patch(
         'apps.fyle.helpers.sync_dimensions',
         return_value=None
@@ -792,9 +750,6 @@ def test_check_interval_and_sync_dimension(db, mocker):
 
 
 def test_get_fund_source(db):
-    """
-    Test get fund source
-    """
     workspace_id = 1
     Configuration.objects.filter(workspace_id=workspace_id).update(
         reimbursable_expenses_object='BILL',

@@ -1,46 +1,29 @@
 import re
 import json
 import logging
+from typing import List, Dict
 from datetime import datetime, timedelta
-
-import unidecode
-from django.db.models import Q
 from django.utils import timezone
+import unidecode
 from django.conf import settings
 
 from cryptography.fernet import Fernet
 
+from django.conf import settings
+from django.db.models import Q
+
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import (
-    MappingSetting,
-    ExpenseAttribute,
-    DestinationAttribute
-)
 
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    FyleCredential,
-    SageIntacctCredential
-)
+from apps.workspaces.models import SageIntacctCredential, FyleCredential, Workspace, Configuration
 
-from apps.sage_intacct.models import (
-    Bill,
-    CostType,
-    APPayment,
-    JournalEntry,
-    BillLineitem,
-    ExpenseReport,
-    APPaymentLineitem,
-    JournalEntryLineitem,
-    ExpenseReportLineitem,
-    ChargeCardTransaction,
-    SageIntacctReimbursement,
-    ChargeCardTransactionLineitem,
-    SageIntacctReimbursementLineitem
+from .models import (
+    ExpenseReport, ExpenseReportLineitem, Bill, BillLineitem, ChargeCardTransaction, 
+    ChargeCardTransactionLineitem, APPayment, APPaymentLineitem, JournalEntry, JournalEntryLineitem, SageIntacctReimbursement,
+    SageIntacctReimbursementLineitem, CostType, get_user_defined_dimension_object
 )
 
 logger = logging.getLogger(__name__)
@@ -72,6 +55,7 @@ class SageIntacctConnector:
     """
     Sage Intacct utility functions
     """
+
     def __init__(self, credentials_object: SageIntacctCredential, workspace_id: int):
         sender_id = settings.SI_SENDER_ID
         sender_password = settings.SI_SENDER_PASSWORD
@@ -93,12 +77,8 @@ class SageIntacctConnector:
 
         self.workspace_id = workspace_id
 
-    def get_tax_solution_id_or_none(self, lineitems: list[ExpenseReportLineitem | BillLineitem | JournalEntryLineitem | ChargeCardTransactionLineitem]) -> str:
-        """
-        Get Tax Solution Id or None
-        :param lineitems: List of lineitems
-        :return: Tax Solution Id or None
-        """
+    def get_tax_solution_id_or_none(self, lineitems):
+
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
 
         if general_mappings.location_entity_id:
@@ -115,29 +95,25 @@ class SageIntacctConnector:
 
             return tax_solution_id
 
-    def get_tax_exclusive_amount(self, amount: float | int, default_tax_code_id: str) -> tuple:
-        """
-        Get Tax Exclusive Amount
-        :param amount: Amount
-        :param default_tax_code_id: Default Tax Code Id
-        :return: Tax Exclusive Amount and Tax Amount
-        """
+    def get_tax_exclusive_amount(self, amount, default_tax_code_id):
+
         tax_attribute = DestinationAttribute.objects.filter(destination_id=default_tax_code_id, attribute_type='TAX_DETAIL',workspace_id=self.workspace_id).first()
         tax_exclusive_amount = amount
         tax_amount = None
         if tax_attribute:
             tax_rate = int(tax_attribute.detail['tax_rate'])
-            tax_exclusive_amount = round((amount - (amount / (tax_rate + 1))), 2)
+            tax_exclusive_amount = round((amount - (amount/(tax_rate + 1))), 2)
             tax_amount = round((amount - tax_exclusive_amount), 2)
 
         return tax_exclusive_amount, tax_amount
+    
 
-    def is_sync_allowed(self, attribute_type: str, attribute_count: int) -> bool:
+    def is_sync_allowed(self, attribute_type: str, attribute_count: int):
         """
         Checks if the sync is allowed
-        :param attribute_type: Attribute Type
-        :param attribute_count: Attribute Count
-        :return: True if sync is allowed else False
+
+        Returns:
+            bool: True
         """
         if attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
             workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
@@ -148,27 +124,17 @@ class SageIntacctConnector:
 
         return True
 
-    def get_latest_sync(self, workspace_id: int, attribute_type: str) -> str:
-        """
-        Get the latest sync date
-        :param workspace_id: Workspace Id
-        :param attribute_type: Attribute Type
-        :return: Latest Sync Date
-        """
+    def get_latest_sync(self, workspace_id, attribute_type):
+
         latest_sync = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type=attribute_type).order_by('-updated_at').first()
         if latest_sync:
             latest_synced_timestamp = latest_sync.updated_at - timedelta(days=1)
             return latest_synced_timestamp.strftime('%m/%d/%Y')
-
+        
         return None
 
-    def construct_get_all_generator_params(self, fields: list, latest_updated_at: str = None) -> dict:
-        """
-        Construct Get All Generator Params
-        :param fields: Fields
-        :param latest_updated_at: Latest Updated At
-        :return: Params
-        """
+
+    def construct_get_all_generator_params(self, fields, latest_updated_at):
         params = {'fields': fields}
 
         if latest_updated_at:
@@ -179,22 +145,23 @@ class SageIntacctConnector:
 
         return params
 
-    def sync_accounts(self) -> list:
+    def sync_accounts(self):
         """
         Get accounts
         """
-        attribute_count = self.connection.accounts.count()
 
+        attribute_count = self.connection.accounts.count()
         if not self.is_sync_allowed(attribute_type = 'accounts', attribute_count=attribute_count):
             logger.info('Skipping sync of accounts for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
-        is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+    
         account_generator = self.connection.accounts.get_all_generator(**params)
+        is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
 
         account_attributes = {
             'account': [],
@@ -227,7 +194,7 @@ class SageIntacctConnector:
                 )
         return []
 
-    def sync_departments(self) -> list:
+    def sync_departments(self):
         """
         Get departments
         """
@@ -235,12 +202,11 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'departments', attribute_count = attribute_count):
             logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         fields = ['TITLE', 'DEPARTMENTID']
-        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='DEPARTMENT')
-        is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
-
+        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='DEPARTMENT')
         department_generator = self.connection.departments.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
 
         department_attributes = []
 
@@ -266,7 +232,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_expense_types(self) -> list:
+    def sync_expense_types(self):
         """
         Get expense types
         """
@@ -274,30 +240,31 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'expense_types', attribute_count = attribute_count):
             logger.info('Skipping sync of expense_type for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
-        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
-        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
+        latest_updated_at= self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+
         expense_type_generator = self.connection.expense_types.get_all_generator(**params)
+        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
 
         expense_types_attributes = []
 
         for expense_types in expense_type_generator:
             for expense_type in expense_types:
-                expense_types_attributes.append({
-                    'attribute_type': 'EXPENSE_TYPE',
-                    'display_name': 'Expense Types',
-                    'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
-                    'destination_id': expense_type['ACCOUNTLABEL'],
-                    'active': expense_type['STATUS'] == 'active',
-                    'detail': {
-                        'gl_account_no': expense_type['GLACCOUNTNO'],
-                        'gl_account_title': expense_type['GLACCOUNTTITLE']
-                    },
-                    'code': expense_type['ACCOUNTLABEL']
-                })
+                    expense_types_attributes.append({
+                        'attribute_type': 'EXPENSE_TYPE',
+                        'display_name': 'Expense Types',
+                        'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
+                        'destination_id': expense_type['ACCOUNTLABEL'],
+                        'active': expense_type['STATUS'] == 'active',
+                        'detail': {
+                            'gl_account_no': expense_type['GLACCOUNTNO'],
+                            'gl_account_title': expense_type['GLACCOUNTTITLE']
+                        },
+                        'code': expense_type['ACCOUNTLABEL']
+                    })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
             expense_types_attributes,
@@ -309,7 +276,7 @@ class SageIntacctConnector:
         )
         return []
 
-    def sync_charge_card_accounts(self) -> list:
+    def sync_charge_card_accounts(self):
         """
         Get charge card accounts
         """
@@ -331,7 +298,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_payment_accounts(self) -> list:
+    def sync_payment_accounts(self):
         """
         Get Payment accounts
         """
@@ -356,7 +323,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_cost_types(self) -> list:
+    def sync_cost_types(self):
         """
         Sync of Sage Intacct Cost Types
         """
@@ -364,7 +331,7 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'cost_types', attribute_count = attribute_count):
             logger.info('Skipping sync of cost_types for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         args = {
             'field': 'STATUS',
             'value': 'active'
@@ -385,22 +352,22 @@ class SageIntacctConnector:
         dependent_field_setting.last_synced_at = datetime.now()
         dependent_field_setting.save()
 
-    def sync_projects(self) -> list:
+
+    def sync_projects(self):
         """
         Get projects
         """
+
         attribute_count = self.connection.projects.count()
         if not self.is_sync_allowed(attribute_type = 'projects', attribute_count = attribute_count):
             logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
-
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-        is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
-
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         project_generator = self.connection.projects.get_all_generator(**params)
+        is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
 
         project_attributes = []
 
@@ -420,7 +387,7 @@ class SageIntacctConnector:
                     'detail': detail,
                     'code': project['PROJECTID']
                 })
-
+        
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 project_attributes,
                 'PROJECT',
@@ -432,7 +399,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_items(self) -> list:
+    def sync_items(self):
         """
         Get items
         """
@@ -440,9 +407,8 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'items', attribute_count = attribute_count):
             logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         fields = ['NAME', 'ITEMID', 'ITEMTYPE']
-
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
         item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
 
@@ -465,10 +431,11 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_locations(self) -> list:
+    def sync_locations(self):
         """
         Get locations
         """
+
         attribute_count = self.connection.locations.count()
         if not self.is_sync_allowed(attribute_type = 'locations', attribute_count = attribute_count):
             logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
@@ -494,11 +461,7 @@ class SageIntacctConnector:
 
         return []
 
-    def __get_entity_slide_preference(self) -> bool:
-        """
-        Get Entity Slide Preference
-        :return: True if Entity Slide is disabled else False
-        """
+    def __get_entity_slide_preference(self):
         entity_slide_disabled = False
 
         # Check if entity slide is disabled or enabled
@@ -519,7 +482,8 @@ class SageIntacctConnector:
 
         return entity_slide_disabled
 
-    def sync_location_entities(self) -> list:
+
+    def sync_location_entities(self):
         """
         Get location entities
         """
@@ -548,7 +512,8 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_expense_payment_types(self) -> list:
+
+    def sync_expense_payment_types(self):
         """
         Get Expense Payment Types
         """
@@ -576,7 +541,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_employees(self) -> list:
+    def sync_employees(self):
         """
         Get employees
         """
@@ -609,10 +574,11 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_allocations(self) -> list:
+    def sync_allocations(self):
         """
         Sync allocation entries from intacct
         """
+
         allocation_attributes = []
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
         params = {}
@@ -635,16 +601,18 @@ class SageIntacctConnector:
                         for field_name in allocation_entry.keys():
                             if allocation_entry[field_name] is not None and field_name not in detail:
                                 detail[field_name] = True
-
+                    
+                    
                     detail.pop('ALLOCATIONID')
                     detail.pop('ALLOCATIONKEY')
 
-                    allocation_attributes.append({
+                    allocation_attributes.append(
+                    {
                         'attribute_type': 'ALLOCATION',
                         'display_name': 'allocation',
                         'value': value,
                         'destination_id': destination_id,
-                        'active': status == 'active',
+                        'active': status=='active',
                         'detail': detail
                     })
 
@@ -652,10 +620,12 @@ class SageIntacctConnector:
                 allocation_attributes, 'ALLOCATION', self.workspace_id, update=True
             )
 
-    def sync_user_defined_dimensions(self) -> list:
+
+    def sync_user_defined_dimensions(self):
         """
         Get User Defined Dimensions
         """
+
         dimensions = self.connection.dimensions.get_all()
 
         for dimension in dimensions:
@@ -679,7 +649,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_classes(self) -> list:
+    def sync_classes(self):
         """
         Get classes
         """
@@ -687,7 +657,7 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'classes', attribute_count = attribute_count):
             logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
         class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at if latest_updated_at else None)
         class_attributes = []
@@ -707,7 +677,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_customers(self) -> list:
+    def sync_customers(self):
         """
         Get Customers
         """
@@ -715,7 +685,7 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'customers', attribute_count = attribute_count):
             logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
         customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at if latest_updated_at else None)
 
@@ -736,7 +706,7 @@ class SageIntacctConnector:
 
         return []
 
-    def sync_tax_details(self) -> list:
+    def sync_tax_details(self):
         """
         Get and Sync Tax Details
         """
@@ -744,7 +714,7 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'tax_details', attribute_count = attribute_count):
             logger.info('Skipping sync of tax_details for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-
+        
         attributes = []
         fields = ['DETAILID', 'VALUE', 'TAXSOLUTIONID', 'TAXTYPE']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='TAX_DETAIL')
@@ -765,23 +735,11 @@ class SageIntacctConnector:
                     })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            attributes,
-            'TAX_DETAIL',
-            self.workspace_id,
-            True
-        )
+                attributes, 'TAX_DETAIL', self.workspace_id, True)
 
         return []
 
-    def create_destination_attribute(self, attribute: str, name: str, destination_id: str, email: str = None) -> DestinationAttribute:
-        """
-        Create Destination Attribute
-        :param attribute: Attribute
-        :param name: Name
-        :param destination_id: Destination Id
-        :param email: Email
-        :return: Destination Attribute
-        """
+    def create_destination_attribute(self, attribute: str, name: str, destination_id: str, email: str = None):
         created_attribute = DestinationAttribute.create_or_update_destination_attribute({
             'attribute_type': attribute.upper(),
             'display_name': attribute,
@@ -795,7 +753,7 @@ class SageIntacctConnector:
 
         return created_attribute
 
-    def get_or_create_employee(self, source_employee: ExpenseAttribute) -> DestinationAttribute:
+    def get_or_create_employee(self, source_employee: ExpenseAttribute):
         """
         Call Sage Intacct api to get or create employee
         :param source_employee: employee attribute to be created
@@ -819,7 +777,7 @@ class SageIntacctConnector:
                 'employee', employee['CONTACT_NAME'], employee['EMPLOYEEID'], source_employee.value
             )
 
-    def get_or_create_vendor(self, vendor_name: str, email: str = None, create: bool = False) -> DestinationAttribute:
+    def get_or_create_vendor(self, vendor_name: str, email: str = None, create: bool = False):
         """
         Call Sage Intacct api to get or create vendor
         :param vendor_name: Name of the vendor
@@ -856,13 +814,9 @@ class SageIntacctConnector:
                 return
         else:
             return self.create_destination_attribute(
-                'vendor',
-                vendor['NAME'],
-                vendor['VENDORID'],
-                vendor['DISPLAYCONTACT.EMAIL1']
-            )
+                'vendor', vendor['NAME'], vendor['VENDORID'], vendor['DISPLAYCONTACT.EMAIL1'])
 
-    def get_expense_link(self, lineitem: ChargeCardTransactionLineitem | ExpenseReportLineitem | JournalEntryLineitem | BillLineitem) -> str:
+    def get_expense_link(self, lineitem) -> str:
         """
         Create Link For Fyle Expenses
         :param expense: Expense Lineitem
@@ -884,7 +838,7 @@ class SageIntacctConnector:
 
         return expense_link
 
-    def post_employees(self, employee: ExpenseAttribute) -> dict:
+    def post_employees(self, employee: ExpenseAttribute):
         """
         Create a Vendor on Sage Intacct
         :param employee: employee attribute to be created
@@ -940,7 +894,8 @@ class SageIntacctConnector:
 
         return created_employee
 
-    def sync_vendors(self) -> list:
+
+    def sync_vendors(self):
         """
         Get vendors
         """
@@ -971,12 +926,13 @@ class SageIntacctConnector:
 
         return []
 
-    def post_vendor(self, vendor_id: str, vendor_name: str, email: str = None) -> dict:
+    def post_vendor(self, vendor_id: str, vendor_name: str, email: str = None):
         """
         Create a Vendor on Sage Intacct
         :param vendor: vendor attribute to be created
         :return Vendor Destination Attribute
         """
+
         sage_intacct_display_name = vendor_name
 
         name = vendor_name.split(' ')
@@ -997,11 +953,8 @@ class SageIntacctConnector:
 
         return created_vendor
 
-    def __construct_expense_report(
-        self,
-        expense_report: ExpenseReport,
-        expense_report_lineitems: list[ExpenseReportLineitem]
-    ) -> dict:
+    def __construct_expense_report(self, expense_report: ExpenseReport,
+                                   expense_report_lineitems: List[ExpenseReportLineitem]) -> Dict:
         """
         Create a expense report
         :param expense_report: ExpenseReport object extracted from database
@@ -1033,10 +986,12 @@ class SageIntacctConnector:
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
                 'customfields': {
-                    'customfield': [{
+                   'customfield': [
+                    {
                         'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
-                    }]
+                    },
+                   ]
                 },
                 'projectid': lineitem.project_id,
                 'taskid': lineitem.task_id,
@@ -1090,7 +1045,7 @@ class SageIntacctConnector:
         logger.info("| Payload for the expense report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, EXPENSE_REPORT_PAYLOAD = {}}}".format(self.workspace_id, expense_report.expense_group.id, expense_report_payload))
         return expense_report_payload
 
-    def __construct_bill(self, bill: Bill, bill_lineitems: list[BillLineitem]) -> dict:
+    def __construct_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]) -> Dict:
         """
         Create a bill
         :param bill: Bill object extracted from database
@@ -1126,10 +1081,12 @@ class SageIntacctConnector:
                     }
                 },
                 'customfields': {
-                    'customfield': [{
+                   'customfield': [
+                    {
                         'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
-                    }]
+                    },
+                   ]
                 }
             }
 
@@ -1170,17 +1127,16 @@ class SageIntacctConnector:
         logger.info("| Payload for the bill creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, BILL_PAYLOAD = {}}}".format(self.workspace_id, bill.expense_group.id, bill_payload))
         return bill_payload
 
-    def __construct_charge_card_transaction(
-        self,
-        charge_card_transaction: ChargeCardTransaction,
-        charge_card_transaction_lineitems: list[ChargeCardTransactionLineitem]
-    ) -> dict:
+    def __construct_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
+                                            charge_card_transaction_lineitems: List[
+                                                ChargeCardTransactionLineitem]) -> Dict:
         """
         Create a charge card transaction
         :param charge_card_transaction: ChargeCardTransaction object extracted from database
         :param charge_card_transaction_lineitems: ChargeCardTransactionLineitem objects extracted from database
         :return: constructed charge_card_transaction
         """
+
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
 
@@ -1203,10 +1159,12 @@ class SageIntacctConnector:
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
                 'customfields': {
-                    'customfield': [{
+                   'customfield': [
+                    {
                         'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
-                    }]
+                    },
+                   ]
                 },
                 'totaltrxamount': lineitem.amount,
                 'taxentries': {
@@ -1249,7 +1207,7 @@ class SageIntacctConnector:
         logger.info("| Payload for the charge card transaction creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, CHARGE_CARD_TRANSACTION_PAYLOAD = {}}}".format(self.workspace_id, charge_card_transaction.expense_group.id, charge_card_transaction_payload))
         return charge_card_transaction_payload
 
-    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], recordno: str = None) -> dict:
+    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], recordno : str  = None) -> Dict:
         """
         Create a journal_entry
         :param journal_entry: JournalEntry object extracted from database
@@ -1262,18 +1220,20 @@ class SageIntacctConnector:
         journal_entry_payload = []
 
         for lineitem in journal_entry_lineitems:
+
             dimensions_values = {
-                'project_id': lineitem.project_id,
-                'location_id': lineitem.location_id,
-                'department_id': lineitem.department_id,
-                'class_id': lineitem.class_id,
-                'customer_id': lineitem.customer_id,
-                'item_id': lineitem.item_id,
-                'task_id': lineitem.task_id,
-                'cost_type_id': lineitem.cost_type_id
-            }
+                    'project_id': lineitem.project_id,
+                    'location_id': lineitem.location_id,
+                    'department_id': lineitem.department_id,
+                    'class_id': lineitem.class_id,
+                    'customer_id': lineitem.customer_id,
+                    'item_id': lineitem.item_id,
+                    'task_id': lineitem.task_id,
+                    'cost_type_id': lineitem.cost_type_id
+                }
 
             if lineitem.allocation_id:
+
                 allocation_mapping = {
                     'LOCATIONID': 'location_id',
                     'DEPARTMENTID': 'department_id',
@@ -1293,9 +1253,9 @@ class SageIntacctConnector:
 
                 allocation_dimensions = set(allocation_detail.keys())
                 lineitem.user_defined_dimensions = [user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
-
+                
             expense_link = self.get_expense_link(lineitem)
-            credit_line = {
+            credit_line = { 
                 'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
                 'currency': journal_entry.currency,
                 'amount': lineitem.amount,
@@ -1314,10 +1274,12 @@ class SageIntacctConnector:
                 'billable': lineitem.billable if configuration.is_journal_credit_billable else None,
                 'allocation':lineitem.allocation_id,
                 'customfields': {
-                    'customfield': [{
+                   'customfield': [
+                    {
                         'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
-                    }]
+                    },
+                   ]
                 }
             }
             tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
@@ -1347,10 +1309,12 @@ class SageIntacctConnector:
                     }
                 },
                 'customfields': {
-                    'customfield': [{
+                   'customfield': [
+                    {
                         'customfieldname': 'FYLE_EXPENSE_URL',
                         'customfieldvalue': expense_link
-                    }]
+                    },
+                   ]
                 }
             }
 
@@ -1373,7 +1337,8 @@ class SageIntacctConnector:
 
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
-
+        
+        
         journal_entry_payload = {
             'recordno': recordno if recordno else None,
             'journal': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
@@ -1396,12 +1361,9 @@ class SageIntacctConnector:
         logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(self.workspace_id, journal_entry.expense_group.id, journal_entry_payload))
         return journal_entry_payload
 
-    def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: list[ExpenseReportLineitem]) -> dict:
+    def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: List[ExpenseReportLineitem]):
         """
         Post expense report to Sage Intacct
-        :param expense_report: ExpenseReport object extracted from database
-        :param expense_report_lineitems: ExpenseReportLineitem objects extracted from database
-        :return: created expense report
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
@@ -1431,12 +1393,9 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def post_bill(self, bill: Bill, bill_lineitems: list[BillLineitem]) -> dict:
+    def post_bill(self, bill: Bill, bill_lineitems: List[BillLineitem]):
         """
         Post expense report to Sage Intacct
-        :param bill: Bill object
-        :param bill_lineitems: BillLineitem objects
-        :return: created bill
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
@@ -1463,12 +1422,9 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem]) -> dict:
+    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem]):
         """
         Post journal_entry  to Sage Intacct
-        :param journal_entry: JournalEntry object
-        :param journal_entry_lineitems: JournalEntryLineitem objects
-        :return: created journal_entry
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
@@ -1495,54 +1451,38 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def get_bill(self, bill_id: str, fields: list = None) -> dict:
+    def get_bill(self, bill_id: str, fields: list = None):
         """
         GET bill from SAGE Intacct
-        :param bill_id: Bill Id
-        :param fields: Fields to be fetched
-        :return: Bill
         """
         bill = self.connection.bills.get(field='RECORDNO', value=bill_id, fields=fields)
         return bill
 
-    def get_expense_report(self, expense_report_id: str, fields: list = None) -> dict:
+    def get_expense_report(self, expense_report_id: str, fields: list = None):
         """
         GET expense reports from SAGE
-        :param expense_report_id: Expense Report Id
-        :param fields: Fields to be fetched
-        :return: Expense Report
         """
         expense_report = self.connection.expense_reports.get(field='RECORDNO', value=expense_report_id, fields=fields)
         return expense_report
 
-    def get_journal_entry(self, journal_entry_id: str, fields: list = None) -> dict:
+    def get_journal_entry(self, journal_entry_id: str, fields: list = None):
         """
         GET journal_entry from SAGE Intacct
-        :param journal_entry_id: Journal Entry Id
-        :param fields: Fields to be fetched
-        :return: Journal Entry
         """
         journal_entry = self.connection.journal_entries.get(field='RECORDNO', value=journal_entry_id, fields=fields)
-        return journal_entry
+        return journal_entry    
 
-    def post_charge_card_transaction(
-        self,
-        charge_card_transaction: ChargeCardTransaction,
-        charge_card_transaction_lineitems: list[ChargeCardTransactionLineitem]
-    ) -> dict:
+    def post_charge_card_transaction(self, charge_card_transaction: ChargeCardTransaction, \
+                                     charge_card_transaction_lineitems: List[ChargeCardTransactionLineitem]):
         """
         Post charge card transaction to Sage Intacct
-        :param charge_card_transaction: ChargeCardTransaction object
-        :param charge_card_transaction_lineitems: ChargeCardTransactionLineitem objects
-        :return: created charge card transaction
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
         try:
-            created_charge_card_transaction_payload = self.__construct_charge_card_transaction(
-                charge_card_transaction,
-                charge_card_transaction_lineitems
-            )
-            created_charge_card_transaction = self.connection.charge_card_transactions.post(created_charge_card_transaction_payload)
+            created_charge_card_transaction_payload = self.__construct_charge_card_transaction \
+                (charge_card_transaction, charge_card_transaction_lineitems)
+            created_charge_card_transaction = self.connection.charge_card_transactions.post \
+                (created_charge_card_transaction_payload)
             return created_charge_card_transaction
 
         except WrongParamsError as exception:
@@ -1572,18 +1512,15 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None) -> dict:
+    def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None):
         """
         GET charge card transaction from SAGE Intacct
-        :param charge_card_transaction_id: Charge Card Transaction Id
-        :param fields: Fields to be fetched
-        :return: Charge Card Transaction
         """
         charge_card_transaction = self.connection.charge_card_transactions.get(
             field='RECORDNO', value=charge_card_transaction_id, fields=fields)
         return charge_card_transaction
 
-    def update_expense_report(self, object_key: str, supdocid: str) -> dict:
+    def update_expense_report(self, object_key, supdocid: str):
         """
         Map posted attachment with Sage Intacct Object
         :param object_key: expense report key
@@ -1592,7 +1529,7 @@ class SageIntacctConnector:
         """
         return self.connection.expense_reports.update_attachment(key=object_key, supdocid=supdocid)
 
-    def update_bill(self, object_key: str, supdocid: str) -> dict:
+    def update_bill(self, object_key, supdocid: str):
         """
         Map posted attachment with Sage Intacct Object
         :param object_key: expense report key
@@ -1601,7 +1538,7 @@ class SageIntacctConnector:
         """
         return self.connection.bills.update_attachment(recordno=object_key, supdocid=supdocid)
 
-    def update_charge_card_transaction(self, object_key: str, supdocid: str) -> dict:
+    def update_charge_card_transaction(self, object_key, supdocid: str):
         """
         Map posted attachment with Sage Intacct Object
         :param object_key: charge card transaction key
@@ -1610,7 +1547,7 @@ class SageIntacctConnector:
         """
         return self.connection.charge_card_transactions.update_attachment(key=object_key, supdocid=supdocid)
 
-    def update_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], supdocid: str, recordno: str) -> dict:
+    def update_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: List[JournalEntryLineitem], supdocid: str, recordno : str):
         """
         Map posted attachment with Sage Intacct Object
         :param supdocid: attachments id
@@ -1620,13 +1557,14 @@ class SageIntacctConnector:
         journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems, supdocid, recordno)
         return self.connection.journal_entries.update(journal_entry_payload)
 
-    def post_attachments(self, attachments: list[dict], supdoc_id: str) -> str | bool:
+    def post_attachments(self, attachments: List[Dict], supdoc_id: str):
         """
         Post attachments to Sage Intacct
         :param attachments: attachment[dict()]
         :param supdoc_id: supdoc id
         :return: supdocid in sage intacct
         """
+
         if attachments:
             attachment_number = 1
             attachments_list = []
@@ -1670,13 +1608,14 @@ class SageIntacctConnector:
             return False
 
     @staticmethod
-    def __construct_ap_payment(ap_payment: APPayment, ap_payment_lineitems: list[APPaymentLineitem]) -> dict:
+    def __construct_ap_payment(ap_payment: APPayment, ap_payment_lineitems: List[APPaymentLineitem]) -> Dict:
         """
         Create an AP Payment
         :param ap_payment: APPayment object extracted from database
         :param ap_payment_lineitems: APPaymentLineItem objects extracted from database
         :return: constructed AP Payment
         """
+
         ap_payment_lineitems_payload = []
 
         for lineitem in ap_payment_lineitems:
@@ -1705,28 +1644,24 @@ class SageIntacctConnector:
         logger.info("| Payload for the AP Payment creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, AP_PAYMENT_PAYLOAD = {}}}".format(ap_payment.expense_group.workspace.id, ap_payment.expense_group.id, ap_payment_payload))
         return ap_payment_payload
 
-    def post_ap_payment(self, ap_payment: APPayment, ap_payment_lineitems: list[APPaymentLineitem]) -> dict:
+    def post_ap_payment(self, ap_payment: APPayment, ap_payment_lineitems: List[APPaymentLineitem]):
         """
         Post AP Payment to Sage Intacct
-        :param ap_payment: APPayment object
-        :param ap_payment_lineitems: APPaymentLineItem objects
-        :return: created AP Payment
         """
         ap_payment_payload = self.__construct_ap_payment(ap_payment, ap_payment_lineitems)
         created_ap_payment = self.connection.ap_payments.post(ap_payment_payload)
         return created_ap_payment
 
     @staticmethod
-    def __construct_sage_intacct_reimbursement(
-        reimbursement: SageIntacctReimbursement,
-        reimbursement_lineitems: list[SageIntacctReimbursementLineitem]
-    ) -> dict:
+    def __construct_sage_intacct_reimbursement(reimbursement: SageIntacctReimbursement,
+                                               reimbursement_lineitems: List[SageIntacctReimbursementLineitem]) -> Dict:
         """
         Create a Reimbursement
         :param reimbursement: Reimbursement object extracted from database
         :param reimbursement_lineitems: ReimbursementLineItem objects extracted from database
         :return: constructed Reimbursement
         """
+
         reimbursement_lineitems_payload = []
 
         for lineitem in reimbursement_lineitems:
@@ -1756,16 +1691,10 @@ class SageIntacctConnector:
         logger.info("| Payload for the reimbursement creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, REIMBURSEMENT_PAYLOAD = {}}}".format(reimbursement.expense_group.workspace.id, reimbursement.expense_group.id, reimbursement_payload))
         return reimbursement_payload
 
-    def post_sage_intacct_reimbursement(
-        self,
-        reimbursement: SageIntacctReimbursement,
-        reimbursement_lineitems: list[SageIntacctReimbursementLineitem]
-    ) -> dict:
+    def post_sage_intacct_reimbursement(self, reimbursement: SageIntacctReimbursement,
+                                        reimbursement_lineitems: List[SageIntacctReimbursementLineitem]):
         """
         Post Reimbursement to Sage Intacct
-        :param reimbursement: SageIntacctReimbursement object
-        :param reimbursement_lineitems: SageIntacctReimbursementLineItem objects
-        :return: created Reimbursement
         """
         reimbursement_payload = self.__construct_sage_intacct_reimbursement(reimbursement, reimbursement_lineitems)
         created_reimbursement = self.connection.reimbursements.post(reimbursement_payload)
@@ -1788,7 +1717,7 @@ class SageIntacctConnector:
 
         return None
 
-    def get_disable_attribute_callback_func(self, destination_field: str) -> callable:
+    def get_disable_attribute_callback_func(self, destination_field: str):
         """
         Get the callback function to disable the attribute
         :param destination_field: Destination Field
@@ -1802,7 +1731,7 @@ class SageIntacctConnector:
             return ATTRIBUTE_DISABLE_CALLBACK_PATH[mapping_settings.source_field]
         return None
 
-    def is_import_enabled(self, attribute_type: str, workspace_id: int) -> bool:
+    def is_import_enabled(self, attribute_type: str, workspace_id: int):
         """
         Check if the import is enabled for the attribute type
         :param attribute_type: Attribute Type
@@ -1823,21 +1752,26 @@ class SageIntacctConnector:
 
         return is_enabled
 
-    def get_exported_entry(self, resource_type: str, export_id: str) -> dict:
+    def get_exported_entry(self, resource_type: str, export_id: str):
         """
         Retrieve a specific resource by internal ID.
-        :param resource_type: The type of resource to fetch.
-        :param export_id: The internal ID of the resource to fetch.
-        :return: Parsed JSON representation of the resource data.
+
+        Args:
+            resource_type (str): The type of resource to fetch.
+            export_id (str): The internal ID of the resource.
         """
         response = getattr(self, 'get_{}'.format(resource_type))(export_id)
         return json.loads(json.dumps(response, default=str))
 
-    def get_accounting_fields(self, resource_type: str) -> dict:
+    def get_accounting_fields(self, resource_type: str):
         """
         Retrieve accounting fields for a specific resource type and internal ID.
-        :param resource_type: The type of resource to fetch accounting fields for.
-        :return: Parsed JSON representation of the accounting fields.
+
+        Args:
+            resource_type (str): The type of resource to fetch.
+
+        Returns:
+            list or dict: Parsed JSON representation of the resource data.
         """
         module = getattr(self.connection, resource_type)
         method = 'get_all' if resource_type == 'dimensions' else 'get_all_generator'

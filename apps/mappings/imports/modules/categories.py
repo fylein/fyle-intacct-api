@@ -1,14 +1,13 @@
 import logging
 from datetime import datetime
-
-from fyle_integrations_platform_connector import PlatformConnector
+from typing import List, Dict
+from apps.mappings.imports.modules.base import Base
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     CategoryMapping,
     ExpenseAttribute
 )
-
-from apps.mappings.imports.modules.base import Base
+from fyle_integrations_platform_connector import PlatformConnector
 from apps.workspaces.models import Configuration, FyleCredential
 from apps.mappings.helpers import prepend_code_to_name
 
@@ -30,7 +29,7 @@ class Category(Base):
             prepend_code_to_name=prepend_code_to_name
         )
 
-    def trigger_import(self) -> None:
+    def trigger_import(self):
         """
         Trigger import for Category module
         """
@@ -38,10 +37,10 @@ class Category(Base):
 
     def construct_fyle_payload(
         self,
-        paginated_destination_attributes: list[DestinationAttribute],
+        paginated_destination_attributes: List[DestinationAttribute],
         existing_fyle_attributes_map: object,
         is_auto_sync_status_allowed: bool
-    ) -> list:
+    ):
         """
         Construct Fyle payload for Category module
         :param paginated_destination_attributes: List of paginated destination attributes
@@ -68,7 +67,8 @@ class Category(Base):
 
         return payload
 
-    def create_mappings(self) -> None:
+    # create_mappings method is overridden 
+    def create_mappings(self):
         """
         Create mappings for Category module
         """
@@ -78,7 +78,7 @@ class Category(Base):
         }
 
         # get all the destination attributes that have category mappings as null
-        destination_attributes: list[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)
+        destination_attributes: List[DestinationAttribute] = DestinationAttribute.objects.filter(**filters)
 
         destination_attributes_without_duplicates = []
         destination_attributes_without_duplicates = self.remove_duplicate_attributes(destination_attributes)
@@ -90,13 +90,7 @@ class Category(Base):
         )
 
 
-def disable_categories(
-    workspace_id: int,
-    categories_to_disable: dict,
-    is_import_to_fyle_enabled: bool = False,
-    *args,
-    **kwargs
-) -> list:
+def disable_categories(workspace_id: int, categories_to_disable: Dict, is_import_to_fyle_enabled: bool = False, *args, **kwargs):
     """
     categories_to_disable object format:
     {

@@ -1,13 +1,9 @@
+"""
+Workspace Serializers
+"""
 from rest_framework import serializers
 
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    FyleCredential,
-    LastExportDetail,
-    WorkspaceSchedule,
-    SageIntacctCredential
-)
+from .models import Workspace, Configuration, FyleCredential, SageIntacctCredential, WorkspaceSchedule, LastExportDetail
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):
@@ -25,7 +21,7 @@ class ConfigurationSerializer(serializers.ModelSerializer):
     """
     workspace = serializers.CharField()
 
-    def create(self, validated_data: dict) -> Configuration:
+    def create(self, validated_data):
         """
         Create Workspace General Settings
         :param validated_data: Validated data
@@ -40,7 +36,7 @@ class ConfigurationSerializer(serializers.ModelSerializer):
 
         return configuration
 
-    def validate(self, data: dict) -> dict:
+    def validate(self, data):
         """
         Validate auto create destination entity
         :param data: Non-validated data

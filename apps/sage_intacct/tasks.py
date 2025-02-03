@@ -1,77 +1,61 @@
 import logging
 import traceback
+from typing import List
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
-from django.db.models import Q
-from django.conf import settings
 from django.utils import timezone
+
 from django.db import transaction
+from django.db.models import Q, F
+from django.conf import settings
+
+from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
 from fyle_integrations_platform_connector import PlatformConnector
-from sageintacctsdk.exceptions import (
-    NoPrivilegeError,
-    WrongParamsError,
-    InvalidTokenError
-)
 from fyle_accounting_mappings.models import (
-    Mapping,
-    EmployeeMapping,
-    CategoryMapping,
-    ExpenseAttribute,
-    DestinationAttribute,
-)
+        Mapping, 
+        ExpenseAttribute, 
+        DestinationAttribute,
+        CategoryMapping, 
+        EmployeeMapping
+    )
 
-from apps.tasks.models import TaskLog, Error
-from apps.mappings.models import GeneralMapping
-from apps.fyle.models import ExpenseGroup, Expense
 from fyle_intacct_api.exceptions import BulkError
 from fyle_intacct_api.logging_middleware import get_logger
-from apps.sage_intacct.utils import SageIntacctConnector
+from apps.fyle.models import ExpenseGroup, Expense
+from apps.tasks.models import TaskLog, Error
+from apps.mappings.models import GeneralMapping
+from apps.fyle.actions import update_expenses_in_progress, update_failed_expenses, update_complete_expenses
 from apps.fyle.tasks import post_accounting_export_summary
-from apps.fyle.actions import (
-    update_expenses_in_progress,
-    update_failed_expenses,
-    update_complete_expenses
-)
 from apps.workspaces.models import (
-    SageIntacctCredential,
-    FyleCredential,
-    Configuration,
-    LastExportDetail,
-    Workspace
-)
+        SageIntacctCredential,
+        FyleCredential,
+        Configuration,
+        LastExportDetail,
+        Workspace
+    )
 from apps.sage_intacct.models import (
-    ExpenseReport,
-    ExpenseReportLineitem,
-    Bill,
-    BillLineitem,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem,
-    APPayment,
-    APPaymentLineitem,
-    JournalEntry,
-    JournalEntryLineitem,
-    SageIntacctReimbursement,
-    SageIntacctReimbursementLineitem
-)
-from apps.sage_intacct.errors.helpers import (
-    error_matcher,
-    remove_support_id,
-    get_entity_values,
-    replace_destination_id_with_values
-)
+        ExpenseReport,
+        ExpenseReportLineitem,
+        Bill,
+        BillLineitem,
+        ChargeCardTransaction,
+        ChargeCardTransactionLineitem,
+        APPayment,
+        APPaymentLineitem,
+        JournalEntry,
+        JournalEntryLineitem,
+        SageIntacctReimbursement,
+        SageIntacctReimbursementLineitem
+    )
+from .utils import SageIntacctConnector
+from .errors.helpers import error_matcher, get_entity_values, replace_destination_id_with_values, remove_support_id
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def update_last_export_details(workspace_id: int) -> LastExportDetail:
-    """
-    Update last export details
-    :param workspace_id: Workspace Id
-    :return: Last Export Detail
-    """
+def update_last_export_details(workspace_id):
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
 
     failed_exports = TaskLog.objects.filter(
@@ -93,7 +77,7 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     return last_export_detail
 
 
-def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_group: ExpenseGroup) -> str:
+def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_group: ExpenseGroup):
     """
     Get attachments from fyle
     :param sage_intacct_connection: Sage Intacct Connection
@@ -126,19 +110,8 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_grou
         )
 
 
-def create_or_update_employee_mapping(
-    expense_group: ExpenseGroup,
-    sage_intacct_connection: SageIntacctConnector,
-    auto_map_employees_preference: str,
-    employee_field_mapping: str
-) -> None:
-    """
-    Create or update employee mapping
-    :param expense_group: Expense Group
-    :param sage_intacct_connection: Sage Intacct Connection
-    :param auto_map_employees_preference: Auto map employees preference
-    :param employee_field_mapping: Employee field mapping
-    """
+def create_or_update_employee_mapping(expense_group: ExpenseGroup, sage_intacct_connection: SageIntacctConnector,
+                                      auto_map_employees_preference: str, employee_field_mapping: str):
     try:
         mapping = EmployeeMapping.objects.get(
             source_employee__value=expense_group.description.get('employee_email'),
@@ -171,9 +144,9 @@ def create_or_update_employee_mapping(
                 }
 
             entity = DestinationAttribute.objects.filter(
-                workspace_id=expense_group.workspace_id,
-                **filters
-            ).first()
+                     workspace_id=expense_group.workspace_id,
+                     **filters
+                ).first()
 
             existing_employee_mapping = EmployeeMapping.objects.filter(
                 source_employee=source_employee
@@ -254,12 +227,12 @@ def create_or_update_employee_mapping(
                     )
 
 
-def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configuration, merchant: str = None, sage_intacct_connection: SageIntacctConnector = None) -> DestinationAttribute:
+def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configuration, merchant: str = None, sage_intacct_connection: SageIntacctConnector = None):
     """
     Get or create default vendor
     :param merchant: Fyle Expense Merchant
     :param workspace_id: Workspace Id
-    :return: Destination Attribute for Vendor
+    :return:
     """
     if not sage_intacct_connection:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -290,7 +263,7 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
     return vendor
 
 
-def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup) -> None:
+def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup):
     """
     Resolve errors for exported expense group
     :param expense_group: Expense group
@@ -298,15 +271,7 @@ def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup) -> No
     Error.objects.filter(workspace_id=expense_group.workspace_id, expense_group=expense_group, is_resolved=False).update(is_resolved=True)
 
 
-def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str) -> None:
-    """
-    Handle Sage Intacct errors
-    :param exception: Exception
-    :param expense_group: Expense Group
-    :param task_log: Task Log
-    :param export_type: Export Type
-    :return: None
-    """
+def handle_sage_intacct_errors(exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str):
     logger.info(exception.__dict__)
 
     errors = []
@@ -344,6 +309,7 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
                     if ('correction' in error and error['correction']) else 'Not available'
             })
 
+
     if errors:
         error_title = errors[0]['correction'] if (errors[0]['correction'] and errors[0]['correction'] != 'not available') else errors[0]['short_description']
         error_msg = errors[0]['long_description']
@@ -360,19 +326,20 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
             article_link = error_dict['article_link']
             attribute_type = error_dict['attribute_type']
 
+
     error, created = Error.objects.update_or_create(
-        workspace_id=expense_group.workspace_id,
-        expense_group=expense_group,
-        defaults={
-            'type': 'INTACCT_ERROR',
-            'error_title': error_title,
-            'error_detail': error_msg,
-            'is_resolved': False,
-            'is_parsed': is_parsed,
-            'attribute_type': attribute_type,
-            'article_link': article_link
-        }
-    )
+            workspace_id=expense_group.workspace_id,
+            expense_group=expense_group,
+            defaults={
+                'type': 'INTACCT_ERROR',
+                'error_title': error_title,
+                'error_detail': error_msg,
+                'is_resolved': False,
+                'is_parsed': is_parsed,
+                'attribute_type': attribute_type,
+                'article_link': article_link
+            }
+        )
 
     error.increase_repetition_count_by_one(created)
 
@@ -384,14 +351,7 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
     update_failed_expenses(expense_group.expenses.all(), False)
 
 
-def get_employee_mapping(employee_email: str, workspace_id: int, configuration: Configuration) -> EmployeeMapping:
-    """
-    Get employee mapping
-    :param employee_email: Employee Email
-    :param workspace_id: Workspace Id
-    :param configuration: Configuration
-    :return: Employee Mapping
-    """
+def get_employee_mapping(employee_email, workspace_id, configuration):
     entity = EmployeeMapping.objects.get(
         source_employee__value=employee_email,
         workspace_id=workspace_id
@@ -401,13 +361,7 @@ def get_employee_mapping(employee_email: str, workspace_id: int, configuration: 
     return entity.destination_vendor
 
 
-def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Configuration) -> None:
-    """
-    Validate employee mapping
-    :param expense_group: Expense Group
-    :param configuration: Configuration
-    :return: None
-    """
+def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Configuration):
     bulk_errors = []
     employee_email = expense_group.description.get('employee_email')
     workspace_id = expense_group.workspace_id
@@ -463,13 +417,7 @@ def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Conf
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration) -> None:
-    """
-    Validate expense group
-    :param expense_group: Expense Group
-    :param configuration: Configuration
-    :return: None
-    """
+def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configuration):
     bulk_errors = []
     row = 0
 
@@ -583,14 +531,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
-    """
-    Create journal entry
-    :param expense_group: Expense Group
-    :param task_log_id: Task Log Id
-    :param last_export: Last Export
-    :return: None
-    """
+def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     worker_logger = get_logger()
     task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
     worker_logger.info('Creating Journal Entry for Expense Group %s, current state is %s', expense_group.id, task_log.status)
@@ -663,7 +604,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
-
+        
         try:
             generate_export_url_and_update_expense(expense_group)
         except Exception as e:
@@ -672,7 +613,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         if last_export:
             update_last_export_details(expense_group.workspace_id)
-
+    
     except SageIntacctCredential.DoesNotExist:
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
@@ -709,7 +650,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         if last_export:
             last_export_failed = True
-
+    
     except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
 
@@ -730,14 +671,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         update_last_export_details(expense_group.workspace_id)
 
 
-def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
-    """
-    Create expense report
-    :param expense_group: Expense Group
-    :param task_log_id: Task Log Id
-    :param last_export: Last Export
-    :return: None
-    """
+def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     worker_logger = get_logger()
     task_log = TaskLog.objects.get(id=task_log_id)
     worker_logger.info('Creating Expense Report for Expense Group %s, current state is %s', expense_group.id, task_log.status)
@@ -873,7 +807,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
-
+    
     if last_export:
         if last_export_failed:
             update_last_export_details(expense_group.workspace_id)
@@ -882,14 +816,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
 
-def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
-    """
-    Create bill
-    :param expense_group: Expense Group
-    :param task_log_id: Task Log Id
-    :param last_export: Last Export
-    :return: None
-    """
+def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     worker_logger = get_logger()
     task_log = TaskLog.objects.get(id=task_log_id)
     worker_logger.info('Creating Bill for Expense Group %s, current state is %s', expense_group.id, task_log.status)
@@ -951,7 +878,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             expense_group.export_type = 'BILL'
             expense_group.save()
             resolve_errors_for_exported_expense_group(expense_group)
-
+        
         try:
             generate_export_url_and_update_expense(expense_group)
         except Exception as e:
@@ -977,7 +904,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         if last_export:
             last_export_failed = True
-
+    
     except BulkError as exception:
         logger.info(exception.response)
         detail = exception.response
@@ -996,7 +923,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         if last_export:
             last_export_failed = True
-
+    
     except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
@@ -1021,14 +948,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             create_ap_payment(workspace_id=expense_group.workspace.id)
 
 
-def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
-    """
-    Create charge card transaction
-    :param expense_group: Expense Group
-    :param task_log_id: Task Log Id
-    :param last_export: Last Export
-    :return: None
-    """
+def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool):
     worker_logger = get_logger()
     task_log = TaskLog.objects.get(id=task_log_id)
     worker_logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s', expense_group.id, task_log.status)
@@ -1136,7 +1056,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         if last_export:
             last_export_failed = True
-
+    
     except (InvalidTokenError, NoPrivilegeError) as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
@@ -1157,15 +1077,8 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         update_last_export_details(expense_group.workspace_id)
 
 
-def check_expenses_reimbursement_status(expenses: list[Expense], workspace_id: int, platform: PlatformConnector, filter_credit_expenses: bool) -> bool:
-    """
-    Check if expenses are reimbursed
-    :param expenses: Expenses
-    :param workspace_id: Workspace Id
-    :param platform: Platform
-    :param filter_credit_expenses: Filter Credit Expenses
-    :return: True if reimbursed, False otherwise
-    """
+def check_expenses_reimbursement_status(expenses, workspace_id, platform, filter_credit_expenses):
+
     if expenses.first().paid_on_fyle:
         return True
 
@@ -1187,14 +1100,7 @@ def check_expenses_reimbursement_status(expenses: list[Expense], workspace_id: i
     return is_paid
 
 
-def validate_for_skipping_payment(export_module: Bill | ExpenseReport, workspace_id: int, type: str) -> bool:
-    """
-    Validate for skipping payment
-    :param export_module: Export Module
-    :param workspace_id: Workspace Id
-    :param type: Type
-    :return: True if payment is to be skipped, False otherwise
-    """
+def validate_for_skipping_payment(export_module: Bill | ExpenseReport, workspace_id: int, type: str):
     task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(export_module.expense_group.id), workspace_id=workspace_id, type=type).first()
     if task_log:
         now = timezone.now()
@@ -1208,26 +1114,21 @@ def validate_for_skipping_payment(export_module: Bill | ExpenseReport, workspace
             # if updated_at is within 1 months will be skipped
             if task_log.updated_at > now - relativedelta(months=1):
                 return True
+        
         # If created is within 1 month
         elif now - relativedelta(months=1) < task_log.created_at:
             # Skip if updated within the last week
             if task_log.updated_at > now - relativedelta(weeks=1):
                 return True
-
+    
     return False
 
-
-def create_ap_payment(workspace_id: int) -> None:
-    """
-    Create AP Payment
-    :param workspace_id: Workspace Id
-    :return: None
-    """
+def create_ap_payment(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
     filter_credit_expenses = False
 
-    bills = Bill.objects.filter(
+    bills: List[Bill] = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
         expense_group__fund_source='PERSONAL', is_retired=False
     ).all()
@@ -1235,18 +1136,13 @@ def create_ap_payment(workspace_id: int) -> None:
     if bills:
         for bill in bills:
             expense_group_reimbursement_status = check_expenses_reimbursement_status(
-                bill.expense_group.expenses.all(),
-                workspace_id=workspace_id,
-                platform=platform,
-                filter_credit_expenses=filter_credit_expenses
-            )
-
+                bill.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
             if expense_group_reimbursement_status:
+                
                 skip_payment = validate_for_skipping_payment(export_module=bill, workspace_id=workspace_id, type='CREATING_AP_PAYMENT')
-
                 if skip_payment:
                     continue
-
+                
                 task_log, _ = TaskLog.objects.update_or_create(
                     workspace_id=workspace_id,
                     task_id='PAYMENT_{}'.format(bill.expense_group.id),
@@ -1260,7 +1156,9 @@ def create_ap_payment(workspace_id: int) -> None:
                     with transaction.atomic():
 
                         ap_payment_object = APPayment.create_ap_payment(bill.expense_group)
+
                         bill_task_log = TaskLog.objects.get(expense_group=bill.expense_group)
+
                         record_key = bill_task_log.detail['data']['apbill']['RECORDNO']
 
                         ap_payment_lineitems_objects = APPaymentLineitem.create_ap_payment_lineitems(
@@ -1268,7 +1166,9 @@ def create_ap_payment(workspace_id: int) -> None:
                         )
 
                         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
                         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+
                         created_ap_payment = sage_intacct_connection.post_ap_payment(
                             ap_payment_object, ap_payment_lineitems_objects
                         )
@@ -1314,7 +1214,7 @@ def create_ap_payment(workspace_id: int) -> None:
                     task_log.detail = exception.response
 
                     if exception.response and (
-                        "Oops, we can't find this transaction; enter a valid" in str(exception.response)
+                        "Oops, we can't find this transaction; enter a valid" in str(exception.response) 
                         or 'No line items found' in str(exception.response)
                         or 'There is no due on the bill' in str(exception.response)
                     ):
@@ -1351,18 +1251,13 @@ def create_ap_payment(workspace_id: int) -> None:
                                  task_log.detail)
 
 
-def create_sage_intacct_reimbursement(workspace_id: int) -> None:
-    """
-    Create Sage Intacct Reimbursement
-    :param workspace_id: Workspace Id
-    :return: None
-    """
+def create_sage_intacct_reimbursement(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
     filter_credit_expenses = False
 
-    expense_reports: list[ExpenseReport] = ExpenseReport.objects.filter(
+    expense_reports: List[ExpenseReport] = ExpenseReport.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
         expense_group__fund_source='PERSONAL', is_retired=False
     ).all()
@@ -1387,20 +1282,24 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
 
             try:
                 with transaction.atomic():
-                    sage_intacct_reimbursement_object = SageIntacctReimbursement.create_sage_intacct_reimbursement(expense_report.expense_group)
+
+                    sage_intacct_reimbursement_object = SageIntacctReimbursement.\
+                        create_sage_intacct_reimbursement(expense_report.expense_group)
+
                     expense_report_task_log = TaskLog.objects.get(expense_group=expense_report.expense_group)
+
                     record_key = expense_report_task_log.detail['key']
 
-                    sage_intacct_reimbursement_lineitems_objects = SageIntacctReimbursementLineitem.create_sage_intacct_reimbursement_lineitems(
-                        sage_intacct_reimbursement_object.expense_group,
-                        record_key
-                    )
+                    sage_intacct_reimbursement_lineitems_objects = SageIntacctReimbursementLineitem.\
+                        create_sage_intacct_reimbursement_lineitems(sage_intacct_reimbursement_object.expense_group,
+                                                                    record_key)
 
                     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
                     sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+
                     created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
-                        sage_intacct_reimbursement_object,
-                        sage_intacct_reimbursement_lineitems_objects
+                        sage_intacct_reimbursement_object, sage_intacct_reimbursement_lineitems_objects
                     )
 
                     expense_report.payment_synced = True
@@ -1456,14 +1355,14 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                     task_log.delete()
                 else:
                     task_log.save()
-
+            
             except InvalidTokenError as exception:
                 logger.info(exception.response)
                 task_log.status = 'FAILED'
                 task_log.detail = exception.response
 
                 task_log.save()
-
+            
             except NoPrivilegeError as exception:
                 logger.info(exception.response)
                 task_log.status = 'FAILED'
@@ -1478,21 +1377,15 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                 }
                 task_log.status = 'FATAL'
                 task_log.save()
-                logger.exception(
-                    'Something unexpected happened workspace_id: %s %s',
-                    task_log.workspace_id,
-                    task_log.detail
-                )
+                logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
+                                task_log.detail)
 
 
-def get_all_sage_intacct_bill_ids(sage_objects: Bill) -> dict:
-    """
-    Get all sage intacct bill ids
-    :param sage_objects: Sage Objects
-    :return: Sage Intacct Bill Details
-    """
+def get_all_sage_intacct_bill_ids(sage_objects: Bill):
     sage_intacct_bill_details = {}
+
     expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]
+
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
 
     for task_log in task_logs:
@@ -1504,14 +1397,11 @@ def get_all_sage_intacct_bill_ids(sage_objects: Bill) -> dict:
     return sage_intacct_bill_details
 
 
-def get_all_sage_intacct_expense_report_ids(sage_objects: ExpenseReport) -> dict:
-    """
-    Get all sage intacct expense report ids
-    :param sage_objects: Sage Objects
-    :return: Sage Intacct Expense Report Details
-    """
+def get_all_sage_intacct_expense_report_ids(sage_objects: ExpenseReport):
     sage_intacct_expense_report_details = {}
+
     expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]
+
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
 
     for task_log in task_logs:
@@ -1522,29 +1412,21 @@ def get_all_sage_intacct_expense_report_ids(sage_objects: ExpenseReport) -> dict
     return sage_intacct_expense_report_details
 
 
-def check_sage_intacct_object_status(workspace_id: int) -> None:
-    """
-    Check Sage Intacct Object Status
-    :param workspace_id: Workspace Id
-    :return: None
-    """
+def check_sage_intacct_object_status(workspace_id):
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError, NoPrivilegeError):
         logger.info('Invalid Token or SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
-        return
+        return 
 
     bills = Bill.objects.filter(
-        expense_group__workspace_id=workspace_id,
-        paid_on_sage_intacct=False,
-        expense_group__fund_source='PERSONAL'
+        expense_group__workspace_id=workspace_id, paid_on_sage_intacct=False, expense_group__fund_source='PERSONAL'
     ).all()
 
     expense_reports = ExpenseReport.objects.filter(
-        expense_group__workspace_id=workspace_id,
-        paid_on_sage_intacct=False,
-        expense_group__fund_source='PERSONAL'
+        expense_group__workspace_id=workspace_id, paid_on_sage_intacct=False, expense_group__fund_source='PERSONAL'
     ).all()
 
     if bills:
@@ -1583,12 +1465,7 @@ def check_sage_intacct_object_status(workspace_id: int) -> None:
                 expense_report.save()
 
 
-def process_fyle_reimbursements(workspace_id: int) -> None:
-    """
-    Process Fyle Reimbursements
-    :param workspace_id: Workspace Id
-    :return: None
-    """
+def process_fyle_reimbursements(workspace_id):
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
@@ -1614,16 +1491,7 @@ def process_fyle_reimbursements(workspace_id: int) -> None:
         mark_paid_on_fyle(platform, payloads, reports_to_be_marked, workspace_id)
 
 
-def mark_paid_on_fyle(platform: PlatformConnector, payloads:dict, reports_to_be_marked: list, workspace_id: int, retry_num: int = 10) -> None:
-    """
-    Mark Paid on Fyle
-    :param platform: Platform
-    :param payloads: Payloads
-    :param reports_to_be_marked: Reports to be marked
-    :param workspace_id: Workspace Id
-    :param retry_num: Retry Number
-    :return: None
-    """
+def mark_paid_on_fyle(platform, payloads:dict, reports_to_be_marked, workspace_id, retry_num=10):
     try:
         logger.info('Marking reports paid on fyle for report ids - %s', reports_to_be_marked)
         logger.info('Payloads- %s', payloads)
@@ -1658,7 +1526,7 @@ def mark_paid_on_fyle(platform: PlatformConnector, payloads:dict, reports_to_be_
         logger.exception(error)
 
 
-def update_expense_and_post_summary(in_progress_expenses: list[Expense], workspace_id: int, fund_source: str) -> None:
+def update_expense_and_post_summary(in_progress_expenses: List[Expense], workspace_id: int, fund_source: str) -> None:
     """
     Update expense and post accounting export summary
     :param in_progress_expenses: List of expenses

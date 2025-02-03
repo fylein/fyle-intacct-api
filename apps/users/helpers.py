@@ -1,11 +1,12 @@
+from typing import Tuple
+
 from fyle_rest_auth.models import AuthToken
 
-from apps.users.models import User
 from apps.fyle.helpers import get_cluster_domain
 from apps.workspaces.models import FyleCredential
 
 
-def get_cluster_domain_and_refresh_token(user: User) -> tuple[str, str]:
+def get_cluster_domain_and_refresh_token(user) -> Tuple[str, str]:
     """
     Get cluster domain and refresh token from User
     """

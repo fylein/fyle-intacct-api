@@ -1,8 +1,11 @@
+"""
+Workspace Models
+"""
 from django.db import models
-from django.db.models import JSONField
-from django_q.models import Schedule
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
+from django_q.models import Schedule
+from django.db.models import JSONField
 
 from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
 
@@ -38,10 +41,7 @@ CODE_IMPORT_FIELD_CHOICES = (
 )
 
 
-def get_default_onboarding_state() -> str:
-    """
-    Default onboarding state
-    """
+def get_default_onboarding_state():
     return 'CONNECTION'
 
 
@@ -65,6 +65,7 @@ class Workspace(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+    
 
     class Meta:
         db_table = 'workspaces'
@@ -95,10 +96,7 @@ EMPLOYEE_FIELD_MAPPING_CHOICES = (
 )
 
 
-def get_default_memo_fields() -> list:
-    """
-    Default memo fields
-    """
+def get_default_memo_fields():
     return ['employee_email', 'category', 'spent_on', 'report_number', 'purpose', 'expense_link']
 
 
@@ -123,7 +121,7 @@ class Configuration(AutoAddCreateUpdateInfoMixin, models.Model):
         max_length=50, choices=REIMBURSABLE_EXPENSES_OBJECT_CHOICES, help_text='Mapping Settings ( BILL / EXPENSE_REPORT )', null = True
     )
     corporate_credit_card_expenses_object = models.CharField(
-        max_length=50, choices=COPORATE_CARD_EXPENSES_OBJECT_CHOICES,
+        max_length=50, choices=COPORATE_CARD_EXPENSES_OBJECT_CHOICES, 
         help_text='Mapping Settings ( BILL / CHARGE_CARD_TRANSACTION )', null=True
     )
     import_projects = models.BooleanField(default=False, help_text='Auto import projects to Fyle')

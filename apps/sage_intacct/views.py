@@ -1,37 +1,35 @@
+from django.db.models import Q
+from datetime import datetime
+from django.conf import settings
 import logging
 
-from django.db.models import Q
-from django.conf import settings
-from django_q.tasks import async_task
-
-from rest_framework import generics
-from rest_framework.views import status
-from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import status
+from rest_framework import generics
 
 from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 
 from sageintacctsdk.exceptions import InvalidTokenError
 
-from apps.sage_intacct.helpers import sync_dimensions
-from apps.workspaces.actions import export_to_intacct
-from apps.sage_intacct.serializers import SageIntacctFieldSerializer
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    SageIntacctCredential
-)
-from apps.sage_intacct.tasks import (
+from django_q.tasks import async_task
+
+from apps.workspaces.models import SageIntacctCredential, Workspace, Configuration
+
+from .helpers import sync_dimensions, check_interval_and_sync_dimension
+
+from .tasks import (
     create_ap_payment,
     create_sage_intacct_reimbursement,
     check_sage_intacct_object_status,
     process_fyle_reimbursements
 )
+from apps.workspaces.actions import export_to_intacct
+
+from .serializers import SageIntacctFieldSerializer
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
-
 
 class DestinationAttributesView(generics.ListAPIView):
     """
@@ -40,10 +38,7 @@ class DestinationAttributesView(generics.ListAPIView):
     serializer_class = DestinationAttributeSerializer
     pagination_class = None
 
-    def get_queryset(self) -> DestinationAttribute:
-        """
-        Get Destination Attributes
-        """
+    def get_queryset(self):
         attribute_types = self.request.query_params.get('attribute_types').split(',')
         account_type = self.request.query_params.get('account_type')
         active = self.request.query_params.get('active')
@@ -64,7 +59,7 @@ class DestinationAttributesView(generics.ListAPIView):
                 'attribute_type': 'ACCOUNT',
                 'detail__account_type': account_type
             }
-            destination_attributes = destination_attributes.exclude(**params)  # to filter out data with account_type='incomestatement
+            destination_attributes = destination_attributes.exclude(**params) #to filter out data with account_type='incomestatement
 
         return destination_attributes
 
@@ -75,10 +70,7 @@ class PaginatedDestinationAttributesView(generics.ListAPIView):
     """
     serializer_class = DestinationAttributeSerializer
 
-    def get_queryset(self) -> DestinationAttribute:
-        """
-        Get Destination Attributes
-        """
+    def get_queryset(self):
         value = self.request.query_params.get('value')
         params = {
             'attribute_type': self.request.query_params.get('attribute_type'),
@@ -96,10 +88,7 @@ class DestinationAttributesCountView(generics.RetrieveAPIView):
     """
     Destination Attributes Count view
     """
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get Destination Attributes Count
-        """
+    def get(self, request, *args, **kwargs):
         attribute_type = self.request.query_params.get('attribute_type')
 
         attribute_count = DestinationAttribute.objects.filter(
@@ -113,30 +102,22 @@ class DestinationAttributesCountView(generics.RetrieveAPIView):
             status=status.HTTP_200_OK
         )
 
-
 class TriggerExportsView(generics.GenericAPIView):
     """
     Trigger exports creation
     """
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Trigger exports
-        """
+    def post(self, request, *args, **kwargs):
         export_to_intacct(workspace_id=self.kwargs['workspace_id'])
 
         return Response(
             status=status.HTTP_200_OK
         )
 
-
 class TriggerPaymentsView(generics.GenericAPIView):
     """
     Trigger payments sync
     """
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Trigger payments sync
-        """
+    def post(self, request, *args, **kwargs):
         configurations = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
 
         if configurations.sync_fyle_to_sage_intacct_payments:
@@ -151,21 +132,14 @@ class TriggerPaymentsView(generics.GenericAPIView):
             status=status.HTTP_200_OK
         )
 
-
 class SageIntacctFieldsView(generics.ListAPIView):
-    """
-    Sage Intacct Fields View
-    """
     pagination_class = None
     serializer_class = SageIntacctFieldSerializer
 
-    def get_queryset(self) -> DestinationAttribute:
-        """
-        Get Sage Intacct Fields
-        """
+    def get_queryset(self):
         attributes = DestinationAttribute.objects.filter(
-            ~Q(attribute_type='EMPLOYEE') & ~Q(attribute_type='VENDOR') & ~Q(attribute_type='CHARGE_CARD_NUMBER')
-            & ~Q(attribute_type='EXPENSE_TYPE') & ~Q(attribute_type='ACCOUNT') & ~Q(attribute_type='CCC_ACCOUNT'),
+            ~Q(attribute_type='EMPLOYEE') & ~Q(attribute_type='VENDOR') & ~Q(attribute_type='CHARGE_CARD_NUMBER') &
+            ~Q(attribute_type='EXPENSE_TYPE') & ~Q(attribute_type='ACCOUNT') & ~Q(attribute_type='CCC_ACCOUNT'),
             ~Q(attribute_type='PAYMENT_ACCOUNT'), ~Q(attribute_type='EXPENSE_PAYMENT_TYPE'),
             ~Q(attribute_type='LOCATION_ENTITY'), ~Q(attribute_type='TAX_DETAIL'),
             ~Q(attribute_type='PROJECT'),
@@ -184,7 +158,7 @@ class SageIntacctFieldsView(generics.ListAPIView):
             if configurations.corporate_credit_card_expenses_object not in ['BILL', 'JOURNAL_ENTRY'] and configurations.reimbursable_expenses_object not in ['BILL', 'JOURNAL_ENTRY']:
                 if {'attribute_type': 'ALLOCATION', 'display_name': 'allocation'} in serialized_attributes:
                     serialized_attributes.remove({'attribute_type': 'ALLOCATION', 'display_name': 'allocation'})
-
+        
         # Adding project by default since we support importing Projects from Sage Intacct even though they don't exist
         serialized_attributes.append({'attribute_type': 'PROJECT', 'display_name': 'Project'})
 
@@ -195,17 +169,16 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
     """
     Sync Sage Intacct Dimension View
     """
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Sync data from sage intacct
-        """
+
+    def post(self, request, *args, **kwargs):
+
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             SageIntacctCredential.objects.get(workspace_id=workspace.id)
 
             async_task(
                 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
-                kwargs['workspace_id'],
+                kwargs['workspace_id'], 
             )
 
             return Response(
@@ -226,12 +199,13 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
     """
     Refresh Sage Intacct Dimensions view
     """
-    def post(self, request: Request, *args, **kwargs) -> Response:
+
+    def post(self, request, *args, **kwargs):
         """
         Sync data from sage intacct
         """
         dimensions_to_sync = request.data.get('dimensions_to_sync', [])
-
+        
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)

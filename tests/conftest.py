@@ -1,39 +1,28 @@
-import pytest
-
 import os
-from unittest import mock
 from datetime import datetime, timezone
-
-from fyle.platform import Platform
+from unittest import mock
+import pytest
 from rest_framework.test import APIClient
 from fyle_rest_auth.models import AuthToken, User
+from fyle.platform import Platform
 
-from fyle_intacct_api.tests import settings
 from apps.fyle.helpers import get_access_token
-
+from fyle_intacct_api.tests import settings
 from .test_fyle.fixtures import data as fyle_data
 
 
 def pytest_configure():
-    """
-    This function is called when pytest starts
-    """
     os.system('sh ./tests/sql_fixtures/reset_db_fixtures/reset_db.sh')
 
 
 @pytest.fixture
 def api_client():
-    """
-    Returns an instance of APIClient
-    """
     return APIClient()
 
 
 @pytest.fixture(scope="session", autouse=True)
 def default_session_fixture(request):
-    """
-    Default session fixture
-    """
+
     patched_1 = mock.patch(
         'fyle_rest_auth.authentication.get_fyle_admin',
         return_value=fyle_data['get_my_profile']

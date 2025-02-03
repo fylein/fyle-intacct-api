@@ -1,34 +1,22 @@
-from datetime import datetime
-from typing import Optional, Union
-
-from django.db import models
+"""
+Sage Intacct models
+"""
+from datetime import datetime, timezone
 from django.conf import settings
-from django.db.models import JSONField, Value, CharField
+from django.db.models import JSONField
+from django.db import models
 from django.db.models.functions import Concat
+from django.db.models import Value, CharField
 from django.utils.module_loading import import_string
 
-from fyle_accounting_mappings.models import (
-    Mapping,
-    MappingSetting,
-    CategoryMapping,
-    EmployeeMapping,
-    DestinationAttribute
-)
+from fyle_accounting_mappings.models import Mapping, MappingSetting, DestinationAttribute, CategoryMapping, \
+    EmployeeMapping
 
+from apps.fyle.models import ExpenseGroup, Expense, ExpenseAttribute, Reimbursement, ExpenseGroupSettings, DependentFieldSetting
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    FyleCredential
-)
-from apps.fyle.models import (
-    Expense,
-    ExpenseGroup,
-    Reimbursement,
-    ExpenseAttribute,
-    ExpenseGroupSettings,
-    DependentFieldSetting
-)
+
+from apps.workspaces.models import Configuration, Workspace, FyleCredential, SageIntacctCredential
+from typing import Dict, List, Union
 
 
 allocation_mapping = {
@@ -42,14 +30,7 @@ allocation_mapping = {
     'PROJECTID': 'project_id'
 }
 
-
-def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) -> Optional[tuple]:
-    """
-    Get allocation id and detail
-    :param expense_group: expense group
-    :param lineitem: expense
-    :return: allocation id and detail
-    """
+def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense):
     allocation_id = None
     allocation_detail = None
 
@@ -77,18 +58,10 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) ->
         if mapping:
             allocation_id = mapping.destination.value
             allocation_detail = mapping.destination.detail
-
     return allocation_id, allocation_detail
 
 
-def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
-    """
-    Get project id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param general_mappings: general mappings
-    :return: project id or none
-    """
+def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     project_id = None
     if general_mappings and general_mappings.default_project_id:
         project_id = general_mappings.default_project_id
@@ -119,14 +92,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
     return project_id
 
 
-def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
-    """
-    Get department id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param general_mappings: general mappings
-    :return: department id or none
-    """
+def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     department_id = None
     source_value = None
     if general_mappings and general_mappings.default_department_id:
@@ -159,14 +125,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
     return department_id
 
 
-def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
-    """
-    Get location id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param general_mappings: general mappings
-    :return: location id or none
-    """
+def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     location_id = None
     if general_mappings and general_mappings.default_location_id:
         location_id = general_mappings.default_location_id
@@ -197,15 +156,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     return location_id
 
 
-def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str) -> Optional[str]:
-    """
-    Get customer id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param general_mappings: general mappings
-    :param project_id: project id
-    :return: customer id or none
-    """
+def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str):
     customer_id = None
 
     if project_id:
@@ -245,14 +196,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     return customer_id
 
 
-def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
-    """
-    Get item id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param general_mappings: general mappings
-    :return: item id or none
-    """
+def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     item_id = None
 
     item_setting: MappingSetting = MappingSetting.objects.filter(
@@ -282,17 +226,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     return item_id
 
 
-def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, task_id: str, prepend_code_to_name: bool = False) -> Optional[str]:
-    """
-    Get cost type id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param dependent_field_setting: dependent field setting
-    :param project_id: project id
-    :param task_id: task id
-    :param prepend_code_to_name: prepend code to name
-    :return: cost type id or none
-    """
+def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, task_id: str, prepend_code_to_name: bool = False):
     cost_type_id = None
 
     selected_cost_type = lineitem.custom_properties.get(dependent_field_setting.cost_type_field_name, None)
@@ -324,16 +258,7 @@ def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dep
     return cost_type_id
 
 
-def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, prepend_code_to_name: bool = False) -> Optional[str]:
-    """
-    Get task id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param dependent_field_setting: dependent field setting
-    :param project_id: project id
-    :param prepend_code_to_name: prepend code to name
-    :return: task id or none
-    """
+def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, prepend_code_to_name: bool = False):
     task_id = None
 
     selected_cost_code = lineitem.custom_properties.get(dependent_field_setting.cost_code_field_name, None)
@@ -363,14 +288,7 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
     return task_id
 
 
-def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
-    """
-    Get class id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :param general_mappings: general mappings
-    :return: class id or none
-    """
+def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping):
     class_id = None
     if general_mappings and general_mappings.default_class_id:
         class_id = general_mappings.default_class_id
@@ -402,13 +320,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
     return class_id
 
 
-def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None) -> Optional[str]:
-    """
-    Get tax code id or none
-    :param expense_group: expense group
-    :param lineitem: expense
-    :return: tax code id or none
-    """
+def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None):
     tax_code = None
     mapping: Mapping = Mapping.objects.filter(
         source_type='TAX_GROUP',
@@ -423,11 +335,6 @@ def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = Non
 
 
 def get_transaction_date(expense_group: ExpenseGroup) -> str:
-    """
-    Get the transaction date from the description of the expense group.
-    :param expense_group: The expense group to get the transaction date from.
-    :return: The transaction date.
-    """
     if 'posted_at' in expense_group.description and expense_group.description['posted_at']:
         return expense_group.description['posted_at']
     elif 'approved_at' in expense_group.description and expense_group.description['approved_at']:
@@ -441,18 +348,16 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
-def get_memo(
-    expense_group: ExpenseGroup,
-    ExportTable: Union['Bill', 'ExpenseReport', 'JournalEntry', 'ChargeCardTransaction', 'APPayment', 'SageIntacctReimbursement'],
-    workspace_id: int,
-    payment_type: str = None
-) -> str:
+def get_memo(expense_group: ExpenseGroup,
+            ExportTable: Union['Bill', 'ExpenseReport', 'JournalEntry', 'ChargeCardTransaction', 'APPayment', 'SageIntacctReimbursement'],
+            workspace_id: int, payment_type: str=None) -> str:
     """
     Get the memo from the description of the expense group.
     :param expense_group: The expense group to get the memo from.
     :param payment_type: The payment type to use in the memo.
     :return: The memo.
     """
+
     if ExportTable is ChargeCardTransaction:
         memo = 'Corporate Card Expense'
         email = expense_group.description.get('employee_email')
@@ -466,7 +371,8 @@ def get_memo(
 
         return memo
 
-    expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' else 'Corporate Card expense'
+    expense_fund_source = 'Reimbursable expense' if expense_group.fund_source == 'PERSONAL' \
+        else 'Corporate Card expense'
     unique_number = None
     count = 0
 
@@ -508,32 +414,21 @@ def get_memo(
         if not payment_type:
             count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
         if count > 0:
-            memo = '{} - {}'.format(memo, count)
+            memo = '{} - {}'.format(memo, count)        
 
         return memo.replace('\'', '')
     else:
         # Safety addition
-        memo = (
-            'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email'))
-            if expense_group.fund_source == 'PERSONAL'
+        memo = 'Reimbursable expenses by {0}'.format(expense_group.description.get('employee_email')) \
+        if expense_group.fund_source == 'PERSONAL' \
             else 'Credit card expenses by {0}'.format(expense_group.description.get('employee_email'))
-        )
         count = ExportTable.objects.filter(memo__contains=memo, expense_group__workspace_id=workspace_id).count()
         if count > 0:
-            memo = '{} - {}'.format(memo, count)
-
+            memo = '{} - {}'.format(memo, count)  
         return memo
 
 
-def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str, configuration: Configuration) -> str:
-    """
-    Get the expense purpose
-    :param workspace_id: Workspace ID
-    :param lineitem: Expense
-    :param category: Category
-    :param configuration: Configuration
-    :return: The expense purpose
-    """
+def get_expense_purpose(workspace_id, lineitem: Expense, category: str, configuration: Configuration) -> str:
     workspace = Workspace.objects.get(id=workspace_id)
     org_id = workspace.fyle_org_id
 
@@ -576,13 +471,7 @@ def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str, con
     return purpose
 
 
-def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Expense) -> list:
-    """
-    Get user defined dimensions
-    :param expense_group: expense group
-    :param lineitem: expense
-    :return: user defined dimensions
-    """
+def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Expense):
     mapping_settings = MappingSetting.objects.filter(workspace_id=expense_group.workspace_id).all()
 
     user_dimensions = []
@@ -621,13 +510,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     return user_dimensions
 
 
-def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup) -> str:
-    """
-    Get default employee object
-    :param object_type: Object type
-    :param expense_group: Expense group
-    :return: Default employee object
-    """
+def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup):
     mapping = EmployeeMapping.objects.filter(
         source_employee__value=expense_group.description.get('employee_email'),
         workspace_id=expense_group.workspace_id
@@ -645,14 +528,7 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup) -
             return default_employee_object
 
 
-def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, description: str) -> str:
-    """
-    Get default charge card account id
-    :param general_mappings: General mappings
-    :param expense: Expense
-    :param description: Description
-    :return: Default charge card account id
-    """
+def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, description: str):
     card_mapping = Mapping.objects.filter(
         source_type='CORPORATE_CARD',
         destination_type='CHARGE_CARD_NUMBER',
@@ -668,24 +544,15 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
             workspace_id=general_mappings.workspace
         ).first()
         if employee_mapping and employee_mapping.destination_card_account:
-            return employee_mapping.destination_card_account.destination_id
+            return employee_mapping.destination_card_account.destination_id 
 
     return general_mappings.default_charge_card_id
 
-
-def get_credit_card_transaction_number(expense_group: ExpenseGroup, expense: Expense, expense_group_settings: ExpenseGroupSettings) -> str:
-    """
-    Get credit card transaction number
-    :param expense_group: Expense group
-    :param expense: Expense
-    :param expense_group_settings: Expense group settings
-    :return: Credit card transaction number
-    """
+def get_credit_card_transaction_number(expense_group: ExpenseGroup, expense: Expense, expense_group_settings: ExpenseGroupSettings):
     if expense_group.expenses.count() > 1 and expense_group_settings.split_expense_grouping == 'MULTIPLE_LINE_ITEM' and 'bank_transaction_id' in expense_group.description:
         return expense_group.description['bank_transaction_id']
     else:
         return expense.expense_number
-
 
 class Bill(models.Model):
     """
@@ -709,7 +576,7 @@ class Bill(models.Model):
         db_table = 'bills'
 
     @staticmethod
-    def create_bill(expense_group: ExpenseGroup, supdoc_id: str = None) -> 'Bill':
+    def create_bill(expense_group: ExpenseGroup, supdoc_id: str = None):
         """
         Create bill
         :param expense_group: expense group
@@ -774,7 +641,7 @@ class BillLineitem(models.Model):
         db_table = 'bill_lineitems'
 
     @staticmethod
-    def create_bill_lineitems(expense_group: ExpenseGroup,  configuration: Configuration) -> list['BillLineitem']:
+    def create_bill_lineitems(expense_group: ExpenseGroup,  configuration: Configuration):
         """
         Create bill lineitems
         :param expense_group: expense group
@@ -830,25 +697,25 @@ class BillLineitem(models.Model):
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             dimensions_values = {
-                'project_id': project_id,
-                'location_id': default_employee_location_id or location_id,
-                'department_id': default_employee_department_id or department_id,
-                'class_id': class_id,
-                'customer_id': customer_id,
-                'item_id': item_id,
-                'task_id': task_id,
-                'cost_type_id': cost_type_id
-            }
-
+                    'project_id': project_id,
+                    'location_id': default_employee_location_id or location_id,
+                    'department_id': default_employee_department_id or department_id,
+                    'class_id': class_id,
+                    'customer_id': customer_id,
+                    'item_id': item_id,
+                    'task_id': task_id,
+                    'cost_type_id': cost_type_id
+                }
+            
             allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
             if allocation_id and allocation_detail:
                 for allocation_dimension, dimension_variable_name in allocation_mapping.items():
-                    if allocation_dimension in allocation_detail.keys():
-                        dimensions_values[dimension_variable_name] = None
+                        if allocation_dimension in allocation_detail.keys():
+                            dimensions_values[dimension_variable_name] = None
 
                 allocation_dimensions = set(allocation_detail.keys())
                 user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
-
+            
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
                 expense_id=lineitem.id,
@@ -902,7 +769,7 @@ class ExpenseReport(models.Model):
         db_table = 'expense_reports'
 
     @staticmethod
-    def create_expense_report(expense_group: ExpenseGroup, supdoc_id: str = None) -> 'ExpenseReport':
+    def create_expense_report(expense_group: ExpenseGroup, supdoc_id: str = None):
         """
         Create expense report
         :param expense_group: expense group
@@ -962,7 +829,7 @@ class ExpenseReportLineitem(models.Model):
         db_table = 'expense_report_lineitems'
 
     @staticmethod
-    def create_expense_report_lineitems(expense_group: ExpenseGroup, configuration: Configuration) -> list['ExpenseReportLineitem']:
+    def create_expense_report_lineitems(expense_group: ExpenseGroup, configuration: Configuration):
         """
         Create expense report lineitems
         :param expense_group: expense group
@@ -1014,7 +881,7 @@ class ExpenseReportLineitem(models.Model):
                 task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, prepend_code_to_task)
                 prepend_code_to_cost_type = True if 'COST_TYPE' in configuration.import_code_fields else False
                 cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id, prepend_code_to_cost_type)
-
+            
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             if expense_group.fund_source == 'PERSONAL':
@@ -1057,7 +924,7 @@ class ExpenseReportLineitem(models.Model):
 
 class JournalEntry(models.Model):
     """
-    Sage Intacct Journal Entry
+    Sage Intacct Journal Entry 
     """
     id = models.AutoField(primary_key=True)
     expense_group = models.OneToOneField(ExpenseGroup, on_delete=models.PROTECT, help_text='Expense group reference')
@@ -1073,7 +940,7 @@ class JournalEntry(models.Model):
         db_table = 'journal_entries'
 
     @staticmethod
-    def create_journal_entry(expense_group: ExpenseGroup, supdoc_id: str = None) -> 'JournalEntry':
+    def create_journal_entry(expense_group: ExpenseGroup, supdoc_id: str = None):
         """
         Create journal entry
         :param expense_group: expense group
@@ -1131,7 +998,7 @@ class JournalEntryLineitem(models.Model):
         db_table = 'journal_entry_lineitems'
 
     @staticmethod
-    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any) -> list['JournalEntryLineitem']:
+    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection):
         """
         Create journal entry lineitems
         :param expense_group: expense group
@@ -1212,7 +1079,7 @@ class JournalEntryLineitem(models.Model):
                     ).first()
 
                 vendor_id = vendor.destination_id
-
+            
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
 
             if dependent_field_setting:
@@ -1280,7 +1147,7 @@ class ChargeCardTransaction(models.Model):
         db_table = 'charge_card_transactions'
 
     @staticmethod
-    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None, supdoc_id: str = None) -> 'ChargeCardTransaction':
+    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None, supdoc_id: str = None):
         """
         Create create charge card transaction
         :param expense_group: ExpenseGroup
@@ -1297,7 +1164,7 @@ class ChargeCardTransaction(models.Model):
         expense_group.save()
 
         merchant = expense.vendor if expense.vendor else None
-        if not vendor_id:
+        if not vendor_id: 
             vendor_id = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
@@ -1352,7 +1219,7 @@ class ChargeCardTransactionLineitem(models.Model):
         db_table = 'charge_card_transaction_lineitems'
 
     @staticmethod
-    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup,  configuration: Configuration) -> list['ChargeCardTransactionLineitem']:
+    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup,  configuration: Configuration):
         """
         Create expense report lineitems
         :param expense_group: expense group
@@ -1374,7 +1241,7 @@ class ChargeCardTransactionLineitem(models.Model):
         except GeneralMapping.DoesNotExist:
             general_mappings = None
 
-        charge_card_transaction_lineitem_objects: list[ChargeCardTransactionLineitem] = []
+        charge_card_transaction_lineitem_objects: List[ChargeCardTransactionLineitem] = []
 
         for lineitem in expenses:
             category = lineitem.category if (lineitem.category == lineitem.sub_category or lineitem.sub_category == None) else '{0} / {1}'.format(
@@ -1454,7 +1321,7 @@ class APPayment(models.Model):
         db_table = 'ap_payments'
 
     @staticmethod
-    def create_ap_payment(expense_group: ExpenseGroup) -> 'APPayment':
+    def create_ap_payment(expense_group: ExpenseGroup):
         """
         Create AP Payments
         :param expense_group: expense group
@@ -1501,7 +1368,7 @@ class APPaymentLineitem(models.Model):
         db_table = 'ap_payment_lineitems'
 
     @staticmethod
-    def create_ap_payment_lineitems(expense_group: ExpenseGroup, record_key: str) -> list['APPaymentLineitem']:
+    def create_ap_payment_lineitems(expense_group: ExpenseGroup, record_key):
         """
         Create AP Payment lineitems
         :param record_key:
@@ -1546,12 +1413,13 @@ class SageIntacctReimbursement(models.Model):
         db_table = 'sage_intacct_reimbursements'
 
     @staticmethod
-    def create_sage_intacct_reimbursement(expense_group: ExpenseGroup) -> 'SageIntacctReimbursement':
+    def create_sage_intacct_reimbursement(expense_group: ExpenseGroup):
         """
         Create Sage Intacct Reimbursements
         :param expense_group: expense group
         :return: Sage Intacct Reimbursement object
         """
+
         description = expense_group.description
         memo = get_memo(
             expense_group, ExportTable=SageIntacctReimbursement,
@@ -1593,7 +1461,7 @@ class SageIntacctReimbursementLineitem(models.Model):
         db_table = 'sage_intacct_reimbursement_lineitems'
 
     @staticmethod
-    def create_sage_intacct_reimbursement_lineitems(expense_group: ExpenseGroup, record_key: str) -> list['SageIntacctReimbursementLineitem']:
+    def create_sage_intacct_reimbursement_lineitems(expense_group: ExpenseGroup, record_key):
         """
         Create Reimbursement lineitems
         :param record_key:
@@ -1653,7 +1521,7 @@ class CostType(models.Model):
         ]
 
     @staticmethod
-    def bulk_create_or_update(cost_types: list[dict], workspace_id: int) -> None:
+    def bulk_create_or_update(cost_types: List[Dict], workspace_id: int):
         """
         Bulk create or update cost types
         """

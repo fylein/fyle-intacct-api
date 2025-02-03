@@ -1,50 +1,34 @@
-from rest_framework import generics, status
-from rest_framework.request import Request
+from django.db.models import Q
+from datetime import datetime
+
+from rest_framework.views import status
+from rest_framework import generics
 from rest_framework.response import Response
 
-from django.db.models import Q, QuerySet
-from django_q.tasks import async_task
+from django_q.tasks import Chain, async_task
+
 from django_filters.rest_framework import DjangoFilterBackend
-
-from fyle.platform.exceptions import PlatformError
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
-
+from fyle.platform.exceptions import PlatformError
+from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
 from fyle_intacct_api.utils import LookupFieldMixin
 
-from apps.tasks.models import TaskLog
-from apps.exceptions import handle_view_exceptions
-from apps.fyle.queue import async_import_and_export_expenses
-from apps.fyle.helpers import ExpenseSearchFilter, ExpenseGroupSearchFilter
-from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
+from fyle_integrations_platform_connector import PlatformConnector
 
-from apps.workspaces.models import (
-    Workspace,
-    FyleCredential,
-    Configuration
-)
-from apps.fyle.tasks import (
-    create_expense_groups,
-    get_task_log_and_fund_source,
-    schedule_expense_group_creation
-)
-from apps.fyle.models import (
-    Expense,
-    ExpenseFilter,
-    ExpenseGroup,
-    ExpenseGroupSettings,
-    DependentFieldSetting
-)
-from apps.fyle.serializers import (
-    ExpenseSerializer,
-    ExpenseFieldSerializer,
-    ExpenseGroupSerializer,
-    ExpenseFilterSerializer,
-    ExpenseGroupExpenseSerializer,
-    ExpenseGroupSettingsSerializer,
+from apps.workspaces.models import FyleCredential, Configuration, Workspace
+from apps.tasks.models import TaskLog
+
+from .tasks import create_expense_groups, schedule_expense_group_creation, get_task_log_and_fund_source
+from .helpers import check_interval_and_sync_dimension, sync_dimensions, ExpenseSearchFilter, ExpenseGroupSearchFilter
+from .models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings, DependentFieldSetting
+from .serializers import (
+    ExpenseFilterSerializer, ExpenseGroupExpenseSerializer, ExpenseGroupSerializer,
+    ExpenseSerializer, ExpenseFieldSerializer, ExpenseGroupSettingsSerializer,
     DependentFieldSettingSerializer
 )
+from .queue import async_import_and_export_expenses
+from apps.exceptions import handle_view_exceptions
 
 
 class ExpenseGroupView(LookupFieldMixin, generics.ListCreateAPIView):
@@ -56,7 +40,7 @@ class ExpenseGroupView(LookupFieldMixin, generics.ListCreateAPIView):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = ExpenseGroupSearchFilter
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request, *args, **kwargs):
         """
         Create expense groups
         """
@@ -74,7 +58,6 @@ class ExpenseGroupView(LookupFieldMixin, generics.ListCreateAPIView):
             fund_source=fund_source,
             task_log=task_log,
         )
-
         return Response(
             status=status.HTTP_200_OK
         )
@@ -85,10 +68,7 @@ class ExpenseGroupCountView(generics.ListAPIView):
     Expense Group Count View
     """
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get expense group count
-        """
+    def get(self, request, *args, **kwargs):
         state_filter = {
             'tasklog__status': self.request.query_params.get('state')
         }
@@ -107,12 +87,11 @@ class ExpenseGroupScheduleView(generics.CreateAPIView):
     Create expense group schedule
     """
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request, *args, **kwargs):
         """
         Post expense schedule
         """
         schedule_expense_group_creation(kwargs['workspace_id'])
-
         return Response(
             status=status.HTTP_200_OK
         )
@@ -130,7 +109,8 @@ class ExpenseGroupExpenseView(generics.RetrieveAPIView):
     """
     Expense view
     """
-    def get(self, request: Request, *args, **kwargs) -> Response:
+
+    def get(self, request, *args, **kwargs):
         """
         Get expenses
         """
@@ -162,10 +142,7 @@ class EmployeeView(generics.ListCreateAPIView):
     serializer_class = ExpenseAttributeSerializer
     pagination_class = None
 
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for employee
-        """
+    def get_queryset(self):
         return ExpenseAttribute.objects.filter(
             attribute_type='EMPLOYEE', workspace_id=self.kwargs['workspace_id']).order_by('value')
 
@@ -174,13 +151,11 @@ class CategoryView(generics.ListCreateAPIView):
     """
     Category view
     """
+
     serializer_class = ExpenseAttributeSerializer
     pagination_class = None
 
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for category
-        """
+    def get_queryset(self):
         return ExpenseAttribute.objects.filter(
             attribute_type='CATEGORY', workspace_id=self.kwargs['workspace_id']).order_by('value')
 
@@ -192,10 +167,7 @@ class ProjectView(generics.ListCreateAPIView):
     serializer_class = ExpenseAttributeSerializer
     pagination_class = None
 
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for project
-        """
+    def get_queryset(self):
         return ExpenseAttribute.objects.filter(
             attribute_type='PROJECT', workspace_id=self.kwargs['workspace_id']).order_by('value')
 
@@ -208,10 +180,7 @@ class CostCenterView(generics.ListCreateAPIView):
     serializer_class = ExpenseAttributeSerializer
     pagination_class = None
 
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for cost center
-        """
+    def get_queryset(self):
         return ExpenseAttribute.objects.filter(
             attribute_type='COST_CENTER', workspace_id=self.kwargs['workspace_id']).order_by('value')
 
@@ -222,10 +191,7 @@ class ExpenseGroupSettingsView(generics.ListCreateAPIView):
     """
     serializer_class = ExpenseGroupSettingsSerializer
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get Expense Group Settings
-        """
+    def get(self, request, *args, **kwargs):
         expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=self.kwargs['workspace_id'])
 
         return Response(
@@ -233,10 +199,7 @@ class ExpenseGroupSettingsView(generics.ListCreateAPIView):
             status=status.HTTP_200_OK
         )
 
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Update Expense Group Settings
-        """
+    def post(self, request, *args, **kwargs):
         expense_group_settings, _ = ExpenseGroupSettings.update_expense_group_settings(
             request.data, self.kwargs['workspace_id'], request.user)
         return Response(
@@ -252,10 +215,8 @@ class ExpenseAttributesView(generics.ListAPIView):
     serializer_class = ExpenseAttributeSerializer
     pagination_class = None
 
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset
-        """
+    def get_queryset(self):
+        attribute_type = self.request.query_params.get('attribute_type')
         active = self.request.query_params.get('active')
 
         params = {
@@ -266,20 +227,15 @@ class ExpenseAttributesView(generics.ListAPIView):
         if active and active.lower() == 'true':
             params['active'] = True
 
+
         return ExpenseAttribute.objects.filter(**params).order_by('value')
 
 
 class FyleFieldsView(generics.ListAPIView):
-    """
-    Fyle Fields view
-    """
     pagination_class = None
     serializer_class = ExpenseFieldSerializer
 
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get Fyle Fields
-        """
+    def get(self, request, *args, **kwargs):
         default_attributes = ['EMPLOYEE', 'CATEGORY', 'PROJECT', 'COST_CENTER', 'LOCATION_ENTITY', 'TAX_GROUP', 'CORPORATE_CARD', 'MERCHANT']
 
         fields = ExpenseAttribute.objects.filter(
@@ -294,11 +250,14 @@ class FyleFieldsView(generics.ListAPIView):
             detail__is_dependent=True
         ).values('attribute_type', 'display_name').distinct()
 
-        expense_fields = [{
-            'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center', 'is_dependent': False
-        },{
-            'attribute_type': 'PROJECT', 'display_name': 'Project', 'is_dependent': False
-        }]
+        expense_fields= [
+            {
+                'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center', 'is_dependent': False
+            },
+            {
+                'attribute_type': 'PROJECT', 'display_name': 'Project', 'is_dependent': False
+            }
+        ]
 
         for attribute in fields:
             attribute['is_dependent'] = False
@@ -318,7 +277,7 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
     """
     Sync Fyle Dimensions view
     """
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request, *args, **kwargs):
         """
         Sync data from Fyle
         """
@@ -355,7 +314,7 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
     """
     Refresh Fyle Dimensions view
     """
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request, *args, **kwargs):
         """
         Sync data from Fyle
         """
@@ -391,24 +350,18 @@ class ExpenseFilterView(generics.ListCreateAPIView, generics.DestroyAPIView):
     """
     serializer_class = ExpenseFilterSerializer
 
-    def get_queryset(self) -> QuerySet:
-        """
-        Get Expense Filter queryset
-        """
+    def get_queryset(self):
         queryset = ExpenseFilter.objects.filter(workspace_id=self.kwargs['workspace_id']).order_by('rank')
         return queryset
 
-    def delete(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Delete Expense Filter
-        """
+    def delete(self, request, *args, **kwargs):
         workspace_id = self.kwargs['workspace_id']
         rank = request.data.get('rank')
         ExpenseFilter.objects.filter(workspace_id=workspace_id, rank=rank).delete()
 
         return Response(data={
             'workspace_id': workspace_id,
-            'rank': rank,
+            'rank' : rank,
             'message': 'Expense filter deleted'
         })
 
@@ -424,22 +377,25 @@ class ExpenseView(LookupFieldMixin, generics.ListAPIView):
     filterset_class = ExpenseSearchFilter
 
 
+
 class CustomFieldView(generics.RetrieveAPIView):
     """
     Custom Field view
     """
-    def get(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, request, *args, **kwargs):
         """
         Get Custom Fields
         """
-        response = []
-        response.extend(DEFAULT_FYLE_CONDITIONS)
-
         workspace_id = self.kwargs['workspace_id']
+
         fyle_credentails = FyleCredential.objects.get(workspace_id=workspace_id)
+
         platform = PlatformConnector(fyle_credentails)
+
         custom_fields = platform.expense_custom_fields.list_all()
 
+        response = []
+        response.extend(DEFAULT_FYLE_CONDITIONS)
         for custom_field in custom_fields:
             if custom_field['type'] in ('SELECT', 'NUMBER', 'TEXT', 'BOOLEAN'):
                 response.append({
@@ -467,10 +423,7 @@ class ExportableExpenseGroupsView(generics.RetrieveAPIView):
     """
     List Exportable Expense Groups
     """
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get exportable expense groups
-        """
+    def get(self, request, *args, **kwargs):
         configuration = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
         fund_source = []
 
@@ -495,7 +448,7 @@ class ExpenseGroupSyncView(generics.CreateAPIView):
     """
     Create expense groups
     """
-    def post(self, request: Request, *args, **kwargs) -> Response:
+    def post(self, request, *args, **kwargs):
         """
         Post expense groups creation
         """
@@ -516,10 +469,7 @@ class ExportView(generics.CreateAPIView):
     permission_classes = []
 
     @handle_view_exceptions()
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Import and Export expenses
-        """
+    def post(self, request, *args, **kwargs):
         async_import_and_export_expenses(request.data, int(kwargs['workspace_id']))
 
         return Response(data={}, status=status.HTTP_200_OK)

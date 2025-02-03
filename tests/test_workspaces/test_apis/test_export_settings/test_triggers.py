@@ -1,13 +1,10 @@
-from apps.fyle.models import ExpenseGroup
-from apps.tasks.models import TaskLog, Error
-from apps.workspaces.models import Configuration
 from apps.workspaces.apis.export_settings.triggers import ExportSettingsTrigger
+from apps.workspaces.models import Configuration
+from apps.tasks.models import TaskLog, Error
+from apps.fyle.models import ExpenseGroup
 
 
 def test_post_save_configuration_trigger(mocker, db):
-    """
-    Test post_save_configuration trigger
-    """
     workspace_id = 1
     configuration, _ = Configuration.objects.update_or_create(
         workspace_id=workspace_id,
@@ -40,9 +37,6 @@ def test_post_save_configuration_trigger(mocker, db):
 
 
 def test_post_save_configuration_trigger_2(mocker, db):
-    """
-    Test post_save_configuration trigger
-    """
     workspace_id = 1
     configuration, _ = Configuration.objects.update_or_create(
         workspace_id=workspace_id,

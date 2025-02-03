@@ -2,9 +2,9 @@ from rest_framework import serializers
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.tasks.models import Error
 from apps.fyle.models import ExpenseGroup
 from apps.fyle.serializers import ExpenseSerializer
+from apps.tasks.models import Error
 
 
 class ExpenseAttributeSerializer(serializers.ModelSerializer):
