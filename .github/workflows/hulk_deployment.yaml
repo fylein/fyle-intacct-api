@@ -16,6 +16,8 @@ jobs:
     environment: Staging
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Run CI
         id: run-ci
