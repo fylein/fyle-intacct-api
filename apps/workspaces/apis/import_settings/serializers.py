@@ -1,15 +1,15 @@
 import logging
 
+from django.db.models import Q
+from django.db import transaction
 from rest_framework import serializers
 from fyle_accounting_mappings.models import MappingSetting
-from django.db import transaction
-from django.db.models import Q
 
+from apps.mappings.models import ImportLog
+from apps.mappings.models import GeneralMapping
 from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import Workspace, Configuration
-from apps.mappings.models import GeneralMapping
-from .triggers import ImportSettingsTrigger
-from apps.mappings.models import ImportLog
+from apps.workspaces.apis.import_settings.triggers import ImportSettingsTrigger
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -21,7 +21,10 @@ class MappingSettingFilteredListSerializer(serializers.ListSerializer):
     System Model. The value argument to to_representation() method is
     the model instance
     """
-    def to_representation(self, data):
+    def to_representation(self, data: list) -> list:
+        """
+        Filters the active system
+        """
         data = data.filter(~Q(
             destination_field__in=[
                 'ACCOUNT',
@@ -41,19 +44,24 @@ class ReadWriteSerializerMethodField(serializers.SerializerMethodField):
     Serializer Method Field to Read and Write from values
     Inherits serializers.SerializerMethodField
     """
-
-    def __init__(self, method_name=None, **kwargs):
+    def __init__(self, method_name: any = None, **kwargs):
         self.method_name = method_name
         kwargs['source'] = '*'
         super(serializers.SerializerMethodField, self).__init__(**kwargs)
 
-    def to_internal_value(self, data):
+    def to_internal_value(self, data: dict) -> dict:
+        """
+        Converts the data to internal value
+        """
         return {
             self.field_name: data
         }
 
 
 class MappingSettingSerializer(serializers.ModelSerializer):
+    """
+    Mapping Setting Serializer
+    """
     class Meta:
         model = MappingSetting
         list_serializer_class = MappingSettingFilteredListSerializer
@@ -67,6 +75,9 @@ class MappingSettingSerializer(serializers.ModelSerializer):
 
 
 class ConfigurationsSerializer(serializers.ModelSerializer):
+    """
+    Configuration Serializer
+    """
     class Meta:
         model = Configuration
         fields = [
@@ -78,6 +89,9 @@ class ConfigurationsSerializer(serializers.ModelSerializer):
 
 
 class GeneralMappingsSerializer(serializers.ModelSerializer):
+    """
+    General Mappings Serializer
+    """
     default_tax_code = ReadWriteSerializerMethodField()
 
     class Meta:
@@ -86,7 +100,10 @@ class GeneralMappingsSerializer(serializers.ModelSerializer):
             'default_tax_code'
         ]
 
-    def get_default_tax_code(self, instance):
+    def get_default_tax_code(self, instance: GeneralMapping) -> dict:
+        """
+        Get default tax code
+        """
         return {
             'name': instance.default_tax_code_name,
             'id': instance.default_tax_code_id
@@ -109,6 +126,9 @@ class DependentFieldSettingSerializer(serializers.ModelSerializer):
 
 
 class ImportSettingsSerializer(serializers.ModelSerializer):
+    """
+    Import Settings Serializer
+    """
     configurations = ConfigurationsSerializer()
     general_mappings = GeneralMappingsSerializer()
     dependent_field_settings = DependentFieldSettingSerializer(allow_null=True, required=False)
@@ -126,10 +146,16 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['workspace_id']
 
-    def get_workspace_id(self, instance):
+    def get_workspace_id(self, instance: Workspace) -> int:
+        """
+        Get workspace id
+        """
         return instance.id
 
-    def update(self, instance, validated):
+    def update(self, instance: Configuration, validated: dict) -> Configuration:
+        """
+        Update the instance
+        """
         request = self.context.get('request')
         user = request.user if request and hasattr(request, 'user') else None
 
@@ -202,7 +228,10 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """
+        Validate the data
+        """
         if not data.get('configurations'):
             raise serializers.ValidationError('Workspace general settings are required')
 
@@ -272,4 +301,5 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Cannot change the code fields once they are imported')
 
         data.get('configurations')['import_code_fields'] = list(new_code_pref_list)
+
         return data

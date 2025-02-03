@@ -1,17 +1,21 @@
 from unittest import mock
-from apps.mappings.imports.modules.cost_centers import CostCenter, disable_cost_centers
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute,
     Mapping,
     MappingSetting
 )
-from fyle_integrations_platform_connector import PlatformConnector
+
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
+from apps.mappings.imports.modules.cost_centers import CostCenter, disable_cost_centers
 from .fixtures import cost_center_data
 
 
 def test_sync_expense_atrributes(mocker, db):
+    """
+    Test sync expense attributes
+    """
     workspace_id = 1
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credentials.workspace.fyle_org_id = 'ortL3T2BabCW'
@@ -44,7 +48,11 @@ def test_sync_expense_atrributes(mocker, db):
     # NOTE : we are not using cost_center_data['..'][0]['count'] because some duplicates where present in the data
     assert cost_center_count == 566 + 7
 
+
 def test_auto_create_destination_attributes(mocker, db):
+    """
+    Test auto create destination attributes
+    """
     cost_center = CostCenter(1, 'CLASS', None)
     cost_center.sync_after = None
 
@@ -71,7 +79,7 @@ def test_auto_create_destination_attributes(mocker, db):
         )
         mock_call.side_effect = [
             cost_center_data['create_new_auto_create_cost_centers_expense_attributes_0'],
-            cost_center_data['create_new_auto_create_cost_centers_expense_attributes_1'] 
+            cost_center_data['create_new_auto_create_cost_centers_expense_attributes_1']
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'COST_CENTER').count()
@@ -79,7 +87,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 0
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').count()
-        
+
         assert mappings_count == 0
 
         cost_center.trigger_import()
@@ -89,7 +97,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 7
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').count()
-        
+
         assert mappings_count == 7
 
     # create new project sub-sequent run (we will be adding 2 new CLASSES)
@@ -108,7 +116,7 @@ def test_auto_create_destination_attributes(mocker, db):
         )
         mock_call.side_effect = [
             [],
-            cost_center_data['create_new_auto_create_cost_centers_expense_attributes_2'] 
+            cost_center_data['create_new_auto_create_cost_centers_expense_attributes_2']
         ]
 
         expense_attributes_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'COST_CENTER').count()
@@ -116,7 +124,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 7
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').count()
-        
+
         assert mappings_count == 7
 
         cost_center.trigger_import()
@@ -126,11 +134,14 @@ def test_auto_create_destination_attributes(mocker, db):
         assert expense_attributes_count == 7 + 2
 
         mappings_count = Mapping.objects.filter(workspace_id=1, source_type='COST_CENTER', destination_type='CLASS').count()
-        
+
         assert mappings_count == 7 + 2
 
 
 def test_construct_fyle_payload(db):
+    """
+    Test construct fyle payload
+    """
     cost_center = CostCenter(1, 'CLASS', None)
 
     # create new case
@@ -152,6 +163,9 @@ def test_get_existing_fyle_attributes(
     add_cost_center_mappings,
     add_configuration
 ):
+    """
+    Test get existing fyle attributes
+    """
     cost_center = CostCenter(98, 'DEPARTMENT', None)
 
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT')
@@ -176,6 +190,9 @@ def test_construct_fyle_payload_with_code(
     add_cost_center_mappings,
     add_configuration
 ):
+    """
+    Test construct fyle payload with code
+    """
     cost_center = CostCenter(98, 'DEPARTMENT', None, True)
 
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT')
@@ -209,6 +226,9 @@ def test_disable_cost_centers(
     add_cost_center_mappings,
     add_configuration
 ):
+    """
+    Test disable cost centers
+    """
     workspace_id = 98
 
     mocker.patch(

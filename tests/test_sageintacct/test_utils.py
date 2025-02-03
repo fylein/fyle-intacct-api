@@ -1,22 +1,37 @@
-import ast
-import json
-from datetime import datetime
 import pytest
+
 import logging
 from unittest import mock
-from apps.sage_intacct.models import CostType
+from datetime import datetime
+
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, Mapping, CategoryMapping
-from apps.sage_intacct.utils import SageIntacctConnector, SageIntacctCredential, Configuration, Workspace
-from apps.mappings.models import GeneralMapping
-from .fixtures import data
+from fyle_accounting_mappings.models import (
+    Mapping,
+    CategoryMapping,
+    ExpenseAttribute,
+    DestinationAttribute,
+)
+
 from tests.helper import dict_compare_keys
+
+from apps.sage_intacct.models import CostType
+from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.utils import (
+    Workspace,
+    Configuration,
+    SageIntacctConnector,
+    SageIntacctCredential
+)
+from .fixtures import data
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.django_db
 def test_sync_employees(mocker, db):
+    """
+    Test sync employees
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -39,6 +54,9 @@ def test_sync_employees(mocker, db):
 
 
 def test_post_vendor(mocker, db):
+    """
+    Test post vendor
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -58,6 +76,9 @@ def test_post_vendor(mocker, db):
 
 
 def test_sync_vendors(mocker, db):
+    """
+    Test sync vendors
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -77,6 +98,9 @@ def test_sync_vendors(mocker, db):
 
 
 def test_sync_departments(mocker, db):
+    """
+    Test sync departments
+    """
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Departments.count',
@@ -99,6 +123,9 @@ def test_sync_departments(mocker, db):
 
 
 def test_sync_expense_types(mocker, db):
+    """
+    Test sync expense types
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -128,6 +155,9 @@ def test_sync_expense_types(mocker, db):
 
 
 def test_sync_charge_card_accounts(mocker, db):
+    """
+    Test sync charge card accounts
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -147,6 +177,9 @@ def test_sync_charge_card_accounts(mocker, db):
 
 
 def test_sync_payment_accounts(mocker, db):
+    """
+    Test sync payment accounts
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -166,6 +199,9 @@ def test_sync_payment_accounts(mocker, db):
 
 
 def test_sync_projects(mocker, db):
+    """
+    Test sync projects
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -194,6 +230,9 @@ def test_sync_projects(mocker, db):
 
 
 def test_sync_items(mocker, db):
+    """
+    Test sync items
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -219,6 +258,9 @@ def test_sync_items(mocker, db):
 
 
 def test_sync_locations(mocker, db):
+    """
+    Test sync locations
+    """
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Locations.count',
@@ -241,6 +283,9 @@ def test_sync_locations(mocker, db):
 
 
 def test_sync_location_entities(mocker, db):
+    """
+    Test sync location entities
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -260,6 +305,9 @@ def test_sync_location_entities(mocker, db):
 
 
 def test_sync_expense_payment_types(mocker, db):
+    """
+    Test sync expense payment types
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -279,6 +327,9 @@ def test_sync_expense_payment_types(mocker, db):
 
 
 def test_sync_user_defined_dimensions(mocker, db):
+    """
+    Test sync user defined dimensions
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -302,6 +353,9 @@ def test_sync_user_defined_dimensions(mocker, db):
 
 
 def test_construct_bill(create_bill, db):
+    """
+    Test construct bill
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -322,6 +376,9 @@ def test_construct_bill(create_bill, db):
 
 
 def test_construct_expense_report(create_expense_report, db):
+    """
+    Test construct expense report
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -335,6 +392,9 @@ def test_construct_expense_report(create_expense_report, db):
 
 
 def test_construct_charge_card_transaction(create_charge_card_transaction, db):
+    """
+    Test construct charge card transaction
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -348,6 +408,9 @@ def test_construct_charge_card_transaction(create_charge_card_transaction, db):
 
 
 def test_construct_journal_entry(create_journal_entry, db):
+    """
+    Test construct journal entry
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -379,7 +442,11 @@ def test_construct_journal_entry(create_journal_entry, db):
 
     assert dict_compare_keys(journal_entry_object, data['journal_entry_re_payload']) == [], 'construct journal entry api return diffs in keys'
 
+
 def test_construct_sage_intacct_reimbursement(create_sage_intacct_reimbursement, db):
+    """
+    Test construct sage intacct reimbursement
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -392,6 +459,9 @@ def test_construct_sage_intacct_reimbursement(create_sage_intacct_reimbursement,
 
 
 def test_construct_ap_payment(create_ap_payment, db):
+    """
+    Test construct ap payment
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -404,6 +474,9 @@ def test_construct_ap_payment(create_ap_payment, db):
 
 
 def test_get_bill(mocker, db):
+    """
+    Test get bill
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -419,12 +492,15 @@ def test_get_bill(mocker, db):
 
 
 def test_get_tax_solution_id_or_none(mocker, db, create_expense_report):
+    """
+    Test get tax solution id or none
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
-    
-    expense_report, expense_report_lineitems = create_expense_report
+
+    _, expense_report_lineitems = create_expense_report
     tax_solution_id = sage_intacct_connection.get_tax_solution_id_or_none(expense_report_lineitems)
     assert tax_solution_id == 'Australia - GST'
 
@@ -441,16 +517,22 @@ def test_get_tax_solution_id_or_none(mocker, db, create_expense_report):
 
 
 def test_get_tax_exclusive_amount(db):
+    """
+    Test get tax exclusive amount
+    """
     workspace_id = 1
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
-    tax_exclusive_amount, tax_amount = sage_intacct_connection.get_tax_exclusive_amount(100, 4)
-    
+    tax_exclusive_amount, _ = sage_intacct_connection.get_tax_exclusive_amount(100, 4)
+
     assert tax_exclusive_amount == 100.0
 
 
 def test_sync_tax_details(mocker, db):
+    """
+    Test sync tax details
+    """
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.TaxDetails.count',
@@ -473,6 +555,9 @@ def test_sync_tax_details(mocker, db):
 
 
 def tests_sync_accounts(mocker, db):
+    """
+    Test sync accounts
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -500,6 +585,9 @@ def tests_sync_accounts(mocker, db):
 
 
 def test_sync_classes(mocker, db):
+    """
+    Test sync classes
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -525,6 +613,9 @@ def test_sync_classes(mocker, db):
 
 
 def test_sync_customers(mocker, db):
+    """
+    Test sync customers
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -548,6 +639,9 @@ def test_sync_customers(mocker, db):
 
 
 def test_post_bill_exception(mocker, db, create_bill):
+    """
+    Test post bill exception
+    """
     mocker.patch(
         'sageintacctsdk.apis.Bills.post',
         return_value=data['bill_response']
@@ -576,6 +670,9 @@ def test_post_bill_exception(mocker, db, create_bill):
 
 
 def test_post_sage_intacct_reimbursement_exception(mocker, db, create_sage_intacct_reimbursement):
+    """
+    Test post sage intacct reimbursement exception
+    """
     mocker.patch(
         'sageintacctsdk.apis.Reimbursements.post',
         return_value=data['reimbursements']
@@ -591,6 +688,9 @@ def test_post_sage_intacct_reimbursement_exception(mocker, db, create_sage_intac
 
 
 def test_post_expense_report_exception(mocker, db, create_expense_report):
+    """
+    Test post expense report exception
+    """
     mocker.patch(
         'sageintacctsdk.apis.ExpenseReports.post',
         return_value=data['expense_report_post_response']
@@ -609,18 +709,21 @@ def test_post_expense_report_exception(mocker, db, create_expense_report):
     try:
         with mock.patch('sageintacctsdk.apis.ExpenseReports.post') as mock_call:
             mock_call.side_effect = [WrongParamsError(
-            msg={
-                'Message': 'Invalid parametrs'
-            }, response={
-                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                'type': 'Invalid_params'
-            }), None]
+                msg = {
+                    'Message': 'Invalid parametrs'
+                }, response={
+                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                    'type': 'Invalid_params'
+                }), None]
             sage_intacct_connection.post_expense_report(expense_report, expense_report_lineitems)
-    except:
+    except Exception:
         logger.info("Account period error")
 
 
 def test_post_charge_card_transaction_exception(mocker, db, create_charge_card_transaction):
+    """
+    Test post charge card transaction exception
+    """
     mocker.patch(
         'sageintacctsdk.apis.ChargeCardTransactions.post',
         return_value=data['credit_card_response']
@@ -639,18 +742,21 @@ def test_post_charge_card_transaction_exception(mocker, db, create_charge_card_t
     try:
         with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.post') as mock_call:
             mock_call.side_effect = [WrongParamsError(
-            msg={
-                'Message': 'Invalid parametrs'
-            }, response={
-                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                'type': 'Invalid_params'
-            }), None]
+                msg = {
+                    'Message': 'Invalid parametrs'
+                }, response={
+                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                    'type': 'Invalid_params'
+                }), None]
             sage_intacct_connection.post_charge_card_transaction(charge_card_transaction, charge_card_transaction_lineitems)
-    except:
+    except Exception:
         logger.info("Account period error")
 
 
 def test_post_journal_entry_exception(mocker, db, create_journal_entry):
+    """
+    Test post journal entry exception
+    """
     mocker.patch(
         'sageintacctsdk.apis.JournalEntries.post',
         return_value=data['journal_entry_response']
@@ -669,18 +775,21 @@ def test_post_journal_entry_exception(mocker, db, create_journal_entry):
     try:
         with mock.patch('sageintacctsdk.apis.JournalEntries.post') as mock_call:
             mock_call.side_effect = [WrongParamsError(
-            msg={
-                'Message': 'Invalid parametrs'
-            }, response={
-                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                'type': 'Invalid_params'
-            }), None]
+                msg={
+                    'Message': 'Invalid parametrs'
+                }, response={
+                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                    'type': 'Invalid_params'
+                }), None]
             sage_intacct_connection.post_journal_entry(journal_entry, journal_entry_lineitems)
-    except:
+    except Exception:
         logger.info("Account period error")
 
 
 def test_post_ap_payment(mocker, db, create_ap_payment):
+    """
+    Test post ap payment
+    """
     mocker.patch(
         'sageintacctsdk.apis.APPayments.post',
         return_value=data['reimbursements']
@@ -696,6 +805,9 @@ def test_post_ap_payment(mocker, db, create_ap_payment):
 
 
 def test_post_attachments(mocker, db):
+    """
+    Test post attachments
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -710,7 +822,11 @@ def test_post_attachments(mocker, db):
 
     assert supdoc_id == 'asd'
 
+
 def test_get_expense_link(mocker, db, create_journal_entry):
+    """
+    Test get expense link
+    """
     workspace_id = 1
 
     workspace = Workspace.objects.get(id=workspace_id)
@@ -727,6 +843,9 @@ def test_get_expense_link(mocker, db, create_journal_entry):
 
 
 def test_get_or_create_vendor(mocker, db):
+    """
+    Test get or create vendor
+    """
     workspace_id = 1
     get_call_mock = mocker.patch(
         'sageintacctsdk.apis.Vendors.get',
@@ -804,6 +923,9 @@ def test_get_or_create_vendor(mocker, db):
 
 
 def test_get_or_create_employee(mocker, db):
+    """
+    Test get or create employee
+    """
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Employees.get',
@@ -828,6 +950,9 @@ def test_get_or_create_employee(mocker, db):
 
 
 def test_sanitize_vendor_name(db):
+    """
+    Test sanitize vendor name
+    """
     workspace_id = 1
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
 
@@ -898,6 +1023,9 @@ def test_sanitize_vendor_name(db):
 
 
 def test_sync_allocations(mocker, db):
+    """
+    Test sync allocations
+    """
     workspace_id = 1
 
     def mock_allocation_entry_generator(field, value):
@@ -907,7 +1035,7 @@ def test_sync_allocations(mocker, db):
 
     def mock_allocations_generator(field, value, updated_at=None):
         yield data['allocations']
- 
+
     mocker.patch(
         'sageintacctsdk.apis.AllocationEntry.get_all_generator',
         side_effect=mock_allocation_entry_generator
@@ -926,7 +1054,7 @@ def test_sync_allocations(mocker, db):
     allocation_attributes = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ALLOCATION')
 
     assert allocation_attributes.count() == 2
-  
+
     for allocation_attribute in allocation_attributes:
         if allocation_attribute.value == 'RENT':
             assert set(allocation_attribute.detail.keys()) == {'LOCATIONID'}
@@ -935,6 +1063,9 @@ def test_sync_allocations(mocker, db):
 
 
 def test_skip_sync_attributes(mocker, db):
+    """
+    Test skip sync attributes
+    """
     mocker.patch(
         'sageintacctsdk.apis.Projects.count',
         return_value=25001
@@ -1035,7 +1166,7 @@ def test_skip_sync_attributes(mocker, db):
 
     new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='TAX_DETAIL').count()
     assert new_project_count == 0
-    
+
     CostType.objects.filter(workspace_id=1).delete()
 
     sage_intacct_connection.sync_cost_types()

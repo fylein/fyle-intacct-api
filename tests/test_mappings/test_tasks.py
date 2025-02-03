@@ -1,23 +1,35 @@
 from django_q.models import Schedule
-from fyle_accounting_mappings.models import (
-    DestinationAttribute,
-    Mapping,
-    EmployeeMapping,
-    ExpenseAttribute
-)
-from apps.mappings.tasks import *
-from ..test_sageintacct.fixtures import data as intacct_data
-from ..test_fyle.fixtures import data as fyle_data
-from apps.workspaces.models import Configuration
-from apps.fyle.models import ExpenseGroup
+
 from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
     InternalServerError
 )
-from apps.mappings.models import ImportLog
+from fyle_accounting_mappings.models import (
+    Mapping,
+    EmployeeMapping,
+    ExpenseAttribute,
+    DestinationAttribute,
+)
+from apps.mappings.tasks import (
+    async_auto_map_employees,
+    schedule_auto_map_employees,
+    sync_sage_intacct_attributes,
+    resolve_expense_attribute_errors,
+    async_auto_map_charge_card_account,
+    schedule_auto_map_charge_card_employees
+)
+from apps.tasks.models import Error
+from apps.fyle.models import ExpenseGroup
+from apps.workspaces.models import Configuration
+
+from tests.test_fyle.fixtures import data as fyle_data
+from tests.test_sageintacct.fixtures import data as intacct_data
 
 
 def test_resolve_expense_attribute_errors(db):
+    """
+    Test resolve expense attribute errors
+    """
     workspace_id = 1
     expense_group = ExpenseGroup.objects.get(id=3)
 
@@ -77,6 +89,9 @@ def test_resolve_expense_attribute_errors(db):
 
 
 def test_async_auto_map_employees(mocker, db):
+    """
+    Test async auto map employees
+    """
     workspace_id = 1
 
     mocker.patch(
@@ -114,6 +129,9 @@ def test_async_auto_map_employees(mocker, db):
 
 
 def test_schedule_auto_map_employees(db):
+    """
+    Test schedule auto map employees
+    """
     workspace_id = 1
 
     schedule_auto_map_employees(employee_mapping_preference=True, workspace_id=workspace_id)
@@ -122,7 +140,7 @@ def test_schedule_auto_map_employees(db):
         func='apps.mappings.tasks.async_auto_map_employees',
         args='{}'.format(workspace_id),
     ).first()
-    
+
     assert schedule.func == 'apps.mappings.tasks.async_auto_map_employees'
 
     schedule_auto_map_employees(employee_mapping_preference=False, workspace_id=workspace_id)
@@ -132,10 +150,13 @@ def test_schedule_auto_map_employees(db):
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule == None   
+    assert schedule == None
 
 
 def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting, create_cost_type):
+    """
+    Test sync sage intacct attributes
+    """
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Locations.count',
@@ -175,11 +196,9 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=0
     )
 
-
     mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
     mocker.patch.object(mock_platform.return_value.projects, 'sync')
-
 
     sync_sage_intacct_attributes('DEPARTMENT', workspace_id=workspace_id)
     sync_sage_intacct_attributes('LOCATION', workspace_id=workspace_id)
@@ -195,8 +214,11 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
 
 
 def test_async_auto_map_charge_card_account(mocker, db):
+    """
+    Test async auto map charge card account
+    """
     workspace_id = 1
-    
+
     mock_call = mocker.patch(
         'fyle_integrations_platform_connector.apis.Employees.sync',
         return_value=[]
@@ -218,6 +240,9 @@ def test_async_auto_map_charge_card_account(mocker, db):
 
 
 def test_schedule_auto_map_charge_card_employees(db):
+    """
+    Test schedule auto map charge card employees
+    """
     workspace_id = 1
 
     configuration = Configuration.objects.get(workspace_id=workspace_id)
@@ -231,7 +256,7 @@ def test_schedule_auto_map_charge_card_employees(db):
         func='apps.mappings.tasks.async_auto_map_charge_card_account',
         args='{}'.format(workspace_id),
     ).first()
-    
+
     assert schedule.func == 'apps.mappings.tasks.async_auto_map_charge_card_account'
 
     configuration.corporate_credit_card_expenses_object = 'BILL'

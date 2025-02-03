@@ -1,15 +1,16 @@
 from rest_framework import generics
-from rest_framework.response import Response
 from rest_framework.views import status
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from django_q.tasks import Chain
 
 from fyle_intacct_api.utils import assert_valid
-from apps.workspaces.models import Configuration
 
-from .serializers import GeneralMappingSerializer, LocationEntityMappingSerializer
-from .models import GeneralMapping, LocationEntityMapping
-from .utils import MappingUtils
+from apps.workspaces.models import Configuration
+from apps.mappings.utils import MappingUtils
+from apps.mappings.models import GeneralMapping, LocationEntityMapping
+from apps.mappings.serializers import GeneralMappingSerializer, LocationEntityMappingSerializer
 
 
 class LocationEntityMappingView(generics.ListCreateAPIView, generics.DestroyAPIView):
@@ -20,7 +21,7 @@ class LocationEntityMappingView(generics.ListCreateAPIView, generics.DestroyAPIV
     queryset = LocationEntityMapping.objects.all()
     lookup_field = 'workspace_id'
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs) -> Response:
         """
         Get location entity mapping
         """
@@ -47,7 +48,7 @@ class GeneralMappingView(generics.ListCreateAPIView):
     serializer_class = GeneralMappingSerializer
     queryset = GeneralMapping.objects.all()
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args, **kwargs) -> Response:
         """
         Create general mappings
         """
@@ -64,7 +65,7 @@ class GeneralMappingView(generics.ListCreateAPIView):
             status=status.HTTP_200_OK
         )
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request: Request, *args, **kwargs) -> Response:
         """
         Get general mappings
         """
@@ -88,7 +89,7 @@ class AutoMapEmployeeView(generics.CreateAPIView):
     Auto Map Employee view
     """
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args, **kwargs) -> Response:
         """
         Trigger Auto Map Employees
         """

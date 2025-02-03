@@ -1,31 +1,38 @@
-import json
 import pytest
+
+import json
 from unittest import mock
+
 from django.db.models import Q
-from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings, Reimbursement
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
+
+from fyle.platform.exceptions import InvalidTokenError, InternalServerError
+
+from tests.helper import dict_compare_keys
+
+from apps.tasks.models import TaskLog
+from apps.fyle.actions import mark_expenses_as_skipped
 from apps.workspaces.models import FyleCredential, Workspace
+from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
 from apps.fyle.tasks import (
     create_expense_groups,
     schedule_expense_group_creation,
     post_accounting_export_summary,
     update_non_exported_expenses
 )
-from apps.tasks.models import TaskLog
-from tests.helper import dict_compare_keys
 from .fixtures import data
-from django.urls import reverse
-from rest_framework.exceptions import ValidationError
-from rest_framework import status
-from apps.fyle.actions import mark_expenses_as_skipped
-from fyle.platform.exceptions import InvalidTokenError, InternalServerError
 
 
 def test_schedule_expense_group_creation(api_client, test_connection):
+    """
+    Test schedule expense group creation
+    """
     workspace_id = 1
-
     expense_groups = ExpenseGroup.objects.filter(workspace_id=workspace_id).count()
     assert expense_groups == 3
-    
+
     schedule_expense_group_creation(workspace_id=workspace_id)
 
     expense_groups = ExpenseGroup.objects.filter(workspace_id=workspace_id).count()
@@ -33,8 +40,11 @@ def test_schedule_expense_group_creation(api_client, test_connection):
 
 
 def test_create_expense_groups(mocker, db):
+    """
+    Test create expense groups
+    """
     workspace_id = 1
-    
+
     mock_call = mocker.patch(
         'fyle_integrations_platform_connector.apis.Expenses.get',
         return_value=data['expenses']
@@ -93,9 +103,12 @@ def test_create_expense_groups(mocker, db):
 
 @pytest.mark.django_db()
 def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
+    """
+    Test create expense groups
+    """
     access_token = test_connection.access_token
-    #adding the expense-filter
-    url = reverse('expense-filters', 
+    # adding the expense-filter
+    url = reverse('expense-filters',
         kwargs={
             'workspace_id': 1,
         }
@@ -117,9 +130,6 @@ def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
         }
     )
 
-    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=1)
-
-
     with mock.patch('fyle_integrations_platform_connector.apis.Expenses.get') as mock_call:
         mock_call.side_effect = [
             data['expenses'],
@@ -137,10 +147,14 @@ def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
         assert len(expenses) == expenses_count
 
         for expense in expenses:
-            if expense.employee_email == 'jhonsnow@fyle.in': 
+            if expense.employee_email == 'jhonsnow@fyle.in':
                 assert expense.is_skipped == True
 
+
 def test_post_accounting_export_summary(db, mocker):
+    """
+    Test post accounting export summary
+    """
     expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
     expense_id = expense_group.expenses.first().id
     expense_group.expenses.remove(expense_id)
@@ -165,6 +179,9 @@ def test_post_accounting_export_summary(db, mocker):
 
 
 def test_update_non_exported_expenses(db, create_temp_workspace, mocker, api_client):
+    """
+    Test update non exported expenses
+    """
     expense = data['raw_expense']
     expense['bank_transaction_id'] = 'btxnanish'
     default_raw_expense = data['default_raw_expense']

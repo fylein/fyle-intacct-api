@@ -1,14 +1,16 @@
 from datetime import datetime, timedelta, timezone
+
+
+from apps.mappings.models import ImportLog
+from apps.workspaces.models import Configuration
+from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 from apps.mappings.tasks import (
     schedule_auto_map_employees,
     schedule_auto_map_charge_card_employees
 )
-from apps.workspaces.models import Configuration
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
-from apps.mappings.models import ImportLog
 
 
-def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
+def schedule_or_delete_auto_mapping_tasks(configuration: Configuration) -> None:
     """
     :param configuration: Workspace Configuration Instance
     :return: None
@@ -24,6 +26,10 @@ def schedule_or_delete_auto_mapping_tasks(configuration: Configuration):
 def prepend_code_to_name(prepend_code_in_name: bool, value: str, code: str = None) -> str:
     """
     Format the attribute name based on the use_code_in_naming flag
+    :param prepend_code_in_name: Boolean flag to prepend code in name
+    :param value: Value of the attribute
+    :param code: Code of the attribute
+    :return: Formatted attribute name
     """
     if prepend_code_in_name and code:
         return "{}: {}".format(code, value)
@@ -33,6 +39,8 @@ def prepend_code_to_name(prepend_code_in_name: bool, value: str, code: str = Non
 def is_project_sync_allowed(import_log: ImportLog = None) -> bool:
     """
     Check if job sync is allowed
+    :param import_log: Import Log Instance
+    :return: Boolean
     """
     time_difference = datetime.now(timezone.utc) - timedelta(minutes=30)
     time_difference = time_difference.replace(tzinfo=timezone.utc)

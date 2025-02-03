@@ -1,10 +1,13 @@
 from django import forms
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
 
-from .models import User
+from apps.users.models import User
 
 
 class RegisterForm(forms.ModelForm):
+    """
+    Form for registering a new account.
+    """
     password = forms.CharField(widget=forms.PasswordInput)
     password2 = forms.CharField(label='Confirm password', widget=forms.PasswordInput)
 
@@ -12,14 +15,20 @@ class RegisterForm(forms.ModelForm):
         model = User
         fields = ('email', 'full_name')
 
-    def clean_email(self):
+    def clean_email(self) -> str:
+        """
+        Check if email is unique.
+        """
         email = self.cleaned_data.get('email')
         qs = User.objects.filter(email=email)
         if qs.exists():
             raise forms.ValidationError("email is taken")
         return email
 
-    def clean_password2(self):
+    def clean_password2(self) -> str:
+        """
+        Check if password1 and password2 are the same.
+        """
         password1 = self.cleaned_data.get("password1")
         password2 = self.cleaned_data.get("password2")
         if password1 and password2 and password1 != password2:
@@ -28,8 +37,10 @@ class RegisterForm(forms.ModelForm):
 
 
 class UserAdminCreationForm(forms.ModelForm):
-    """A form for creating new users. Includes all the required
-    fields, plus a repeated password."""
+    """
+    A form for creating new users. Includes all the required
+    fields, plus a repeated password.
+    """
     password1 = forms.CharField(label='Password', widget=forms.PasswordInput)
     password2 = forms.CharField(label='Password confirmation', widget=forms.PasswordInput)
 
@@ -37,14 +48,20 @@ class UserAdminCreationForm(forms.ModelForm):
         model = User
         fields = ('email', 'full_name')
 
-    def clean_password2(self):
+    def clean_password2(self) -> str:
+        """
+        Check if password1 and password2 are the same.
+        """
         password1 = self.cleaned_data.get("password1")
         password2 = self.cleaned_data.get("password2")
         if password1 and password2 and password1 != password2:
             raise forms.ValidationError("Passwords don't match")
         return password2
 
-    def save(self, commit=True):
+    def save(self, commit: bool = True) -> User:
+        """
+        Save the provided password in hashed format.
+        """
         user = super(UserAdminCreationForm, self).save(commit=False)
         user.set_password(self.cleaned_data["password1"])
         if commit:
@@ -53,7 +70,8 @@ class UserAdminCreationForm(forms.ModelForm):
 
 
 class UserAdminChangeForm(forms.ModelForm):
-    """A form for updating users. Includes all the fields on
+    """
+    A form for updating users. Includes all the fields on
     the user, but replaces the password field with admin's
     password hash display field.
     """
@@ -63,5 +81,8 @@ class UserAdminChangeForm(forms.ModelForm):
         model = User
         fields = ('email', 'full_name', 'password', 'active', 'admin')
 
-    def clean_password(self):
+    def clean_password(self) -> str:
+        """
+        Clean password
+        """
         return self.initial["password"]

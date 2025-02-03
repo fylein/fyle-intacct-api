@@ -1,10 +1,16 @@
 import json
+
 from tests.helper import dict_compare_keys
+
 from apps.workspaces.models import Workspace, FyleCredential
+
 from .fixtures import data
 
 
 def test_advanced_settings(api_client, test_connection):
+    """
+    Test case to test advanced settings
+    """
     FyleCredential.objects.update_or_create(
         workspace_id=1,
         defaults={
@@ -35,7 +41,8 @@ def test_advanced_settings(api_client, test_connection):
     response = api_client.put(
         url,
         data={
-        'general_mappings':{}},
+            'general_mappings':{}
+        },
         format='json'
     )
 
@@ -44,7 +51,8 @@ def test_advanced_settings(api_client, test_connection):
     response = api_client.put(
         url,
         data={
-        'configurations':{}},
+            'configurations':{}
+        },
         format='json'
     )
 
@@ -53,7 +61,8 @@ def test_advanced_settings(api_client, test_connection):
     response = api_client.put(
         url,
         data={
-        'workspace_schedules':{}},
+            'workspace_schedules':{}
+        },
         format='json'
     )
 

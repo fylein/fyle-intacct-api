@@ -1,7 +1,10 @@
 import os
+
 from django.db import migrations
 from django.db.utils import ProgrammingError
-def safe_run_sql(sql_files):
+
+
+def safe_run_sql(sql_files: list) -> list:
     """
     Safely create migrations.RunSQL operations from a list of SQL file paths.
     Handles FileNotFoundError for missing files and lets ProgrammingError surface naturally.
@@ -22,4 +25,5 @@ def safe_run_sql(sql_files):
             raise RuntimeError(
                 f"Unexpected error in file {file_path}: {e}"
             ) from e
+
     return operations

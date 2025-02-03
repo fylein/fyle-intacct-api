@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import AccountingFieldsView, ExportedEntryView
+from apps.internal.views import AccountingFieldsView, ExportedEntryView
 
 urlpatterns = [
     path('accounting_fields/', AccountingFieldsView.as_view(), name='accounting-fields'),

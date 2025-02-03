@@ -1,13 +1,14 @@
 import logging
 from datetime import datetime
-from typing import List, Dict
-from apps.mappings.imports.modules.base import Base
+
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
     ExpenseAttribute,
     MappingSetting
 )
-from fyle_integrations_platform_connector import PlatformConnector
+
+from apps.mappings.imports.modules.base import Base
 from apps.workspaces.models import Configuration, FyleCredential
 from apps.mappings.helpers import prepend_code_to_name
 
@@ -29,7 +30,7 @@ class CostCenter(Base):
             prepend_code_to_name=prepend_code_to_name
         )
 
-    def trigger_import(self):
+    def trigger_import(self) -> None:
         """
         Trigger import for CostCenter module
         """
@@ -38,10 +39,10 @@ class CostCenter(Base):
     # remove the is_auto_sync_status_allowed parameter
     def construct_fyle_payload(
         self,
-        paginated_destination_attributes: List[DestinationAttribute],
+        paginated_destination_attributes: list[DestinationAttribute],
         existing_fyle_attributes_map: object,
         is_auto_sync_status_allowed: bool
-    ):
+    ) -> list:
         """
         Construct Fyle payload for CostCenter module
         :param paginated_destination_attributes: List of paginated destination attributes
@@ -68,7 +69,13 @@ class CostCenter(Base):
         return payload
 
 
-def disable_cost_centers(workspace_id: int, cost_centers_to_disable: Dict, is_import_to_fyle_enabled: bool = False, *args, **kwargs):
+def disable_cost_centers(
+    workspace_id: int,
+    cost_centers_to_disable: dict,
+    is_import_to_fyle_enabled: bool = False,
+    *args,
+    **kwargs
+) -> list:
     """
     cost_centers_to_disable object format:
     {
