@@ -10,7 +10,7 @@ class Sentry:
     def init():
         sentry_sdk.init(
             dsn=os.environ.get('SENTRY_DSN'),
-            send_default_pii=False,
+            send_default_pii=True,
             integrations=[DjangoIntegration()],
             environment=os.environ.get('SENTRY_ENV'),
             attach_stacktrace=True,
