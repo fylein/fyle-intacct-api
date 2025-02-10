@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def re_export_stuck_exports():
+def re_export_stuck_exports() -> None:
     prod_workspace_ids = Workspace.objects.filter(
         ~Q(name__icontains='fyle for') & ~Q(name__icontains='test')
     ).values_list('id', flat=True)
