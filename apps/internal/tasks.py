@@ -17,6 +17,10 @@ logger.level = logging.INFO
 
 
 def re_export_stuck_exports() -> None:
+    """
+    Re-exports stuck exports by identifying failed export attempts
+    and retrying them.
+    """
     prod_workspace_ids = Workspace.objects.filter(
         ~Q(name__icontains='fyle for') & ~Q(name__icontains='test')
     ).values_list('id', flat=True)
