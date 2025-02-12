@@ -4,6 +4,7 @@ from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 
+from apps.fyle.tasks import re_run_skip_export_rule
 from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
 
 from apps.fyle.helpers import connect_to_platform
@@ -49,7 +50,7 @@ def run_pre_save_dependent_field_settings_triggers(sender: type[DependentFieldSe
 
 
 @receiver(post_save, sender=ExpenseFilter)
-def run_post_save_expense_filters(sender, instance: ExpenseFilter, **kwargs):
+def run_post_save_expense_filters(sender: type[ExpenseFilter], instance: ExpenseFilter, **kwargs) -> None:
     """
     :param sender: Sender Class
     :param instance: Row Instance of Sender Class
