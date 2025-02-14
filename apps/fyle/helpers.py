@@ -25,7 +25,8 @@ from apps.fyle.models import (
     Expense,
     ExpenseFilter,
     ExpenseGroup,
-    ExpenseGroupSettings
+    ExpenseGroupSettings,
+    DependentFieldSetting
 )
 
 logger = logging.getLogger(__name__)
@@ -180,12 +181,21 @@ def sync_dimensions(fyle_credentials: FyleCredential, is_export: bool = False) -
     :param is_export: Is export
     :return: None
     """
+    skip_dependent_field_ids = []
+
+    dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=fyle_credentials.workspace_id, is_import_enabled=True).first()
+
+    if dependent_field_settings:
+        skip_dependent_field_ids = [dependent_field_settings.cost_code_field_id, dependent_field_settings.cost_type_field_id]
+
     platform = PlatformConnector(fyle_credentials)
     platform.import_fyle_dimensions(
         import_taxes=True,
         import_dependent_fields=True,
-        is_export=is_export
+        is_export=is_export,
+        skip_dependent_field_ids=skip_dependent_field_ids
     )
+
     if is_export:
         categories_count = platform.categories.get_count()
 
