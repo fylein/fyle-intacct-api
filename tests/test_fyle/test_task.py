@@ -14,7 +14,7 @@ from tests.helper import dict_compare_keys
 
 from apps.tasks.models import Error, TaskLog
 from apps.fyle.actions import mark_expenses_as_skipped
-from apps.workspaces.models import FyleCredential, LastExportDetail, Workspace
+from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, Workspace
 from apps.fyle.models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
 from apps.fyle.tasks import (
     create_expense_groups,
@@ -292,7 +292,7 @@ def test_re_run_skip_export_rule(db, create_temp_workspace, mocker, api_client, 
         expense.save()
 
     # Create expense groups - this should create 3 separate groups, one for each expense
-    ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, 1)
+    ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, Configuration.objects.get(workspace_id=1), 1)
     expense_groups = ExpenseGroup.objects.filter(workspace_id=1)
     expense_group_ids = expense_groups.values_list('id', flat=True)
     # Create LastExportDetail to simulate failed exports
