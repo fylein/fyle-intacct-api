@@ -286,7 +286,6 @@ def construct_expense_filter(expense_filter: ExpenseFilter) -> Q:
     :param expense_filter: Expense filter
     :return: Constructed expense filter
     """
-    constructed_expense_filter = {}
     # If the expense filter is a custom field
     if expense_filter.is_custom:
         # If the operator is not isnull
@@ -363,7 +362,7 @@ def construct_expense_filter_query(expense_filters: list[ExpenseFilter]) -> Q:
     :return: Constructed expense filter query
     """
     final_filter = None
-    join_by = None
+    previous_join_by = None
     for expense_filter in expense_filters:
         constructed_expense_filter = construct_expense_filter(expense_filter)
 
@@ -373,13 +372,13 @@ def construct_expense_filter_query(expense_filters: list[ExpenseFilter]) -> Q:
 
         # If join by is AND, OR
         elif expense_filter.rank != 1:
-            if join_by == 'AND':
+            if previous_join_by == 'AND':
                 final_filter = final_filter & (constructed_expense_filter)
             else:
                 final_filter = final_filter | (constructed_expense_filter)
 
         # Set the join type for the additonal filter
-        join_by = expense_filter.join_by
+        previous_join_by = expense_filter.join_by
 
     return final_filter
 
