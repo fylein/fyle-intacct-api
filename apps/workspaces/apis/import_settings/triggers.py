@@ -37,7 +37,7 @@ class ImportSettingsTrigger:
             current_mapping_settings: List[MappingSetting],
             new_mappings_settings: List[Dict],
             workspace_id: int
-    ):
+    ) -> None:
         """
         Reset Import logs when mapping settings are deleted or the source_field is changed.
         """
