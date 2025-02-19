@@ -12,13 +12,12 @@ from fyle.platform.exceptions import InvalidTokenError, InternalServerError
 
 from tests.helper import dict_compare_keys
 
-from apps.tasks.models import Error, TaskLog
+from apps.tasks.models import TaskLog
 from apps.fyle.actions import mark_expenses_as_skipped
-from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, Workspace
-from apps.fyle.models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+from apps.workspaces.models import FyleCredential, Workspace
+from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
 from apps.fyle.tasks import (
     create_expense_groups,
-    re_run_skip_export_rule,
     schedule_expense_group_creation,
     post_accounting_export_summary,
     update_non_exported_expenses
