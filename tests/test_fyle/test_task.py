@@ -283,12 +283,6 @@ def test_re_run_skip_export_rule(db, create_temp_workspace, mocker, api_client, 
 
     # Create expense objects
     expense_objects = Expense.create_expense_objects(expenses, 1)
-    print('Created expenses:')
-    for exp in expense_objects:
-        print(
-            f"  Expense ID: {exp.id}, Number: {exp.expense_number}, "
-            f"Email: {exp.employee_email}, Category: {exp.category}, is_skipped: {exp.is_skipped}"
-        )
 
     # Mark all expenses as failed
     for expense in Expense.objects.filter(workspace_id=1):
@@ -299,7 +293,6 @@ def test_re_run_skip_export_rule(db, create_temp_workspace, mocker, api_client, 
     configuration = Configuration.objects.get(workspace_id=1)
     ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, 1)
     expense_groups = ExpenseGroup.objects.filter(workspace_id=1)
-    print('Created expense groups:', list(expense_groups.values_list('id', flat=True)))
 
     # Create a LastExportDetail to simulate failed exports
     LastExportDetail.objects.update_or_create(
@@ -329,26 +322,12 @@ def test_re_run_skip_export_rule(db, create_temp_workspace, mocker, api_client, 
         expense_group=ExpenseGroup.objects.get(id=expense_group_ids[0])
     )
 
-    print('Before re_run_skip_export_rule:')
-    for exp in Expense.objects.filter(workspace_id=1):
-        print(
-            f"  Expense ID: {exp.id}, Number: {exp.expense_number}, "
-            f"Email: {exp.employee_email}, Category: {exp.category}, is_skipped: {exp.is_skipped}"
-        )
-
     # IMPORTANT: match workspace.fyle_org_id to the expense org_id
     workspace = Workspace.objects.get(id=1)
     workspace.fyle_org_id = 'orHVw3ikkCxJ'
     workspace.save()
 
     re_run_skip_export_rule(workspace)
-
-    print('After re_run_skip_export_rule:')
-    for exp in Expense.objects.filter(workspace_id=1):
-        print(
-            f"  Expense ID: {exp.id}, Number: {exp.expense_number}, "
-            f"Email: {exp.employee_email}, Category: {exp.category}, is_skipped: {exp.is_skipped}"
-        )
 
     skipped_expense = Expense.objects.get(expense_number='expense_1')
     non_skipped_expense = Expense.objects.get(expense_number='expense_2')
