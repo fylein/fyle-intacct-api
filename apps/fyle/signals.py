@@ -15,7 +15,7 @@ logger.level = logging.INFO
 
 
 @receiver(pre_save, sender=DependentFieldSetting)
-def run_pre_save_dependent_field_settings_triggers(sender, instance, **kwargs):
+def run_pre_save_dependent_field_settings_triggers(sender: type[DependentFieldSetting], instance: DependentFieldSetting, **kwargs) -> None:
     """
     Ensure dependent fields are created before saving.
     """
