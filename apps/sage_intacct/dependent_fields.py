@@ -101,7 +101,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                         cost_code_name=F('value'),  # value -> task_name
                         cost_code_code=F('destination_id')  # destination_id -> task_id
                     ),
-                    output_field=JSONField(),  # Ensure JSONField is used
+                    output_field=JSONField(),
                     distinct=True
                 )
             )
