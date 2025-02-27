@@ -58,7 +58,8 @@ SYNC_UPPER_LIMIT = {
     'departments': 1000,
     'vendors': 20000,
     'tax_details': 200,
-    'cost_types': 500000
+    'cost_types': 500000,
+    'cost_codes': 10000
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
@@ -385,6 +386,54 @@ class SageIntacctConnector:
         dependent_field_setting.last_synced_at = datetime.now()
         dependent_field_setting.save()
 
+    def sync_cost_codes(self) -> None:
+        """
+        Sync Cost Codes
+        """
+        attribute_count = self.connection.tasks.count(field=None, value=None)
+        logger.info("attribute_count: %s", attribute_count)
+
+        if not self.is_sync_allowed(attribute_type = 'cost_codes', attribute_count = attribute_count):
+            logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+
+        fields = ['RECORDNO', 'TASKID', 'NAME', 'PROJECTID', 'PROJECTKEY', 'PROJECTNAME']
+        args = {}
+
+        dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id).first()
+
+        if dependent_field_setting and dependent_field_setting.last_synced_at:
+            latest_synced_timestamp = dependent_field_setting.last_synced_at - timedelta(days=1)
+            args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
+
+        tasks_generator = self.connection.tasks.get_all_generator(field=None, value=None, fields=fields, updated_at=args.get('updated_at', None))
+        tasks_attribute = []
+
+        for tasks in tasks_generator:
+            for task in tasks:
+                detail = {
+                    'project_id': task['PROJECTID'],
+                    'project_key': task['PROJECTKEY'],
+                    'project_name': task['PROJECTNAME'],
+                    'record_no': task['RECORDNO']
+                }
+
+                tasks_attribute.append({
+                    'attribute_type': 'COST_CODE',
+                    'display_name': 'Cost Code',
+                    'value': task['NAME'],
+                    'destination_id': task['TASKID'],
+                    'active': True,
+                    'detail': detail,
+                    'code': task['TASKID']
+                })
+
+            DestinationAttribute.bulk_create_or_update_destination_attributes(tasks_attribute, 'COST_CODE', self.workspace_id, True)
+            tasks_attribute = []
+
+        dependent_field_setting.last_synced_at = datetime.now()
+        dependent_field_setting.save()
+
     def sync_projects(self) -> list:
         """
         Get projects
@@ -461,7 +510,11 @@ class SageIntacctConnector:
                     })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                item_attributes, 'ITEM', self.workspace_id, True)
+                item_attributes,
+                'ITEM',
+                self.workspace_id,
+                True
+            )
 
         return []
 

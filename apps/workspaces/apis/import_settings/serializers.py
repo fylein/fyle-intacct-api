@@ -215,6 +215,16 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
 
             project_mapping = MappingSetting.objects.filter(workspace_id=instance.id, destination_field='PROJECT').first()
             if project_mapping and project_mapping.import_to_fyle and dependent_field_settings:
+                dependent_field_settings['is_cost_type_import_enabled'] = dependent_field_settings.get('cost_type_field_name') is not None
+
+                dependent_field_settings_instance = DependentFieldSetting.objects.filter(workspace_id=instance.id).first()
+
+                if dependent_field_settings_instance and (
+                    (dependent_field_settings_instance.cost_type_field_name is not None) != (dependent_field_settings.get('cost_type_field_name') is not None)
+                ):
+                    dependent_field_settings['last_synced_at'] = None
+                    dependent_field_settings['last_successful_import_at'] = None
+
                 DependentFieldSetting.objects.update_or_create(
                     workspace_id=instance.id,
                     defaults=dependent_field_settings

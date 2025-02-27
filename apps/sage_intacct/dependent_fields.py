@@ -2,11 +2,11 @@ import logging
 from time import sleep
 from datetime import datetime, timezone
 
-from django.db.models import F, Func, Value
-from django.contrib.postgres.fields import JSONField
+from django.db.models import F, Func, Value, CharField, JSONField
+from django.db.models.functions import JSONObject
 from django.contrib.postgres.aggregates import JSONBAgg
 
-from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_mappings.models import ExpenseAttribute, DestinationAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
@@ -85,22 +85,43 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
     total_batches = 0
     processed_batches = 0
     is_errored = False
+    projects_batch = []
 
-    projects_batch = (
-        CostType.objects.filter(**filters)
-        .values('project_name', 'project_id')
-        .annotate(
-            cost_codes=JSONBAgg(
-                Func(
-                    Value('cost_code_name'), F('task_name'),
-                    Value('cost_code_code'), F('task_id'),
-                    function='jsonb_build_object'
-                ),
-                output_field=JSONField(),
-                distinct=True
+    if 'attribute_type' in filters:
+        projects_batch = (
+            DestinationAttribute.objects.filter(**filters)
+            .annotate(
+                project_name=Func(F('detail'), Value('project_name'), function='jsonb_extract_path_text', output_field=CharField()),
+                project_id=Func(F('detail'), Value('project_id'), function='jsonb_extract_path_text', output_field=CharField())
+            )
+            .values('project_name', 'project_id')
+            .annotate(
+                cost_codes=JSONBAgg(
+                    JSONObject(
+                        cost_code_name=F('value'),  # value -> task_name
+                        cost_code_code=F('destination_id')  # destination_id -> task_id
+                    ),
+                    output_field=JSONField(),  # Ensure JSONField is used
+                    distinct=True
+                )
             )
         )
-    )
+    else:
+        projects_batch = (
+            CostType.objects.filter(**filters)
+            .values('project_name', 'project_id')
+            .annotate(
+                cost_codes=JSONBAgg(
+                    Func(
+                        Value('cost_code_name'), F('task_name'),
+                        Value('cost_code_code'), F('task_id'),
+                        function='jsonb_build_object'
+                    ),
+                    output_field=JSONField(),
+                    distinct=True
+                )
+            )
+        )
 
     existing_projects_in_fyle = set(
         ExpenseAttribute.objects.filter(
@@ -235,6 +256,29 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
     return is_errored
 
 
+def post_dependent_cost_code_only(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, cost_code_import_log: ImportLog) -> None:
+    """
+    Post dependent cost code to Fyle
+    :param workspace_id: Workspace ID
+    :param dependent_field_setting: Dependent field setting object
+    :param platform: Platform connector object
+    :param cost_code_import_log: Cost code import log object
+    :return: None
+    """
+    filters = {
+        'workspace_id': workspace_id,
+        'attribute_type': 'COST_CODE'
+    }
+
+    if dependent_field_setting.last_successful_import_at:
+        filters['updated_at__gte'] = dependent_field_setting.last_successful_import_at
+
+    posted_cost_codes, is_errored = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters)
+
+    if not is_errored and cost_code_import_log.processed_batches_count == cost_code_import_log.total_batches_count:
+        DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
+
+
 def post_dependent_expense_field_values(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector = None, cost_code_import_log: ImportLog = None, cost_type_import_log: ImportLog = None) -> None:
     """
     Post dependent expense field values to Fyle
@@ -283,16 +327,28 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
     :return: None
     """
     dependent_field = DependentFieldSetting.objects.get(workspace_id=workspace_id)
+
     cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
-    cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    cost_type_import_log = None
+
+    if dependent_field.is_cost_type_import_enabled:
+        cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+
     exception = None
     try:
         platform = connect_to_platform(workspace_id)
-        sync_sage_intacct_attributes('COST_TYPE', workspace_id)
-        if cost_code_import_log.status == 'IN_PROGRESS' and cost_type_import_log.status == 'IN_PROGRESS':
-            post_dependent_expense_field_values(workspace_id, dependent_field, platform, cost_code_import_log, cost_type_import_log)
+        if dependent_field.is_cost_type_import_enabled:
+            sync_sage_intacct_attributes('COST_TYPE', workspace_id)
+            if cost_code_import_log.status == 'IN_PROGRESS' and cost_type_import_log.status == 'IN_PROGRESS':
+                post_dependent_expense_field_values(workspace_id, dependent_field, platform, cost_code_import_log, cost_type_import_log)
+            else:
+                logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
         else:
-            logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
+            sync_sage_intacct_attributes('COST_CODE', workspace_id)
+            if cost_code_import_log.status == 'IN_PROGRESS':
+                post_dependent_cost_code_only(workspace_id=workspace_id, dependent_field_setting=dependent_field, platform=platform, cost_code_import_log=cost_code_import_log)
+            else:
+                logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
         exception = "Invalid Token or Sage Intacct credentials does not exist"
         logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
@@ -365,41 +421,80 @@ def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: dict,
     dependent_field_setting = DependentFieldSetting.objects.filter(is_import_enabled=True, workspace_id=workspace_id).first()
 
     if dependent_field_setting:
-        filters = {
-            'project_id__in': list(cost_codes_to_disable.keys()),
-            'workspace_id': workspace_id
-        }
-        cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
-        # This call will disable the cost codes in Fyle that has old project name
-        posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
+        if dependent_field_setting.is_cost_type_import_enabled:
+            filters = {
+                'project_id__in': list(cost_codes_to_disable.keys()),
+                'workspace_id': workspace_id
+            }
 
-        logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")
+            cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+            # This call will disable the cost codes in Fyle that has old project name
+            posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
 
-        BATCH_SIZE = 500
+            logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")
 
-        for destination_id, value in cost_codes_to_disable.items():
-            updated_project_name = prepend_code_to_name(prepend_code_in_name=use_code_in_naming, value=value['updated_value'], code=value['updated_code'])
+            BATCH_SIZE = 500
 
-            cost_types_queryset = CostType.objects.filter(
-                workspace_id=workspace_id,
-                project_id=destination_id
-            ).exclude(project_name=updated_project_name)
+            for _, value in cost_codes_to_disable.items():
+                cost_types_queryset = CostType.objects.filter(
+                    workspace_id=workspace_id,
+                    project_id=value['code']
+                ).exclude(project_name=value['updated_value'], project_id=value['updated_code'])
+                bulk_update_payload = []
 
-            bulk_update_payload = []
+                for cost_type in cost_types_queryset.iterator(chunk_size=BATCH_SIZE):
+                    cost_type.project_id = value['updated_code']
+                    cost_type.project_name = value['updated_value']
+                    # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
+                    cost_type.updated_at = datetime.now(timezone.utc)
+                    bulk_update_payload.append(cost_type)
 
-            for cost_type in cost_types_queryset.iterator(chunk_size=BATCH_SIZE):
-                cost_type.project_id = value['updated_code']
-                cost_type.project_name = value['updated_value']
-                # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
-                cost_type.updated_at = datetime.now(timezone.utc)
-                bulk_update_payload.append(cost_type)
+                    if len(bulk_update_payload) >= BATCH_SIZE:
+                        logger.info(f"Updating Cost Types | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
+                        CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
+                        bulk_update_payload = []
 
-                if len(bulk_update_payload) >= BATCH_SIZE:
+                # Final update for any remaining objects in the last batch
+                if bulk_update_payload:
                     logger.info(f"Updating Cost Types | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
                     CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
-                    bulk_update_payload = []
+        else:
+            filters = {
+                'detail__project_id__in': list(cost_codes_to_disable.keys()),
+                'workspace_id': workspace_id,
+                'attribute_type': 'COST_CODE'
+            }
+            cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+            # This call will disable the cost codes in Fyle that has old project name
+            posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
 
-            # Final update for any remaining objects in the last batch
-            if bulk_update_payload:
-                logger.info(f"Updating Cost Types | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-                CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
+            logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")
+
+            BATCH_SIZE = 500
+
+            for _, value in cost_codes_to_disable.items():
+                cost_codes_queryset = DestinationAttribute.objects.filter(
+                    workspace_id=workspace_id,
+                    detail__project_id=value['code']
+                ).exclude(detail__project_name=value['updated_value'], detail__project_id=value['updated_code'])
+
+                bulk_update_payload = []
+
+                for cost_code in cost_codes_queryset.iterator(chunk_size=BATCH_SIZE):
+                    detail = cost_code.detail
+                    detail['project_id'] = value['updated_code']
+                    detail['project_name'] = value['updated_value']
+                    cost_code.detail = detail
+                    # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
+                    cost_code.updated_at = datetime.now(timezone.utc)
+                    bulk_update_payload.append(cost_code)
+
+                    if len(bulk_update_payload) >= BATCH_SIZE:
+                        logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
+                        DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+                        bulk_update_payload = []
+
+                # Final update for any remaining objects in the last batch
+                if bulk_update_payload:
+                    logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
+                    DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)

@@ -700,8 +700,8 @@ class DependentFieldSetting(models.Model):
     cost_code_field_name = models.CharField(max_length=255, help_text='Fyle Cost Code Field Name')
     cost_code_field_id = models.IntegerField(help_text='Fyle Cost Code Field ID')
     cost_code_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost code')
-    cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name')
-    cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID')
+    cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name', null=True)
+    cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID', null=True)
     cost_type_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost Type')
     workspace = models.OneToOneField(
         Workspace,
@@ -711,6 +711,7 @@ class DependentFieldSetting(models.Model):
     )
     last_synced_at = models.DateTimeField(null=True, help_text='Last Synced At (Intacct)')
     last_successful_import_at = models.DateTimeField(null=True, help_text='Last Successful Import At')
+    is_cost_type_import_enabled = models.BooleanField(help_text='Is Cost Type Import Enabled', default=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 

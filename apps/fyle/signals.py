@@ -15,38 +15,43 @@ logger.level = logging.INFO
 
 
 @receiver(pre_save, sender=DependentFieldSetting)
-def run_pre_save_dependent_field_settings_triggers(sender: type[DependentFieldSetting], instance: DependentFieldSetting, **kwargs) -> None:
+def run_pre_save_dependent_field_settings_triggers(sender, instance, **kwargs):
     """
-    :param sender: Sender Class
-    :param instance: Row instance of Sender Class
-    :return: None
+    Ensure dependent fields are created before saving.
     """
-    # Patch alert - Skip creating dependent fields if they're already created
-    if instance.cost_code_field_id:
-        return
+    if getattr(instance, "_skip_signal", False):
+        return  # Prevent infinite loop
+
+    if instance.cost_code_field_id and instance.cost_type_field_id:
+        return  # Already set
 
     platform = connect_to_platform(instance.workspace_id)
-
     instance.project_field_id = platform.dependent_fields.get_project_field_id()
 
-    cost_code = create_dependent_custom_field_in_fyle(
-        workspace_id=instance.workspace_id,
-        fyle_attribute_type=instance.cost_code_field_name,
-        platform=platform,
-        source_placeholder=instance.cost_code_placeholder,
-        parent_field_id=instance.project_field_id,
-    )
+    if not instance.cost_code_field_id:
+        cost_code = create_dependent_custom_field_in_fyle(
+            workspace_id=instance.workspace_id,
+            fyle_attribute_type=instance.cost_code_field_name,
+            platform=platform,
+            source_placeholder=instance.cost_code_placeholder,
+            parent_field_id=instance.project_field_id,
+        )
+        instance.cost_code_field_id = cost_code['data']['id']
 
-    instance.cost_code_field_id = cost_code['data']['id']
+    if not instance.cost_type_field_id and instance.cost_type_field_name:
+        cost_type = create_dependent_custom_field_in_fyle(
+            workspace_id=instance.workspace_id,
+            fyle_attribute_type=instance.cost_type_field_name,
+            platform=platform,
+            source_placeholder=instance.cost_type_placeholder,
+            parent_field_id=instance.cost_code_field_id,
+        )
+        instance.cost_type_field_id = cost_type['data']['id']
 
-    cost_type = create_dependent_custom_field_in_fyle(
-        workspace_id=instance.workspace_id,
-        fyle_attribute_type=instance.cost_type_field_name,
-        platform=platform,
-        source_placeholder=instance.cost_type_placeholder,
-        parent_field_id=instance.cost_code_field_id,
-    )
-    instance.cost_type_field_id = cost_type['data']['id']
+        # Ensure instance is already saved before updating fields
+        if instance.pk:
+            instance._skip_signal = True
+            instance.save(update_fields=['cost_type_field_id'])
 
 
 @receiver(post_save, sender=ExpenseFilter)
