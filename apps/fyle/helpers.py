@@ -223,7 +223,6 @@ def handle_refresh_dimensions(workspace_id: int) -> None:
     :return: None
     """
     workspace = Workspace.objects.get(id=workspace_id)
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
     configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
 
     import_code_fields = [] if not configuration else configuration.import_code_fields
