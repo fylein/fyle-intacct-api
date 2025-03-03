@@ -1,6 +1,7 @@
 import logging
 import traceback
 from datetime import datetime
+from typing import List
 
 from django.db import transaction
 from django_q.tasks import async_task
@@ -16,7 +17,6 @@ from fyle.platform.exceptions import (
 
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.actions import export_to_intacct
-from apps.fyle.queue import async_post_accounting_export_summary
 from apps.workspaces.models import (
     LastExportDetail,
     Workspace,
@@ -238,8 +238,9 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog, workspace: 
         expenses_object_ids = [expense_object.id for expense_object in expense_objects]
         final_query = construct_expense_filter_query(expense_filters)
 
-        mark_expenses_as_skipped(final_query, expenses_object_ids, workspace)
-        async_post_accounting_export_summary(workspace.fyle_org_id, workspace.id)
+        skipped_expenses = mark_expenses_as_skipped(final_query, expenses_object_ids, workspace)
+        if skipped_expenses:
+            post_accounting_export_summary(workspace.fyle_org_id, workspace.id, [expense.id for expense in skipped_expenses])
 
         filtered_expenses = Expense.objects.filter(
             is_skipped=False,
@@ -256,7 +257,7 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog, workspace: 
     task_log.save()
 
 
-def post_accounting_export_summary(org_id: str, workspace_id: int, fund_source: str = None, is_failed: bool = False) -> None:
+def post_accounting_export_summary(org_id: str, workspace_id: int, expense_ids: List = None, fund_source: str = None, is_failed: bool = False) -> None:
     """
     Post accounting export summary to Fyle
     :param org_id: org id
@@ -271,6 +272,9 @@ def post_accounting_export_summary(org_id: str, workspace_id: int, fund_source: 
         'org_id': org_id,
         'accounting_export_summary__synced': False
     }
+
+    if expense_ids:
+        filters['id__in'] = expense_ids
 
     if fund_source:
         filters['fund_source'] = fund_source
@@ -396,6 +400,7 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
             workspace
         )
         if skipped_expenses:
+            post_accounting_export_summary(workspace.fyle_org_id, workspace.id, [expense.id for expense in skipped_expenses])
             expense_groups = ExpenseGroup.objects.filter(exported_at__isnull=True, workspace_id=workspace.id)
             deleted_failed_expense_groups_count = 0
             for expense_group in expense_groups:
