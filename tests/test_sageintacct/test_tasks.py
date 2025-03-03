@@ -1398,7 +1398,7 @@ def test_schedule_journal_entries_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_journal_entries_creation(workspace_id, [1], False, 'PERSONAL', 1)
+    schedule_journal_entries_creation(workspace_id, [1], False, 1)
 
     TaskLog.objects.filter(type='CREATING_JOURNAL_ENTRIES').count() != 0
 
@@ -1409,7 +1409,7 @@ def test_schedule_expense_reports_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_expense_reports_creation(workspace_id, [1], False, 'PERSONAL', 1)
+    schedule_expense_reports_creation(workspace_id, [1], False, 1)
 
     TaskLog.objects.filter(type='CREATING_EXPENSE_REPORTS').count() != 0
 
@@ -1420,7 +1420,7 @@ def test_schedule_bills_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_bills_creation(workspace_id, [1], False, 'PERSONAL', 1)
+    schedule_bills_creation(workspace_id, [1], False, 1)
 
     TaskLog.objects.filter(type='CREATING_BILLS').count() != 0
 
@@ -1431,7 +1431,7 @@ def test_schedule_charge_card_transaction_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_charge_card_transaction_creation(workspace_id, [2], False, 'CCC', 1)
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1)
 
     TaskLog.objects.filter(type='CREATING_CHARGE_CARD_TRANSACTIONS').count() != 0
 

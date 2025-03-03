@@ -174,13 +174,14 @@ def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> None:
         workspace.save(update_fields=['source_synced_at'])
 
 
-def sync_dimensions(fyle_credentials: FyleCredential, is_export: bool = False) -> None:
+def sync_dimensions(workspace_id: int, is_export: bool = False) -> None:
     """
     Sync dimensions
-    :param fyle_credentials: Fyle credentials
+    :param workspace_id: Workspace ID
     :param is_export: Is export
     :return: None
     """
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     skip_dependent_field_ids = []
 
     dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=fyle_credentials.workspace_id, is_import_enabled=True).first()
