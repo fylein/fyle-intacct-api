@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 
 from apps.tasks.models import Error
-from apps.workspaces.models import Workspace, FyleCredential
+from apps.workspaces.models import Workspace
 from apps.sage_intacct.queue import __create_chain_and_run, validate_failing_export
 from apps.fyle.queue import async_import_and_export_expenses
 

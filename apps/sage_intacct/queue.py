@@ -8,7 +8,7 @@ from django_q.tasks import Chain
 
 from apps.tasks.models import TaskLog, Error
 from apps.fyle.models import ExpenseGroup
-from apps.workspaces.models import Configuration, FyleCredential
+from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
 
 logger = logging.getLogger(__name__)

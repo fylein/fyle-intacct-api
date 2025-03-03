@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 from django_q.tasks import async_task
 
