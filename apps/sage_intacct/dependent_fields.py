@@ -256,7 +256,7 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
     return is_errored
 
 
-def post_dependent_cost_code_only(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, cost_code_import_log: ImportLog) -> None:
+def post_dependent_cost_code_standalone(workspace_id: int, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, cost_code_import_log: ImportLog) -> None:
     """
     Post dependent cost code to Fyle
     :param workspace_id: Workspace ID
@@ -346,7 +346,7 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
         else:
             sync_sage_intacct_attributes('COST_CODE', workspace_id)
             if cost_code_import_log.status == 'IN_PROGRESS':
-                post_dependent_cost_code_only(workspace_id=workspace_id, dependent_field_setting=dependent_field, platform=platform, cost_code_import_log=cost_code_import_log)
+                post_dependent_cost_code_standalone(workspace_id=workspace_id, dependent_field_setting=dependent_field, platform=platform, cost_code_import_log=cost_code_import_log)
             else:
                 logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
     except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
