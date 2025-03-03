@@ -1,4 +1,4 @@
-cryptography==44.0.0
+cryptography==44.0.1
 dj-database-url==2.3.0
 Django==4.2.18
 django-db-geventpool==4.0.1
@@ -11,7 +11,7 @@ django-sendgrid-v5==1.2.0
 future==1.0.0
 fyle==0.37.2
 fyle-accounting-mappings==1.36.3
-fyle-integrations-platform-connector==1.39.3
+fyle-integrations-platform-connector==1.40.0
 fyle-rest-auth==1.7.2
 gevent==24.11.1
 gunicorn==23.0.0

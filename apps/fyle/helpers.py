@@ -25,7 +25,8 @@ from apps.fyle.models import (
     Expense,
     ExpenseFilter,
     ExpenseGroup,
-    ExpenseGroupSettings
+    ExpenseGroupSettings,
+    DependentFieldSetting
 )
 
 logger = logging.getLogger(__name__)
@@ -205,12 +206,21 @@ def sync_dimensions(fyle_credentials: FyleCredential, is_export: bool = False) -
     :param is_export: Is export
     :return: None
     """
+    skip_dependent_field_ids = []
+
+    dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=fyle_credentials.workspace_id, is_import_enabled=True).first()
+
+    if dependent_field_settings:
+        skip_dependent_field_ids = [dependent_field_settings.cost_code_field_id, dependent_field_settings.cost_type_field_id]
+
     platform = PlatformConnector(fyle_credentials)
     platform.import_fyle_dimensions(
         import_taxes=True,
         import_dependent_fields=True,
-        is_export=is_export
+        is_export=is_export,
+        skip_dependent_field_ids=skip_dependent_field_ids
     )
+
     if is_export:
         categories_count = platform.categories.get_count()
 
@@ -301,7 +311,6 @@ def construct_expense_filter(expense_filter: ExpenseFilter) -> Q:
     :param expense_filter: Expense filter
     :return: Constructed expense filter
     """
-    constructed_expense_filter = {}
     # If the expense filter is a custom field
     if expense_filter.is_custom:
         # If the operator is not isnull
@@ -378,7 +387,7 @@ def construct_expense_filter_query(expense_filters: list[ExpenseFilter]) -> Q:
     :return: Constructed expense filter query
     """
     final_filter = None
-    join_by = None
+    previous_join_by = None
     for expense_filter in expense_filters:
         constructed_expense_filter = construct_expense_filter(expense_filter)
 
@@ -388,13 +397,13 @@ def construct_expense_filter_query(expense_filters: list[ExpenseFilter]) -> Q:
 
         # If join by is AND, OR
         elif expense_filter.rank != 1:
-            if join_by == 'AND':
+            if previous_join_by == 'AND':
                 final_filter = final_filter & (constructed_expense_filter)
             else:
                 final_filter = final_filter | (constructed_expense_filter)
 
         # Set the join type for the additonal filter
-        join_by = expense_filter.join_by
+        previous_join_by = expense_filter.join_by
 
     return final_filter
 
