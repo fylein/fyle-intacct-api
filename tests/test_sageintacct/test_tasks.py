@@ -1,3 +1,4 @@
+import json
 import random
 import logging
 from unittest import mock
@@ -15,7 +16,7 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.tasks.models import Error, TaskLog
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import Expense, ExpenseGroup, Reimbursement
-from apps.workspaces.models import Configuration, SageIntacctCredential
+from apps.workspaces.models import Configuration, LastExportDetail, SageIntacctCredential
 from apps.sage_intacct.utils import (
     SageIntacctConnector
 )
@@ -1582,13 +1583,41 @@ def test_load_attachments(mocker, db):
         logger.info('wrong parameters')
 
 
-def test_update_last_export_details(db):
+def test_update_last_export_details(mocker, db):
     """
     Test update_last_export_details
     """
     workspace_id = 1
     last_export_detail = update_last_export_details(workspace_id)
     assert last_export_detail.export_mode == 'MANUAL'
+
+    # `update_last_export_details` when called with failed task logs
+    # should do a patch request to integrations settings api to
+    # update the `errors_count`
+
+    mocked_patch = mock.MagicMock()
+    mocker.patch('apps.fyle.helpers.requests.patch', side_effect=mocked_patch)
+
+    LastExportDetail.objects.update(
+        workspace_id=workspace_id,
+        last_exported_at=datetime.now(tz=timezone.utc)
+    )
+
+    TaskLog.objects.all().delete()
+
+    mock_task_logs = data['task_logs']
+    for task_log in mock_task_logs:
+        TaskLog.objects.create(workspace_id=workspace_id, type=task_log['type'], status=task_log['status'])
+
+    update_last_export_details(workspace_id)
+
+    failed_count = len([i for i in mock_task_logs if i['status'] in ('FAILED', 'FATAL')])
+    expected_payload = {'errors_count': failed_count, 'tpa_name': 'Fyle Sage Intacct Integration'}
+
+    _, kwargs = mocked_patch.call_args
+    actual_payload = json.loads(kwargs['data'])
+
+    assert actual_payload == expected_payload
 
 
 def test__validate_employee_mapping(mocker, db):

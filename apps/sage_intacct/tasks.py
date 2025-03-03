@@ -22,6 +22,7 @@ from fyle_accounting_mappings.models import (
     DestinationAttribute,
 )
 
+from apps.sage_intacct.helpers import patch_integration_settings
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, Expense
@@ -89,6 +90,8 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     last_export_detail.successful_expense_groups_count = successful_exports
     last_export_detail.total_expense_groups_count = failed_exports + successful_exports
     last_export_detail.save()
+
+    patch_integration_settings(workspace_id, errors=failed_exports)
 
     return last_export_detail
 
