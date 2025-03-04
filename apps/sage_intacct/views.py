@@ -2,7 +2,6 @@ import logging
 
 from django.db.models import Q
 from django.conf import settings
-from apps.sage_intacct.models import DimensionDetail
 from django_q.tasks import async_task
 
 from rest_framework import generics
@@ -12,6 +11,7 @@ from rest_framework.response import Response
 
 from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
+from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from sageintacctsdk.exceptions import InvalidTokenError

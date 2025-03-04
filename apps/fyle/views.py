@@ -1,4 +1,3 @@
-from apps.sage_intacct.models import DimensionDetail
 from rest_framework import generics, status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -11,6 +10,7 @@ from fyle.platform.exceptions import PlatformError
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
+from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from fyle_intacct_api.utils import LookupFieldMixin

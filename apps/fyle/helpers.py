@@ -5,7 +5,6 @@ from typing import Optional, Union
 from datetime import datetime, timezone
 
 import requests
-from apps.sage_intacct.models import DimensionDetail
 import django_filters
 from django.conf import settings
 from django.db.models import Q
@@ -15,6 +14,7 @@ from rest_framework.exceptions import ValidationError
 
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
+from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from apps.tasks.models import TaskLog
