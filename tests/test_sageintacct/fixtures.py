@@ -840,5 +840,27 @@ data = {
                 "GLDIMWHAT_IS_NILESH_PANT": None
             }
         ]
+    ],
+    'task_logs': [
+        {
+            'type': 'CREATING_BILLS',
+            'status': 'FAILED'
+        },
+        {
+            'type': 'CREATING_CHARGE_CARD_TRANSACTIONS',
+            'status': 'FATAL'
+        },
+        {
+            'type': 'CREATING_JOURNAL_ENTRIES',
+            'status': 'FAILED'
+        },
+        {
+            'type': 'CREATING_EXPENSE_REPORTS',
+            'status': 'COMPLETE'
+        },
+        {
+            'type': 'CREATING_JOURNAL_ENTRIES',
+            'status': 'FATAL'
+        },
     ]
 }
