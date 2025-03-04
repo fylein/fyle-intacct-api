@@ -163,24 +163,24 @@ def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> None:
     :return: None
     """
     workspace = Workspace.objects.get(pk=workspace_id)
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
 
     if workspace.source_synced_at:
         time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
     if workspace.source_synced_at is None or time_interval.days > 0:
-        sync_dimensions(fyle_credentials)
+        sync_dimensions(workspace_id)
         workspace.source_synced_at = datetime.now()
         workspace.save(update_fields=['source_synced_at'])
 
 
-def sync_dimensions(fyle_credentials: FyleCredential, is_export: bool = False) -> None:
+def sync_dimensions(workspace_id: int, is_export: bool = False) -> None:
     """
     Sync dimensions
-    :param fyle_credentials: Fyle credentials
+    :param workspace_id: Workspace ID
     :param is_export: Is export
     :return: None
     """
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     skip_dependent_field_ids = []
 
     dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=fyle_credentials.workspace_id, is_import_enabled=True).first()
@@ -223,7 +223,6 @@ def handle_refresh_dimensions(workspace_id: int) -> None:
     :return: None
     """
     workspace = Workspace.objects.get(id=workspace_id)
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
     configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
 
     import_code_fields = [] if not configuration else configuration.import_code_fields
@@ -274,7 +273,7 @@ def handle_refresh_dimensions(workspace_id: int) -> None:
     if chain.length() > 0:
         chain.run()
 
-    sync_dimensions(fyle_credentials)
+    sync_dimensions(workspace_id)
 
     workspace.source_synced_at = datetime.now()
     workspace.save(update_fields=['source_synced_at'])

@@ -382,6 +382,7 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
     task_log.save()
 
     update_failed_expenses(expense_group.expenses.all(), False)
+    post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
 
 def get_employee_mapping(employee_email: str, workspace_id: int, configuration: Configuration) -> EmployeeMapping:
@@ -583,12 +584,13 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
+def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create journal entry
     :param expense_group: Expense Group
     :param task_log_id: Task Log Id
     :param last_export: Last Export
+    :param is_auto_export: Is auto export
     :return: None
     """
     worker_logger = get_logger()
@@ -600,6 +602,15 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         task_log.save()
     else:
         return
+
+    in_progress_expenses = []
+    # Don't include expenses with previous export state as ERROR and it's an auto import/export run
+    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+        try:
+            in_progress_expenses.extend(expense_group.expenses.all())
+            update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
@@ -700,6 +711,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -724,18 +736,20 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
         update_last_export_details(expense_group.workspace_id)
 
 
-def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
+def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create expense report
     :param expense_group: Expense Group
     :param task_log_id: Task Log Id
     :param last_export: Last Export
+    :param is_auto_export: Is auto export
     :return: None
     """
     worker_logger = get_logger()
@@ -747,6 +761,15 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.save()
     else:
         return
+
+    in_progress_expenses = []
+    # Don't include expenses with previous export state as ERROR and it's an auto import/export run
+    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+        try:
+            in_progress_expenses.extend(expense_group.expenses.all())
+            update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
@@ -835,6 +858,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -848,6 +872,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -872,6 +897,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -882,12 +908,13 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
 
-def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
+def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create bill
     :param expense_group: Expense Group
     :param task_log_id: Task Log Id
     :param last_export: Last Export
+    :param is_auto_export: Is auto export
     :return: None
     """
     worker_logger = get_logger()
@@ -899,6 +926,15 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.save()
     else:
         return
+
+    in_progress_expenses = []
+    # Don't include expenses with previous export state as ERROR and it's an auto import/export run
+    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+        try:
+            in_progress_expenses.extend(expense_group.expenses.all())
+            update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
     last_export_failed = False
@@ -974,6 +1010,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -987,6 +1024,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -1011,6 +1049,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -1021,12 +1060,13 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             create_ap_payment(workspace_id=expense_group.workspace.id)
 
 
-def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool) -> None:
+def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create charge card transaction
     :param expense_group: Expense Group
     :param task_log_id: Task Log Id
     :param last_export: Last Export
+    :param is_auto_export: Is auto export
     :return: None
     """
     worker_logger = get_logger()
@@ -1038,6 +1078,15 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.save()
     else:
         return
+
+    in_progress_expenses = []
+    # Don't include expenses with previous export state as ERROR and it's an auto import/export run
+    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+        try:
+            in_progress_expenses.extend(expense_group.expenses.all())
+            update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
+        except Exception as e:
+            logger.error('Error while updating expenses for expense_group_id: %s and posting accounting export summary %s', expense_group.id, e)
 
     configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
 
@@ -1114,6 +1163,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -1127,6 +1177,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -1151,6 +1202,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
@@ -1668,7 +1720,7 @@ def update_expense_and_post_summary(in_progress_expenses: list[Expense], workspa
     """
     fyle_org_id = Workspace.objects.get(pk=workspace_id).fyle_org_id
     update_expenses_in_progress(in_progress_expenses)
-    post_accounting_export_summary(fyle_org_id, workspace_id, fund_source)
+    post_accounting_export_summary(fyle_org_id, workspace_id, [expense.id for expense in in_progress_expenses], fund_source)
 
 
 def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
@@ -1691,4 +1743,4 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
     expense_group.save()
 
     update_complete_expenses(expense_group.expenses.all(), url)
-    post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, expense_group.fund_source)
+    post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source)
