@@ -328,7 +328,7 @@ def test_post_bill_success(mocker, create_task_logs, db):
 
     expense_group.expenses.set(expenses)
 
-    create_bill(expense_group, task_log.id, True)
+    create_bill(expense_group, task_log.id, True, False)
 
     task_log = TaskLog.objects.get(pk=task_log.id)
     bill = Bill.objects.get(expense_group_id=expense_group.id)
@@ -341,10 +341,10 @@ def test_post_bill_success(mocker, create_task_logs, db):
 
     with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.update_bill') as mock_call:
         mock_call.side_effect = Exception()
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
 
 def test_create_bill_exceptions(mocker, db, create_task_logs):
@@ -376,19 +376,19 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
 
     with mock.patch('apps.sage_intacct.models.Bill.create_bill') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = BulkError(msg='employess not found', response='mapping error')
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = Exception()
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FATAL'
@@ -400,7 +400,7 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
             })
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
@@ -412,13 +412,13 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
             })
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_bill(expense_group, task_log.id, True)
+        create_bill(expense_group, task_log.id, True, False)
 
 
 def test_post_sage_intacct_reimbursements_success(mocker, create_task_logs, db, create_expense_report):
@@ -623,7 +623,7 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
     general_mappings.default_charge_card_id = 'sample'
     general_mappings.save()
 
-    create_charge_card_transaction(expense_group, task_log.id, True)
+    create_charge_card_transaction(expense_group, task_log.id, True, False)
 
     task_log = TaskLog.objects.get(pk=task_log.id)
     charge_card_transaction = ChargeCardTransaction.objects.get(expense_group_id=expense_group.id)
@@ -633,10 +633,10 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
 
     with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.update_attachment') as mock_call:
         mock_call.side_effect = Exception()
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
 
 def test_post_credit_card_exceptions(mocker, create_task_logs, db):
@@ -672,19 +672,19 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
 
     with mock.patch('apps.sage_intacct.models.ChargeCardTransaction.create_charge_card_transaction') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = BulkError(msg='employess not found', response='mapping error')
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = Exception()
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FATAL'
@@ -698,7 +698,7 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
             }
         )
 
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
@@ -712,13 +712,13 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
             }
         )
 
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_charge_card_transaction(expense_group, task_log.id, True)
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
 
 
 def test_post_journal_entry_success(mocker, create_task_logs, db):
@@ -769,7 +769,7 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
     expense_group.expenses.set(expenses)
     expense_group.save()
 
-    create_journal_entry(expense_group, task_log.id, True)
+    create_journal_entry(expense_group, task_log.id, True, False)
 
     task_log = TaskLog.objects.get(id=task_log.id)
     journal_entry = JournalEntry.objects.get(expense_group_id=expense_group.id)
@@ -782,10 +782,10 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
 
     with mock.patch('sageintacctsdk.apis.JournalEntries.update') as mock_call:
         mock_call.side_effect = Exception()
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
 
 def test_post_create_journal_entry_exceptions(create_task_logs, db):
@@ -817,19 +817,19 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
 
     with mock.patch('apps.sage_intacct.models.JournalEntry.create_journal_entry') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = BulkError(msg='employess not found', response='mapping error')
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = Exception()
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FATAL'
@@ -843,7 +843,7 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
             }
         )
 
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
@@ -857,13 +857,13 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
             }
         )
 
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
-        create_journal_entry(expense_group, task_log.id, True)
+        create_journal_entry(expense_group, task_log.id, True, False)
 
 
 def test_post_expense_report_success(mocker, create_task_logs, db):
@@ -898,7 +898,7 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
     task_log.save()
 
     expense_group = ExpenseGroup.objects.get(id=1)
-    create_expense_report(expense_group, task_log.id, True)
+    create_expense_report(expense_group, task_log.id, True, False)
 
     task_log = TaskLog.objects.get(id=task_log.id)
     expense_report = ExpenseReport.objects.get(expense_group_id=expense_group.id)
@@ -911,10 +911,10 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
 
     with mock.patch('sageintacctsdk.apis.ExpenseReports.update_attachment') as mock_call:
         mock_call.side_effect = Exception()
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
         mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
 
 def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
@@ -950,19 +950,19 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
 
     with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = BulkError(msg='employess not found', response='mapping error')
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = Exception()
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FATAL'
@@ -976,7 +976,7 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
             }
         )
 
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
@@ -990,13 +990,13 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
             }
         )
 
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
         assert task_log.status == 'FAILED'
 
         mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
-        create_expense_report(expense_group, task_log.id, True)
+        create_expense_report(expense_group, task_log.id, True, False)
 
 
 def test_create_ap_payment(mocker, db):
@@ -1047,7 +1047,7 @@ def test_create_ap_payment(mocker, db):
         reimbursement.state = 'COMPLETE'
         reimbursement.save()
 
-    create_bill(expense_group, task_log.id, True)
+    create_bill(expense_group, task_log.id, True, False)
 
     bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
 
@@ -1079,7 +1079,7 @@ def test_create_ap_payment_exceptions(mocker, db):
     task_log.status = 'READY'
     task_log.save()
 
-    create_bill(expense_group, task_log.id, True)
+    create_bill(expense_group, task_log.id, True, False)
 
     bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
     bill.payment_synced = False
@@ -1190,7 +1190,7 @@ def test_post_ap_payment_exceptions(mocker, db):
     expense_group.expenses.set(expenses)
     expense_group.save()
 
-    create_bill(expense_group, task_log.id, True)
+    create_bill(expense_group, task_log.id, True, False)
 
     bill = Bill.objects.last()
     task_log = TaskLog.objects.get(id=task_log.id)
@@ -1399,7 +1399,7 @@ def test_schedule_journal_entries_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_journal_entries_creation(workspace_id, [1], False, 'PERSONAL', 1)
+    schedule_journal_entries_creation(workspace_id, [1], False, 1)
 
     TaskLog.objects.filter(type='CREATING_JOURNAL_ENTRIES').count() != 0
 
@@ -1410,7 +1410,7 @@ def test_schedule_expense_reports_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_expense_reports_creation(workspace_id, [1], False, 'PERSONAL', 1)
+    schedule_expense_reports_creation(workspace_id, [1], False, 1)
 
     TaskLog.objects.filter(type='CREATING_EXPENSE_REPORTS').count() != 0
 
@@ -1421,7 +1421,7 @@ def test_schedule_bills_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_bills_creation(workspace_id, [1], False, 'PERSONAL', 1)
+    schedule_bills_creation(workspace_id, [1], False, 1)
 
     TaskLog.objects.filter(type='CREATING_BILLS').count() != 0
 
@@ -1432,7 +1432,7 @@ def test_schedule_charge_card_transaction_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_charge_card_transaction_creation(workspace_id, [2], False, 'CCC', 1)
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1)
 
     TaskLog.objects.filter(type='CREATING_CHARGE_CARD_TRANSACTIONS').count() != 0
 
@@ -1749,7 +1749,7 @@ def test_skipping_create_ap_payment(mocker, db):
         reimbursement.state = 'COMPLETE'
         reimbursement.save()
 
-    create_bill(expense_group, task_log.id, True)
+    create_bill(expense_group, task_log.id, True, False)
 
     bill = Bill.objects.get(expense_group__workspace_id=workspace_id)
 
