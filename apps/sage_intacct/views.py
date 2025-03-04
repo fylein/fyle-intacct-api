@@ -2,6 +2,7 @@ import logging
 
 from django.db.models import Q
 from django.conf import settings
+from apps.sage_intacct.models import DimensionDetail
 from django_q.tasks import async_task
 
 from rest_framework import generics
@@ -11,6 +12,7 @@ from rest_framework.response import Response
 
 from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from sageintacctsdk.exceptions import InvalidTokenError
 
@@ -172,21 +174,38 @@ class SageIntacctFieldsView(generics.ListAPIView):
             workspace_id=self.kwargs['workspace_id']
         ).values('attribute_type', 'display_name').distinct()
 
+        attributes = list(attributes)
+        attributes.append({
+            'attribute_type': 'PROJECT',
+            'display_name': 'Project'
+        })
+
+        dimensions = DimensionDetail.objects.filter(workspace_id=self.kwargs['workspace_id'], source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value).values(
+            'attribute_type', 'display_name'
+        )
+
+        allocation_fields = {'attribute_type': 'ALLOCATION', 'display_name': 'allocation'}
+
+        for attribute in attributes:
+            attribute_type = attribute['attribute_type']
+
+            if dimensions.filter(attribute_type=attribute_type).exists():
+                attribute['display_name'] = dimensions.get(attribute_type=attribute_type)['display_name']
+                if attribute_type == 'ALLOCATION':
+                    allocation_fields['display_name'] = attribute['display_name']
+
         serialized_attributes = SageIntacctFieldSerializer(attributes, many=True).data
 
         if settings.BRAND_ID != 'fyle':
-            if {'attribute_type': 'ALLOCATION', 'display_name': 'allocation'} in serialized_attributes:
-                serialized_attributes.remove({'attribute_type': 'ALLOCATION', 'display_name': 'allocation'})
+            if allocation_fields in serialized_attributes:
+                serialized_attributes.remove(allocation_fields)
 
         else:
             configurations = Configuration.objects.get(workspace_id=self.kwargs['workspace_id'])
 
             if configurations.corporate_credit_card_expenses_object not in ['BILL', 'JOURNAL_ENTRY'] and configurations.reimbursable_expenses_object not in ['BILL', 'JOURNAL_ENTRY']:
-                if {'attribute_type': 'ALLOCATION', 'display_name': 'allocation'} in serialized_attributes:
-                    serialized_attributes.remove({'attribute_type': 'ALLOCATION', 'display_name': 'allocation'})
-
-        # Adding project by default since we support importing Projects from Sage Intacct even though they don't exist
-        serialized_attributes.append({'attribute_type': 'PROJECT', 'display_name': 'Project'})
+                if allocation_fields in serialized_attributes:
+                    serialized_attributes.remove(allocation_fields)
 
         return serialized_attributes
 
