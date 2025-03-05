@@ -117,15 +117,11 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
             # if the task log is created in the last 2 months
             if now - relativedelta(months=2) < task_log.created_at <= now - relativedelta(months=1):
                 if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(weeks=1):
-                    task_log.save()
                     return True
 
             # if the task log is created is the last month
             if task_log.created_at > now - relativedelta(months=1):
-                print('here')
                 if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(hours=24):
-                    print('here2')
-                    task_log.save()
                     return True
 
     return False
