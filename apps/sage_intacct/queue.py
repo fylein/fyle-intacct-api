@@ -45,7 +45,6 @@ def schedule_journal_entries_creation(
     :param workspace_id: workspace id
     :return: None
     """
-
     q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
     if is_auto_export:
         q_filter = q_filter | Q(tasklog__is_retired=False)
