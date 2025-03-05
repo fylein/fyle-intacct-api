@@ -543,12 +543,12 @@ def update_dimension_details(platform: PlatformConnector, workspace_id: int) -> 
                 'workspace_id': workspace_id
             })
 
-        if details:
-            DimensionDetail.bulk_create_or_update_dimension_details(
-                dimensions=details,
-                workspace_id=workspace_id,
-                source_type=DimensionDetailSourceTypeEnum.FYLE.value
-            )
+    if details:
+        DimensionDetail.bulk_create_or_update_dimension_details(
+            dimensions=details,
+            workspace_id=workspace_id,
+            source_type=DimensionDetailSourceTypeEnum.FYLE.value
+        )
 
 
 class AdvanceSearchFilter(django_filters.FilterSet):
