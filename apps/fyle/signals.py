@@ -22,12 +22,14 @@ def run_pre_save_dependent_field_settings_triggers(sender: type[DependentFieldSe
     if getattr(instance, "_skip_signal", False):
         return  # Prevent infinite loop
 
+    # If both cost_code and cost_type are created in Fyle then return
     if instance.cost_code_field_id and instance.cost_type_field_id:
         return  # Already set
 
     platform = connect_to_platform(instance.workspace_id)
     instance.project_field_id = platform.dependent_fields.get_project_field_id()
 
+    # Create cost code field if not exists in Fyle
     if not instance.cost_code_field_id:
         cost_code = create_dependent_custom_field_in_fyle(
             workspace_id=instance.workspace_id,
@@ -38,6 +40,7 @@ def run_pre_save_dependent_field_settings_triggers(sender: type[DependentFieldSe
         )
         instance.cost_code_field_id = cost_code['data']['id']
 
+    # Create cost type field if not exists in Fyle and cost code field is created
     if not instance.cost_type_field_id and instance.cost_type_field_name:
         cost_type = create_dependent_custom_field_in_fyle(
             workspace_id=instance.workspace_id,

@@ -88,6 +88,44 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
     projects_batch = []
 
     if 'attribute_type' in filters:
+        """
+        Structure of the query output:
+        [
+            {
+                "project_name": "Project A",
+                "project_id": "1",
+                "cost_codes": [
+                    {
+                        "cost_code_name": "Task 1",
+                        "cost_code_code": "101"
+                    },
+                    {
+                        "cost_code_name": "Task 2",
+                        "cost_code_code": "102"
+                    }
+                ]
+            }
+        ]
+
+        SQL Query:
+        SELECT
+            detail ->> 'project_name' AS project_name,
+            detail ->> 'project_id' AS project_id,
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'cost_code_name', value,
+                    'cost_code_code', destination_id
+                )
+            ) AS cost_codes
+        FROM
+            destination_attributes
+        WHERE
+            workspace_id = 1
+            AND attribute_type = 'COST_CODE'
+        GROUP BY
+            project_name,
+            project_id;
+        """
         projects_batch = (
             DestinationAttribute.objects.filter(**filters)
             .annotate(
@@ -422,79 +460,103 @@ def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: dict,
 
     if dependent_field_setting:
         if dependent_field_setting.is_cost_type_import_enabled:
-            filters = {
-                'project_id__in': list(cost_codes_to_disable.keys()),
-                'workspace_id': workspace_id
-            }
-
-            cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
-            # This call will disable the cost codes in Fyle that has old project name
-            posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
-
-            logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")
-
-            BATCH_SIZE = 500
-
-            for _, value in cost_codes_to_disable.items():
-                cost_types_queryset = CostType.objects.filter(
-                    workspace_id=workspace_id,
-                    project_id=value['code']
-                ).exclude(project_name=value['updated_value'], project_id=value['updated_code'])
-                bulk_update_payload = []
-
-                for cost_type in cost_types_queryset.iterator(chunk_size=BATCH_SIZE):
-                    cost_type.project_id = value['updated_code']
-                    cost_type.project_name = value['updated_value']
-                    # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
-                    cost_type.updated_at = datetime.now(timezone.utc)
-                    bulk_update_payload.append(cost_type)
-
-                    if len(bulk_update_payload) >= BATCH_SIZE:
-                        logger.info(f"Updating Cost Types | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-                        CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
-                        bulk_update_payload = []
-
-                # Final update for any remaining objects in the last batch
-                if bulk_update_payload:
-                    logger.info(f"Updating Cost Types | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-                    CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
+            disable_and_post_cost_code_from_cost_type_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
         else:
-            filters = {
-                'detail__project_id__in': list(cost_codes_to_disable.keys()),
-                'workspace_id': workspace_id,
-                'attribute_type': 'COST_CODE'
-            }
-            cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
-            # This call will disable the cost codes in Fyle that has old project name
-            posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
+            disable_and_post_cost_code_from_destination_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
 
-            logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")
 
-            BATCH_SIZE = 500
+def disable_and_post_cost_code_from_cost_type_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
+    """
+    Disable and post cost codes from cost type table
+    :param workspace_id: Workspace ID
+    :param cost_codes_to_disable: Cost codes to disable
+    :param platform: Platform connector object
+    :param dependent_field_setting: Dependent field setting object
+    :return: None
+    """
+    filters = {
+        'project_id__in': list(cost_codes_to_disable.keys()),
+        'workspace_id': workspace_id
+    }
 
-            for _, value in cost_codes_to_disable.items():
-                cost_codes_queryset = DestinationAttribute.objects.filter(
-                    workspace_id=workspace_id,
-                    detail__project_id=value['code']
-                ).exclude(detail__project_name=value['updated_value'], detail__project_id=value['updated_code'])
+    cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+    # This call will disable the cost codes in Fyle that has old project name
+    posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
 
+    logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")
+
+    BATCH_SIZE = 500
+
+    for _, value in cost_codes_to_disable.items():
+        cost_types_queryset = CostType.objects.filter(
+            workspace_id=workspace_id,
+            project_id=value['code']
+        ).exclude(project_name=value['updated_value'], project_id=value['updated_code'])
+        bulk_update_payload = []
+
+        for cost_type in cost_types_queryset.iterator(chunk_size=BATCH_SIZE):
+            cost_type.project_id = value['updated_code']
+            cost_type.project_name = value['updated_value']
+            # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
+            cost_type.updated_at = datetime.now(timezone.utc)
+            bulk_update_payload.append(cost_type)
+
+            if len(bulk_update_payload) >= BATCH_SIZE:
+                logger.info(f"Updating Cost Types | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
+                CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
                 bulk_update_payload = []
 
-                for cost_code in cost_codes_queryset.iterator(chunk_size=BATCH_SIZE):
-                    detail = cost_code.detail
-                    detail['project_id'] = value['updated_code']
-                    detail['project_name'] = value['updated_value']
-                    cost_code.detail = detail
-                    # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
-                    cost_code.updated_at = datetime.now(timezone.utc)
-                    bulk_update_payload.append(cost_code)
+        # Final update for any remaining objects in the last batch
+        if bulk_update_payload:
+            logger.info(f"Updating Cost Types | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
+            CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
 
-                    if len(bulk_update_payload) >= BATCH_SIZE:
-                        logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-                        DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
-                        bulk_update_payload = []
 
-                # Final update for any remaining objects in the last batch
-                if bulk_update_payload:
-                    logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-                    DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
+    """
+    Disable and post cost codes from destination table
+    :param workspace_id: Workspace ID
+    :param cost_codes_to_disable: Cost codes to disable
+    :param platform: Platform connector object
+    :param dependent_field_setting: Dependent field setting object
+    :return: None
+    """
+    filters = {
+        'detail__project_id__in': list(cost_codes_to_disable.keys()),
+        'workspace_id': workspace_id,
+        'attribute_type': 'COST_CODE'
+    }
+    cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+    # This call will disable the cost codes in Fyle that has old project name
+    posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
+
+    logger.info(f"Disabled Cost Codes in Fyle | WORKSPACE_ID: {workspace_id} | COUNT: {len(posted_cost_codes)}")
+
+    BATCH_SIZE = 500
+
+    for _, value in cost_codes_to_disable.items():
+        cost_codes_queryset = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id,
+            detail__project_id=value['code']
+        ).exclude(detail__project_name=value['updated_value'], detail__project_id=value['updated_code'])
+
+        bulk_update_payload = []
+
+        for cost_code in cost_codes_queryset.iterator(chunk_size=BATCH_SIZE):
+            detail = cost_code.detail
+            detail['project_id'] = value['updated_code']
+            detail['project_name'] = value['updated_value']
+            cost_code.detail = detail
+            # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
+            cost_code.updated_at = datetime.now(timezone.utc)
+            bulk_update_payload.append(cost_code)
+
+            if len(bulk_update_payload) >= BATCH_SIZE:
+                logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
+                DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+                bulk_update_payload = []
+
+        # Final update for any remaining objects in the last batch
+        if bulk_update_payload:
+            logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
+            DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)

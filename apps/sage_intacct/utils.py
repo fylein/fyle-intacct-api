@@ -397,7 +397,7 @@ class SageIntacctConnector:
             logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
-        fields = ['RECORDNO', 'TASKID', 'NAME', 'PROJECTID', 'PROJECTKEY', 'PROJECTNAME']
+        fields = ['RECORDNO', 'TASKID', 'NAME', 'PROJECTID', 'PROJECTNAME']
         args = {}
 
         dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id).first()
@@ -413,7 +413,6 @@ class SageIntacctConnector:
             for task in tasks:
                 detail = {
                     'project_id': task['PROJECTID'],
-                    'project_key': task['PROJECTKEY'],
                     'project_name': task['PROJECTNAME'],
                     'record_no': task['RECORDNO']
                 }
