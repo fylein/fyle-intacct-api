@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 
 from apps.fyle.models import ExpenseGroup
-from apps.tasks.models import Error, TaskLog
+from apps.tasks.models import TaskLog
 from apps.workspaces.models import Workspace
 from apps.sage_intacct.queue import __create_chain_and_run, validate_failing_export
 from apps.fyle.queue import async_import_and_export_expenses
@@ -52,138 +52,80 @@ def test_validate_failing_export(db):
     expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
     task_log = TaskLog.objects.filter(workspace_id=1).first()
 
-    error = Error(
-        repetition_count=900,
-        updated_at=datetime.now(tz=timezone.utc),
-        expense_group=expense_group,
-        workspace_id=1
-    )
-    skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, error=error, expense_group=expense_group)
-
-    assert skip_export is False
-    assert task_log.is_retired is False
-
-    # Should return false if repetition count is less than 100
-    task_log.created_at = datetime.now(tz=timezone.utc) - timedelta(hours=1)
-    task_log.save()
-
-    error = Error(
-        repetition_count=90,
-        updated_at=datetime.now(tz=timezone.utc),
-        workspace_id=1
-    )
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, error=error, expense_group=expense_group)
-
-    assert skip_export is False
-    assert task_log.is_retired is False
-
-    # Hourly schedule - errored for 4 days straight - 101 repetitions
-    error = Error.objects.create(
-        repetition_count=101,
-        workspace_id=1,
-        type='INTACCT_ERROR',
-        error_title='Dummy title',
-        error_detail='Dummy detail',
-        updated_at=datetime.now(tz=timezone.utc)
-    )
-
-    task_log.created_at = datetime.now(tz=timezone.utc) - timedelta(hours=1)
-    task_log.save()
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=error, expense_group=expense_group)
-
-    assert skip_export is True
-    assert task_log.is_retired is False
-
-    # Manually setting last error'd time to 25 hours ago
-    task_log.created_at = datetime.now(tz=timezone.utc) - timedelta(hours=1)
-    task_log.refresh_from_db()
-    task_log.save()
-
-    Error.objects.filter(id=error.id).update(updated_at=datetime.now(tz=timezone.utc) - timedelta(hours=25))
-    latest_error = Error.objects.get(id=error.id)
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error, expense_group=expense_group)
+    skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, expense_group=expense_group)
 
     assert skip_export is False
     task_log.refresh_from_db()
     assert task_log.is_retired is False
 
-    # It should skip in next run after 1h, manually setting last error'd time to now
-    Error.objects.filter(id=error.id).update(updated_at=datetime.now(tz=timezone.utc))
-    latest_error = Error.objects.get(id=error.id)
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error, expense_group=expense_group)
+    # Task Log created 25 hour ago and tried 25 hours ago
+    time = datetime.now(tz=timezone.utc) - timedelta(hours=25)
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=time, created_at=time)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, expense_group=expense_group)
+
+    assert skip_export is False
+    task_log.refresh_from_db()
+    assert task_log.is_retired is False
+
+    # Hourly schedule - Task Log created 1 hour ago but tried to export 1 hour ago
+    time = datetime.now(tz=timezone.utc) - timedelta(hours=1)
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=time, created_at=time)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, expense_group=expense_group)
 
     assert skip_export is True
+    task_log.refresh_from_db()
+    assert task_log.is_retired is False
 
-    # Task Log created 2 months ago and error repetition count is 101
-    task_log.created_at = datetime.now(tz=timezone.utc) - timedelta(days=61)
-    task_log.save()
+    # Task Log created 29 days and tried 6 days ago
+    update_time = datetime.now(tz=timezone.utc) - timedelta(days=6)
+    create_time = datetime.now(tz=timezone.utc) - timedelta(days=29)
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=create_time)
 
-    error = Error.objects.create(
-        repetition_count=101,
-        workspace_id=1,
-        type='INTACCT_ERROR',
-        error_title='Dummy title',
-        error_detail='Dummy detail',
-        updated_at=datetime.now(tz=timezone.utc)
-    )
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, expense_group=expense_group)
 
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=error, expense_group=expense_group)
+    assert skip_export is True
+    task_log.refresh_from_db()
+    assert task_log.is_retired is False
+
+    # Task Log created 29 days and tried 7 days ago
+    update_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+    create_time = datetime.now(tz=timezone.utc) - timedelta(days=29)
+
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=create_time)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, expense_group=expense_group)
+
+    assert skip_export is False
+    task_log.refresh_from_db()
+    assert task_log.is_retired is False
+
+    # Task Log created 31 days and tried 19 days ago
+    update_time = datetime.now(tz=timezone.utc) - timedelta(days=19)
+    create_time = datetime.now(tz=timezone.utc) - timedelta(days=31)
+
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=create_time)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, expense_group=expense_group)
+
+    assert skip_export is False
+    task_log.refresh_from_db()
+    assert task_log.is_retired is False
+
+    # Task Log created 61 days and tried 6 days ago
+    update_time = datetime.now(tz=timezone.utc) - timedelta(days=6)
+    create_time = datetime.now(tz=timezone.utc) - timedelta(days=61)
+
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=create_time)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, expense_group=expense_group)
 
     assert skip_export is True
     task_log.refresh_from_db()
     assert task_log.is_retired is True
 
-    # Task Log created 1 month ago and error repetition count is 101
-    task_log.created_at = datetime.now(tz=timezone.utc) - timedelta(days=30)
-    task_log.is_retired = False
-    task_log.save()
-
-    error = Error.objects.create(
-        repetition_count=101,
-        workspace_id=1,
-        type='INTACCT_ERROR',
-        error_title='Dummy title',
-        error_detail='Dummy detail',
-        updated_at=datetime.now(tz=timezone.utc)
-    )
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=error, expense_group=expense_group)
-
-    assert skip_export is True
-    task_log.refresh_from_db()
-    assert task_log.is_retired is False
-
-    # Error last updated > 1 week ago
-    Error.objects.filter(id=error.id).update(updated_at=datetime.now(tz=timezone.utc) - timedelta(days=8))
-    latest_error = Error.objects.get(id=error.id)
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error, expense_group=expense_group)
+    # is_auto_export is False
+    skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, expense_group=expense_group)
 
     assert skip_export is False
-    assert task_log.is_retired is False
-
-    # Error last updated > 24 hrs ago
-    Error.objects.filter(id=error.id).update(updated_at=datetime.now(tz=timezone.utc) - timedelta(days=2))
-    latest_error = Error.objects.get(id=error.id)
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error, expense_group=expense_group)
-
-    assert skip_export is True
-    task_log.refresh_from_db()
-    assert task_log.is_retired is False
-
-    # Error last updated < 24 hrs ago
-    task_log.created_at = datetime.now(tz=timezone.utc) - timedelta(days=14)
-    task_log.is_retired = False
-    task_log.save()
-
-    Error.objects.filter(id=error.id).update(updated_at=datetime.now(tz=timezone.utc), repetition_count=10)
-    latest_error = Error.objects.get(id=error.id)
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, error=latest_error, expense_group=expense_group)
-
-    assert skip_export is False
-    task_log.refresh_from_db()
-    assert task_log.is_retired is False
