@@ -293,6 +293,9 @@ def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dep
     :param prepend_code_to_name: prepend code to name
     :return: cost type id or none
     """
+    if not dependent_field_setting.is_cost_type_import_enabled:
+        return None
+
     cost_type_id = None
 
     selected_cost_type = lineitem.custom_properties.get(dependent_field_setting.cost_type_field_name, None)
@@ -335,30 +338,54 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
     :return: task id or none
     """
     task_id = None
+    cost_type = None
+    task = None
 
     selected_cost_code = lineitem.custom_properties.get(dependent_field_setting.cost_code_field_name, None)
 
-    if prepend_code_to_name:
-        cost_type = CostType.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            project_id=project_id,
-            task_id__isnull=False,
-            task_name__isnull=False
-        ).annotate(
-            combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
-        ).filter(
-            combined_code_name=selected_cost_code
-        ).first()
+    if dependent_field_setting.is_cost_type_import_enabled:
+        if prepend_code_to_name:
+            cost_type = CostType.objects.filter(
+                workspace_id=expense_group.workspace_id,
+                project_id=project_id,
+                task_id__isnull=False,
+                task_name__isnull=False
+            ).annotate(
+                combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
+            ).filter(
+                combined_code_name=selected_cost_code
+            ).first()
 
+        else:
+            cost_type = CostType.objects.filter(
+                workspace_id=expense_group.workspace_id,
+                task_name=selected_cost_code,
+                project_id=project_id
+            ).first()
+
+        if cost_type:
+            task_id = cost_type.task_id
     else:
-        cost_type = CostType.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            task_name=selected_cost_code,
-            project_id=project_id
-        ).first()
+        if prepend_code_to_name:
+            task = DestinationAttribute.objects.filter(
+                attribute_type='COST_CODE',
+                workspace_id=expense_group.workspace_id,
+                detail__project_id=str(project_id)
+            ).annotate(
+                combined_code_name=Concat('code', Value(': '), 'value', output_field=CharField())
+            ).filter(
+                combined_code_name=selected_cost_code
+            ).first()
+        else:
+            task = DestinationAttribute.objects.filter(
+                attribute_type='COST_CODE',
+                workspace_id=expense_group.workspace_id,
+                detail__project_id=str(project_id),
+                value=selected_cost_code
+            ).first()
 
-    if cost_type:
-        task_id = cost_type.task_id
+        if task:
+            task_id = task.destination_id
 
     return task_id
 
