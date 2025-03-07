@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version 15.10 (Debian 15.10-1.pgdg120+1)
--- Dumped by pg_dump version 15.10 (Debian 15.10-1.pgdg120+1)
+-- Dumped by pg_dump version 15.12 (Debian 15.12-1.pgdg120+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -16,9 +16,1265 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: delete_failed_expenses(integer, boolean, integer[]); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.delete_failed_expenses(_workspace_id integer, _delete_all boolean DEFAULT false, _expense_group_ids integer[] DEFAULT '{}'::integer[]) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+  	rcount integer;
+	temp_expenses integer[];
+	local_expense_group_ids integer[];
+	total_expense_groups integer;
+	failed_expense_groups integer;
+	_fyle_org_id text;
+	expense_ids text;
+BEGIN
+  RAISE NOTICE 'Deleting failed expenses from workspace % ', _workspace_id; 
+
+local_expense_group_ids := _expense_group_ids;
+
+IF _delete_all THEN
+	-- Update last_export_details when delete_all is true
+	select array_agg(expense_group_id) into local_expense_group_ids from task_logs where status='FAILED' and workspace_id=_workspace_id;
+	UPDATE last_export_details SET failed_expense_groups_count = 0 WHERE workspace_id = _workspace_id;
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Updated % last_export_details', rcount;
+END IF;
+
+SELECT array_agg(expense_id) into temp_expenses from expense_groups_expenses where expensegroup_id in (SELECT unnest(local_expense_group_ids));
+
+_fyle_org_id := (select fyle_org_id from workspaces where id = _workspace_id);
+expense_ids := (
+    select string_agg(format('%L', expense_id), ', ') 
+    from expenses
+    where workspace_id = _workspace_id
+    and id in (SELECT unnest(temp_expenses))
+);
+
+DELETE
+	FROM task_logs WHERE workspace_id = _workspace_id AND status = 'FAILED' and expense_group_id in (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % task_logs', rcount;
+
+DELETE
+	FROM errors
+	where expense_group_id IN (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % errors', rcount;
+
+DELETE 
+	FROM expense_groups_expenses WHERE expensegroup_id IN (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % expense_groups_expenses', rcount;
+
+DELETE 
+	FROM expense_groups WHERE id in (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % expense_groups', rcount;
+
+IF NOT _delete_all THEN
+    UPDATE last_export_details
+        SET total_expense_groups_count = total_expense_groups_count - rcount,
+            failed_expense_groups_count = failed_expense_groups_count - rcount,
+            updated_at = NOW()
+        WHERE workspace_id = _workspace_id;
+
+    total_expense_groups := (SELECT total_expense_groups_count FROM last_export_details WHERE workspace_id = _workspace_id);
+    failed_expense_groups := (SELECT failed_expense_groups_count FROM last_export_details WHERE workspace_id = _workspace_id);
+
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Updated last_export_details';
+    RAISE NOTICE 'New total_expense_groups_count: %', total_expense_groups;
+    RAISE NOTICE 'New failed_expense_groups_count: %', failed_expense_groups;
+END IF;
+
+
+DELETE 
+	FROM expenses WHERE id in (SELECT unnest(temp_expenses));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % expenses', rcount;
+
+
+RAISE NOTICE E'\n\n\nProd DB Queries to delete accounting export summaries:';
+RAISE NOTICE E'rollback; begin; update platform_schema.expenses_wot set accounting_export_summary = \'{}\' where org_id = \'%\' and id in (%); update platform_schema.reports_wot set accounting_export_summary = \'{}\' where org_id = \'%\' and id in (select report->>\'id\' from platform_schema.expenses_rov where org_id = \'%\' and id in (%));', _fyle_org_id, expense_ids, _fyle_org_id, _fyle_org_id, expense_ids;
+
+RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.delete_failed_expenses(_workspace_id integer, _delete_all boolean, _expense_group_ids integer[]) OWNER TO postgres;
+
+--
+-- Name: delete_test_orgs_schedule(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.delete_test_orgs_schedule() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    rcount integer;
+BEGIN
+    
+    DELETE FROM workspace_schedules
+    WHERE workspace_id NOT IN (
+        SELECT id FROM prod_workspaces_view
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % workspace_schedules', rcount;
+
+    DELETE FROM django_q_schedule
+    WHERE args NOT IN (
+        SELECT id::text FROM prod_workspaces_view
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % django_q_schedule', rcount;
+END;
+$$;
+
+
+ALTER FUNCTION public.delete_test_orgs_schedule() OWNER TO postgres;
+
+--
+-- Name: delete_workspace(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.delete_workspace(_workspace_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    rcount integer;
+    _org_id varchar(255);
+BEGIN
+    RAISE NOTICE 'Deleting data from workspace %', _workspace_id;
+
+    DELETE
+    FROM dependent_field_settings dfs
+    WHERE dfs.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % dependent_field_settings', rcount;
+
+    DELETE
+    FROM cost_types ct
+    WHERE ct.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % cost_types', rcount;
+
+    DELETE
+    FROM location_entity_mappings lem
+    WHERE lem.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % location_entity_mappings', rcount;
+    
+    DELETE 
+    FROM expense_fields ef
+    WHERE ef.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_fields', rcount;
+
+    DELETE 
+    FROM errors e
+    WHERE e.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % errors', rcount;
+
+    DELETE 
+    FROM import_logs il
+    WHERE il.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % import_logs', rcount;
+
+    DELETE
+    FROM task_logs tl
+    WHERE tl.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % task_logs', rcount;
+
+    DELETE
+    FROM bill_lineitems bl
+    WHERE bl.bill_id IN (
+        SELECT b.id FROM bills b WHERE b.expense_group_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % bill_lineitems', rcount;
+
+    DELETE
+    FROM bills b
+    WHERE b.expense_group_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % bills', rcount;
+
+    DELETE
+    FROM charge_card_transaction_lineitems cctl
+    WHERE cctl.charge_card_transaction_id IN (
+        SELECT cct.id FROM charge_card_transactions cct WHERE cct.expense_group_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % charge_card_transaction_lineitems', rcount;
+
+    DELETE
+    FROM charge_card_transactions cct
+    WHERE cct.expense_group_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % charge_card_transactions', rcount;
+
+    DELETE
+    FROM journal_entry_lineitems jel
+    WHERE jel.journal_entry_id IN (
+        SELECT je.id FROM journal_entries je WHERE je.expense_group_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % journal_entry_lineitems', rcount;
+
+    DELETE
+    FROM journal_entries je
+    WHERE je.expense_group_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % journal_entries', rcount;
+
+    DELETE
+    FROM expense_report_lineitems erl
+    WHERE erl.expense_report_id IN (
+        SELECT er.id FROM expense_reports er WHERE er.expense_group_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_report_lineitems', rcount;
+
+    DELETE
+    FROM expense_reports er
+    WHERE er.expense_group_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_reports', rcount;
+
+    DELETE
+    FROM ap_payment_lineitems apl
+    WHERE apl.ap_payment_id IN (
+        SELECT ap.id FROM ap_payments ap WHERE ap.expense_group_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % ap_payment_lineitems', rcount;
+
+    DELETE
+    FROM ap_payments ap
+    WHERE ap.expense_group_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % ap_payments', rcount;
+
+    DELETE
+    FROM sage_intacct_reimbursement_lineitems sirl
+    WHERE sirl.sage_intacct_reimbursement_id IN (
+        SELECT sir.id FROM sage_intacct_reimbursements sir WHERE sir.expense_group_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % sage_intacct_reimbursement_lineitems', rcount;
+
+    DELETE
+    FROM sage_intacct_reimbursements sir
+    WHERE sir.expense_group_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % sage_intacct_reimbursements', rcount;
+
+    DELETE
+    FROM reimbursements r
+    WHERE r.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % reimbursements', rcount;
+
+    DELETE
+    FROM expenses e
+    WHERE e.id IN (
+        SELECT expense_id FROM expense_groups_expenses ege WHERE ege.expensegroup_id IN (
+            SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expenses', rcount;
+
+    DELETE
+    FROM expenses 
+    WHERE is_skipped=true and org_id in (SELECT fyle_org_id FROM workspaces WHERE id=_workspace_id);
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % skipped expenses', rcount;
+
+    DELETE
+    FROM expense_groups_expenses ege
+    WHERE ege.expensegroup_id IN (
+        SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_groups_expenses', rcount;
+
+    DELETE
+    FROM expense_groups eg
+    WHERE eg.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_groups', rcount;
+
+    DELETE
+    FROM mappings m
+    WHERE m.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % mappings', rcount;
+
+    DELETE
+    FROM employee_mappings em
+    WHERE em.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % employee_mappings', rcount;
+
+    DELETE
+    FROM category_mappings cm
+    WHERE cm.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % category_mappings', rcount;
+
+    DELETE
+    FROM mapping_settings ms
+    WHERE ms.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % mapping_settings', rcount;
+
+    DELETE
+    FROM general_mappings gm
+    WHERE gm.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % general_mappings', rcount;
+
+    DELETE
+    FROM configurations c
+    WHERE c.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % configurations', rcount;
+
+    DELETE
+    FROM expense_group_settings egs
+    WHERE egs.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_group_settings', rcount;
+
+    DELETE
+    FROM fyle_credentials fc
+    WHERE fc.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % fyle_credentials', rcount;
+
+    DELETE
+    FROM sage_intacct_credentials sic
+    WHERE sic.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % sage_intacct_credentials', rcount;
+
+    DELETE
+    FROM expense_attributes_deletion_cache ead
+    WHERE ead.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_attributes_deletion_cache', rcount;
+
+    DELETE
+    FROM expense_attributes ea
+    WHERE ea.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_attributes', rcount;
+
+    DELETE
+    FROM expense_filters ef
+    WHERE ef.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_filters', rcount;
+
+    DELETE
+    FROM destination_attributes da
+    WHERE da.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % destination_attributes', rcount;
+
+    DELETE
+    FROM workspace_schedules wsch
+    WHERE wsch.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % workspace_schedules', rcount;
+
+    DELETE
+    FROM last_export_details led
+    WHERE led.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % last_export_details', rcount;
+
+    DELETE
+    FROM django_q_schedule dqs
+    WHERE dqs.args = _workspace_id::varchar(255);
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % django_q_schedule', rcount;
+
+    DELETE
+    FROM auth_tokens aut
+    WHERE aut.user_id IN (
+        SELECT u.id FROM users u WHERE u.id IN (
+            SELECT wu.user_id FROM workspaces_user wu WHERE workspace_id = _workspace_id
+        )
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % auth_tokens', rcount;
+
+    DELETE
+    FROM workspaces_user wu
+    WHERE workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % workspaces_user', rcount;
+
+    DELETE
+    FROM users u
+    WHERE u.id IN (
+        SELECT wu.user_id FROM workspaces_user wu WHERE workspace_id = _workspace_id
+    );
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % users', rcount;
+
+    _org_id := (SELECT fyle_org_id FROM workspaces WHERE id = _workspace_id);
+
+    DELETE
+    FROM workspaces w
+    WHERE w.id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % workspaces', rcount;
+
+    RAISE NOTICE E'\n\n\n\n\n\n\n\n\nSwitch to integration_settings db and run the below query to delete the integration';
+    RAISE NOTICE E'\\c integration_settings; \n\n begin; select delete_integration(''%'');\n\n\n\n\n\n\n\n\n\n\n', _org_id;
+
+    RAISE NOTICE E'\n\n\n\n\n\n\n\n\nSwitch to prod db and run the below query to update the subscription';
+    RAISE NOTICE E'begin; update platform_schema.admin_subscriptions set is_enabled = false where org_id = ''%'';\n\n\n\n\n\n\n\n\n\n\n', _org_id;
+
+    RAISE NOTICE E'\n\n\n\n\n\n\n\n\nSwitch to prod db and run the below queries to delete dependent fields';
+    RAISE NOTICE E'rollback;begin; delete from platform_schema.dependent_expense_field_mappings where expense_field_id in (select id from platform_schema.expense_fields where org_id =''%'' and type=''DEPENDENT_SELECT''); delete from platform_schema.expense_fields where org_id = ''%'' and type = ''DEPENDENT_SELECT'';\n\n\n\n\n\n\n\n\n\n\n', _org_id, _org_id;
+
+
+RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.delete_workspace(_workspace_id integer) OWNER TO postgres;
+
+--
+-- Name: json_diff(jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.json_diff(left_json jsonb, right_json jsonb) RETURNS jsonb
+    LANGUAGE sql
+    AS $$
+    SELECT jsonb_object_agg(left_table.key, jsonb_build_array(left_table.value, right_table.value)) FROM
+        ( SELECT key, value FROM jsonb_each(left_json) ) left_table LEFT OUTER JOIN
+        ( SELECT key, value FROM jsonb_each(right_json) ) right_table ON left_table.key = right_table.key
+    WHERE left_table.value != right_table.value OR right_table.key IS NULL;
+$$;
+
+
+ALTER FUNCTION public.json_diff(left_json jsonb, right_json jsonb) OWNER TO postgres;
+
+--
+-- Name: log_delete_event(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.log_delete_event() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE difference jsonb;
+BEGIN
+    IF (TG_OP = 'DELETE') THEN
+        INSERT INTO update_logs(table_name, old_data, operation_type, workspace_id)
+        VALUES (TG_TABLE_NAME, to_jsonb(OLD), 'DELETE', OLD.workspace_id);
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.log_delete_event() OWNER TO postgres;
+
+--
+-- Name: log_update_event(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.log_update_event() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    difference jsonb;
+    key_count int;
+BEGIN
+    IF (TG_OP = 'UPDATE') THEN
+        difference := json_diff(to_jsonb(OLD), to_jsonb(NEW));
+
+        -- Count the number of keys in the difference JSONB object
+        SELECT COUNT(*)
+        INTO key_count
+        FROM jsonb_each_text(difference);
+
+        -- If difference has only the key updated_at, then insert into update_logs
+        IF TG_TABLE_NAME = 'expenses' THEN
+            IF (difference ? 'accounting_export_summary') THEN
+                INSERT INTO update_logs(table_name, old_data, new_data, difference, workspace_id)
+                VALUES (TG_TABLE_NAME, to_jsonb(OLD), to_jsonb(NEW), difference, OLD.workspace_id);
+            END IF;
+        ELSE
+            IF NOT (key_count = 1 AND difference ? 'updated_at') THEN
+                INSERT INTO update_logs(table_name, old_data, new_data, difference, workspace_id)
+                VALUES (TG_TABLE_NAME, to_jsonb(OLD), to_jsonb(NEW), difference, OLD.workspace_id);
+            END IF;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.log_update_event() OWNER TO postgres;
+
+--
+-- Name: reset_location_entity_without_clearing_past_exports(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.reset_location_entity_without_clearing_past_exports(_workspace_id integer) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    rcount integer;
+BEGIN
+    RAISE NOTICE 'Deleting data from workspace %', _workspace_id;
+
+    DELETE
+    FROM dependent_field_settings dfs
+    WHERE dfs.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % dependent_field_settings', rcount;
+
+    DELETE
+    FROM cost_types ct
+    WHERE ct.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % cost_types', rcount;
+
+    DELETE
+    FROM location_entity_mappings lem
+    WHERE lem.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % location_entity_mappings', rcount;
+    
+    DELETE 
+    FROM expense_fields ef
+    WHERE ef.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_fields', rcount;
+
+    DELETE 
+    FROM errors e
+    WHERE e.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % errors', rcount;
+
+    DELETE 
+    FROM import_logs il
+    WHERE il.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % import_logs', rcount;
+
+    -- DELETE
+    -- FROM task_logs tl
+    -- WHERE tl.workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % task_logs', rcount;
+
+    -- DELETE
+    -- FROM bill_lineitems bl
+    -- WHERE bl.bill_id IN (
+    --     SELECT b.id FROM bills b WHERE b.expense_group_id IN (
+    --         SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % bill_lineitems', rcount;
+
+    -- DELETE
+    -- FROM bills b
+    -- WHERE b.expense_group_id IN (
+    --     SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % bills', rcount;
+
+    -- DELETE
+    -- FROM charge_card_transaction_lineitems cctl
+    -- WHERE cctl.charge_card_transaction_id IN (
+    --     SELECT cct.id FROM charge_card_transactions cct WHERE cct.expense_group_id IN (
+    --         SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % charge_card_transaction_lineitems', rcount;
+
+    -- DELETE
+    -- FROM charge_card_transactions cct
+    -- WHERE cct.expense_group_id IN (
+    --     SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % charge_card_transactions', rcount;
+
+    -- DELETE
+    -- FROM journal_entry_lineitems jel
+    -- WHERE jel.journal_entry_id IN (
+    --     SELECT je.id FROM journal_entries je WHERE je.expense_group_id IN (
+    --         SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % journal_entry_lineitems', rcount;
+
+    -- DELETE
+    -- FROM journal_entries je
+    -- WHERE je.expense_group_id IN (
+    --     SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % journal_entries', rcount;
+
+    -- DELETE
+    -- FROM expense_report_lineitems erl
+    -- WHERE erl.expense_report_id IN (
+    --     SELECT er.id FROM expense_reports er WHERE er.expense_group_id IN (
+    --         SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % expense_report_lineitems', rcount;
+
+        -- DELETE
+        -- FROM expense_reports er
+        -- WHERE er.expense_group_id IN (
+        --     SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+        -- );
+        -- GET DIAGNOSTICS rcount = ROW_COUNT;
+        -- RAISE NOTICE 'Deleted % expense_reports', rcount;
+
+    -- DELETE
+    -- FROM ap_payment_lineitems apl
+    -- WHERE apl.ap_payment_id IN (
+    --     SELECT ap.id FROM ap_payments ap WHERE ap.expense_group_id IN (
+    --         SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % ap_payment_lineitems', rcount;
+
+    -- DELETE
+    -- FROM ap_payments ap
+    -- WHERE ap.expense_group_id IN (
+    --     SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % ap_payments', rcount;
+
+    -- DELETE
+    -- FROM sage_intacct_reimbursement_lineitems sirl
+    -- WHERE sirl.sage_intacct_reimbursement_id IN (
+    --     SELECT sir.id FROM sage_intacct_reimbursements sir WHERE sir.expense_group_id IN (
+    --         SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % sage_intacct_reimbursement_lineitems', rcount;
+
+    -- DELETE
+    -- FROM sage_intacct_reimbursements sir
+    -- WHERE sir.expense_group_id IN (
+    --     SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % sage_intacct_reimbursements', rcount;
+
+    -- DELETE
+    -- FROM reimbursements r
+    -- WHERE r.workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % reimbursements', rcount;
+
+    -- DELETE
+    -- FROM expenses e
+    -- WHERE e.id IN (
+    --     SELECT expense_id FROM expense_groups_expenses ege WHERE ege.expensegroup_id IN (
+    --         SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % expenses', rcount;
+
+    -- DELETE
+    -- FROM expenses 
+    -- WHERE is_skipped=true and org_id in (SELECT fyle_org_id FROM workspaces WHERE id=_workspace_id);
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % skipped expenses', rcount;
+
+    -- DELETE
+    -- FROM expense_groups_expenses ege
+    -- WHERE ege.expensegroup_id IN (
+    --     SELECT eg.id FROM expense_groups eg WHERE eg.workspace_id = _workspace_id
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % expense_groups_expenses', rcount;
+
+    -- DELETE
+    -- FROM expense_groups eg
+    -- WHERE eg.workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % expense_groups', rcount;
+
+    DELETE
+    FROM mappings m
+    WHERE m.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % mappings', rcount;
+
+    DELETE
+    FROM employee_mappings em
+    WHERE em.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % employee_mappings', rcount;
+
+    DELETE
+    FROM category_mappings cm
+    WHERE cm.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % category_mappings', rcount;
+
+    DELETE
+    FROM mapping_settings ms
+    WHERE ms.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % mapping_settings', rcount;
+
+    DELETE
+    FROM general_mappings gm
+    WHERE gm.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % general_mappings', rcount;
+
+    DELETE
+    FROM configurations c
+    WHERE c.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % configurations', rcount;
+
+    -- DELETE
+    -- FROM expense_group_settings egs
+    -- WHERE egs.workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % expense_group_settings', rcount;
+
+    -- DELETE
+    -- FROM fyle_credentials fc
+    -- WHERE fc.workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % fyle_credentials', rcount;
+
+    -- DELETE
+    -- FROM sage_intacct_credentials sic
+    -- WHERE sic.workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % sage_intacct_credentials', rcount;
+
+    DELETE
+    FROM expense_attributes ea
+    WHERE ea.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_attributes', rcount;
+
+    DELETE
+    FROM expense_filters ef
+    WHERE ef.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % expense_filters', rcount;
+
+    DELETE
+    FROM destination_attributes da
+    WHERE da.workspace_id = _workspace_id and attribute_type != 'LOCATION_ENTITY';
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % destination_attributes', rcount;
+
+    DELETE
+    FROM workspace_schedules wsch
+    WHERE wsch.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % workspace_schedules', rcount;
+
+    -- DELETE
+    -- FROM last_export_details led
+    -- WHERE led.workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % last_export_details', rcount;
+
+    DELETE
+    FROM django_q_schedule dqs
+    WHERE dqs.args = _workspace_id::varchar(255);
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % django_q_schedule', rcount;
+
+    -- DELETE
+    -- FROM auth_tokens aut
+    -- WHERE aut.user_id IN (
+    --     SELECT u.id FROM users u WHERE u.id IN (
+    --         SELECT wu.user_id FROM workspaces_user wu WHERE workspace_id = _workspace_id
+    --     )
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % auth_tokens', rcount;
+
+    -- DELETE
+    -- FROM workspaces_user wu
+    -- WHERE workspace_id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % workspaces_user', rcount;
+
+    -- DELETE
+    -- FROM users u
+    -- WHERE u.id IN (
+    --     SELECT wu.user_id FROM workspaces_user wu WHERE workspace_id = _workspace_id
+    -- );
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % users', rcount;
+
+    -- DELETE
+    -- FROM workspaces w
+    -- WHERE w.id = _workspace_id;
+    -- GET DIAGNOSTICS rcount = ROW_COUNT;
+    -- RAISE NOTICE 'Deleted % workspaces', rcount;
+
+    UPDATE workspaces
+    set onboarding_state = 'CONNECTION', source_synced_at = null, destination_synced_at = null where id = _workspace_id;
+
+    UPDATE last_export_details
+    SET failed_expense_groups_count = null
+    WHERE workspace_id = _workspace_id;
+
+RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.reset_location_entity_without_clearing_past_exports(_workspace_id integer) OWNER TO postgres;
+
+--
+-- Name: trigger_auto_import(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.trigger_auto_import(_workspace_id character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    rcount integer;
+BEGIN
+    UPDATE django_q_schedule 
+    SET next_run = now() + INTERVAL '35 sec' 
+    WHERE args = _workspace_id and func = 'apps.mappings.imports.queues.chain_import_fields_to_fyle';
+    
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+
+    IF rcount > 0 THEN
+        RAISE NOTICE 'Updated % schedule', rcount;
+    ELSE
+        RAISE NOTICE 'Schedule not updated since it doesnt exist';
+    END IF;
+
+RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.trigger_auto_import(_workspace_id character varying) OWNER TO postgres;
+
+--
+-- Name: trigger_auto_import_export(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.trigger_auto_import_export(_workspace_id character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    rcount integer;
+BEGIN
+    UPDATE django_q_schedule 
+    SET next_run = now() + INTERVAL '35 sec' 
+    WHERE args = _workspace_id and func = 'apps.workspaces.tasks.run_sync_schedule';
+    
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+
+    IF rcount > 0 THEN
+        RAISE NOTICE 'Updated % schedule', rcount;
+    ELSE
+        RAISE NOTICE 'Schedule not updated since it doesnt exist';
+    END IF;
+
+    update errors set updated_at = now() - interval '25 hours' where is_resolved = 'f' and workspace_id = NULLIF(_workspace_id, '')::int and repetition_count > 100;
+
+RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.trigger_auto_import_export(_workspace_id character varying) OWNER TO postgres;
+
+--
+-- Name: update_in_progress_tasks_to_failed(integer[]); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_in_progress_tasks_to_failed(_expense_group_ids integer[]) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+  rcount integer;
+
+BEGIN
+    RAISE NOTICE 'Updating in progress tasks to failed for expense groups % ', _expense_group_ids;
+
+UPDATE
+    task_logs SET status = 'FAILED' WHERE status in ('ENQUEUED', 'IN_PROGRESS') and expense_group_id in (SELECT unnest(_expense_group_ids));
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Updated % task_logs', rcount;
+
+RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.update_in_progress_tasks_to_failed(_expense_group_ids integer[]) OWNER TO postgres;
+
+--
+-- Name: ws_email(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.ws_email(_workspace_id integer) RETURNS TABLE(workspace_id integer, workspace_name character varying, email character varying)
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  RETURN QUERY
+  select w.id as workspace_id, w.name as workspace_name, u.email as email from workspaces w 
+    left join workspaces_user wu on wu.workspace_id = w.id
+    left join users u on wu.user_id = u.id
+    where w.id = _workspace_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.ws_email(_workspace_id integer) OWNER TO postgres;
+
+--
+-- Name: ws_org_id(text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.ws_org_id(_org_id text) RETURNS TABLE(workspace_id integer, workspace_org_id character varying, workspace_name character varying)
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  RETURN QUERY
+  select id as workspace_id, fyle_org_id as workspace_org_id, name as workspace_name
+  from workspaces where fyle_org_id = _org_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.ws_org_id(_org_id text) OWNER TO postgres;
+
+--
+-- Name: ws_search(text); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.ws_search(_name text) RETURNS TABLE(workspace_id integer, workspace_org_id character varying, workspace_name character varying)
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  RETURN QUERY
+  select id as workspace_id, fyle_org_id as workspace_org_id, name as workspace_name
+  from workspaces where name ilike '%' || _name || '%';
+END;
+$$;
+
+
+ALTER FUNCTION public.ws_search(_name text) OWNER TO postgres;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: expense_groups_expenses; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.expense_groups_expenses (
+    id integer NOT NULL,
+    expensegroup_id integer NOT NULL,
+    expense_id integer NOT NULL
+);
+
+
+ALTER TABLE public.expense_groups_expenses OWNER TO postgres;
+
+--
+-- Name: expenses; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.expenses (
+    id integer NOT NULL,
+    employee_email character varying(255) NOT NULL,
+    category character varying(255),
+    sub_category character varying(255),
+    project character varying(255),
+    expense_id character varying(255) NOT NULL,
+    expense_number character varying(255) NOT NULL,
+    claim_number character varying(255),
+    amount double precision NOT NULL,
+    currency character varying(5) NOT NULL,
+    foreign_amount double precision,
+    foreign_currency character varying(5),
+    settlement_id character varying(255),
+    reimbursable boolean NOT NULL,
+    state character varying(255) NOT NULL,
+    vendor character varying(255),
+    cost_center character varying(255),
+    purpose text,
+    report_id character varying(255) NOT NULL,
+    spent_at timestamp with time zone,
+    approved_at timestamp with time zone,
+    expense_created_at timestamp with time zone NOT NULL,
+    expense_updated_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    fund_source character varying(255) NOT NULL,
+    custom_properties jsonb,
+    verified_at timestamp with time zone,
+    billable boolean,
+    paid_on_sage_intacct boolean NOT NULL,
+    org_id character varying(255),
+    tax_amount double precision,
+    tax_group_id character varying(255),
+    file_ids character varying(255)[],
+    payment_number character varying(55),
+    corporate_card_id character varying(255),
+    is_skipped boolean,
+    report_title text,
+    posted_at timestamp with time zone,
+    employee_name character varying(255),
+    accounting_export_summary jsonb NOT NULL,
+    previous_export_state character varying(255),
+    workspace_id integer,
+    paid_on_fyle boolean NOT NULL,
+    bank_transaction_id character varying(255),
+    is_posted_at_null boolean NOT NULL,
+    masked_corporate_card_number character varying(255)
+);
+
+
+ALTER TABLE public.expenses OWNER TO postgres;
+
+--
+-- Name: prod_workspaces_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.prod_workspaces_view AS
+SELECT
+    NULL::integer AS id,
+    NULL::character varying(255) AS name,
+    NULL::character varying(255) AS fyle_org_id,
+    NULL::timestamp with time zone AS last_synced_at,
+    NULL::timestamp with time zone AS created_at,
+    NULL::timestamp with time zone AS updated_at,
+    NULL::timestamp with time zone AS destination_synced_at,
+    NULL::timestamp with time zone AS source_synced_at,
+    NULL::character varying(255) AS cluster_domain,
+    NULL::timestamp with time zone AS ccc_last_synced_at,
+    NULL::character varying(50) AS onboarding_state,
+    NULL::character varying(2) AS app_version,
+    NULL::character varying[] AS user_emails;
+
+
+ALTER TABLE public.prod_workspaces_view OWNER TO postgres;
+
+--
+-- Name: task_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.task_logs (
+    id integer NOT NULL,
+    type character varying(50) NOT NULL,
+    task_id character varying(255),
+    status character varying(255) NOT NULL,
+    detail jsonb,
+    sage_intacct_errors jsonb,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    bill_id integer,
+    expense_report_id integer,
+    expense_group_id integer,
+    workspace_id integer NOT NULL,
+    charge_card_transaction_id integer,
+    ap_payment_id integer,
+    sage_intacct_reimbursement_id integer,
+    journal_entry_id integer,
+    supdoc_id character varying(255),
+    is_retired boolean NOT NULL
+);
+
+
+ALTER TABLE public.task_logs OWNER TO postgres;
+
+--
+-- Name: _direct_export_errored_expenses_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public._direct_export_errored_expenses_view AS
+ WITH prod_workspace_ids AS (
+         SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view
+        ), errored_expenses_in_complete_state AS (
+         SELECT count(*) AS complete_expenses_error_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'state'::text) <> ALL (ARRAY['COMPLETE'::text, 'DELETED'::text])) AND (expenses.id IN ( SELECT expense_groups_expenses.expense_id
+                   FROM public.expense_groups_expenses
+                  WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
+                           FROM public.task_logs
+                          WHERE (((task_logs.status)::text = 'COMPLETE'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                                   FROM prod_workspace_ids))))))))
+        ), errored_expenses_in_error_state AS (
+         SELECT count(*) AS error_expenses_error_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'state'::text) <> ALL (ARRAY['ERROR'::text, 'DELETED'::text])) AND (expenses.id IN ( SELECT expense_groups_expenses.expense_id
+                   FROM public.expense_groups_expenses
+                  WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
+                           FROM public.task_logs
+                          WHERE (((task_logs.status)::text = ANY ((ARRAY['FAILED'::character varying, 'FATAL'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                                   FROM prod_workspace_ids))))))))
+        ), errored_expenses_in_inprogress_state AS (
+         SELECT count(*) AS in_progress_expenses_error_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'state'::text) <> ALL (ARRAY['IN_PROGRESS'::text, 'DELETED'::text])) AND (expenses.id IN ( SELECT expense_groups_expenses.expense_id
+                   FROM public.expense_groups_expenses
+                  WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
+                           FROM public.task_logs
+                          WHERE (((task_logs.status)::text = 'IN_PROGRESS'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                                   FROM prod_workspace_ids))))))))
+        ), not_synced_to_platform AS (
+         SELECT count(*) AS not_synced_expenses_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'synced'::text) = 'false'::text))
+        )
+ SELECT errored_expenses_in_complete_state.complete_expenses_error_count,
+    errored_expenses_in_error_state.error_expenses_error_count,
+    errored_expenses_in_inprogress_state.in_progress_expenses_error_count,
+    not_synced_to_platform.not_synced_expenses_count
+   FROM errored_expenses_in_complete_state,
+    errored_expenses_in_error_state,
+    errored_expenses_in_inprogress_state,
+    not_synced_to_platform;
+
+
+ALTER TABLE public._direct_export_errored_expenses_view OWNER TO postgres;
+
+--
+-- Name: _django_queue_fatal_tasks_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public._django_queue_fatal_tasks_view AS
+ SELECT 'FATAL'::text AS status,
+    COALESCE(count(*), (0)::bigint) AS count
+   FROM public.task_logs
+  WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = 'FATAL'::text));
+
+
+ALTER TABLE public._django_queue_fatal_tasks_view OWNER TO postgres;
+
+--
+-- Name: _django_queue_in_progress_tasks_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public._django_queue_in_progress_tasks_view AS
+ SELECT 'IN_PROGRESS, ENQUEUED'::text AS status,
+    COALESCE(count(*), (0)::bigint) AS count
+   FROM public.task_logs
+  WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])));
+
+
+ALTER TABLE public._django_queue_in_progress_tasks_view OWNER TO postgres;
+
+--
+-- Name: import_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.import_logs (
+    id integer NOT NULL,
+    attribute_type character varying(150) NOT NULL,
+    status character varying(255),
+    error_log jsonb NOT NULL,
+    total_batches_count integer NOT NULL,
+    processed_batches_count integer NOT NULL,
+    last_successful_run_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.import_logs OWNER TO postgres;
+
+--
+-- Name: _import_logs_fatal_failed_in_progress_tasks_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public._import_logs_fatal_failed_in_progress_tasks_view AS
+ SELECT count(*) AS log_count,
+    import_logs.status,
+    current_database() AS database
+   FROM public.import_logs
+  WHERE (((import_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'FATAL'::character varying, 'FAILED'::character varying])::text[])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND ((import_logs.error_log)::text !~~* '%Token%'::text) AND ((import_logs.error_log)::text !~~* '%tenant%'::text) AND (import_logs.updated_at < (now() - '00:45:00'::interval)))
+  GROUP BY import_logs.status;
+
+
+ALTER TABLE public._import_logs_fatal_failed_in_progress_tasks_view OWNER TO postgres;
 
 --
 -- Name: ap_payment_lineitems; Type: TABLE; Schema: public; Owner: postgres
@@ -528,6 +1784,62 @@ CREATE TABLE public.destination_attributes (
 ALTER TABLE public.destination_attributes OWNER TO postgres;
 
 --
+-- Name: direct_export_errored_expenses_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.direct_export_errored_expenses_view AS
+ WITH prod_workspace_ids AS (
+         SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view
+        ), errored_expenses_in_complete_state AS (
+         SELECT count(*) AS complete_expenses_error_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'state'::text) <> ALL (ARRAY['COMPLETE'::text, 'DELETED'::text])) AND (expenses.id IN ( SELECT expense_groups_expenses.expense_id
+                   FROM public.expense_groups_expenses
+                  WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
+                           FROM public.task_logs
+                          WHERE (((task_logs.status)::text = 'COMPLETE'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                                   FROM prod_workspace_ids)) AND (task_logs.updated_at > (now() - '1 day'::interval)) AND (task_logs.updated_at < (now() - '00:45:00'::interval))))))))
+        ), errored_expenses_in_error_state AS (
+         SELECT count(*) AS error_expenses_error_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'state'::text) <> ALL (ARRAY['ERROR'::text, 'DELETED'::text])) AND (expenses.id IN ( SELECT expense_groups_expenses.expense_id
+                   FROM public.expense_groups_expenses
+                  WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
+                           FROM public.task_logs
+                          WHERE (((task_logs.status)::text = ANY ((ARRAY['FAILED'::character varying, 'FATAL'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                                   FROM prod_workspace_ids)) AND (task_logs.updated_at > (now() - '1 day'::interval)) AND (task_logs.updated_at < (now() - '00:45:00'::interval))))))))
+        ), errored_expenses_in_inprogress_state AS (
+         SELECT count(*) AS in_progress_expenses_error_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'state'::text) <> ALL (ARRAY['IN_PROGRESS'::text, 'DELETED'::text])) AND (expenses.id IN ( SELECT expense_groups_expenses.expense_id
+                   FROM public.expense_groups_expenses
+                  WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
+                           FROM public.task_logs
+                          WHERE (((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                                   FROM prod_workspace_ids)) AND (task_logs.updated_at > (now() - '1 day'::interval)) AND (task_logs.updated_at < (now() - '00:45:00'::interval))))))))
+        ), not_synced_to_platform AS (
+         SELECT count(*) AS not_synced_expenses_count
+           FROM public.expenses
+          WHERE ((expenses.workspace_id IN ( SELECT prod_workspace_ids.id
+                   FROM prod_workspace_ids)) AND ((expenses.accounting_export_summary ->> 'synced'::text) = 'false'::text) AND (expenses.updated_at > (now() - '1 day'::interval)) AND (expenses.updated_at < (now() - '00:45:00'::interval)))
+        )
+ SELECT errored_expenses_in_complete_state.complete_expenses_error_count,
+    errored_expenses_in_error_state.error_expenses_error_count,
+    errored_expenses_in_inprogress_state.in_progress_expenses_error_count,
+    not_synced_to_platform.not_synced_expenses_count
+   FROM errored_expenses_in_complete_state,
+    errored_expenses_in_error_state,
+    errored_expenses_in_inprogress_state,
+    not_synced_to_platform;
+
+
+ALTER TABLE public.direct_export_errored_expenses_view OWNER TO postgres;
+
+--
 -- Name: django_admin_log; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -744,6 +2056,34 @@ CREATE TABLE public.django_q_task (
 
 
 ALTER TABLE public.django_q_task OWNER TO postgres;
+
+--
+-- Name: django_queue_fatal_tasks_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.django_queue_fatal_tasks_view AS
+ SELECT 'FATAL'::text AS status,
+    COALESCE(count(*), (0)::bigint) AS count
+   FROM public.task_logs
+  WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = 'FATAL'::text) AND ((task_logs.updated_at >= (now() - '24:00:00'::interval)) AND (task_logs.updated_at <= (now() - '00:30:00'::interval))));
+
+
+ALTER TABLE public.django_queue_fatal_tasks_view OWNER TO postgres;
+
+--
+-- Name: django_queue_in_progress_tasks_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.django_queue_in_progress_tasks_view AS
+ SELECT 'IN_PROGRESS, ENQUEUED'::text AS status,
+    COALESCE(count(*), (0)::bigint) AS count
+   FROM public.task_logs
+  WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])) AND ((task_logs.updated_at >= (now() - '24:00:00'::interval)) AND (task_logs.updated_at <= (now() - '00:30:00'::interval))));
+
+
+ALTER TABLE public.django_queue_in_progress_tasks_view OWNER TO postgres;
 
 --
 -- Name: django_session; Type: TABLE; Schema: public; Owner: postgres
@@ -1051,19 +2391,6 @@ CREATE TABLE public.expense_groups (
 ALTER TABLE public.expense_groups OWNER TO postgres;
 
 --
--- Name: expense_groups_expenses; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.expense_groups_expenses (
-    id integer NOT NULL,
-    expensegroup_id integer NOT NULL,
-    expense_id integer NOT NULL
-);
-
-
-ALTER TABLE public.expense_groups_expenses OWNER TO postgres;
-
---
 -- Name: expense_report_lineitems; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1120,61 +2447,327 @@ CREATE TABLE public.expense_reports (
 ALTER TABLE public.expense_reports OWNER TO postgres;
 
 --
--- Name: expenses; Type: TABLE; Schema: public; Owner: postgres
+-- Name: extended_category_mappings_view; Type: VIEW; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.expenses (
+CREATE VIEW public.extended_category_mappings_view AS
+ SELECT ea.id AS expense_attribute_id,
+    ea.attribute_type AS expense_attribute_attribute_type,
+    ea.display_name AS expense_attribute_display_name,
+    ea.value AS expense_attribute_value,
+    ea.auto_mapped AS expense_attribute_auto_mapped,
+    ea.auto_created AS expense_attribute_auto_created,
+    ea.created_at AS expense_attribute_created_at,
+    ea.updated_at AS expense_attribute_updated_at,
+    ea.source_id AS expense_attribute_source_id,
+    ea.detail AS expense_attribute_detail,
+    ea.active AS expense_attribute_active,
+    da.id AS destination_attribute_id,
+    da.attribute_type AS destination_attribute_attribute_type,
+    da.display_name AS destination_attribute_display_name,
+    da.value AS destination_attribute_value,
+    da.destination_id AS destination_attribute_destination_id,
+    da.auto_created AS destination_attribute_auto_created,
+    da.detail AS destination_attribute_detail,
+    da.active AS destination_attribute_active,
+    da.created_at AS destination_attribute_created_at,
+    da.updated_at AS destination_attribute_updated_at,
+    cm.workspace_id
+   FROM (((public.category_mappings cm
+     JOIN public.expense_attributes ea ON ((ea.id = cm.source_category_id)))
+     JOIN public.destination_attributes da ON ((da.id = cm.destination_account_id)))
+     JOIN public.destination_attributes da2 ON ((da2.id = cm.destination_expense_head_id)));
+
+
+ALTER TABLE public.extended_category_mappings_view OWNER TO postgres;
+
+--
+-- Name: extended_employee_mappings_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.extended_employee_mappings_view AS
+ SELECT ea.id AS expense_attribute_id,
+    ea.attribute_type AS expense_attribute_attribute_type,
+    ea.display_name AS expense_attribute_display_name,
+    ea.value AS expense_attribute_value,
+    ea.auto_mapped AS expense_attribute_auto_mapped,
+    ea.auto_created AS expense_attribute_auto_created,
+    ea.created_at AS expense_attribute_created_at,
+    ea.updated_at AS expense_attribute_updated_at,
+    ea.source_id AS expense_attribute_source_id,
+    ea.detail AS expense_attribute_detail,
+    ea.active AS expense_attribute_active,
+    da.id AS destination_attribute_id,
+    da.attribute_type AS destination_attribute_attribute_type,
+    da.display_name AS destination_attribute_display_name,
+    da.value AS destination_attribute_value,
+    da.destination_id AS destination_attribute_destination_id,
+    da.auto_created AS destination_attribute_auto_created,
+    da.detail AS destination_attribute_detail,
+    da.active AS destination_attribute_active,
+    da.created_at AS destination_attribute_created_at,
+    da.updated_at AS destination_attribute_updated_at,
+    em.workspace_id
+   FROM ((((public.employee_mappings em
+     JOIN public.expense_attributes ea ON ((ea.id = em.source_employee_id)))
+     JOIN public.destination_attributes da ON ((da.id = em.destination_employee_id)))
+     JOIN public.destination_attributes da2 ON ((da2.id = em.destination_vendor_id)))
+     JOIN public.destination_attributes da3 ON ((da3.id = em.destination_card_account_id)));
+
+
+ALTER TABLE public.extended_employee_mappings_view OWNER TO postgres;
+
+--
+-- Name: extended_expenses_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.extended_expenses_view AS
+ SELECT e.id,
+    e.employee_email,
+    e.category,
+    e.sub_category,
+    e.project,
+    e.expense_id,
+    e.expense_number,
+    e.claim_number,
+    e.amount,
+    e.currency,
+    e.foreign_amount,
+    e.foreign_currency,
+    e.settlement_id,
+    e.reimbursable,
+    e.state,
+    e.vendor,
+    e.cost_center,
+    e.purpose,
+    e.report_id,
+    e.spent_at,
+    e.approved_at,
+    e.expense_created_at,
+    e.expense_updated_at,
+    e.created_at,
+    e.updated_at,
+    e.fund_source,
+    e.custom_properties,
+    e.verified_at,
+    e.billable,
+    e.paid_on_sage_intacct,
+    e.org_id,
+    e.tax_amount,
+    e.tax_group_id,
+    e.file_ids,
+    e.payment_number,
+    e.corporate_card_id,
+    e.is_skipped,
+    e.report_title,
+    e.posted_at,
+    e.employee_name,
+    e.accounting_export_summary,
+    e.previous_export_state,
+    e.workspace_id,
+    e.paid_on_fyle,
+    e.bank_transaction_id,
+    e.is_posted_at_null,
+    e.masked_corporate_card_number,
+    eg.id AS expense_group_id,
+    eg.employee_name AS expense_group_employee_name,
+    eg.export_url AS expense_group_export_url,
+    eg.description AS expense_group_description,
+    eg.created_at AS expense_group_created_at,
+    eg.updated_at AS expense_group_updated_at,
+    eg.workspace_id AS expense_group_workspace_id,
+    eg.fund_source AS expense_group_fund_source,
+    eg.exported_at AS expense_group_exported_at,
+    eg.response_logs AS expense_group_response_logs
+   FROM ((public.expenses e
+     JOIN public.expense_groups_expenses ege ON ((ege.expense_id = e.id)))
+     JOIN public.expense_groups eg ON ((eg.id = ege.expensegroup_id)));
+
+
+ALTER TABLE public.extended_expenses_view OWNER TO postgres;
+
+--
+-- Name: mappings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.mappings (
     id integer NOT NULL,
-    employee_email character varying(255) NOT NULL,
-    category character varying(255),
-    sub_category character varying(255),
-    project character varying(255),
-    expense_id character varying(255) NOT NULL,
-    expense_number character varying(255) NOT NULL,
-    claim_number character varying(255),
-    amount double precision NOT NULL,
-    currency character varying(5) NOT NULL,
-    foreign_amount double precision,
-    foreign_currency character varying(5),
-    settlement_id character varying(255),
-    reimbursable boolean NOT NULL,
-    state character varying(255) NOT NULL,
-    vendor character varying(255),
-    cost_center character varying(255),
-    purpose text,
-    report_id character varying(255) NOT NULL,
-    spent_at timestamp with time zone,
-    approved_at timestamp with time zone,
-    expense_created_at timestamp with time zone NOT NULL,
-    expense_updated_at timestamp with time zone NOT NULL,
+    source_type character varying(255) NOT NULL,
+    destination_type character varying(255) NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    fund_source character varying(255) NOT NULL,
-    custom_properties jsonb,
-    verified_at timestamp with time zone,
-    billable boolean,
-    paid_on_sage_intacct boolean NOT NULL,
-    org_id character varying(255),
-    tax_amount double precision,
-    tax_group_id character varying(255),
-    file_ids character varying(255)[],
-    payment_number character varying(55),
-    corporate_card_id character varying(255),
-    is_skipped boolean,
-    report_title text,
-    posted_at timestamp with time zone,
-    employee_name character varying(255),
-    accounting_export_summary jsonb NOT NULL,
-    previous_export_state character varying(255),
-    workspace_id integer,
-    paid_on_fyle boolean NOT NULL,
-    bank_transaction_id character varying(255),
-    is_posted_at_null boolean NOT NULL,
-    masked_corporate_card_number character varying(255)
+    destination_id integer NOT NULL,
+    source_id integer NOT NULL,
+    workspace_id integer NOT NULL
 );
 
 
-ALTER TABLE public.expenses OWNER TO postgres;
+ALTER TABLE public.mappings OWNER TO postgres;
+
+--
+-- Name: extended_mappings_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.extended_mappings_view AS
+ SELECT ea.id AS expense_attribute_id,
+    ea.attribute_type AS expense_attribute_attribute_type,
+    ea.display_name AS expense_attribute_display_name,
+    ea.value AS expense_attribute_value,
+    ea.auto_mapped AS expense_attribute_auto_mapped,
+    ea.auto_created AS expense_attribute_auto_created,
+    ea.created_at AS expense_attribute_created_at,
+    ea.updated_at AS expense_attribute_updated_at,
+    ea.source_id AS expense_attribute_source_id,
+    ea.detail AS expense_attribute_detail,
+    ea.active AS expense_attribute_active,
+    da.id AS destination_attribute_id,
+    da.attribute_type AS destination_attribute_attribute_type,
+    da.display_name AS destination_attribute_display_name,
+    da.value AS destination_attribute_value,
+    da.destination_id AS destination_attribute_destination_id,
+    da.auto_created AS destination_attribute_auto_created,
+    da.detail AS destination_attribute_detail,
+    da.active AS destination_attribute_active,
+    da.created_at AS destination_attribute_created_at,
+    da.updated_at AS destination_attribute_updated_at,
+    m.workspace_id
+   FROM ((public.mappings m
+     JOIN public.expense_attributes ea ON ((ea.id = m.source_id)))
+     JOIN public.destination_attributes da ON ((da.id = m.destination_id)));
+
+
+ALTER TABLE public.extended_mappings_view OWNER TO postgres;
+
+--
+-- Name: general_mappings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.general_mappings (
+    id integer NOT NULL,
+    default_location_name character varying(255),
+    default_location_id character varying(255),
+    default_department_name character varying(255),
+    default_department_id character varying(255),
+    default_project_name character varying(255),
+    default_project_id character varying(255),
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL,
+    default_charge_card_name character varying(255),
+    default_charge_card_id character varying(255),
+    default_ccc_vendor_name character varying(255),
+    default_ccc_vendor_id character varying(255),
+    default_item_id character varying(255),
+    default_item_name character varying(255),
+    payment_account_id character varying(255),
+    payment_account_name character varying(255),
+    default_ccc_expense_payment_type_id character varying(255),
+    default_ccc_expense_payment_type_name character varying(255),
+    default_reimbursable_expense_payment_type_id character varying(255),
+    default_reimbursable_expense_payment_type_name character varying(255),
+    use_intacct_employee_departments boolean NOT NULL,
+    use_intacct_employee_locations boolean NOT NULL,
+    location_entity_id character varying(255),
+    location_entity_name character varying(255),
+    default_class_id character varying(255),
+    default_class_name character varying(255),
+    default_tax_code_id character varying(255),
+    default_tax_code_name character varying(255),
+    default_credit_card_id character varying(255),
+    default_credit_card_name character varying(255),
+    default_gl_account_id character varying(255),
+    default_gl_account_name character varying(255),
+    created_by character varying(255),
+    updated_by character varying(255)
+);
+
+
+ALTER TABLE public.general_mappings OWNER TO postgres;
+
+--
+-- Name: last_export_details; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.last_export_details (
+    id integer NOT NULL,
+    last_exported_at timestamp with time zone,
+    export_mode character varying(50),
+    total_expense_groups_count integer,
+    successful_expense_groups_count integer,
+    failed_expense_groups_count integer,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL,
+    next_export_at timestamp with time zone
+);
+
+
+ALTER TABLE public.last_export_details OWNER TO postgres;
+
+--
+-- Name: workspace_schedules; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.workspace_schedules (
+    id integer NOT NULL,
+    enabled boolean NOT NULL,
+    start_datetime timestamp with time zone,
+    interval_hours integer,
+    schedule_id integer,
+    workspace_id integer NOT NULL,
+    additional_email_options jsonb,
+    emails_selected character varying(255)[],
+    error_count integer,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone
+);
+
+
+ALTER TABLE public.workspace_schedules OWNER TO postgres;
+
+--
+-- Name: workspaces; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.workspaces (
+    id integer NOT NULL,
+    name character varying(255) NOT NULL,
+    fyle_org_id character varying(255) NOT NULL,
+    last_synced_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    destination_synced_at timestamp with time zone,
+    source_synced_at timestamp with time zone,
+    cluster_domain character varying(255),
+    ccc_last_synced_at timestamp with time zone,
+    onboarding_state character varying(50),
+    app_version character varying(2) NOT NULL
+);
+
+
+ALTER TABLE public.workspaces OWNER TO postgres;
+
+--
+-- Name: extended_settings_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.extended_settings_view AS
+ SELECT row_to_json(w.*) AS workspaces,
+    row_to_json(c.*) AS configurations,
+    row_to_json(gm.*) AS general_mappings,
+    row_to_json(ws.*) AS workspace_schedules,
+    row_to_json(egs.*) AS expense_group_settings,
+    row_to_json(led.*) AS last_export_details,
+    w.fyle_org_id
+   FROM (((((public.workspaces w
+     LEFT JOIN public.configurations c ON ((w.id = c.workspace_id)))
+     LEFT JOIN public.general_mappings gm ON ((gm.workspace_id = w.id)))
+     LEFT JOIN public.workspace_schedules ws ON ((ws.workspace_id = w.id)))
+     LEFT JOIN public.expense_group_settings egs ON ((egs.workspace_id = w.id)))
+     LEFT JOIN public.last_export_details led ON ((led.workspace_id = w.id)));
+
+
+ALTER TABLE public.extended_settings_view OWNER TO postgres;
 
 --
 -- Name: fyle_accounting_mappings_destinationattribute_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -1219,24 +2812,6 @@ ALTER TABLE public.fyle_accounting_mappings_expenseattribute_id_seq OWNER TO pos
 
 ALTER SEQUENCE public.fyle_accounting_mappings_expenseattribute_id_seq OWNED BY public.expense_attributes.id;
 
-
---
--- Name: mappings; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.mappings (
-    id integer NOT NULL,
-    source_type character varying(255) NOT NULL,
-    destination_type character varying(255) NOT NULL,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    destination_id integer NOT NULL,
-    source_id integer NOT NULL,
-    workspace_id integer NOT NULL
-);
-
-
-ALTER TABLE public.mappings OWNER TO postgres;
 
 --
 -- Name: fyle_accounting_mappings_mapping_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -1409,70 +2984,20 @@ ALTER SEQUENCE public.fyle_rest_auth_authtokens_id_seq OWNED BY public.auth_toke
 
 
 --
--- Name: general_mappings; Type: TABLE; Schema: public; Owner: postgres
+-- Name: import_logs_fatal_failed_in_progress_tasks_view; Type: VIEW; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.general_mappings (
-    id integer NOT NULL,
-    default_location_name character varying(255),
-    default_location_id character varying(255),
-    default_department_name character varying(255),
-    default_department_id character varying(255),
-    default_project_name character varying(255),
-    default_project_id character varying(255),
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL,
-    default_charge_card_name character varying(255),
-    default_charge_card_id character varying(255),
-    default_ccc_vendor_name character varying(255),
-    default_ccc_vendor_id character varying(255),
-    default_item_id character varying(255),
-    default_item_name character varying(255),
-    payment_account_id character varying(255),
-    payment_account_name character varying(255),
-    default_ccc_expense_payment_type_id character varying(255),
-    default_ccc_expense_payment_type_name character varying(255),
-    default_reimbursable_expense_payment_type_id character varying(255),
-    default_reimbursable_expense_payment_type_name character varying(255),
-    use_intacct_employee_departments boolean NOT NULL,
-    use_intacct_employee_locations boolean NOT NULL,
-    location_entity_id character varying(255),
-    location_entity_name character varying(255),
-    default_class_id character varying(255),
-    default_class_name character varying(255),
-    default_tax_code_id character varying(255),
-    default_tax_code_name character varying(255),
-    default_credit_card_id character varying(255),
-    default_credit_card_name character varying(255),
-    default_gl_account_id character varying(255),
-    default_gl_account_name character varying(255),
-    created_by character varying(255),
-    updated_by character varying(255)
-);
+CREATE VIEW public.import_logs_fatal_failed_in_progress_tasks_view AS
+ SELECT count(*) AS count,
+    import_logs.status,
+    current_database() AS database
+   FROM public.import_logs
+  WHERE (((import_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'FATAL'::character varying, 'FAILED'::character varying])::text[])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND (import_logs.updated_at > (now() - '1 day'::interval)) AND (import_logs.updated_at < (now() - '00:45:00'::interval)) AND ((import_logs.error_log)::text !~~* '%Token%'::text) AND ((import_logs.error_log)::text !~~* '%tenant%'::text))
+  GROUP BY import_logs.status;
 
 
-ALTER TABLE public.general_mappings OWNER TO postgres;
-
---
--- Name: import_logs; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.import_logs (
-    id integer NOT NULL,
-    attribute_type character varying(150) NOT NULL,
-    status character varying(255),
-    error_log jsonb NOT NULL,
-    total_batches_count integer NOT NULL,
-    processed_batches_count integer NOT NULL,
-    last_successful_run_at timestamp with time zone,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL
-);
-
-
-ALTER TABLE public.import_logs OWNER TO postgres;
+ALTER TABLE public.import_logs_fatal_failed_in_progress_tasks_view OWNER TO postgres;
 
 --
 -- Name: import_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -1495,6 +3020,22 @@ ALTER TABLE public.import_logs_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE public.import_logs_id_seq OWNED BY public.import_logs.id;
 
+
+--
+-- Name: inactive_workspaces_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.inactive_workspaces_view AS
+ SELECT count(DISTINCT w.id) AS count,
+    current_database() AS database
+   FROM ((public.workspaces w
+     JOIN public.last_export_details led ON ((w.id = led.workspace_id)))
+     JOIN public.django_q_schedule dqs ON (((w.id)::text = dqs.args)))
+  WHERE ((w.source_synced_at < (now() - '2 mons'::interval)) AND (w.destination_synced_at < (now() - '2 mons'::interval)) AND (w.last_synced_at < (now() - '2 mons'::interval)) AND (w.ccc_last_synced_at < (now() - '2 mons'::interval)) AND (led.last_exported_at < (now() - '2 mons'::interval)) AND (w.id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)));
+
+
+ALTER TABLE public.inactive_workspaces_view OWNER TO postgres;
 
 --
 -- Name: journal_entries; Type: TABLE; Schema: public; Owner: postgres
@@ -1594,26 +3135,6 @@ ALTER SEQUENCE public.journal_entry_lineitems_id_seq OWNED BY public.journal_ent
 
 
 --
--- Name: last_export_details; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.last_export_details (
-    id integer NOT NULL,
-    last_exported_at timestamp with time zone,
-    export_mode character varying(50),
-    total_expense_groups_count integer,
-    successful_expense_groups_count integer,
-    failed_expense_groups_count integer,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL,
-    next_export_at timestamp with time zone
-);
-
-
-ALTER TABLE public.last_export_details OWNER TO postgres;
-
---
 -- Name: last_export_details_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -1697,6 +3218,152 @@ ALTER SEQUENCE public.mappings_generalmapping_id_seq OWNED BY public.general_map
 
 
 --
+-- Name: ormq_count_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.ormq_count_view AS
+ SELECT count(*) AS count,
+    current_database() AS database
+   FROM public.django_q_ormq;
+
+
+ALTER TABLE public.ormq_count_view OWNER TO postgres;
+
+--
+-- Name: prod_active_workspaces_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.prod_active_workspaces_view AS
+SELECT
+    NULL::integer AS id,
+    NULL::character varying(255) AS name,
+    NULL::character varying(255) AS fyle_org_id,
+    NULL::timestamp with time zone AS last_synced_at,
+    NULL::timestamp with time zone AS created_at,
+    NULL::timestamp with time zone AS updated_at,
+    NULL::timestamp with time zone AS destination_synced_at,
+    NULL::timestamp with time zone AS source_synced_at,
+    NULL::character varying(255) AS cluster_domain,
+    NULL::timestamp with time zone AS ccc_last_synced_at,
+    NULL::character varying(50) AS onboarding_state,
+    NULL::character varying(2) AS app_version,
+    NULL::character varying[] AS user_emails;
+
+
+ALTER TABLE public.prod_active_workspaces_view OWNER TO postgres;
+
+--
+-- Name: product_advanced_settings_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.product_advanced_settings_view AS
+ SELECT w.id AS workspace_id,
+    w.name AS workspace_name,
+    w.fyle_org_id AS workspace_org_id,
+    c.change_accounting_period,
+    c.sync_fyle_to_sage_intacct_payments,
+    c.sync_sage_intacct_to_fyle_payments,
+    c.auto_create_destination_entity,
+    c.memo_structure,
+    c.auto_create_merchants_as_vendors,
+    gm.payment_account_name,
+    gm.payment_account_id,
+    gm.default_location_name,
+    gm.default_location_id,
+    gm.default_project_name,
+    gm.default_project_id,
+    gm.default_item_name,
+    gm.default_item_id,
+    gm.use_intacct_employee_departments,
+    gm.use_intacct_employee_locations,
+    ws.enabled AS schedule_enabled,
+    ws.interval_hours AS schedule_interval_hours,
+    ws.additional_email_options AS schedule_additional_email_options,
+    ws.emails_selected AS schedule_emails_selected
+   FROM (((public.workspaces w
+     JOIN public.configurations c ON ((w.id = c.workspace_id)))
+     JOIN public.general_mappings gm ON ((w.id = gm.workspace_id)))
+     LEFT JOIN public.workspace_schedules ws ON ((w.id = ws.workspace_id)));
+
+
+ALTER TABLE public.product_advanced_settings_view OWNER TO postgres;
+
+--
+-- Name: product_export_settings_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.product_export_settings_view AS
+ SELECT w.id AS workspace_id,
+    w.name AS workspace_name,
+    w.fyle_org_id AS workspace_org_id,
+    c.reimbursable_expenses_object,
+    c.corporate_credit_card_expenses_object,
+    c.is_simplify_report_closure_enabled,
+    c.employee_field_mapping,
+    c.auto_map_employees,
+    c.use_merchant_in_journal_line,
+    egs.reimbursable_expense_group_fields,
+        CASE
+            WHEN ((egs.reimbursable_expense_group_fields @> ARRAY['expense_id'::character varying]) OR (egs.reimbursable_expense_group_fields @> ARRAY['expense_number'::character varying])) THEN 'Expense'::text
+            ELSE 'Report'::text
+        END AS readable_reimbursable_expense_group_fields,
+    egs.corporate_credit_card_expense_group_fields,
+        CASE
+            WHEN ((egs.corporate_credit_card_expense_group_fields @> ARRAY['expense_id'::character varying]) OR (egs.corporate_credit_card_expense_group_fields @> ARRAY['expense_number'::character varying])) THEN 'Expense'::text
+            ELSE 'Report'::text
+        END AS readable_corporate_credit_card_expense_group_fields,
+    egs.reimbursable_export_date_type,
+    egs.expense_state,
+    egs.ccc_export_date_type,
+    egs.ccc_expense_state,
+    egs.split_expense_grouping,
+    gm.default_gl_account_name,
+    gm.default_gl_account_id,
+    gm.default_credit_card_name,
+    gm.default_credit_card_id,
+    gm.default_charge_card_name,
+    gm.default_charge_card_id,
+    gm.default_reimbursable_expense_payment_type_name,
+    gm.default_reimbursable_expense_payment_type_id,
+    gm.default_ccc_expense_payment_type_name,
+    gm.default_ccc_expense_payment_type_id,
+    gm.default_ccc_vendor_name,
+    gm.default_ccc_vendor_id
+   FROM (((public.workspaces w
+     JOIN public.configurations c ON ((w.id = c.workspace_id)))
+     JOIN public.expense_group_settings egs ON ((w.id = egs.workspace_id)))
+     JOIN public.general_mappings gm ON ((w.id = gm.workspace_id)));
+
+
+ALTER TABLE public.product_export_settings_view OWNER TO postgres;
+
+--
+-- Name: product_import_settings_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.product_import_settings_view AS
+ SELECT w.id AS workspace_id,
+    w.name AS workspace_name,
+    w.fyle_org_id AS workspace_org_id,
+    c.import_categories,
+    c.import_tax_codes,
+    c.import_vendors_as_merchants,
+    c.import_code_fields,
+    gm.default_tax_code_name,
+    gm.default_tax_code_id,
+    COALESCE(json_agg(json_build_object('source_field', ms.source_field, 'destination_field', ms.destination_field, 'import_to_fyle', ms.import_to_fyle, 'is_custom', ms.is_custom, 'source_placeholder', ms.source_placeholder)) FILTER (WHERE (ms.workspace_id IS NOT NULL)), '[]'::json) AS mapping_settings_array,
+    COALESCE(json_agg(json_build_object('cost_code_field_name', dfs.cost_code_field_name, 'cost_code_placeholder', dfs.cost_code_placeholder, 'cost_type_field_name', dfs.cost_type_field_name, 'cost_type_placeholder', dfs.cost_type_placeholder, 'is_import_enabled', dfs.is_import_enabled)) FILTER (WHERE (dfs.workspace_id IS NOT NULL)), '[]'::json) AS dependent_field_settings_array
+   FROM ((((public.workspaces w
+     JOIN public.configurations c ON ((w.id = c.workspace_id)))
+     JOIN public.general_mappings gm ON ((w.id = gm.workspace_id)))
+     LEFT JOIN public.mapping_settings ms ON ((w.id = ms.workspace_id)))
+     LEFT JOIN public.dependent_field_settings dfs ON ((w.id = dfs.workspace_id)))
+  GROUP BY w.id, w.name, w.fyle_org_id, c.import_categories, c.import_tax_codes, c.import_vendors_as_merchants, c.import_code_fields, gm.default_tax_code_name, gm.default_tax_code_id;
+
+
+ALTER TABLE public.product_import_settings_view OWNER TO postgres;
+
+--
 -- Name: reimbursements; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1735,6 +3402,20 @@ ALTER TABLE public.reimbursements_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE public.reimbursements_id_seq OWNED BY public.reimbursements.id;
 
+
+--
+-- Name: repetition_error_count_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.repetition_error_count_view AS
+ SELECT count(*) AS count,
+    current_database() AS database
+   FROM public.errors
+  WHERE ((errors.repetition_count > 20) AND (errors.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND (errors.is_resolved = false) AND (errors.created_at < (now() - '2 mons'::interval)));
+
+
+ALTER TABLE public.repetition_error_count_view OWNER TO postgres;
 
 --
 -- Name: sage_intacct_bill_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -1965,33 +3646,6 @@ ALTER SEQUENCE public.sage_intacct_reimbursements_id_seq OWNED BY public.sage_in
 
 
 --
--- Name: task_logs; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.task_logs (
-    id integer NOT NULL,
-    type character varying(50) NOT NULL,
-    task_id character varying(255),
-    status character varying(255) NOT NULL,
-    detail jsonb,
-    sage_intacct_errors jsonb,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    bill_id integer,
-    expense_report_id integer,
-    expense_group_id integer,
-    workspace_id integer NOT NULL,
-    charge_card_transaction_id integer,
-    ap_payment_id integer,
-    sage_intacct_reimbursement_id integer,
-    journal_entry_id integer,
-    supdoc_id character varying(255)
-);
-
-
-ALTER TABLE public.task_logs OWNER TO postgres;
-
---
 -- Name: tasks_tasklog_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -2011,6 +3665,45 @@ ALTER TABLE public.tasks_tasklog_id_seq OWNER TO postgres;
 --
 
 ALTER SEQUENCE public.tasks_tasklog_id_seq OWNED BY public.task_logs.id;
+
+
+--
+-- Name: update_logs; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.update_logs (
+    id integer NOT NULL,
+    table_name text,
+    old_data jsonb,
+    new_data jsonb,
+    difference jsonb,
+    workspace_id integer,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.update_logs OWNER TO postgres;
+
+--
+-- Name: update_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.update_logs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.update_logs_id_seq OWNER TO postgres;
+
+--
+-- Name: update_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.update_logs_id_seq OWNED BY public.update_logs.id;
 
 
 --
@@ -2055,27 +3748,6 @@ ALTER SEQUENCE public.users_user_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: workspace_schedules; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.workspace_schedules (
-    id integer NOT NULL,
-    enabled boolean NOT NULL,
-    start_datetime timestamp with time zone,
-    interval_hours integer,
-    schedule_id integer,
-    workspace_id integer NOT NULL,
-    additional_email_options jsonb,
-    emails_selected character varying(255)[],
-    error_count integer,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone
-);
-
-
-ALTER TABLE public.workspace_schedules OWNER TO postgres;
-
---
 -- Name: workspace_schedules_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -2096,28 +3768,6 @@ ALTER TABLE public.workspace_schedules_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE public.workspace_schedules_id_seq OWNED BY public.workspace_schedules.id;
 
-
---
--- Name: workspaces; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.workspaces (
-    id integer NOT NULL,
-    name character varying(255) NOT NULL,
-    fyle_org_id character varying(255) NOT NULL,
-    last_synced_at timestamp with time zone,
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL,
-    destination_synced_at timestamp with time zone,
-    source_synced_at timestamp with time zone,
-    cluster_domain character varying(255),
-    ccc_last_synced_at timestamp with time zone,
-    onboarding_state character varying(50),
-    app_version character varying(2) NOT NULL
-);
-
-
-ALTER TABLE public.workspaces OWNER TO postgres;
 
 --
 -- Name: workspaces_fylecredential_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -2563,6 +4213,13 @@ ALTER TABLE ONLY public.sage_intacct_reimbursements ALTER COLUMN id SET DEFAULT 
 --
 
 ALTER TABLE ONLY public.task_logs ALTER COLUMN id SET DEFAULT nextval('public.tasks_tasklog_id_seq'::regclass);
+
+
+--
+-- Name: update_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.update_logs ALTER COLUMN id SET DEFAULT nextval('public.update_logs_id_seq'::regclass);
 
 
 --
@@ -4154,6 +5811,13 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 204	fyle_accounting_mappings	0028_auto_20241226_1030	2025-01-08 07:37:36.012387+00
 205	mappings	0016_auto_20250108_0702	2025-01-08 07:37:36.082164+00
 206	workspaces	0041_auto_20250108_0702	2025-01-08 07:37:36.448011+00
+207	internal	0001_auto_generated_sql	2025-03-05 13:24:42.958137+00
+208	internal	0002_auto_generated_sql	2025-03-05 13:24:42.960843+00
+209	internal	0003_auto_generated_sql	2025-03-05 13:24:42.962442+00
+210	internal	0004_auto_generated_sql	2025-03-05 13:24:42.964309+00
+211	internal	0005_auto_generated_sql	2025-03-05 13:24:42.965784+00
+212	internal	0006_auto_generated_sql	2025-03-05 13:24:42.967098+00
+213	tasks	0011_tasklog_is_retired	2025-03-05 13:24:42.980154+00
 \.
 
 
@@ -4175,6 +5839,7 @@ COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repe
 3	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	1	\N	I	-5	2022-09-30 08:46:25.03867+00	72495cee26334ea9ad64b337f757c4a6	\N	1440	\N	\N	\N
 4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-5	2022-09-30 08:46:25.0608+00	3bdcf280bd6c42a197ad24f932ce39c7	\N	1440	\N	\N	\N
 6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-4	2022-09-30 08:47:19.647275+00	334370e333c54c669f6bc9e876d3ec60	\N	1440	\N	\N	\N
+93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-03-05 13:25:42.96495+00	\N	\N	60	\N	import	\N
 \.
 
 
@@ -8045,10 +9710,18 @@ COPY public.sage_intacct_reimbursements (id, account_id, employee_id, memo, paym
 -- Data for Name: task_logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id) FROM stdin;
-2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N
-4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N
-3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N
+COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id, is_retired) FROM stdin;
+2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N	f
+4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N	f
+3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N	f
+\.
+
+
+--
+-- Data for Name: update_logs; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.update_logs (id, table_name, old_data, new_data, difference, workspace_id, created_at) FROM stdin;
 \.
 
 
@@ -8161,7 +9834,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 206, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 213, true);
 
 
 --
@@ -8175,7 +9848,7 @@ SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 89, true);
 -- Name: django_q_schedule_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 92, true);
+SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 93, true);
 
 
 --
@@ -8386,6 +10059,13 @@ SELECT pg_catalog.setval('public.sage_intacct_reimbursements_id_seq', 18, true);
 --
 
 SELECT pg_catalog.setval('public.tasks_tasklog_id_seq', 42, true);
+
+
+--
+-- Name: update_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.update_logs_id_seq', 1, false);
 
 
 --
@@ -9078,6 +10758,14 @@ ALTER TABLE ONLY public.task_logs
 
 
 --
+-- Name: update_logs update_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.update_logs
+    ADD CONSTRAINT update_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: users users_user_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9594,6 +11282,86 @@ CREATE INDEX workspaces_user_user_id_4253baf7 ON public.workspaces_user USING bt
 --
 
 CREATE INDEX workspaces_user_workspace_id_be6c5867 ON public.workspaces_user USING btree (workspace_id);
+
+
+--
+-- Name: prod_workspaces_view _RETURN; Type: RULE; Schema: public; Owner: postgres
+--
+
+CREATE OR REPLACE VIEW public.prod_workspaces_view AS
+ SELECT w.id,
+    w.name,
+    w.fyle_org_id,
+    w.last_synced_at,
+    w.created_at,
+    w.updated_at,
+    w.destination_synced_at,
+    w.source_synced_at,
+    w.cluster_domain,
+    w.ccc_last_synced_at,
+    w.onboarding_state,
+    w.app_version,
+    array_agg(u.email) AS user_emails
+   FROM ((public.workspaces w
+     JOIN public.workspaces_user wu ON ((wu.workspace_id = w.id)))
+     JOIN public.users u ON ((u.id = wu.user_id)))
+  WHERE ((u.email)::text !~~* '%fyle%'::text)
+  GROUP BY w.id;
+
+
+--
+-- Name: prod_active_workspaces_view _RETURN; Type: RULE; Schema: public; Owner: postgres
+--
+
+CREATE OR REPLACE VIEW public.prod_active_workspaces_view AS
+ SELECT w.id,
+    w.name,
+    w.fyle_org_id,
+    w.last_synced_at,
+    w.created_at,
+    w.updated_at,
+    w.destination_synced_at,
+    w.source_synced_at,
+    w.cluster_domain,
+    w.ccc_last_synced_at,
+    w.onboarding_state,
+    w.app_version,
+    array_agg(u.email) AS user_emails
+   FROM ((public.workspaces w
+     JOIN public.workspaces_user wu ON ((wu.workspace_id = w.id)))
+     JOIN public.users u ON ((u.id = wu.user_id)))
+  WHERE (((u.email)::text !~~* '%fyle%'::text) AND (w.id IN ( SELECT DISTINCT task_logs.workspace_id
+           FROM public.task_logs
+          WHERE (((task_logs.status)::text = 'COMPLETE'::text) AND ((task_logs.type)::text <> 'FETCHING_EXPENSES'::text) AND (task_logs.updated_at > (now() - '3 mons'::interval))))))
+  GROUP BY w.id;
+
+
+--
+-- Name: configurations monitor_updates; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER monitor_updates AFTER UPDATE ON public.configurations FOR EACH ROW EXECUTE FUNCTION public.log_update_event();
+
+
+--
+-- Name: expense_group_settings monitor_updates; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER monitor_updates AFTER UPDATE ON public.expense_group_settings FOR EACH ROW EXECUTE FUNCTION public.log_update_event();
+
+
+--
+-- Name: general_mappings monitor_updates; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER monitor_updates AFTER UPDATE ON public.general_mappings FOR EACH ROW EXECUTE FUNCTION public.log_update_event();
+
+
+--
+-- Name: mapping_settings monitor_updates; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER monitor_updates AFTER UPDATE ON public.mapping_settings FOR EACH ROW EXECUTE FUNCTION public.log_update_event();
 
 
 --
