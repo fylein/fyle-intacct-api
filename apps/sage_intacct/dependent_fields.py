@@ -414,7 +414,7 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
             cost_code_import_log.save()
 
 
-def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type: str, platform: PlatformConnector, parent_field_id: str, source_placeholder: str = None) -> dict:
+def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type: str, platform: PlatformConnector, parent_field_id: str, source_placeholder: str = None, cost_type_id: int = None, is_enabled: bool = True) -> dict:
     """
     Create dependent custom field in Fyle
     :param workspace_id: Workspace ID
@@ -436,13 +436,16 @@ def create_dependent_custom_field_in_fyle(workspace_id: int, fyle_attribute_type
         'column_name': fyle_attribute_type,
         'type': 'DEPENDENT_SELECT',
         'is_custom': True,
-        'is_enabled': True,
+        'is_enabled': is_enabled,
         'is_mandatory': False,
         'placeholder': placeholder,
         'options': [],
         'parent_field_id': parent_field_id,
         'code': None
     }
+
+    if cost_type_id:
+        expense_custom_field_payload['id'] = cost_type_id
 
     return platform.expense_custom_fields.post(expense_custom_field_payload)
 
@@ -560,3 +563,54 @@ def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_co
         if bulk_update_payload:
             logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
             DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+
+
+def reset_flag_and_disable_cost_type_field(workspace_id: int, reset_flag: bool) -> None:
+    """
+    Reset the flag and disable the cost type field
+    :param workspace_id: Workspace ID
+    :param reset_flag: Flag to enable/disable the cost type field in Fyle
+    :return: None
+    """
+    platform = connect_to_platform(workspace_id)
+
+    instance = DependentFieldSetting.objects.filter(workspace_id=workspace_id).first()
+
+    cost_type_field_id = None
+    cost_type_field_id = instance.cost_type_field_id
+
+    if reset_flag and cost_type_field_id:
+        logger.info("Resetting Cost Type Import Flag to %s | WORKSPACE_ID: %s", instance.is_cost_type_import_enabled, workspace_id)
+        create_dependent_custom_field_in_fyle(
+            workspace_id=instance.workspace_id,
+            fyle_attribute_type=instance.cost_type_field_name,
+            platform=platform,
+            source_placeholder=instance.cost_type_placeholder,
+            parent_field_id=instance.cost_code_field_id,
+            cost_type_id=cost_type_field_id,
+            is_enabled=instance.is_cost_type_import_enabled
+        )
+
+    # Update the is_imported flag to False for all the cost types so
+    # that when the import is enabled again, all the cost types are imported
+    BATCH_SIZE = 500
+    cost_types_queryset = CostType.objects.filter(
+        workspace_id=instance.workspace_id,
+        is_imported=True
+    )
+
+    bulk_update_payload = []
+
+    for cost_type in cost_types_queryset.iterator(chunk_size=BATCH_SIZE):
+        cost_type.is_imported = False
+        bulk_update_payload.append(cost_type)
+
+        if len(bulk_update_payload) >= BATCH_SIZE:
+            logger.info(f"Updating Cost Types Import Flag | WORKSPACE_ID: {instance.workspace_id} | COUNT: {len(bulk_update_payload)}")
+            CostType.objects.bulk_update(bulk_update_payload, ['is_imported'], batch_size=50)
+            bulk_update_payload = []
+
+    # Final update for any remaining objects in the last batch
+    if bulk_update_payload:
+        logger.info(f"Updating Cost Types Import Flag | WORKSPACE_ID: {instance.workspace_id} | COUNT: {len(bulk_update_payload)}")
+        CostType.objects.bulk_update(bulk_update_payload, ['is_imported'], batch_size=50)
