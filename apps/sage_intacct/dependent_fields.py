@@ -591,6 +591,9 @@ def reset_flag_and_disable_cost_type_field(workspace_id: int, reset_flag: bool) 
             is_enabled=instance.is_cost_type_import_enabled
         )
 
+    if not reset_flag:
+        return
+
     # Update the is_imported flag to False for all the cost types so
     # that when the import is enabled again, all the cost types are imported
     BATCH_SIZE = 500
