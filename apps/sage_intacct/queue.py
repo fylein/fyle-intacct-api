@@ -1,4 +1,5 @@
 import logging
+from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta, timezone
 from typing import List
 
@@ -6,7 +7,7 @@ from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
 
-from apps.tasks.models import TaskLog, Error
+from apps.tasks.models import TaskLog
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
@@ -44,22 +45,24 @@ def schedule_journal_entries_creation(
     :param workspace_id: workspace id
     :return: None
     """
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    if is_auto_export:
+        q_filter = q_filter | Q(tasklog__is_retired=False)
+
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
-            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
+            q_filter,
             workspace_id=workspace_id, id__in=expense_group_ids, journalentry__id__isnull=True,
             exported_at__isnull=True
         ).all()
 
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
-
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
-            skip_export = validate_failing_export(is_auto_export, interval_hours, error)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
+
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -89,15 +92,36 @@ def schedule_journal_entries_creation(
             __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
 
 
-def validate_failing_export(is_auto_export: bool, interval_hours: int, error: Error) -> bool:
+def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_group: ExpenseGroup) -> bool:
     """
     Validate failing export
     :param is_auto_export: Is auto export
     :param interval_hours: Interval hours
-    :param error: Error
+    :param expense_group: Expense Group
+    :return: bool
     """
-    # If auto export is enabled and interval hours is set and error repetition count is greater than 100, export only once a day
-    return is_auto_export and interval_hours and error and error.repetition_count > 100 and datetime.now().replace(tzinfo=timezone.utc) - error.updated_at <= timedelta(hours=24)
+    if is_auto_export and interval_hours:
+        task_log = TaskLog.objects.filter(expense_group=expense_group, workspace_id=expense_group.workspace.id).first()
+        now = datetime.now(tz=timezone.utc)
+
+        if task_log:
+            # if the task log is created before 2 months
+            if task_log.created_at <= now - relativedelta(months=2):
+                task_log.is_retired = True
+                task_log.save()
+                return True
+
+            # if the task log is created in the last 2 months
+            if now - relativedelta(months=2) < task_log.created_at <= now - relativedelta(months=1):
+                if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(weeks=1):
+                    return True
+
+            # if the task log is created is the last month
+            if task_log.created_at > now - relativedelta(months=1):
+                if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(hours=24):
+                    return True
+
+    return False
 
 
 def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int) -> None:
@@ -107,22 +131,24 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
     :param workspace_id: workspace id
     :return: None
     """
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    if is_auto_export:
+        q_filter = q_filter | Q(tasklog__is_retired=False)
+
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
-            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
+            q_filter,
             workspace_id=workspace_id, id__in=expense_group_ids, expensereport__id__isnull=True,
             exported_at__isnull=True
         ).all()
 
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
-
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
-            skip_export = validate_failing_export(is_auto_export, interval_hours, error)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
+
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -159,21 +185,23 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
     :param workspace_id: workspace id
     :return: None
     """
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    if is_auto_export:
+        q_filter = q_filter | Q(tasklog__is_retired=False)
+
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
-            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
+            q_filter,
             workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True, exported_at__isnull=True
         ).all()
-
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
 
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
-            skip_export = validate_failing_export(is_auto_export, interval_hours, error)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
+
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -210,22 +238,23 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
     :param workspace_id: workspace id
     :return: None
     """
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    if is_auto_export:
+        q_filter = q_filter | Q(tasklog__is_retired=False)
+
     if expense_group_ids:
         expense_groups = ExpenseGroup.objects.filter(
-            Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE']),
+            q_filter,
             workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True,
             exported_at__isnull=True
         ).all()
 
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
-
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
-            skip_export = validate_failing_export(is_auto_export, interval_hours, error)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
