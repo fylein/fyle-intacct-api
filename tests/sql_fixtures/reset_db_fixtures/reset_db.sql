@@ -979,6 +979,25 @@ $$;
 ALTER FUNCTION public.update_in_progress_tasks_to_failed(_expense_group_ids integer[]) OWNER TO postgres;
 
 --
+-- Name: ws_email(integer); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.ws_email(_workspace_id integer) RETURNS TABLE(workspace_id integer, workspace_name character varying, email character varying)
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  RETURN QUERY
+  select w.id as workspace_id, w.name as workspace_name, u.email as email from workspaces w 
+    left join workspaces_user wu on wu.workspace_id = w.id
+    left join users u on wu.user_id = u.id
+    where w.id = _workspace_id;
+END;
+$$;
+
+
+ALTER FUNCTION public.ws_email(_workspace_id integer) OWNER TO postgres;
+
+--
 -- Name: ws_org_id(text); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -1130,7 +1149,8 @@ CREATE TABLE public.task_logs (
     ap_payment_id integer,
     sage_intacct_reimbursement_id integer,
     journal_entry_id integer,
-    supdoc_id character varying(255)
+    supdoc_id character varying(255),
+    is_retired boolean NOT NULL
 );
 
 
@@ -1705,16 +1725,15 @@ CREATE TABLE public.dependent_field_settings (
     project_field_id integer NOT NULL,
     cost_code_field_name character varying(255) NOT NULL,
     cost_code_field_id integer NOT NULL,
-    cost_type_field_name character varying(255),
-    cost_type_field_id integer,
+    cost_type_field_name character varying(255) NOT NULL,
+    cost_type_field_id integer NOT NULL,
     last_successful_import_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     cost_code_placeholder text,
     cost_type_placeholder text,
-    last_synced_at timestamp with time zone,
-    is_cost_type_import_enabled boolean NOT NULL
+    last_synced_at timestamp with time zone
 );
 
 
@@ -4559,7 +4578,7 @@ COPY public.cost_types (id, record_number, project_key, project_id, project_name
 -- Data for Name: dependent_field_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder, last_synced_at, is_cost_type_import_enabled) FROM stdin;
+COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder, last_synced_at) FROM stdin;
 \.
 
 
@@ -5792,13 +5811,13 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 204	fyle_accounting_mappings	0028_auto_20241226_1030	2025-01-08 07:37:36.012387+00
 205	mappings	0016_auto_20250108_0702	2025-01-08 07:37:36.082164+00
 206	workspaces	0041_auto_20250108_0702	2025-01-08 07:37:36.448011+00
-207	fyle	0037_alter_dependentfieldsetting_cost_type_field_id_and_more	2025-02-27 10:22:56.70546+00
-208	fyle	0038_dependentfieldsetting_is_cost_type_import_enabled	2025-02-27 10:22:56.714337+00
-209	internal	0001_auto_generated_sql	2025-02-27 10:22:56.742168+00
-210	internal	0002_auto_generated_sql	2025-02-27 10:22:56.744201+00
-211	internal	0003_auto_generated_sql	2025-02-27 10:22:56.745629+00
-212	internal	0004_auto_generated_sql	2025-02-27 10:22:56.747459+00
-213	internal	0005_auto_generated_sql	2025-02-27 10:22:56.748699+00
+207	internal	0001_auto_generated_sql	2025-03-05 13:24:42.958137+00
+208	internal	0002_auto_generated_sql	2025-03-05 13:24:42.960843+00
+209	internal	0003_auto_generated_sql	2025-03-05 13:24:42.962442+00
+210	internal	0004_auto_generated_sql	2025-03-05 13:24:42.964309+00
+211	internal	0005_auto_generated_sql	2025-03-05 13:24:42.965784+00
+212	internal	0006_auto_generated_sql	2025-03-05 13:24:42.967098+00
+213	tasks	0011_tasklog_is_retired	2025-03-05 13:24:42.980154+00
 \.
 
 
@@ -5820,7 +5839,7 @@ COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repe
 3	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	1	\N	I	-5	2022-09-30 08:46:25.03867+00	72495cee26334ea9ad64b337f757c4a6	\N	1440	\N	\N	\N
 4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-5	2022-09-30 08:46:25.0608+00	3bdcf280bd6c42a197ad24f932ce39c7	\N	1440	\N	\N	\N
 6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-4	2022-09-30 08:47:19.647275+00	334370e333c54c669f6bc9e876d3ec60	\N	1440	\N	\N	\N
-93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-02-27 10:23:56.74802+00	\N	\N	60	\N	import	\N
+93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-03-05 13:25:42.96495+00	\N	\N	60	\N	import	\N
 \.
 
 
@@ -9691,10 +9710,10 @@ COPY public.sage_intacct_reimbursements (id, account_id, employee_id, memo, paym
 -- Data for Name: task_logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id) FROM stdin;
-2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N
-4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N
-3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N
+COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id, is_retired) FROM stdin;
+2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N	f
+4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N	f
+3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N	f
 \.
 
 
