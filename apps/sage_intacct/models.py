@@ -7,6 +7,8 @@ from django.db.models import JSONField, Value, CharField
 from django.db.models.functions import Concat
 from django.utils.module_loading import import_string
 
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import (
     Mapping,
     MappingSetting,
@@ -611,7 +613,15 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
                 workspace_id=expense_group.workspace_id
             ).first()
             if mapping:
-                dimension_name = 'GLDIM{}'.format(mapping.destination.attribute_type)
+                dimension = DimensionDetail.objects.filter(
+                    workspace_id=expense_group.workspace_id,
+                    attribute_type=setting.destination_field,
+                    source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value
+                ).first()
+
+                display_name = dimension.display_name if dimension else mapping.destination.display_name
+                dimension_name = 'GLDIM{}'.format(display_name.replace(' ', '_').upper())
+
                 value = mapping.destination.destination_id
 
                 user_dimensions.append({
