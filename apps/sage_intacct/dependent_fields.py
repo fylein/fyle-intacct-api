@@ -311,7 +311,7 @@ def post_dependent_cost_code_standalone(workspace_id: int, dependent_field_setti
     if dependent_field_setting.last_successful_import_at:
         filters['updated_at__gte'] = dependent_field_setting.last_successful_import_at
 
-    posted_cost_codes, is_errored = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters)
+    _, is_errored = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters)
 
     if not is_errored and cost_code_import_log.processed_batches_count == cost_code_import_log.total_batches_count:
         DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())

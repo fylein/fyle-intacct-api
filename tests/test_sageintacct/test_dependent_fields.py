@@ -17,7 +17,8 @@ from apps.sage_intacct.dependent_fields import (
     post_dependent_cost_code,
     import_dependent_fields_to_fyle,
     construct_custom_field_placeholder,
-    post_dependent_expense_field_values
+    post_dependent_expense_field_values,
+    reset_flag_and_disable_cost_type_field
 )
 
 logger = logging.getLogger(__name__)
@@ -224,3 +225,46 @@ def test_construct_custom_field_placeholder():
     # Test case 6: source_placeholder is provided, placeholder is None, and fyle_attribute is provided
     new_placeholder = construct_custom_field_placeholder("Source Placeholder", "PROJECT_CUSTOM", None)
     assert new_placeholder == "Source Placeholder"
+
+
+def test_reset_flag_and_disable_cost_type_field(db, mocker, create_cost_type, create_dependent_field_setting):
+    """
+    Test reset_flag_and_disable_cost_type_field
+    """
+    workspace_id = 1
+    mocker.patch(
+        'fyle_integrations_platform_connector.PlatformConnector',
+        return_value=mock.MagicMock()
+    )
+
+    create_dep_field = mocker.patch('apps.sage_intacct.dependent_fields.create_dependent_custom_field_in_fyle')
+
+    # When reset flag is True and cost type is not imported
+    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(is_cost_type_import_enabled=True)
+    reset_flag_and_disable_cost_type_field(workspace_id, True)
+
+    assert create_dep_field.call_count == 1
+    assert create_dep_field.called_with(workspace_id, mocker.ANY, mocker.ANY, mocker.ANY, mocker.ANY, mocker.ANY, True)
+
+    # When reset flag is True and cost type is not imported
+    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(is_cost_type_import_enabled=False)
+
+    reset_flag_and_disable_cost_type_field(workspace_id, True)
+    assert create_dep_field.call_count == 2
+    assert create_dep_field.called_with(workspace_id, mocker.ANY, mocker.ANY, mocker.ANY, mocker.ANY, mocker.ANY, False)
+
+    # When reset flag is False and cost type is not imported
+    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(is_cost_type_import_enabled=True)
+
+    reset_flag_and_disable_cost_type_field(workspace_id, False)
+
+    assert create_dep_field.call_count == 2
+    assert create_dep_field.not_called()
+
+    # When reset flag is False and cost type is imported
+    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(is_cost_type_import_enabled=False)
+
+    reset_flag_and_disable_cost_type_field(workspace_id, False)
+
+    assert create_dep_field.call_count == 2
+    assert create_dep_field.not_called()
