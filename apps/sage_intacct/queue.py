@@ -7,7 +7,7 @@ from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
 
-from apps.tasks.models import TaskLog, Error
+from apps.tasks.models import TaskLog
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
@@ -56,16 +56,13 @@ def schedule_journal_entries_creation(
             exported_at__isnull=True
         ).all()
 
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
-
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
 
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -145,16 +142,13 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
             exported_at__isnull=True
         ).all()
 
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
-
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
 
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -201,16 +195,13 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
             workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True, exported_at__isnull=True
         ).all()
 
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
-
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
 
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -258,15 +249,12 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             exported_at__isnull=True
         ).all()
 
-        errors = Error.objects.filter(workspace_id=workspace_id, is_resolved=False, expense_group_id__in=expense_group_ids).all()
-
         chain_tasks = []
 
         for index, expense_group in enumerate(expense_groups):
-            error = errors.filter(workspace_id=workspace_id, expense_group=expense_group, is_resolved=False).first()
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
-                logger.info('Skipping expense group %s as it has %s errors', expense_group.id, error.repetition_count)
+                logger.info('Skipping export for expense group %s', expense_group.id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
