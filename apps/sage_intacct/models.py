@@ -826,9 +826,6 @@ class BillLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
-
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
             location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
@@ -1374,10 +1371,8 @@ class ChargeCardTransactionLineitem(models.Model):
             ).first()
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
