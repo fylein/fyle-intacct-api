@@ -122,10 +122,6 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
 def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
     Get department id or none with priority:
-    1. Mapping settings
-    2. Employee's Department in NetSuite
-    3. Default Department from mappings
-    
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
@@ -173,10 +169,6 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
 def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
     Get location id or none with priority:
-    1. Mapping settings
-    2. Employee's Location in NetSuite
-    3. Default Location from mappings
-    
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
