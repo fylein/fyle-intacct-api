@@ -83,16 +83,14 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) ->
 
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
-    Get project id or none
+    Get project id or none with priority:
+    
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
     :return: project id or none
     """
-    project_id = None
-    if general_mappings and general_mappings.default_project_id:
-        project_id = general_mappings.default_project_id
-
+    # 1. Check mapping settings first
     project_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='PROJECT'
@@ -115,8 +113,13 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         ).first()
 
         if mapping:
-            project_id = mapping.destination.destination_id
-    return project_id
+            return mapping.destination.destination_id
+
+    # 2. Check Default Project from mappings
+    if general_mappings and general_mappings.default_project_id:
+        return general_mappings.default_project_id
+
+    return None
 
 
 def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
@@ -268,8 +271,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     :param general_mappings: general mappings
     :return: item id or none
     """
-    item_id = None
-
+    # 1. Check mapping settings first
     item_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='ITEM'
@@ -290,11 +292,15 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
             source__value=source_value,
             workspace_id=expense_group.workspace_id
         ).first()
+
         if mapping:
-            item_id = mapping.destination.destination_id
-    if item_id is None:
-        item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
-    return item_id
+            return mapping.destination.destination_id
+
+    # 2. Check Default Item from mappings
+    if general_mappings and general_mappings.default_item_id:
+        return general_mappings.default_item_id
+
+    return None
 
 
 def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, task_id: str, prepend_code_to_name: bool = False) -> Optional[str]:
@@ -386,10 +392,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
     :param general_mappings: general mappings
     :return: class id or none
     """
-    class_id = None
-    if general_mappings and general_mappings.default_class_id:
-        class_id = general_mappings.default_class_id
-
+    # 1. Check mapping settings first
     class_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='CLASS'
@@ -412,9 +415,13 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         ).first()
 
         if mapping:
-            class_id = mapping.destination.destination_id
+            return mapping.destination.destination_id
 
-    return class_id
+    # 2. Check Default Class from mappings
+    if general_mappings and general_mappings.default_class_id:
+        return general_mappings.default_class_id
+
+    return None
 
 
 def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None) -> Optional[str]:
