@@ -127,11 +127,21 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
     :param general_mappings: general mappings
     :return: department id or none
     """
-    department_id = None
-    source_value = None
-    if general_mappings and general_mappings.default_department_id:
-        department_id = general_mappings.default_department_id
+    # 1. Check expense form value first
+    if hasattr(lineitem, 'department_id') and lineitem.department_id:
+        return lineitem.department_id
 
+    # 2. Check Employee's Department in NetSuite
+    if general_mappings and general_mappings.use_intacct_employee_departments:
+        employee_department = get_intacct_employee_object('department_id', expense_group)
+        if employee_department:
+            return employee_department
+
+    # 3. Check Default Department from mappings
+    if general_mappings and general_mappings.default_department_id:
+        return general_mappings.default_department_id
+
+    # 4. Fallback to mapping settings
     department_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='DEPARTMENT'
@@ -155,8 +165,9 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         ).first()
 
         if mapping:
-            department_id = mapping.destination.destination_id
-    return department_id
+            return mapping.destination.destination_id
+
+    return None
 
 
 def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
@@ -167,10 +178,21 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     :param general_mappings: general mappings
     :return: location id or none
     """
-    location_id = None
-    if general_mappings and general_mappings.default_location_id:
-        location_id = general_mappings.default_location_id
+    # 1. Check expense form value first
+    if hasattr(lineitem, 'location_id') and lineitem.location_id:
+        return lineitem.location_id
 
+    # 2. Check Employee's Location in NetSuite
+    if general_mappings and general_mappings.use_intacct_employee_locations:
+        employee_location = get_intacct_employee_object('location_id', expense_group)
+        if employee_location:
+            return employee_location
+
+    # 3. Check Default Location from mappings
+    if general_mappings and general_mappings.default_location_id:
+        return general_mappings.default_location_id
+
+    # 4. Fallback to mapping settings
     location_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='LOCATION'
@@ -193,8 +215,9 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         ).first()
 
         if mapping:
-            location_id = mapping.destination.destination_id
-    return location_id
+            return mapping.destination.destination_id
+
+    return None
 
 
 def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str) -> Optional[str]:
@@ -787,9 +810,6 @@ class BillLineitem(models.Model):
         task_id = None
         cost_type_id = None
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -806,17 +826,12 @@ class BillLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
             if general_mappings.use_intacct_employee_departments:
                 default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -831,8 +846,8 @@ class BillLineitem(models.Model):
 
             dimensions_values = {
                 'project_id': project_id,
-                'location_id': default_employee_location_id or location_id,
-                'department_id': default_employee_department_id or department_id,
+                'location_id':location_id,
+                'department_id':department_id,
                 'class_id': class_id,
                 'customer_id': customer_id,
                 'item_id': item_id,
@@ -975,9 +990,6 @@ class ExpenseReportLineitem(models.Model):
         cost_type_id = None
         dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=expense_group.workspace_id).first()
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -994,17 +1006,9 @@ class ExpenseReportLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
-
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -1031,10 +1035,9 @@ class ExpenseReportLineitem(models.Model):
                     'expense_type_id': account.destination_expense_head.destination_id
                     if account and account.destination_expense_head else None,
                     'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
+                    'department_id': department_id,
                     'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
+                    'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'task_id': task_id,
@@ -1143,9 +1146,6 @@ class JournalEntryLineitem(models.Model):
         cost_type_id = None
         dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=expense_group.workspace_id).first()
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -1162,21 +1162,13 @@ class JournalEntryLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
-
             description = expense_group.description
 
             employee_mapping_setting = configuration.employee_field_mapping
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
 
             employee_id = None
 
@@ -1234,10 +1226,9 @@ class JournalEntryLineitem(models.Model):
                     'gl_account_number': account.destination_account.destination_id
                     if account and account.destination_account else None,
                     'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
+                    'department_id': department_id,
                     'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
+                    'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'employee_id': employee_id,
@@ -1366,9 +1357,6 @@ class ChargeCardTransactionLineitem(models.Model):
         cost_type_id = None
         dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=expense_group.workspace_id).first()
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -1384,12 +1372,6 @@ class ChargeCardTransactionLineitem(models.Model):
                 source_category__value=category,
                 workspace_id=expense_group.workspace_id
             ).first()
-
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
             department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if\
@@ -1415,10 +1397,9 @@ class ChargeCardTransactionLineitem(models.Model):
                     'gl_account_number': account.destination_account.destination_id
                     if account and account.destination_account else None,
                     'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
+                    'department_id': department_id,
                     'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
+                    'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'task_id': task_id,
