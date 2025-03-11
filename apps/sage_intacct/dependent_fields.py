@@ -87,8 +87,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
     is_errored = False
     projects_batch = []
 
-    if 'attribute_type' in filters:
-        """
+    """
         Structure of the query output:
         [
             {
@@ -125,7 +124,8 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
         GROUP BY
             project_name,
             project_id;
-        """
+    """
+    if 'attribute_type' in filters:
         projects_batch = (
             DestinationAttribute.objects.filter(**filters)
             .annotate(

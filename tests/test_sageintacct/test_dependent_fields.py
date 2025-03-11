@@ -2,9 +2,9 @@ import logging
 from unittest import mock
 from datetime import datetime, timedelta, timezone
 
-from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_mappings.models import ExpenseAttribute, DestinationAttribute
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
 
 from apps.mappings.models import ImportLog
@@ -12,13 +12,15 @@ from apps.sage_intacct.models import CostType
 from apps.workspaces.models import FyleCredential
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.dependent_fields import (
-    create_dependent_custom_field_in_fyle,
     post_dependent_cost_type,
     post_dependent_cost_code,
     import_dependent_fields_to_fyle,
     construct_custom_field_placeholder,
+    post_dependent_cost_code_standalone,
     post_dependent_expense_field_values,
-    reset_flag_and_disable_cost_type_field
+    create_dependent_custom_field_in_fyle,
+    reset_flag_and_disable_cost_type_field,
+    disable_and_post_cost_code_from_destination_table
 )
 
 logger = logging.getLogger(__name__)
@@ -268,3 +270,82 @@ def test_reset_flag_and_disable_cost_type_field(db, mocker, create_cost_type, cr
 
     assert create_dep_field.call_count == 2
     assert create_dep_field.not_called()
+
+
+def test_post_dependent_cost_code_standalone(db, mocker, add_project_mappings, create_dependent_field_setting):
+    """
+    Test post_dependent_cost_code standalone
+    """
+    workspace_id = 1
+    platform = mocker.patch(
+        'fyle_integrations_platform_connector.PlatformConnector',
+        return_value=mocker.MagicMock()
+    )
+
+    mocker.patch(
+        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
+        return_value=None
+    )
+
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='COST_CODE',
+        display_name='Cost Code',
+        value='cost code 123',
+        active=True,
+        detail={'project_id': '10065', 'project_name': 'CRE Platform'}
+    )
+
+    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(is_cost_type_import_enabled=False)
+    dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=workspace_id).first()
+
+    cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+
+    post_dependent_cost_code_standalone(workspace_id, dependent_field_setting, platform, cost_code_import_log)
+
+    cost_code_import_log.refresh_from_db()
+    assert cost_code_import_log.status == 'COMPLETE'
+
+
+def test_disable_and_post_cost_code_from_destination_table(db, mocker, add_project_mappings, create_dependent_field_setting):
+    """
+    Test disable_and_post_cost_code_from_destination_table
+    """
+    workspace_id = 1
+    platform = mocker.patch(
+        'fyle_integrations_platform_connector.PlatformConnector',
+        return_value=mocker.MagicMock()
+    )
+
+    mocker.patch(
+        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
+        return_value=None
+    )
+
+    cost_codes_to_disable = {
+        '10065': {
+            'value': 'CRE Platform',
+            'updated_value': 'CRE Platform',
+            'code': '10065',
+            'updated_code': '10066'
+        }
+    }
+
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='COST_CODE',
+        display_name='Cost Code',
+        value='cost code 123',
+        active=True,
+        detail={'project_id': '10065', 'project_name': 'CRE Platform'}
+    )
+
+    DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(is_cost_type_import_enabled=False)
+    dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=workspace_id).first()
+
+    disable_and_post_cost_code_from_destination_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
+
+    cost_code_attribute = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CODE', value='cost code 123').first()
+
+    assert cost_code_attribute.detail['project_id'] == '10066'
+    assert cost_code_attribute.detail['project_name'] == 'CRE Platform'
