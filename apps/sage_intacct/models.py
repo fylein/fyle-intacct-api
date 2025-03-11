@@ -121,27 +121,17 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
 
 def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
-    Get department id or none
+    Get department id or none with priority:
+    1. Mapping settings
+    2. Employee's Department in NetSuite
+    3. Default Department from mappings
+    
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
     :return: department id or none
     """
-    # 1. Check expense form value first
-    if hasattr(lineitem, 'department_id') and lineitem.department_id:
-        return lineitem.department_id
-
-    # 2. Check Employee's Department in NetSuite
-    if general_mappings and general_mappings.use_intacct_employee_departments:
-        employee_department = get_intacct_employee_object('department_id', expense_group)
-        if employee_department:
-            return employee_department
-
-    # 3. Check Default Department from mappings
-    if general_mappings and general_mappings.default_department_id:
-        return general_mappings.default_department_id
-
-    # 4. Fallback to mapping settings
+    # 1. Check mapping settings first
     department_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='DEPARTMENT'
@@ -167,32 +157,32 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         if mapping:
             return mapping.destination.destination_id
 
+    # 2. Check Employee's Department in NetSuite
+    if general_mappings and general_mappings.use_intacct_employee_departments:
+        employee_department = get_intacct_employee_object('department_id', expense_group)
+        if employee_department:
+            return employee_department
+
+    # 3. Check Default Department from mappings
+    if general_mappings and general_mappings.default_department_id:
+        return general_mappings.default_department_id
+
     return None
 
 
 def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
-    Get location id or none
+    Get location id or none with priority:
+    1. Mapping settings
+    2. Employee's Location in NetSuite
+    3. Default Location from mappings
+    
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
     :return: location id or none
     """
-    # 1. Check expense form value first
-    if hasattr(lineitem, 'location_id') and lineitem.location_id:
-        return lineitem.location_id
-
-    # 2. Check Employee's Location in NetSuite
-    if general_mappings and general_mappings.use_intacct_employee_locations:
-        employee_location = get_intacct_employee_object('location_id', expense_group)
-        if employee_location:
-            return employee_location
-
-    # 3. Check Default Location from mappings
-    if general_mappings and general_mappings.default_location_id:
-        return general_mappings.default_location_id
-
-    # 4. Fallback to mapping settings
+    # 1. Check mapping settings first
     location_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='LOCATION'
@@ -216,6 +206,16 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
 
         if mapping:
             return mapping.destination.destination_id
+
+    # 2. Check Employee's Location in NetSuite
+    if general_mappings and general_mappings.use_intacct_employee_locations:
+        employee_location = get_intacct_employee_object('location_id', expense_group)
+        if employee_location:
+            return employee_location
+
+    # 3. Check Default Location from mappings
+    if general_mappings and general_mappings.default_location_id:
+        return general_mappings.default_location_id
 
     return None
 
