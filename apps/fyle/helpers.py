@@ -14,6 +14,8 @@ from rest_framework.exceptions import ValidationError
 
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import (
@@ -220,6 +222,8 @@ def sync_dimensions(workspace_id: int, is_export: bool = False) -> None:
         is_export=is_export,
         skip_dependent_field_ids=skip_dependent_field_ids
     )
+
+    update_dimension_details(platform=platform, workspace_id=fyle_credentials.workspace.id)
 
     if is_export:
         categories_count = platform.categories.get_count()
@@ -507,6 +511,44 @@ def assert_valid_request(workspace_id:int, fyle_org_id:str) -> None:
     workspace = Workspace.objects.get(fyle_org_id=fyle_org_id)
     if workspace.id != workspace_id:
         raise ValidationError('Workspace mismatch')
+
+
+def update_dimension_details(platform: PlatformConnector, workspace_id: int) -> None:
+    """
+    Update dimension details
+    :param platform: Platform connector
+    :param workspace_id: Workspace ID
+    :return: None
+    """
+    fields = platform.expense_custom_fields.list_all({
+        'order': 'updated_at.desc',
+        'is_custom': 'eq.false',
+        'column_name': 'in.(project_id, cost_center_id)'
+    })
+    details = []
+
+    for field in fields:
+        if field['column_name'] == 'project_id':
+            details.append({
+                'attribute_type': 'PROJECT',
+                'display_name': field['field_name'],
+                'source_type': DimensionDetailSourceTypeEnum.FYLE.value,
+                'workspace_id': workspace_id
+            })
+        elif field['column_name'] == 'cost_center_id':
+            details.append({
+                'attribute_type': 'COST_CENTER',
+                'display_name': field['field_name'],
+                'source_type': DimensionDetailSourceTypeEnum.FYLE.value,
+                'workspace_id': workspace_id
+            })
+
+    if details:
+        DimensionDetail.bulk_create_or_update_dimension_details(
+            dimensions=details,
+            workspace_id=workspace_id,
+            source_type=DimensionDetailSourceTypeEnum.FYLE.value
+        )
 
 
 class AdvanceSearchFilter(django_filters.FilterSet):
