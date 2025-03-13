@@ -53,6 +53,7 @@ from apps.sage_intacct.tasks import (
     get_or_create_credit_card_vendor,
     handle_sage_intacct_errors,
     load_attachments,
+    mark_paid_on_fyle,
     process_fyle_reimbursements,
     update_last_export_details,
     validate_for_skipping_payment
@@ -191,7 +192,6 @@ def test_get_or_create_credit_card_vendor(mocker, db):
         attribute_type='VENDOR',
         display_name='Vendor',
         workspace_id=workspace_id,
-        destination_id='vendor123',
         active=True,
         detail={
             'email': 'vendor123@fyle.in'
@@ -1797,3 +1797,43 @@ def test_skipping_create_ap_payment(mocker, db):
     create_ap_payment(workspace_id)
     task_log.refresh_from_db()
     assert task_log.updated_at == updated_at
+
+
+def test_mark_paid_on_fyle(db, mocker):
+    """
+    Test mark paid on fyle
+    """
+    workspace_id = 1
+    reports_to_be_marked = {'rp123', 'rp456'}
+
+    report_id = 'rp123'
+
+    payloads = [{'id': report_id}]
+
+    Expense.objects.filter(workspace_id=workspace_id).update(paid_on_fyle=False, report_id=report_id)
+
+    # Mock platform connector
+    mock_platform = mock.Mock()
+    mock_platform.reports.bulk_mark_as_paid = mock.Mock()
+
+    # Test successful case
+    mark_paid_on_fyle(mock_platform, payloads, reports_to_be_marked, workspace_id)
+    mock_platform.reports.bulk_mark_as_paid.assert_called_once_with(payloads)
+    assert not Expense.objects.filter(report_id__in=reports_to_be_marked, workspace_id=workspace_id, paid_on_fyle=False).exists()
+
+    # Reset test data
+    Expense.objects.filter(report_id__in=reports_to_be_marked).update(paid_on_fyle=False)
+
+    # Test error case with permission denied
+    error_response = {
+        'data': [
+            {'key': 'rp123', 'message': 'Permission denied to perform this action.'}
+        ]
+    }
+    mock_platform.reports.bulk_mark_as_paid.side_effect = Exception()
+    mock_platform.reports.bulk_mark_as_paid.side_effect.response = error_response
+
+    mark_paid_on_fyle(mock_platform, payloads, reports_to_be_marked, workspace_id, retry_num=1)
+
+    # Verify expenses are marked as paid despite the error
+    assert not Expense.objects.filter(report_id__in=reports_to_be_marked, workspace_id=workspace_id, paid_on_fyle=False).exists()

@@ -1182,7 +1182,7 @@ CREATE VIEW public._direct_export_errored_expenses_view AS
                    FROM public.expense_groups_expenses
                   WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
                            FROM public.task_logs
-                          WHERE (((task_logs.status)::text = ANY ((ARRAY['FAILED'::character varying, 'FATAL'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                          WHERE (((task_logs.status)::text = ANY (ARRAY[('FAILED'::character varying)::text, ('FATAL'::character varying)::text])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
                                    FROM prod_workspace_ids))))))))
         ), errored_expenses_in_inprogress_state AS (
          SELECT count(*) AS in_progress_expenses_error_count
@@ -1235,7 +1235,7 @@ CREATE VIEW public._django_queue_in_progress_tasks_view AS
     COALESCE(count(*), (0)::bigint) AS count
    FROM public.task_logs
   WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
-           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])));
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('ENQUEUED'::character varying)::text])));
 
 
 ALTER TABLE public._django_queue_in_progress_tasks_view OWNER TO postgres;
@@ -1269,7 +1269,7 @@ CREATE VIEW public._import_logs_fatal_failed_in_progress_tasks_view AS
     import_logs.status,
     current_database() AS database
    FROM public.import_logs
-  WHERE (((import_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'FATAL'::character varying, 'FAILED'::character varying])::text[])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+  WHERE (((import_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('FATAL'::character varying)::text, ('FAILED'::character varying)::text])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
            FROM public.prod_workspaces_view)) AND ((import_logs.error_log)::text !~~* '%Token%'::text) AND ((import_logs.error_log)::text !~~* '%tenant%'::text) AND (import_logs.updated_at < (now() - '00:45:00'::interval)))
   GROUP BY import_logs.status;
 
@@ -1725,15 +1725,16 @@ CREATE TABLE public.dependent_field_settings (
     project_field_id integer NOT NULL,
     cost_code_field_name character varying(255) NOT NULL,
     cost_code_field_id integer NOT NULL,
-    cost_type_field_name character varying(255) NOT NULL,
-    cost_type_field_id integer NOT NULL,
+    cost_type_field_name character varying(255),
+    cost_type_field_id integer,
     last_successful_import_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     cost_code_placeholder text,
     cost_type_placeholder text,
-    last_synced_at timestamp with time zone
+    last_synced_at timestamp with time zone,
+    is_cost_type_import_enabled boolean NOT NULL
 );
 
 
@@ -1809,7 +1810,7 @@ CREATE VIEW public.direct_export_errored_expenses_view AS
                    FROM public.expense_groups_expenses
                   WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
                            FROM public.task_logs
-                          WHERE (((task_logs.status)::text = ANY ((ARRAY['FAILED'::character varying, 'FATAL'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                          WHERE (((task_logs.status)::text = ANY (ARRAY[('FAILED'::character varying)::text, ('FATAL'::character varying)::text])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
                                    FROM prod_workspace_ids)) AND (task_logs.updated_at > (now() - '1 day'::interval)) AND (task_logs.updated_at < (now() - '00:45:00'::interval))))))))
         ), errored_expenses_in_inprogress_state AS (
          SELECT count(*) AS in_progress_expenses_error_count
@@ -1819,7 +1820,7 @@ CREATE VIEW public.direct_export_errored_expenses_view AS
                    FROM public.expense_groups_expenses
                   WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
                            FROM public.task_logs
-                          WHERE (((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                          WHERE (((task_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('ENQUEUED'::character varying)::text])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
                                    FROM prod_workspace_ids)) AND (task_logs.updated_at > (now() - '1 day'::interval)) AND (task_logs.updated_at < (now() - '00:45:00'::interval))))))))
         ), not_synced_to_platform AS (
          SELECT count(*) AS not_synced_expenses_count
@@ -2080,7 +2081,7 @@ CREATE VIEW public.django_queue_in_progress_tasks_view AS
     COALESCE(count(*), (0)::bigint) AS count
    FROM public.task_logs
   WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
-           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])) AND ((task_logs.updated_at >= (now() - '24:00:00'::interval)) AND (task_logs.updated_at <= (now() - '00:30:00'::interval))));
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('ENQUEUED'::character varying)::text])) AND ((task_logs.updated_at >= (now() - '24:00:00'::interval)) AND (task_logs.updated_at <= (now() - '00:30:00'::interval))));
 
 
 ALTER TABLE public.django_queue_in_progress_tasks_view OWNER TO postgres;
@@ -2992,7 +2993,7 @@ CREATE VIEW public.import_logs_fatal_failed_in_progress_tasks_view AS
     import_logs.status,
     current_database() AS database
    FROM public.import_logs
-  WHERE (((import_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'FATAL'::character varying, 'FAILED'::character varying])::text[])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+  WHERE (((import_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('FATAL'::character varying)::text, ('FAILED'::character varying)::text])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
            FROM public.prod_workspaces_view)) AND (import_logs.updated_at > (now() - '1 day'::interval)) AND (import_logs.updated_at < (now() - '00:45:00'::interval)) AND ((import_logs.error_log)::text !~~* '%Token%'::text) AND ((import_logs.error_log)::text !~~* '%tenant%'::text))
   GROUP BY import_logs.status;
 
@@ -4578,7 +4579,7 @@ COPY public.cost_types (id, record_number, project_key, project_id, project_name
 -- Data for Name: dependent_field_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder, last_synced_at) FROM stdin;
+COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder, last_synced_at, is_cost_type_import_enabled) FROM stdin;
 \.
 
 
@@ -5818,6 +5819,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 211	internal	0005_auto_generated_sql	2025-03-05 13:24:42.965784+00
 212	internal	0006_auto_generated_sql	2025-03-05 13:24:42.967098+00
 213	tasks	0011_tasklog_is_retired	2025-03-05 13:24:42.980154+00
+214	fyle	0037_alter_dependentfieldsetting_cost_type_field_id_and_more	2025-03-10 14:19:51.122197+00
+215	fyle	0038_dependentfieldsetting_is_cost_type_import_enabled	2025-03-10 14:19:51.131601+00
 \.
 
 
@@ -9834,7 +9837,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 213, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 215, true);
 
 
 --
