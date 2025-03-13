@@ -12,7 +12,6 @@ from cryptography.fernet import Fernet
 
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import (
     MappingSetting,
     ExpenseAttribute,
@@ -32,7 +31,6 @@ from apps.sage_intacct.models import (
     Bill,
     CostType,
     APPayment,
-    DimensionDetail,
     JournalEntry,
     BillLineitem,
     ExpenseReport,
@@ -659,25 +657,17 @@ class SageIntacctConnector:
         Get User Defined Dimensions
         """
         dimensions = self.connection.dimensions.get_all()
-        dimension_details = []
 
         for dimension in dimensions:
-            dimension_details.append({
-                'attribute_type': dimension['objectName'],
-                'display_name': dimension['termLabel'],
-                'source_type': DimensionDetailSourceTypeEnum.ACCOUNTING.value,
-                'workspace_id': self.workspace_id
-            })
-
             if dimension['userDefinedDimension'] == 'true':
                 dimension_attributes = []
-                dimension_name = dimension['objectName'].upper().replace(" ", "_")
+                dimension_name = dimension['objectLabel'].upper().replace(" ", "_")
                 dimension_values = self.connection.dimension_values.get_all(dimension['objectName'])
 
                 for value in dimension_values:
                     dimension_attributes.append({
                         'attribute_type': dimension_name,
-                        'display_name': dimension['termLabel'],
+                        'display_name': dimension['objectLabel'],
                         'value': value['name'],
                         'destination_id': value['id'],
                         'active': True
@@ -686,12 +676,6 @@ class SageIntacctConnector:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
                     dimension_attributes, dimension_name, self.workspace_id
                 )
-
-        DimensionDetail.bulk_create_or_update_dimension_details(
-            dimensions=dimension_details,
-            workspace_id=self.workspace_id,
-            source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value
-        )
 
         return []
 

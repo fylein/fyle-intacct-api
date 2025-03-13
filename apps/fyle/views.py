@@ -10,8 +10,6 @@ from fyle.platform.exceptions import PlatformError
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from fyle_intacct_api.utils import LookupFieldMixin
 
@@ -296,17 +294,10 @@ class FyleFieldsView(generics.ListAPIView):
             detail__is_dependent=True
         ).values('attribute_type', 'display_name').distinct()
 
-        dimensions = DimensionDetail.objects.filter(workspace_id=self.kwargs['workspace_id'], source_type=DimensionDetailSourceTypeEnum.FYLE.value).values(
-            'attribute_type', 'display_name'
-        )
-
-        cost_center_display_name = dimensions.get(attribute_type='COST_CENTER')['display_name'] if dimensions.filter(attribute_type='COST_CENTER').exists() else 'Cost Center'
-        project_display_name = dimensions.get(attribute_type='PROJECT')['display_name'] if dimensions.filter(attribute_type='PROJECT').exists() else 'Project'
-
         expense_fields = [{
-            'attribute_type': 'COST_CENTER', 'display_name': cost_center_display_name, 'is_dependent': False
+            'attribute_type': 'COST_CENTER', 'display_name': 'Cost Center', 'is_dependent': False
         },{
-            'attribute_type': 'PROJECT', 'display_name': project_display_name, 'is_dependent': False
+            'attribute_type': 'PROJECT', 'display_name': 'Project', 'is_dependent': False
         }]
 
         for attribute in fields:
