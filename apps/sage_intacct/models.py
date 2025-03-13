@@ -84,7 +84,7 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) ->
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
     Get project id or none with priority:
-    
+
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
