@@ -221,19 +221,33 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                 dependent_field_settings_instance = DependentFieldSetting.objects.filter(workspace_id=instance.id).first()
 
                 reset_flag = False
+
+                if dependent_field_settings_instance:
+                    if (
+                        (not dependent_field_settings_instance.is_cost_type_import_enabled and not dependent_field_settings.get('cost_type_field_name'))
+                        or (dependent_field_settings_instance.is_cost_type_import_enabled and dependent_field_settings.get('cost_type_field_name'))
+                    ):
+                        reset_flag = False
+                    else:
+                        reset_flag = True
+
                 if dependent_field_settings_instance and (
                     (dependent_field_settings_instance.cost_type_field_name is not None) != (dependent_field_settings.get('cost_type_field_name') is not None)
                 ):
-                    reset_flag = True
                     dependent_field_settings['last_synced_at'] = None
                     dependent_field_settings['last_successful_import_at'] = None
+                    dependent_field_settings['cost_type_field_id'] = dependent_field_settings_instance.cost_type_field_id
+                    dependent_field_settings['cost_code_field_id'] = dependent_field_settings_instance.cost_code_field_id
+                    dependent_field_settings['cost_type_field_name'] = dependent_field_settings_instance.cost_type_field_name
+                    dependent_field_settings['cost_type_placeholder'] = dependent_field_settings_instance.cost_type_placeholder
 
                 DependentFieldSetting.objects.update_or_create(
                     workspace_id=instance.id,
                     defaults=dependent_field_settings
                 )
 
-                async_task('apps.sage_intacct.dependent_fields.reset_flag_and_disable_cost_type_field', workspace_id=instance.id, reset_flag=reset_flag)
+                if reset_flag:
+                    async_task('apps.sage_intacct.dependent_fields.reset_flag_and_disable_cost_type_field', workspace_id=instance.id, reset_flag=reset_flag)
 
             trigger.post_save_mapping_settings(configurations_instance)
 

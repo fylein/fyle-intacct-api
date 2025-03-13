@@ -572,6 +572,9 @@ def reset_flag_and_disable_cost_type_field(workspace_id: int, reset_flag: bool) 
     :param reset_flag: Flag to enable/disable the cost type field in Fyle
     :return: None
     """
+    if not reset_flag:
+        return
+
     platform = connect_to_platform(workspace_id)
 
     instance = DependentFieldSetting.objects.filter(workspace_id=workspace_id).first()
@@ -579,7 +582,7 @@ def reset_flag_and_disable_cost_type_field(workspace_id: int, reset_flag: bool) 
     cost_type_field_id = None
     cost_type_field_id = instance.cost_type_field_id
 
-    if reset_flag and cost_type_field_id:
+    if cost_type_field_id:
         logger.info("Resetting Cost Type Import Flag to %s | WORKSPACE_ID: %s", instance.is_cost_type_import_enabled, workspace_id)
         create_dependent_custom_field_in_fyle(
             workspace_id=instance.workspace_id,
@@ -590,9 +593,6 @@ def reset_flag_and_disable_cost_type_field(workspace_id: int, reset_flag: bool) 
             cost_type_id=cost_type_field_id,
             is_enabled=instance.is_cost_type_import_enabled
         )
-
-    if not reset_flag:
-        return
 
     # Update the is_imported flag to False for all the cost types so
     # that when the import is enabled again, all the cost types are imported
