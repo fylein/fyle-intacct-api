@@ -21,7 +21,7 @@ def re_export_stuck_exports() -> None:
     and retrying them.
     """
     prod_workspace_ids = Workspace.objects.filter(
-        ~Q(name__icontains='fyle for') & ~Q(name__icontains='test')
+        ~Q(name__icontains='fyle for') & ~Q(name__iendswith='test')
     ).values_list('id', flat=True)
     task_logs = TaskLog.objects.filter(
         status__in=['ENQUEUED', 'IN_PROGRESS'],
