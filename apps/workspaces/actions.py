@@ -52,7 +52,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                fund_source='PERSONAL',
                 interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
             )
 
@@ -61,7 +60,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                fund_source='PERSONAL',
                 interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
             )
 
@@ -70,7 +68,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                fund_source='PERSONAL',
                 interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
             )
 
@@ -86,7 +83,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                fund_source='CCC',
                 interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
             )
 
@@ -95,7 +91,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                fund_source='CCC',
                 interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
             )
 
@@ -104,7 +99,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                fund_source='CCC',
                 interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
             )
 
@@ -113,7 +107,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                fund_source='CCC',
                 interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
             )
 

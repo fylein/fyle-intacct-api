@@ -774,6 +774,17 @@ def test_handle_refresh_dimensions(db, mocker):
     workspace = Workspace.objects.get(id=1)
     assert workspace.source_synced_at != None
 
+    configuration = Configuration.objects.get(workspace_id=1)
+    configuration.import_categories = True
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    res = handle_refresh_dimensions(workspace_id=1)
+    assert res == None
+
+    workspace = Workspace.objects.get(id=1)
+    assert workspace.source_synced_at != None
+
 
 def test_check_interval_and_sync_dimension(db, mocker):
     """
