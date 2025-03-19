@@ -201,11 +201,12 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
             configuration=configuration_instance
         )
 
-        reimbursable_changed = (pre_save_configurations.reimbursable_expenses_object == 'EXPENSE REPORT') != (configuration_instance.reimbursable_expenses_object == 'EXPENSE REPORT')
+        if pre_save_configurations:
+            reimbursable_changed = (pre_save_configurations.reimbursable_expenses_object == 'EXPENSE_REPORT') != (configuration_instance.reimbursable_expenses_object == 'EXPENSE_REPORT')
 
-        ccc_changed = (pre_save_configurations.corporate_credit_card_expenses_object == 'EXPENSE REPORT') != (configuration_instance.corporate_credit_card_expenses_object == 'EXPENSE REPORT')
+            ccc_changed = (pre_save_configurations.corporate_credit_card_expenses_object == 'EXPENSE_REPORT') != (configuration_instance.corporate_credit_card_expenses_object == 'EXPENSE_REPORT')
 
-        is_category_mapping_changed = reimbursable_changed or ccc_changed
+            is_category_mapping_changed = reimbursable_changed or ccc_changed
 
         export_trigger.post_save_configurations(is_category_mapping_changed)
 

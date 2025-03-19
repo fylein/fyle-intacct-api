@@ -15,7 +15,7 @@ class ExportSettingsTrigger:
         self.__workspace_id = workspace_id
         self.__configuration = configuration
 
-    def post_save_configurations(self, is_category_mapping_changed: bool) -> None:
+    def post_save_configurations(self, is_category_mapping_changed: bool = False) -> None:
         """
         Run post save action for configurations
         """
