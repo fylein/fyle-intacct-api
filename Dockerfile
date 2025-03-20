@@ -19,6 +19,16 @@ WORKDIR /fyle-intacct-api
 # Do linting checks
 RUN flake8 .
 
+#================================================================
+# Setup non-root user and permissions
+#================================================================
+RUN groupadd -r -g 1001 intacct_api_service && \
+    useradd -r -g intacct_api_service intacct_api_user && \
+    chown -R intacct_api_user:intacct_api_service /fyle-intacct-api
+
+# Switch to non-root user
+USER intacct_api_user
+
 # Expose development port
 EXPOSE 8000
 
