@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from django.dispatch import receiver
 from django.db.models.signals import post_save
@@ -54,7 +55,7 @@ def run_post_configration_triggers(sender: type[Configuration], instance: Config
         # doing this to avoid signal recursion
         Configuration.objects.filter(
             workspace_id=instance.workspace_id
-        ).update(auto_map_employees='NAME')
+        ).update(auto_map_employees='NAME', updated_at=datetime.now())
 
     schedule_or_delete_auto_mapping_tasks(configuration=instance)
     schedule_payment_sync(configuration=instance)
