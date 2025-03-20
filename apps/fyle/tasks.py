@@ -154,7 +154,7 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
                     id__in=expenses_object_ids,
                     expensegroup__isnull=True,
                     org_id=workspace.fyle_org_id
-                ).update(is_skipped=True)
+                ).update(is_skipped=True, updated_at=datetime.now())
 
                 filtered_expenses = Expense.objects.filter(
                     is_skipped=False,
