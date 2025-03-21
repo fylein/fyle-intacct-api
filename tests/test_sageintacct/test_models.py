@@ -307,6 +307,10 @@ def test_get_project_id_or_none(mocker, db):
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=None
     )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.list_all',
+        return_value=[]
+    )
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -429,6 +433,10 @@ def test_get_customer_id_or_none(mocker, db):
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=None
     )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.list_all',
+        return_value=[]
+    )
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -494,6 +502,10 @@ def test_get_class_id_or_none(mocker, db):
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=None
     )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.list_all',
+        return_value=[]
+    )
     workspace_id = 1
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
@@ -547,6 +559,10 @@ def test_get_user_defined_dimension_object(mocker, db):
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=None
+    )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.list_all',
+        return_value=[]
     )
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
@@ -667,6 +683,10 @@ def test_get_location_id_or_none(mocker, db):
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.sync',
         return_value=None
+    )
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.list_all',
+        return_value=[]
     )
     workspace_id = 1
 

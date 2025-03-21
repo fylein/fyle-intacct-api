@@ -828,11 +828,18 @@ def test_update_dimension_details(db, mocker):
     platform.expense_custom_fields.list_all.return_value = [
         {
             'column_name': 'project_id',
-            'field_name': 'Project 123'
+            'field_name': 'Project 123',
+            'type': 'SELECT'
         },
         {
             'column_name': 'cost_center_id',
-            'field_name': 'Cost Center 123'
+            'field_name': 'Cost Center 123',
+            'type': 'SELECT'
+        },
+        {
+            'column_name': 'something',
+            'field_name': 'Test 123',
+            'type': 'SELECT'
         }
     ]
 
@@ -846,3 +853,5 @@ def test_update_dimension_details(db, mocker):
 
     assert dimension_detail.filter(attribute_type='PROJECT').first().display_name == 'Project 123'
     assert dimension_detail.filter(attribute_type='COST_CENTER').first().display_name == 'Cost Center 123'
+
+    assert dimension_detail.filter(attribute_type='TEST_123').first().display_name == 'Test 123'

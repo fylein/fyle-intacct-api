@@ -520,11 +520,7 @@ def update_dimension_details(platform: PlatformConnector, workspace_id: int) -> 
     :param workspace_id: Workspace ID
     :return: None
     """
-    fields = platform.expense_custom_fields.list_all({
-        'order': 'updated_at.desc',
-        'is_custom': 'eq.false',
-        'column_name': 'in.(project_id, cost_center_id)'
-    })
+    fields = platform.expense_custom_fields.list_all()
     details = []
 
     for field in fields:
@@ -538,6 +534,13 @@ def update_dimension_details(platform: PlatformConnector, workspace_id: int) -> 
         elif field['column_name'] == 'cost_center_id':
             details.append({
                 'attribute_type': 'COST_CENTER',
+                'display_name': field['field_name'],
+                'source_type': DimensionDetailSourceTypeEnum.FYLE.value,
+                'workspace_id': workspace_id
+            })
+        elif field['type'] in ('SELECT'):
+            details.append({
+                'attribute_type': field['field_name'].upper().replace(' ', '_'),
                 'display_name': field['field_name'],
                 'source_type': DimensionDetailSourceTypeEnum.FYLE.value,
                 'workspace_id': workspace_id
