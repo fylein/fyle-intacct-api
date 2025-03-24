@@ -143,6 +143,8 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
         return_value=fyle_data['get_all_expense_fields']
     )
 
+    mocker.patch('apps.fyle.helpers.DimensionDetail.bulk_create_or_update_dimension_details', return_value=None)
+
     workspace_id = 1
 
     MappingSetting.objects.all().delete()
@@ -238,6 +240,8 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
         'fyle.platform.apis.v1beta.admin.ExpenseFields.list_all',
         return_value=fyle_data['get_all_expense_fields']
     )
+
+    mocker.patch('apps.fyle.helpers.DimensionDetail.bulk_create_or_update_dimension_details', return_value=None)
 
     workspace_id = 1
     custom_mappings = Mapping.objects.filter(workspace_id=workspace_id, source_type='CUSTOM_INTENTS').count()
