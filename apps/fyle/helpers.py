@@ -521,8 +521,13 @@ def update_dimension_details(platform: PlatformConnector, workspace_id: int) -> 
     :return: None
     """
     fields = platform.expense_custom_fields.list_all({
-        'order': 'updated_at.desc'
+        'order': 'updated_at.desc',
+        'is_custom': 'eq.false',
+        'column_name': 'in.(project_id, cost_center_id)'
     })
+    fields.extend(
+        platform.expense_custom_fields.list_all()
+    )
     details = []
 
     for field in fields:
