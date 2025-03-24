@@ -74,6 +74,7 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     :return: Last Export Detail
     """
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
+    workspace = Workspace.objects.get(id=workspace_id)
 
     failed_exports = TaskLog.objects.filter(
         ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
@@ -92,6 +93,7 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     last_export_detail.save()
 
     patch_integration_settings(workspace_id, errors=failed_exports)
+    post_accounting_export_summary(workspace.fyle_org_id, workspace_id)
 
     return last_export_detail
 
