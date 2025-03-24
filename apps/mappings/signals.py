@@ -17,6 +17,7 @@ from fyle_accounting_mappings.models import (
 )
 
 from apps.tasks.models import Error
+from apps.fyle.helpers import update_dimension_details
 from apps.workspaces.models import Configuration, FyleCredential
 from apps.mappings.models import ImportLog, LocationEntityMapping
 from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
@@ -160,6 +161,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
 
             expense_custom_field.construct_payload_and_import_to_fyle(platform, import_log)
             expense_custom_field.sync_expense_attributes(platform)
+            update_dimension_details(platform=platform, workspace_id=workspace_id)
 
             # NOTE: We are not setting the import_log status to COMPLETE
             # since the post_save trigger will run the import again in async manner
