@@ -825,23 +825,25 @@ def test_update_dimension_details(db, mocker):
     Test update dimension details
     """
     platform = mocker.patch('apps.fyle.helpers.PlatformConnector', return_value=mocker.MagicMock())
-    platform.expense_custom_fields.list_all.return_value = [
-        {
+
+    def mock_list_all(params=None):
+        if params:
+            return []
+        return [{
             'column_name': 'project_id',
             'field_name': 'Project 123',
             'type': 'SELECT'
-        },
-        {
+        },{
             'column_name': 'cost_center_id',
             'field_name': 'Cost Center 123',
             'type': 'SELECT'
-        },
-        {
+        },{
             'column_name': 'something',
             'field_name': 'Test 123',
             'type': 'SELECT'
-        }
-    ]
+        }]
+
+    platform.expense_custom_fields.list_all.side_effect = mock_list_all
 
     workspace_id = 1
     update_dimension_details(platform=platform, workspace_id=workspace_id)
