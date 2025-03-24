@@ -8,6 +8,9 @@ from django.conf import settings
 from rest_framework.views import status
 from rest_framework.response import Response
 
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+
 from apps.workspaces.models import Configuration, Workspace
 from apps.fyle.models import Expense, ExpenseFilter
 from apps.fyle.actions import __bulk_update_expenses
@@ -18,9 +21,10 @@ from apps.fyle.helpers import (
     get_fyle_orgs,
     get_fund_source,
     construct_expense_filter,
+    update_dimension_details,
     handle_refresh_dimensions,
     construct_expense_filter_query,
-    check_interval_and_sync_dimension
+    check_interval_and_sync_dimension,
 )
 
 
@@ -814,3 +818,40 @@ def test_get_fund_source(db):
     fund_source = get_fund_source(workspace_id)
 
     assert fund_source == ['PERSONAL', 'CCC']
+
+
+def test_update_dimension_details(db, mocker):
+    """
+    Test update dimension details
+    """
+    platform = mocker.patch('apps.fyle.helpers.PlatformConnector', return_value=mocker.MagicMock())
+    platform.expense_custom_fields.list_all.return_value = [
+        {
+            'column_name': 'project_id',
+            'field_name': 'Project 123',
+            'type': 'SELECT'
+        },
+        {
+            'column_name': 'cost_center_id',
+            'field_name': 'Cost Center 123',
+            'type': 'SELECT'
+        },
+        {
+            'column_name': 'something',
+            'field_name': 'Test 123',
+            'type': 'SELECT'
+        }
+    ]
+
+    workspace_id = 1
+    update_dimension_details(platform=platform, workspace_id=workspace_id)
+
+    dimension_detail = DimensionDetail.objects.filter(workspace_id=workspace_id, source_type=DimensionDetailSourceTypeEnum.FYLE.value)
+
+    assert dimension_detail.filter(attribute_type='PROJECT').exists() is True
+    assert dimension_detail.filter(attribute_type='COST_CENTER').exists() is True
+
+    assert dimension_detail.filter(attribute_type='PROJECT').first().display_name == 'Project 123'
+    assert dimension_detail.filter(attribute_type='COST_CENTER').first().display_name == 'Cost Center 123'
+
+    assert dimension_detail.filter(attribute_type='TEST_123').first().display_name == 'Test 123'
