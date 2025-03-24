@@ -28,7 +28,7 @@ class ImportSettingsTrigger:
             source_field = new_setting['source_field']
             current_setting = current_mapping_settings.filter(destination_field=destination_field).first()
             if current_setting and current_setting.source_field != source_field:
-                changed_source_fields.append(source_field)
+                changed_source_fields.append(current_setting.source_field)
 
         ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type__in=changed_source_fields).update(auto_mapped=False)
 
