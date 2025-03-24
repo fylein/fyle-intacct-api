@@ -520,7 +520,9 @@ def update_dimension_details(platform: PlatformConnector, workspace_id: int) -> 
     :param workspace_id: Workspace ID
     :return: None
     """
-    fields = platform.expense_custom_fields.list_all()
+    fields = platform.expense_custom_fields.list_all({
+        'order': 'updated_at.desc'
+    })
     details = []
 
     for field in fields:
