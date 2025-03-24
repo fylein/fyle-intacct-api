@@ -54,7 +54,9 @@ INSTALLED_APPS = [
     'apps.fyle',
     'apps.sage_intacct',
     'apps.tasks',
-    'apps.mappings'
+    'apps.mappings',
+    
+    'fyle_accounting_library.common_resources',
 ]
 
 MIDDLEWARE = [
