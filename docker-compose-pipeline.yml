@@ -9,7 +9,7 @@ services:
     entrypoint: bash run.sh
     restart: unless-stopped
     volumes:
-    - ./:/fyle-intacct-api
+    - api-volume:/fyle-intacct-api
     depends_on:
     - db
     environment: 
@@ -43,4 +43,4 @@ services:
       - ./tests/sql_fixtures/reset_db_fixtures/reset_db.sql:/docker-entrypoint-initdb.d/reset_db.sql
 
 volumes:
-  api:
+  api-volume:
