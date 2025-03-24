@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.conf import settings
 from django.db.models import Q
@@ -24,7 +24,7 @@ def __bulk_update_expenses(expense_to_be_updated: list[Expense]) -> None:
     :return: None
     """
     if expense_to_be_updated:
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         for expense in expense_to_be_updated:
             expense.updated_at = current_time
         Expense.objects.bulk_update(expense_to_be_updated, ['is_skipped', 'accounting_export_summary', 'updated_at'], batch_size=50)
@@ -102,7 +102,7 @@ def mark_accounting_export_summary_as_synced(expenses: list[Expense]) -> None:
     """
     # Mark all expenses as synced
     expense_to_be_updated = []
-    current_time = datetime.now()
+    current_time = datetime.now(timezone.utc)
     for expense in expenses:
         expense.accounting_export_summary['synced'] = True
         updated_accounting_export_summary = expense.accounting_export_summary
@@ -187,7 +187,7 @@ def __handle_post_accounting_export_summary_exception(exception: Exception, work
         and 'response' in error_response and 'data' in error_response['response'] and error_response['response']['data']
     ):
         logger.info('Error while syncing workspace %s %s',workspace_id, error_response)
-        current_time = datetime.now()
+        current_time = datetime.now(timezone.utc)
         for expense in error_response['response']['data']:
             if expense['message'] == 'Permission denied to perform this action.':
                 expense_instance = Expense.objects.get(expense_id=expense['key'], workspace_id=workspace_id)

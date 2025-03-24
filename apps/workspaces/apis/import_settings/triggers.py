@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from django.db.models import Q
 
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
@@ -29,7 +29,7 @@ class ImportSettingsTrigger:
             if current_setting and current_setting.source_field != source_field:
                 changed_source_fields.append(source_field)
 
-        ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type__in=changed_source_fields).update(auto_mapped=False, updated_at=datetime.now())
+        ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type__in=changed_source_fields).update(auto_mapped=False, updated_at=datetime.now(timezone.utc))
 
     def pre_save_mapping_settings(self) -> None:
         """
@@ -75,7 +75,7 @@ class ImportSettingsTrigger:
             # Delete the import logs for the redundant mapping-settings
             ImportLog.objects.filter(
                 workspace_id=self.__workspace_id, attribute_type__in=source_fields
-            ).update(last_successful_run_at=None)
+            ).update(last_successful_run_at=None, updated_at=datetime.now(timezone.utc))
 
             # Delete the mapping settings
             mapping_settings_to_delete.delete()

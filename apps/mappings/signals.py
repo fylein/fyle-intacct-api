@@ -49,7 +49,7 @@ def resolve_post_category_mapping_errors(sender: type[CategoryMapping], instance
     """
     Resolve errors after mapping is created
     """
-    Error.objects.filter(expense_attribute_id=instance.source_category_id).update(is_resolved=True, updated_at=datetime.now())
+    Error.objects.filter(expense_attribute_id=instance.source_category_id).update(is_resolved=True, updated_at=datetime.now(timezone.utc))
 
 
 @receiver(post_save, sender=EmployeeMapping)
@@ -57,7 +57,7 @@ def resolve_post_employees_mapping_errors(sender: type[EmployeeMapping], instanc
     """
     Resolve errors after mapping is created
     """
-    Error.objects.filter(expense_attribute_id=instance.source_employee_id).update(is_resolved=True, updated_at=datetime.now())
+    Error.objects.filter(expense_attribute_id=instance.source_employee_id).update(is_resolved=True, updated_at=datetime.now(timezone.utc))
 
 
 @receiver(post_save, sender=LocationEntityMapping)
