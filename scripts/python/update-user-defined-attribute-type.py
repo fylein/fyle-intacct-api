@@ -23,16 +23,16 @@ for workspace in workspaces:
             dimensions = sage_intacct_connection.connection.dimensions.get_all()    
             for dimension in dimensions:
                 if dimension['objectName'] not in default_destination_attributes and dimension['userDefinedDimension'] == 'true':
-                    if dimension['objectName'] != dimension['objectLabel']:
+                    object_label = dimension['objectLabel'].replace(' ', '_').upper()
+                    object_name = dimension['objectName'].replace(' ', '_').upper()
+                    if object_name != object_label:
                         print("workspace_id",workspace.id)
                         print(f"Object Name: {dimension['objectName']}")
                         print(f"Object Label: {dimension['objectLabel']}")
                         print(f"Term Label: {dimension['termLabel']}")
-                        object_label = dimension['objectLabel'].replace(' ', '_').upper()
                         attribute = DestinationAttribute.objects.filter(workspace_id=workspace.id, attribute_type=object_label).exists()
                         print(f"Object Label Exists: {attribute}")
                         if attribute:
-                            object_name = dimension['objectName'].replace(' ', '_').upper()
                             print(f"Updating {object_label} in Destination Attributes to {dimension['objectName']}")
                             attributes_to_update.append({
                                     'workspace_id': workspace.id,
