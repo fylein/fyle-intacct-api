@@ -10,7 +10,7 @@ default_destination_attributes = {
     'ITEM', 'COSTTYPE'
 }
 
-workspaces = Workspace.objects.filter(~Q(name__icontains='fyle for') & ~Q(name__icontains='test'), id__in=[254, 255, 256, 537, 635, 640]).order_by('id')
+workspaces = Workspace.objects.filter(~Q(name__icontains='fyle for') & ~Q(name__icontains='test')).order_by('id')
 
 attributes_to_update = []
 mapping_settings_to_update = []
@@ -54,26 +54,27 @@ for workspace in workspaces:
 print("Attributes to Update", attributes_to_update)
 print("Mapping Settings to Update", mapping_settings_to_update)
 
-# if attributes_to_update:
-#     DestinationAttribute.objects.bulk_update(
-#         [
-#             DestinationAttribute(
-#                 workspace_id=attribute['workspace_id'],
-#                 attribute_type=attribute['new_attribute_type']
-#             )
-#             for attribute in attributes_to_update
-#         ],
-#         ['attribute_type']
-#     )
+if attributes_to_update:
+    for attribute in attributes_to_update:  
+        dest_attrs = DestinationAttribute.objects.filter(  
+            workspace_id=attribute['workspace_id'],  
+            attribute_type=attribute['attribute_type']  
+        )  
+        for dest_attr in dest_attrs:  
+            dest_attr.attribute_type = attribute['new_attribute_type']  
+        
+        DestinationAttribute.objects.bulk_update(dest_attrs, ['attribute_type']) 
 
-# if mapping_settings_to_update:
-#     MappingSetting.objects.bulk_update(
-#         [
-#             MappingSetting(
-#                 workspace_id=mapping_setting['workspace_id'],
-#                 destination_field=mapping_setting['new_destination_field']
-#             )
-#             for mapping_setting in mapping_settings_to_update
-#         ],
-#         ['destination_field']
-#     )
+if mapping_settings_to_update:
+    for mapping_setting in mapping_settings_to_update:  
+        mapping_settings = MappingSetting.objects.filter(  
+            workspace_id=mapping_setting['workspace_id'],  
+            destination_field=mapping_setting['destination_field']  
+        ) 
+        for ms in mapping_settings:  
+            ms.destination_field = mapping_setting['new_destination_field']  
+    
+        MappingSetting.objects.bulk_update(  
+            mapping_settings,  
+            ['destination_field']  
+        )  
