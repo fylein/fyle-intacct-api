@@ -238,8 +238,9 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                     dependent_field_settings['last_successful_import_at'] = None
                     dependent_field_settings['cost_type_field_id'] = dependent_field_settings_instance.cost_type_field_id
                     dependent_field_settings['cost_code_field_id'] = dependent_field_settings_instance.cost_code_field_id
-                    dependent_field_settings['cost_type_field_name'] = dependent_field_settings_instance.cost_type_field_name
-                    dependent_field_settings['cost_type_placeholder'] = dependent_field_settings_instance.cost_type_placeholder
+                    if dependent_field_settings_instance.cost_type_field_name is not None:
+                        dependent_field_settings['cost_type_field_name'] = dependent_field_settings_instance.cost_type_field_name
+                        dependent_field_settings['cost_type_placeholder'] = dependent_field_settings_instance.cost_type_placeholder
 
                 DependentFieldSetting.objects.update_or_create(
                     workspace_id=instance.id,
