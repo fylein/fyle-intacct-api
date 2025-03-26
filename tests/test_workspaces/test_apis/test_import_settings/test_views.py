@@ -39,6 +39,11 @@ def test_import_settings(mocker, api_client, test_connection):
         return_value=12
     )
 
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.ExpenseCustomFields.list_all',
+        return_value=[]
+    )
+
     workspace = Workspace.objects.get(id=1)
     workspace.onboarding_state = 'IMPORT_SETTINGS'
     workspace.save()

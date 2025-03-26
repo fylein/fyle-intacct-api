@@ -5,23 +5,11 @@ FROM python:3.10-slim
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-RUN apt-get update && apt-get -y install libpq-dev gcc && apt-get install git -y --no-install-recommends
-
-ARG CI
-RUN if [ "$CI" = "ENABLED" ]; then \
-        apt-get update; \
-        apt-get install lsb-release gnupg2 wget -y --no-install-recommends; \
-        apt-cache search postgresql | grep postgresql; \
-        sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'; \
-        wget --no-check-certificate --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - ; \
-        apt -y update; \
-        apt-get install postgresql-15 -y --no-install-recommends; \
-    fi
+RUN apt-get update && apt-get -y install libpq-dev gcc && apt-get install git postgresql-client -y --no-install-recommends
 
 # Installing requirements
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --upgrade pip && pip install -r /tmp/requirements.txt && pip install pylint-django==2.3.0
-
 
 # Copy Project to the container
 RUN mkdir -p /fyle-intacct-api
@@ -30,6 +18,18 @@ WORKDIR /fyle-intacct-api
 
 # Do linting checks
 RUN flake8 .
+
+ARG SERVICE_GID=1001
+
+#================================================================
+# Setup non-root user and permissions
+#================================================================
+RUN groupadd -r -g ${SERVICE_GID} intacct_api_service && \
+    useradd -r -g intacct_api_service intacct_api_user && \
+    chown -R intacct_api_user:intacct_api_service /fyle-intacct-api
+
+# Switch to non-root user
+USER intacct_api_user
 
 # Expose development port
 EXPOSE 8000

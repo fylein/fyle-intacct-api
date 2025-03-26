@@ -9,7 +9,7 @@ services:
     entrypoint: bash run.sh
     restart: unless-stopped
     volumes:
-    - ./:/fyle-intacct-api
+    - api-volume:/fyle-intacct-api
     depends_on:
     - db
     environment: 
@@ -31,7 +31,7 @@ services:
       FYLE_TOKEN_URI: 'https://sample.fyle.tech'
       FYLE_SERVER_URL: 'https://sample.fyle.tech'
       FYLE_JOBS_URL: 'https://sample.fyle.tech'
-      HELP_ARTICLE_DOMAIN: 'https://help.fylehq.com'
+      HELP_ARTICLE_DOMAIN: 'https://www.fylehq.com/help'
   db:
     image: "postgres:15"
     environment: 
@@ -39,9 +39,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - data:/var/lib/postgresql/data/
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./tests/sql_fixtures/reset_db_fixtures/reset_db.sql:/docker-entrypoint-initdb.d/reset_db.sql
 
 volumes:
-  api:
-  data:
+  api-volume:

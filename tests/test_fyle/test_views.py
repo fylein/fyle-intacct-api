@@ -466,15 +466,16 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
         }
     )
 
-    MappingSetting.objects.update_or_create(
-        workspace_id = workspace_id,
-        source_field = 'Ashutosh Field',
-        defaults={
-            'destination_field': 'CLASS',
-            'import_to_fyle': True,
-            'is_custom': True
-        }
-    )
+    with mocker.patch('apps.fyle.helpers.DimensionDetail.bulk_create_or_update_dimension_details', return_value=None):
+        MappingSetting.objects.update_or_create(
+            workspace_id = workspace_id,
+            source_field = 'Ashutosh Field',
+            defaults={
+                'destination_field': 'CLASS',
+                'import_to_fyle': True,
+                'is_custom': True
+            }
+        )
 
     access_token = test_connection.access_token
 
