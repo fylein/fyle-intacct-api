@@ -1,7 +1,12 @@
+from datetime import datetime, timezone
+
+from fyle_accounting_mappings.models import ExpenseAttribute
+
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog, Error
 from apps.sage_intacct.tasks import update_last_export_details
 from apps.workspaces.models import Configuration, LastExportDetail
+from apps.mappings.models import ImportLog
 
 
 class ExportSettingsTrigger:
@@ -12,7 +17,7 @@ class ExportSettingsTrigger:
         self.__workspace_id = workspace_id
         self.__configuration = configuration
 
-    def post_save_configurations(self) -> None:
+    def post_save_configurations(self, is_category_mapping_changed: bool = False) -> None:
         """
         Run post save action for configurations
         """
@@ -23,6 +28,10 @@ class ExportSettingsTrigger:
             fund_source.append('PERSONAL')
         if self.__configuration.corporate_credit_card_expenses_object:
             fund_source.append('CCC')
+
+        if is_category_mapping_changed and self.__configuration.import_categories:
+            ImportLog.objects.filter(workspace_id=self.__workspace_id, attribute_type='CATEGORY').update(last_successful_run_at=None, updated_at=datetime.now(timezone.utc))
+            ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type='CATEGORY').update(auto_mapped=False)
 
         expense_group_ids = ExpenseGroup.objects.filter(
             workspace_id=self.__workspace_id,
