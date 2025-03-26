@@ -843,7 +843,13 @@ class SageIntacctConnector:
         :param create: False to just Get and True to Get or Create if not exists
         :return: Vendor
         """
-        vendor_from_db = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='VENDOR', value__iexact=vendor_name.lower(), active=True).first()
+        vendor_from_db = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id,
+            attribute_type='VENDOR',
+            active=True
+        ).filter(
+            Q(value__iexact=vendor_name.lower()) | Q(destination_id__iexact=vendor_name)
+        ).first()
         if vendor_from_db:
             return vendor_from_db
 
