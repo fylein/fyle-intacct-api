@@ -31,7 +31,7 @@ class ExportSettingsTrigger:
 
         if is_category_mapping_changed and self.__configuration.import_categories:
             ImportLog.objects.filter(workspace_id=self.__workspace_id, attribute_type='CATEGORY').update(last_successful_run_at=None, updated_at=datetime.now(timezone.utc))
-            ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type__in='CATEGORY').update(auto_mapped=False)
+            ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type='CATEGORY').update(auto_mapped=False)
 
         expense_group_ids = ExpenseGroup.objects.filter(
             workspace_id=self.__workspace_id,
