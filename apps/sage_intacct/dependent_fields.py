@@ -272,8 +272,8 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
         if not is_cost_type_errored and not is_cost_code_errored and (
             cost_type_import_log.processed_batches_count == cost_type_import_log.total_batches_count
             and cost_code_import_log.processed_batches_count == cost_code_import_log.total_batches_count
-        ):  
-            #add timezone to updated_at
+        ):
+            # add timezone to updated_at
             DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now(), updated_at=datetime.now(timezone.utc))
 
 
