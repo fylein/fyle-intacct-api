@@ -848,7 +848,7 @@ class SageIntacctConnector:
             attribute_type='VENDOR',
             active=True
         ).filter(
-            Q(value__iexact=vendor_name.lower()) | Q(destination_id__iexact=vendor_name)
+            Q(value__iexact=vendor_name.lower()) | Q(destination_id__iexact=vendor_name.lower())
         ).first()
         if vendor_from_db:
             return vendor_from_db
