@@ -201,6 +201,7 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
             configuration=configuration_instance
         )
 
+        is_category_mapping_changed = False
         if pre_save_configurations:
             reimbursable_changed = (pre_save_configurations.reimbursable_expenses_object == 'EXPENSE_REPORT') != (configuration_instance.reimbursable_expenses_object == 'EXPENSE_REPORT')
 
