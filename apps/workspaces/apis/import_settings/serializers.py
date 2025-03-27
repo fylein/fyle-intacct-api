@@ -123,6 +123,11 @@ class DependentFieldSettingSerializer(serializers.ModelSerializer):
             'cost_type_field_name',
             'cost_type_placeholder',
             'is_import_enabled',
+            'is_cost_type_import_enabled',
+        ]
+
+        read_only_fields = [
+            'is_cost_type_import_enabled',
         ]
 
 
