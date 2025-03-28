@@ -823,6 +823,35 @@ def test_post_attachments(mocker, db):
     assert supdoc_id == 'asd'
 
 
+def test_post_attachments_2(mocker, db):
+    """
+    Test post attachments
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.post',
+        return_value={'status': 'success', 'key': '3032'}
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.update',
+        return_value={'status': 'success', 'key': '3032'}
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    attachment = [
+        {'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'},
+        {'download_url': 'abcd', 'name': 'abc.abc.abc', 'id': 'abc'}
+    ]
+
+    supdoc_id = sage_intacct_connection.post_attachments(attachment, 'asd')
+
+    assert supdoc_id == 'asd'
+
+
 def test_get_expense_link(mocker, db, create_journal_entry):
     """
     Test get expense link
@@ -1180,3 +1209,32 @@ def test_skip_sync_attributes(mocker, db):
 
     new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').count()
     assert new_project_count == 0
+
+
+def test_sync_cost_codes(db, mocker, create_dependent_field_setting):
+    """
+    Test sync cost codes
+    """
+    workspace_id = 1
+
+    sage_intacct_mock = mocker.patch('sageintacctsdk.apis.Tasks.count')
+    sage_intacct_mock.return_value = 1
+
+    data = [[
+        {'RECORDNO': '38', 'TASKID': '111', 'PARENTKEY': None, 'PARENTID': None, 'NAME': 'HrishabhCostCode', 'PARENTTASKNAME': None, 'PROJECTKEY': '172', 'PROJECTID': '1171', 'PROJECTNAME': 'Sage Project 10', 'ITEMKEY': None, 'ITEMID': None, 'ITEMNAME': None, 'DESCRIPTION': None, 'BILLABLE': 'false', 'TASKNO': None, 'TASKSTATUS': 'In Progress', 'CLASSID': None, 'CLASSNAME': None, 'CLASSKEY': None, 'ROOTPARENTKEY': '38', 'ROOTPARENTID': '111', 'ROOTPARENTNAME': 'HrishabhCostType_v3'}
+    ]]
+
+    mocker.patch('sageintacctsdk.apis.Tasks.get_all_generator', return_value=data)
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=1)
+
+    sage_intacct_connection.sync_cost_codes()
+
+    attribute = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CODE').first()
+
+    assert attribute.value == 'HrishabhCostCode'
+    assert attribute.detail['project_id'] == '1171'
+    assert attribute.detail['project_name'] == 'Sage Project 10'
+    assert attribute.code == '111'
+    assert attribute.destination_id == '111'
