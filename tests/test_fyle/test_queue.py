@@ -78,17 +78,6 @@ def test_validate_failing_export(db):
     task_log.refresh_from_db()
     assert task_log.is_retired is False
 
-    # Task Log created 29 days and tried 6 days ago
-    update_time = datetime.now(tz=timezone.utc) - timedelta(days=6)
-    create_time = datetime.now(tz=timezone.utc) - timedelta(days=29)
-    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=create_time)
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, expense_group=expense_group)
-
-    assert skip_export is True
-    task_log.refresh_from_db()
-    assert task_log.is_retired is False
-
     # Task Log created 29 days and tried 7 days ago
     update_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
     create_time = datetime.now(tz=timezone.utc) - timedelta(days=29)

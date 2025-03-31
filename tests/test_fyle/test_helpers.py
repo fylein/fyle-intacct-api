@@ -1,3 +1,4 @@
+from apps.tasks.models import TaskLog
 import pytest
 
 from unittest import mock
@@ -15,7 +16,9 @@ from apps.workspaces.models import Configuration, Workspace
 from apps.fyle.models import Expense, ExpenseFilter
 from apps.fyle.actions import __bulk_update_expenses
 from apps.fyle.helpers import (
+    get_source_account_type,
     get_updated_accounting_export_summary,
+    handle_import_exception,
     post_request,
     get_request,
     get_fyle_orgs,
@@ -857,3 +860,23 @@ def test_update_dimension_details(db, mocker):
     assert dimension_detail.filter(attribute_type='COST_CENTER').first().display_name == 'Cost Center 123'
 
     assert dimension_detail.filter(attribute_type='TEST_123').first().display_name == 'Test 123'
+
+
+def test_get_source_account_type():
+    """
+    Test get source account type
+    """
+    fund_sources = ['PERSONAL', 'CCC']
+    source_account_type = get_source_account_type(fund_sources)
+    assert source_account_type == ['PERSONAL_CASH_ACCOUNT', 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT']
+
+
+def test_handle_import_exception(db):
+    """
+    Test handle import exception
+    """
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+
+    handle_import_exception(task_log=task_log)
+    assert task_log.status == 'FATAL'
