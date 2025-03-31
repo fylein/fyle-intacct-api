@@ -274,7 +274,7 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
             try:
                 total_batches += 1
                 platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
-                CostType.objects.filter(task_name=cost_types['task_name'], task_id=cost_types['task_id'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True)
+                CostType.objects.filter(task_name=cost_types['task_name'], task_id=cost_types['task_id'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True, updated_at=datetime.now(timezone.utc))
                 processed_batches += 1
             except Exception as exception:
                 is_errored = True
@@ -355,7 +355,7 @@ def post_dependent_expense_field_values(workspace_id: int, dependent_field_setti
             cost_type_import_log.processed_batches_count == cost_type_import_log.total_batches_count
             and cost_code_import_log.processed_batches_count == cost_code_import_log.total_batches_count
         ):
-            DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now())
+            DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(last_successful_import_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
 
 
 def import_dependent_fields_to_fyle(workspace_id: str) -> None:

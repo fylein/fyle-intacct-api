@@ -300,7 +300,7 @@ def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup) -> No
     Resolve errors for exported expense group
     :param expense_group: Expense group
     """
-    Error.objects.filter(workspace_id=expense_group.workspace_id, expense_group=expense_group, is_resolved=False).update(is_resolved=True)
+    Error.objects.filter(workspace_id=expense_group.workspace_id, expense_group=expense_group, is_resolved=False).update(is_resolved=True, updated_at=datetime.now(timezone.utc))
 
 
 def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str) -> None:
@@ -1239,7 +1239,7 @@ def check_expenses_reimbursement_status(expenses: list[Expense], workspace_id: i
         is_paid = expenses[0]['state'] == 'PAID'
 
     if is_paid:
-        Expense.objects.filter(workspace_id=workspace_id, report_id=report_id, paid_on_fyle=False).update(paid_on_fyle=True)
+        Expense.objects.filter(workspace_id=workspace_id, report_id=report_id, paid_on_fyle=False).update(paid_on_fyle=True, updated_at=datetime.now(timezone.utc))
 
     return is_paid
 
@@ -1685,7 +1685,7 @@ def mark_paid_on_fyle(platform: PlatformConnector, payloads:dict, reports_to_be_
         logger.info('Marking reports paid on fyle for report ids - %s', reports_to_be_marked)
         logger.info('Payloads- %s', payloads)
         platform.reports.bulk_mark_as_paid(payloads)
-        Expense.objects.filter(report_id__in=list(reports_to_be_marked), workspace_id=workspace_id, paid_on_fyle=False).update(paid_on_fyle=True)
+        Expense.objects.filter(report_id__in=list(reports_to_be_marked), workspace_id=workspace_id, paid_on_fyle=False).update(paid_on_fyle=True, updated_at=datetime.now(timezone.utc))
     except Exception as e:
         error = traceback.format_exc()
         target_messages = ['Report is not in APPROVED or PAYMENT_PROCESSING State', 'Permission denied to perform this action.']
@@ -1694,7 +1694,7 @@ def mark_paid_on_fyle(platform: PlatformConnector, payloads:dict, reports_to_be_
 
         for item in error_response.get('data', []):
             if item.get('message') in target_messages:
-                Expense.objects.filter(report_id=item['key'], workspace_id=workspace_id, paid_on_fyle=False).update(paid_on_fyle=True)
+                Expense.objects.filter(report_id=item['key'], workspace_id=workspace_id, paid_on_fyle=False).update(paid_on_fyle=True, updated_at=datetime.now(timezone.utc))
                 to_remove.add(item['key'])
 
         for report_id in to_remove:

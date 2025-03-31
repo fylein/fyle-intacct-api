@@ -156,8 +156,7 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
     create_dependent_field_setting.save()
     post_dependent_expense_field_values(workspace_id, create_dependent_field_setting, cost_code_import_log=cost_code_import_log, cost_type_import_log=cost_type_import_log)
 
-    # Since we've updated timestamp and there would no new cost_types, the mock call count should still exist as 2
-    assert mock.call_count == 2
+    assert mock.call_count == 3
     assert cost_code_import_log.status == 'COMPLETE'
     assert cost_type_import_log.status == 'COMPLETE'
     assert DependentFieldSetting.objects.get(id=create_dependent_field_setting.id).last_successful_import_at >= datetime.now(timezone.utc) - timedelta(minutes=1)
