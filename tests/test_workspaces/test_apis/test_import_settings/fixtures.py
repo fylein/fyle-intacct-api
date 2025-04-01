@@ -125,6 +125,7 @@ data = {
             "cost_type_field_name": "Cost Type Logan paul",
             "cost_type_placeholder": "this sia is dummy placeholder for cost type",
             "is_import_enabled": True,
+            "is_cost_type_import_enabled": True,
         },
     },
     "invalid_general_mappings": {
