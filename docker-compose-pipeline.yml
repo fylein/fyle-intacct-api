@@ -8,8 +8,9 @@ services:
         CI: ENABLED
     entrypoint: bash run.sh
     restart: unless-stopped
+    user: root
     volumes:
-    - api-volume:/fyle-intacct-api
+    - ./:/fyle-intacct-api
     depends_on:
     - db
     environment: 
@@ -41,6 +42,3 @@ services:
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./tests/sql_fixtures/reset_db_fixtures/reset_db.sql:/docker-entrypoint-initdb.d/reset_db.sql
-
-volumes:
-  api-volume:
