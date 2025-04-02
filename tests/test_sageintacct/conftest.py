@@ -2,7 +2,7 @@ import pytest
 
 from datetime import datetime
 
-from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_mappings.models import ExpenseAttribute, DestinationAttribute
 
 from apps.tasks.models import TaskLog
 from apps.mappings.models import GeneralMapping
@@ -299,3 +299,33 @@ def create_expense_group_for_allocation(db):
     expense_group.expenses.add(expense)
 
     return expense_group, expense
+
+
+@pytest.fixture
+def add_project_mappings(db):
+    """
+    Pytest fixture to add project mappings to a workspace
+    """
+    workspace_ids = [
+        1
+    ]
+    for workspace_id in workspace_ids:
+        DestinationAttribute.objects.create(
+            workspace_id=workspace_id,
+            attribute_type='PROJECT',
+            display_name='Project',
+            value='CRE Platform',
+            destination_id='10065',
+            detail={},
+            active=True,
+            code='10065'
+        )
+        ExpenseAttribute.objects.create(
+            workspace_id=workspace_id,
+            attribute_type='PROJECT',
+            display_name='Project',
+            value='CRE Platform',
+            source_id='10065',
+            detail={},
+            active=True
+        )

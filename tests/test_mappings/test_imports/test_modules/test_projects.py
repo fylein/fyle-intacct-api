@@ -150,12 +150,15 @@ def test_update_and_disable_cost_code(
     Test update and disable cost code
     """
     workspace_id = 1
+    DependentFieldSetting.objects.filter(is_import_enabled=True, workspace_id=workspace_id).update(
+        is_cost_type_import_enabled=True
+    )
 
     projects_to_disable = {
         'destination_id': {
             'value': 'old_project',
             'updated_value': 'new_project',
-            'code': 'new_project_code',
+            'code': 'destination_id',
             'updated_code': 'new_project_code'
         }
     }

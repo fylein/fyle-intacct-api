@@ -1,3 +1,4 @@
+from apps.tasks.models import TaskLog
 import pytest
 
 from unittest import mock
@@ -8,19 +9,25 @@ from django.conf import settings
 from rest_framework.views import status
 from rest_framework.response import Response
 
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+
 from apps.workspaces.models import Configuration, Workspace
 from apps.fyle.models import Expense, ExpenseFilter
 from apps.fyle.actions import __bulk_update_expenses
 from apps.fyle.helpers import (
+    get_source_account_type,
     get_updated_accounting_export_summary,
+    handle_import_exception,
     post_request,
     get_request,
     get_fyle_orgs,
     get_fund_source,
     construct_expense_filter,
+    update_dimension_details,
     handle_refresh_dimensions,
     construct_expense_filter_query,
-    check_interval_and_sync_dimension
+    check_interval_and_sync_dimension,
 )
 
 
@@ -814,3 +821,62 @@ def test_get_fund_source(db):
     fund_source = get_fund_source(workspace_id)
 
     assert fund_source == ['PERSONAL', 'CCC']
+
+
+def test_update_dimension_details(db, mocker):
+    """
+    Test update dimension details
+    """
+    platform = mocker.patch('apps.fyle.helpers.PlatformConnector', return_value=mocker.MagicMock())
+
+    def mock_list_all(params=None):
+        if params:
+            return []
+        return [{
+            'column_name': 'project_id',
+            'field_name': 'Project 123',
+            'type': 'SELECT'
+        },{
+            'column_name': 'cost_center_id',
+            'field_name': 'Cost Center 123',
+            'type': 'SELECT'
+        },{
+            'column_name': 'something',
+            'field_name': 'Test 123',
+            'type': 'SELECT'
+        }]
+
+    platform.expense_custom_fields.list_all.side_effect = mock_list_all
+
+    workspace_id = 1
+    update_dimension_details(platform=platform, workspace_id=workspace_id)
+
+    dimension_detail = DimensionDetail.objects.filter(workspace_id=workspace_id, source_type=DimensionDetailSourceTypeEnum.FYLE.value)
+
+    assert dimension_detail.filter(attribute_type='PROJECT').exists() is True
+    assert dimension_detail.filter(attribute_type='COST_CENTER').exists() is True
+
+    assert dimension_detail.filter(attribute_type='PROJECT').first().display_name == 'Project 123'
+    assert dimension_detail.filter(attribute_type='COST_CENTER').first().display_name == 'Cost Center 123'
+
+    assert dimension_detail.filter(attribute_type='TEST_123').first().display_name == 'Test 123'
+
+
+def test_get_source_account_type():
+    """
+    Test get source account type
+    """
+    fund_sources = ['PERSONAL', 'CCC']
+    source_account_type = get_source_account_type(fund_sources)
+    assert source_account_type == ['PERSONAL_CASH_ACCOUNT', 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT']
+
+
+def test_handle_import_exception(db):
+    """
+    Test handle import exception
+    """
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+
+    handle_import_exception(task_log=task_log)
+    assert task_log.status == 'FATAL'
