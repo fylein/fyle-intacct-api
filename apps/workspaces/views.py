@@ -565,16 +565,22 @@ class SageIntacctWebhookCallbackView(APIView):
         """
         Sage Intacct Webhook Callback
         """
-        logger.info('Sage Intacct Webhook Callback', request.data)
+        logger.info('Sage Intacct Webhook Callback - Data: %s', request.data)
         return Response(
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
+            data={
+                'message': 'Sage Intacct Webhook Callback'
+            }
         )
 
     def get(self, request: Request, *args, **kwargs) -> Response:
         """
         Sage Intacct Webhook Callback
         """
-        logger.info('Sage Intacct Webhook Callback', request.data)
+        logger.info('Sage Intacct Webhook Callback - Data: %s', request.data)
         return Response(
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
+            data={
+                'message': 'Sage Intacct Webhook Callback'
+            }
         )
