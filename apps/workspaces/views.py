@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 
 from rest_framework import viewsets
 from rest_framework import generics
-from rest_framework.views import status
+from rest_framework.views import status, APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -554,7 +554,7 @@ class ExportToIntacctView(viewsets.ViewSet):
         )
 
 
-class SageIntacctWebhookCallbackView(generics.GenericAPIView):
+class SageIntacctWebhookCallbackView(APIView):
     """
     Sage Intacct Webhook Callback View
     """
