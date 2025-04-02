@@ -36,15 +36,15 @@ sage_intacct_connection_api_paths = [
         {'post': 'post', 'get': 'get'})),
 ]
 
+sage_intacct_webhook_paths = [
+    path('sage_intacct/webhook_callback/', SageIntacctWebhookCallbackView.as_view()),
+]
+
 other_app_paths = [
     path('<int:workspace_id>/fyle/', include('apps.fyle.urls')),
     path('<int:workspace_id>/sage_intacct/', include('apps.sage_intacct.urls')),
     path('<int:workspace_id>/mappings/', include('apps.mappings.urls')),
     path('<int:workspace_id>/tasks/', include('apps.tasks.urls')),
-]
-
-sage_intacct_webhook_paths = [
-    path('sage_intacct/webhook_callback/', SageIntacctWebhookCallbackView.as_view()),
 ]
 
 common_resources_paths = [
@@ -55,6 +55,6 @@ urlpatterns = []
 urlpatterns.extend(workspace_app_paths)
 urlpatterns.extend(fyle_connection_api_paths)
 urlpatterns.extend(sage_intacct_connection_api_paths)
+urlpatterns.extend(sage_intacct_webhook_paths)
 urlpatterns.extend(other_app_paths)
 urlpatterns.extend(common_resources_paths)
-urlpatterns.extend(sage_intacct_webhook_paths)
