@@ -1,3 +1,4 @@
+import logging
 from cryptography.fernet import Fernet
 
 from django.conf import settings
@@ -42,6 +43,11 @@ from apps.workspaces.serializers import (
     WorkspaceScheduleSerializer,
     SageIntacctCredentialSerializer,
 )
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -543,6 +549,32 @@ class ExportToIntacctView(viewsets.ViewSet):
         """
         export_to_intacct(workspace_id=kwargs['workspace_id'])
 
+        return Response(
+            status=status.HTTP_200_OK
+        )
+
+
+class SageIntacctWebhookCallbackView(generics.GenericAPIView):
+    """
+    Sage Intacct Webhook Callback View
+    """
+    permission_classes = []
+    authentication_classes = []
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Sage Intacct Webhook Callback
+        """
+        logger.info('Sage Intacct Webhook Callback', request.data)
+        return Response(
+            status=status.HTTP_200_OK
+        )
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Sage Intacct Webhook Callback
+        """
+        logger.info('Sage Intacct Webhook Callback', request.data)
         return Response(
             status=status.HTTP_200_OK
         )

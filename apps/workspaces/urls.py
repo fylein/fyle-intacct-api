@@ -9,7 +9,8 @@ from apps.workspaces.views import (
     ExportToIntacctView,
     WorkspaceAdminsView,
     LastExportDetailView,
-    ConnectSageIntacctView
+    ConnectSageIntacctView,
+    SageIntacctWebhookCallbackView
 )
 
 workspace_app_paths = [
@@ -42,6 +43,10 @@ other_app_paths = [
     path('<int:workspace_id>/tasks/', include('apps.tasks.urls')),
 ]
 
+sage_intacct_webhook_paths = [
+    path('webhook_callback/', SageIntacctWebhookCallbackView.as_view()),
+]
+
 common_resources_paths = [
     path('<int:workspace_id>/common_resources/', include('fyle_accounting_library.common_resources.urls'))
 ]
@@ -52,3 +57,4 @@ urlpatterns.extend(fyle_connection_api_paths)
 urlpatterns.extend(sage_intacct_connection_api_paths)
 urlpatterns.extend(other_app_paths)
 urlpatterns.extend(common_resources_paths)
+urlpatterns.extend(sage_intacct_webhook_paths)

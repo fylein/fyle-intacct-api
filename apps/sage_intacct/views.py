@@ -277,26 +277,3 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-
-class SageIntacctWebhookCallbackView(generics.GenericAPIView):
-    """
-    Sage Intacct Webhook Callback View
-    """
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Sage Intacct Webhook Callback
-        """
-        logger.info('Sage Intacct Webhook Callback', request.data)
-        return Response(
-            status=status.HTTP_200_OK
-        )
-
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Sage Intacct Webhook Callback
-        """
-        logger.info('Sage Intacct Webhook Callback', request.data)
-        return Response(
-            status=status.HTTP_200_OK
-        )
