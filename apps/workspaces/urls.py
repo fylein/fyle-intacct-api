@@ -44,7 +44,7 @@ other_app_paths = [
 ]
 
 sage_intacct_webhook_paths = [
-    path('webhook_callback/', SageIntacctWebhookCallbackView.as_view()),
+    path('sage_intacct/webhook_callback/', SageIntacctWebhookCallbackView.as_view()),
 ]
 
 common_resources_paths = [
