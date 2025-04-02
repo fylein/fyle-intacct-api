@@ -5,9 +5,10 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import (
     Workspace,
-    WorkspaceSchedule,
     Configuration,
-    FyleCredential
+    FyleCredential,
+    WorkspaceSchedule,
+    SageIntacctCredential
 )
 from apps.workspaces.tasks import (
     run_sync_schedule,
@@ -170,6 +171,10 @@ def test_email_notification(mocker,db):
     ).first()
 
     assert updated_ws_schedule.error_count == 3
+
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    run_email_notification(workspace_id=workspace_id)
 
 
 def test_async_update_fyle_credentials(db):

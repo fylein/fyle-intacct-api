@@ -12,6 +12,7 @@ from cryptography.fernet import Fernet
 
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import (
     MappingSetting,
     ExpenseAttribute,
@@ -31,6 +32,7 @@ from apps.sage_intacct.models import (
     Bill,
     CostType,
     APPayment,
+    DimensionDetail,
     JournalEntry,
     BillLineitem,
     ExpenseReport,
@@ -58,7 +60,8 @@ SYNC_UPPER_LIMIT = {
     'departments': 1000,
     'vendors': 20000,
     'tax_details': 200,
-    'cost_types': 500000
+    'cost_types': 500000,
+    'cost_codes': 10000
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
@@ -385,6 +388,53 @@ class SageIntacctConnector:
         dependent_field_setting.last_synced_at = datetime.now()
         dependent_field_setting.save()
 
+    def sync_cost_codes(self) -> None:
+        """
+        Sync Cost Codes
+        """
+        attribute_count = self.connection.tasks.count(field=None, value=None)
+        logger.info("attribute_count: %s", attribute_count)
+
+        if not self.is_sync_allowed(attribute_type = 'cost_codes', attribute_count = attribute_count):
+            logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+            return
+
+        fields = ['RECORDNO', 'TASKID', 'NAME', 'PROJECTID', 'PROJECTNAME']
+        args = {}
+
+        dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=self.workspace_id).first()
+
+        if dependent_field_setting and dependent_field_setting.last_synced_at:
+            latest_synced_timestamp = dependent_field_setting.last_synced_at - timedelta(days=1)
+            args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
+
+        tasks_generator = self.connection.tasks.get_all_generator(field=None, value=None, fields=fields, updated_at=args.get('updated_at', None))
+        tasks_attribute = []
+
+        for tasks in tasks_generator:
+            for task in tasks:
+                detail = {
+                    'project_id': task['PROJECTID'],
+                    'project_name': task['PROJECTNAME'],
+                    'record_no': task['RECORDNO']
+                }
+
+                tasks_attribute.append({
+                    'attribute_type': 'COST_CODE',
+                    'display_name': 'Cost Code',
+                    'value': task['NAME'],
+                    'destination_id': task['TASKID'],
+                    'active': True,
+                    'detail': detail,
+                    'code': task['TASKID']
+                })
+
+            DestinationAttribute.bulk_create_or_update_destination_attributes(tasks_attribute, 'COST_CODE', self.workspace_id, True)
+            tasks_attribute = []
+
+        dependent_field_setting.last_synced_at = datetime.now()
+        dependent_field_setting.save()
+
     def sync_projects(self) -> list:
         """
         Get projects
@@ -461,7 +511,11 @@ class SageIntacctConnector:
                     })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                item_attributes, 'ITEM', self.workspace_id, True)
+                item_attributes,
+                'ITEM',
+                self.workspace_id,
+                True
+            )
 
         return []
 
@@ -657,17 +711,25 @@ class SageIntacctConnector:
         Get User Defined Dimensions
         """
         dimensions = self.connection.dimensions.get_all()
+        dimension_details = []
 
         for dimension in dimensions:
+            dimension_details.append({
+                'attribute_type': dimension['objectName'],
+                'display_name': dimension['termLabel'],
+                'source_type': DimensionDetailSourceTypeEnum.ACCOUNTING.value,
+                'workspace_id': self.workspace_id
+            })
+
             if dimension['userDefinedDimension'] == 'true':
                 dimension_attributes = []
-                dimension_name = dimension['objectLabel'].upper().replace(" ", "_")
+                dimension_name = dimension['objectName'].upper().replace(" ", "_")
                 dimension_values = self.connection.dimension_values.get_all(dimension['objectName'])
 
                 for value in dimension_values:
                     dimension_attributes.append({
                         'attribute_type': dimension_name,
-                        'display_name': dimension['objectLabel'],
+                        'display_name': dimension['termLabel'],
                         'value': value['name'],
                         'destination_id': value['id'],
                         'active': True
@@ -676,6 +738,12 @@ class SageIntacctConnector:
                 DestinationAttribute.bulk_create_or_update_destination_attributes(
                     dimension_attributes, dimension_name, self.workspace_id
                 )
+
+        DimensionDetail.bulk_create_or_update_dimension_details(
+            dimensions=dimension_details,
+            workspace_id=self.workspace_id,
+            source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value
+        )
 
         return []
 
@@ -827,7 +895,13 @@ class SageIntacctConnector:
         :param create: False to just Get and True to Get or Create if not exists
         :return: Vendor
         """
-        vendor_from_db = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='VENDOR', value__iexact=vendor_name.lower(), active=True).first()
+        vendor_from_db = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id,
+            attribute_type='VENDOR',
+            active=True
+        ).filter(
+            Q(value__iexact=vendor_name.lower()) | Q(destination_id__iexact=vendor_name.lower())
+        ).first()
         if vendor_from_db:
             return vendor_from_db
 

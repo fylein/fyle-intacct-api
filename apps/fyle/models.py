@@ -1,5 +1,5 @@
 from dateutil import parser
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.db import models
 from django.db.models import Count, JSONField
@@ -607,6 +607,7 @@ class Reimbursement(models.Model):
 
         existing_reimbursement_ids = []
         primary_key_map = {}
+        current_time = datetime.now(timezone.utc)
 
         for existing_reimbursement in existing_reimbursements:
             existing_reimbursement_ids.append(existing_reimbursement.reimbursement_id)
@@ -635,7 +636,8 @@ class Reimbursement(models.Model):
                     attributes_to_be_updated.append(
                         Reimbursement(
                             id=primary_key_map[reimbursement['id']]['id'],
-                            state=reimbursement['state']
+                            state=reimbursement['state'],
+                            updated_at=current_time
                         )
                     )
 
@@ -643,7 +645,7 @@ class Reimbursement(models.Model):
             Reimbursement.objects.bulk_create(attributes_to_be_created, batch_size=50)
 
         if attributes_to_be_updated:
-            Reimbursement.objects.bulk_update(attributes_to_be_updated, fields=['state'], batch_size=50)
+            Reimbursement.objects.bulk_update(attributes_to_be_updated, fields=['state', 'updated_at'], batch_size=50)
 
     @staticmethod
     def get_last_synced_at(workspace_id: int) -> datetime:
@@ -700,8 +702,8 @@ class DependentFieldSetting(models.Model):
     cost_code_field_name = models.CharField(max_length=255, help_text='Fyle Cost Code Field Name')
     cost_code_field_id = models.IntegerField(help_text='Fyle Cost Code Field ID')
     cost_code_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost code')
-    cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name')
-    cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID')
+    cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name', null=True)
+    cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID', null=True)
     cost_type_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost Type')
     workspace = models.OneToOneField(
         Workspace,
@@ -711,6 +713,7 @@ class DependentFieldSetting(models.Model):
     )
     last_synced_at = models.DateTimeField(null=True, help_text='Last Synced At (Intacct)')
     last_successful_import_at = models.DateTimeField(null=True, help_text='Last Successful Import At')
+    is_cost_type_import_enabled = models.BooleanField(help_text='Is Cost Type Import Enabled', default=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
