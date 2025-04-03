@@ -110,4 +110,4 @@ extend-select =
 per-file-ignores =
     tests/*: ANN001,ANN201
 
-exclude = *env, *.yml, .flake8, *.txt, *.yaml, gunicorn_config.py, apps/*/migrations/*, manage.py, fyle-integrations-db-migrations/*, fyle_intacct_api/*, create_sql_migration.py, scripts/*, test.py, Dockerfile
+exclude = *env, *.yml, .flake8, *.txt, *.yaml, gunicorn_config.py, apps/*/migrations/*, manage.py, fyle-integrations-db-migrations/*, fyle_intacct_api/*, create_sql_migration.py, scripts/*, test.py, Dockerfile, fyle_accounting_library/*
