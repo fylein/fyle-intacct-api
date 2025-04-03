@@ -1579,7 +1579,7 @@ class SageIntacctConnector:
         bill = self.connection.bills.get(field='RECORDNO', value=bill_id, fields=fields)
         return bill
 
-    def get_bill_bulk(self, bill_ids: list[str], fields: list = None) -> dict:
+    def get_bill_bulk(self, bill_ids: list[str], fields: list = None) -> list[dict]:
         """
         GET bills from SAGE Intacct
         :param bill_ids: Bill Ids
@@ -1602,7 +1602,7 @@ class SageIntacctConnector:
         expense_report = self.connection.expense_reports.get(field='RECORDNO', value=expense_report_id, fields=fields)
         return expense_report
 
-    def get_expense_report_bulk(self, expense_report_ids: list[str], fields: list = None) -> dict:
+    def get_expense_report_bulk(self, expense_report_ids: list[str], fields: list = None) -> list[dict]:
         """
         GET expense reports from SAGE
         :param expense_report_ids: Expense Report Ids
