@@ -12,6 +12,7 @@ from sageintacctsdk.exceptions import (
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
 from apps.mappings.imports.modules.projects import Project
+from apps.exceptions import handle_view_exceptions
 from apps.mappings.exceptions import handle_import_exceptions
 
 
@@ -125,3 +126,18 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
     assert import_log.error_log['message'] == 'Something went wrong'
     assert import_log.error_log['alert'] == False
+
+
+def test_handle_views_exception():
+    """
+    Test handle_views_exception decorator
+    """
+    # Exception
+    @handle_view_exceptions()
+    def to_be_decorated():
+        raise Exception('This is Exception')
+
+    response = to_be_decorated()
+
+    assert response.status_code == 400
+    assert response.data['message'] == 'An unhandled error has occurred, please re-try later'

@@ -1553,10 +1553,7 @@ def get_all_sage_intacct_bill_ids(sage_objects: Bill) -> dict:
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
 
     for task_log in task_logs:
-        sage_intacct_bill_details[task_log.expense_group.id] = {
-            'expense_group': task_log.expense_group,
-            'sage_object_id': task_log.detail['data']['apbill']['RECORDNO']
-        }
+        sage_intacct_bill_details[task_log.detail['data']['apbill']['RECORDNO']] = task_log.expense_group.id
 
     return sage_intacct_bill_details
 
@@ -1572,10 +1569,7 @@ def get_all_sage_intacct_expense_report_ids(sage_objects: ExpenseReport) -> dict
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
 
     for task_log in task_logs:
-        sage_intacct_expense_report_details[task_log.expense_group.id] = {
-            'expense_group': task_log.expense_group,
-            'sage_object_id': task_log.detail['key']
-        }
+        sage_intacct_expense_report_details[task_log.detail['key']] = task_log.expense_group.id
     return sage_intacct_expense_report_details
 
 
@@ -1605,39 +1599,60 @@ def check_sage_intacct_object_status(workspace_id: int) -> None:
     ).all()
 
     if bills:
-        bill_ids = get_all_sage_intacct_bill_ids(bills)
+        bill_ids = get_all_sage_intacct_bill_ids(bills)  # {'bill_id (sage side)': 'expense_group_id'}
 
-        for bill in bills:
-            bill_object = sage_intacct_connection.get_bill(bill_ids[bill.expense_group.id]['sage_object_id'])
+        bill_ids_batches = [list(bill_ids.keys())[i:i + 50] for i in range(0, len(bill_ids), 50)]
 
-            if 'apbill' in bill_object and bill_object['apbill']['STATE'] == 'Paid':
-                line_items = BillLineitem.objects.filter(bill_id=bill.id)
-                for line_item in line_items:
-                    expense = line_item.expense
-                    expense.paid_on_sage_intacct = True
-                    expense.save()
+        for batch in bill_ids_batches:
+            bills_details = sage_intacct_connection.get_bills(bill_ids=batch)
 
-                bill.paid_on_sage_intacct = True
-                bill.payment_synced = True
-                bill.save()
+            for bill_detail in bills_details:
+                if bill_detail.get('STATE') == 'Paid':
+                    expense_group_id = bill_ids[bill_detail['RECORDNO']]
+                    bill = bills.filter(expense_group_id=expense_group_id).first()
+                    line_items = BillLineitem.objects.filter(bill_id=bill.id)
+
+                    expenses_to_update = []
+                    for line_item in line_items:
+                        expense = line_item.expense
+                        expense.paid_on_sage_intacct = True
+                        expense.updated_at = datetime.now(timezone.utc)
+                        expenses_to_update.append(expense)
+
+                    if expenses_to_update:
+                        Expense.objects.bulk_update(expenses_to_update, ['paid_on_sage_intacct', 'updated_at'], batch_size=50)
+
+                    bill.paid_on_sage_intacct = True
+                    bill.payment_synced = True
+                    bill.save()
 
     if expense_reports:
-        expense_report_ids = get_all_sage_intacct_expense_report_ids(expense_reports)
+        expense_report_ids = get_all_sage_intacct_expense_report_ids(expense_reports)  # {'expense_report_id (sage side)': 'expense_group_id'}
 
-        for expense_report in expense_reports:
-            expense_report_object = sage_intacct_connection.get_expense_report(
-                expense_report_ids[expense_report.expense_group_id]['sage_object_id'])
+        expense_report_ids_batches = [list(expense_report_ids.keys())[i:i + 50] for i in range(0, len(expense_report_ids), 50)]
 
-            if 'eexpenses' in expense_report_object and expense_report_object['eexpenses']['STATE'] == 'Paid':
-                line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
-                for line_item in line_items:
-                    expense = line_item.expense
-                    expense.paid_on_sage_intacct = True
-                    expense.save()
+        for batch in expense_report_ids_batches:
+            expense_reports_details = sage_intacct_connection.get_expense_reports(expense_report_ids=batch)
 
-                expense_report.paid_on_sage_intacct = True
-                expense_report.payment_synced = True
-                expense_report.save()
+            for expense_report_detail in expense_reports_details:
+                if expense_report_detail.get('STATE') == 'Paid':
+                    expense_group_id = expense_report_ids[expense_report_detail['RECORDNO']]
+                    expense_report = expense_reports.filter(expense_group_id=expense_group_id).first()
+                    line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
+
+                    expenses_to_update = []
+                    for line_item in line_items:
+                        expense = line_item.expense
+                        expense.paid_on_sage_intacct = True
+                        expense.updated_at = datetime.now(timezone.utc)
+                        expenses_to_update.append(expense)
+
+                    if expenses_to_update:
+                        Expense.objects.bulk_update(expenses_to_update, ['paid_on_sage_intacct', 'updated_at'], batch_size=50)
+
+                    expense_report.paid_on_sage_intacct = True
+                    expense_report.payment_synced = True
+                    expense_report.save()
 
 
 def process_fyle_reimbursements(workspace_id: int) -> None:

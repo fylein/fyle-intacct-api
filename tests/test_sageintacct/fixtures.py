@@ -119,6 +119,7 @@ data = {
     'credit_card_response': {'key': '3430', 'status': 'success', 'function': 'create', 'controlid': 'a1a61e97-8a53-4390-a5f8-b1d628b2e83b', 'data': {'@listtype': 'objects', '@count': '1', 'cctransaction': {'RECORDNO': '3430', 'RECORD_URL': 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r=cADOKmBnspC0Y1Mp5umhgD3e2gD3B_6rV45dIYv59zw',}}},
     'expense_report_post_response': {'status': 'success', 'function': 'create_expensereport', 'controlid': 'a1a61e97-8a53-4390-a5f8-b1d628b2e83b','key': '3430'},
     'expense_report_response': {'status': 'success', 'function': 'create', 'controlid': 'a1a61e97-8a53-4390-a5f8-b1d628b2e83b', 'data': {'@listtype': 'objects', '@count': '1', 'eexpenses': {'RECORDNO': '3430', 'RECORD_URL': 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r=cADOKmBnspC0Y1Mp5umhgD3e2gD3B_6rV45dIYv59zw', 'STATE': 'Paid'}}},
+    'expense_report_get_bulk': [{'RECORDNO': '3032', 'STATE': 'Paid'}],
     'create_contact': {
         'Contacts': [{
             'ContactID': '79c88297-27fb-4f6f-87a8-fe27017031c6',
@@ -263,6 +264,7 @@ data = {
         },
     ],
     'get_bill': {'@listtype': 'apbill', '@count': '1', '@totalcount': '1', '@numremaining': '0', '@resultId': '', 'apbill': {'STATE': 'Paid', 'RECORD_URL': 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r=cADOKmBnspC0Y1Mp5umhgD3e2gD3B_6rV45dIYv59zw'}},
+    'get_by_query': [{'STATE': 'Paid', 'RECORDNO': '3430'}],
     'get_all_organisations': [
         {
             'Addresses': [
