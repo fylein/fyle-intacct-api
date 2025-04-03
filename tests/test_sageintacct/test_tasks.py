@@ -1276,12 +1276,12 @@ def test_check_sage_intacct_object_status(mocker, db):
     Test check_sage_intacct_object_status
     """
     mocker.patch(
-        'sageintacctsdk.apis.Bills.get',
-        return_value=data['get_bill']
+        'sageintacctsdk.apis.Bills.get_by_query',
+        return_value=data['get_by_query']
     )
     mocker.patch(
-        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_report',
-        return_value=data['expense_report_response']['data']
+        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_reports',
+        return_value=data['expense_report_get_bulk']
     )
     workspace_id = 1
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -1321,7 +1321,7 @@ def test_check_sage_intacct_object_status(mocker, db):
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
 
-    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_report') as mock_call:
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_reports') as mock_call:
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         check_sage_intacct_object_status(workspace_id)
 
