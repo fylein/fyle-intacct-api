@@ -1276,12 +1276,12 @@ def test_check_sage_intacct_object_status(mocker, db):
     Test check_sage_intacct_object_status
     """
     mocker.patch(
-        'sageintacctsdk.apis.Bills.get',
-        return_value=data['get_bill']
+        'sageintacctsdk.apis.Bills.get_by_query',
+        return_value=data['get_by_query']
     )
     mocker.patch(
-        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_report',
-        return_value=data['expense_report_response']['data']
+        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_report_bulk',
+        return_value=data['expense_report_get_bulk']
     )
     workspace_id = 1
     expense_group = ExpenseGroup.objects.get(id=1)
