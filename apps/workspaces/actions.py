@@ -1,8 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
-
-from django.core.cache import cache
-from django.utils.module_loading import import_string
+from datetime import datetime, timedelta
 
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import (
@@ -42,20 +39,6 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
     }
     if expense_group_ids:
         expense_group_filters['id__in'] = expense_group_ids
-
-    vendor_cache_timestamp = cache.get(key=f"vendor_cache_{workspace_id}")
-
-    if not vendor_cache_timestamp:
-        logger.info("Vendor Cache not found for Workspace %s", workspace_id)
-        import_string('apps.sage_intacct.tasks.search_and_upsert_vendors')(
-            workspace_id=workspace_id,
-            configuration=configuration,
-            expense_group_filters=expense_group_filters
-        )
-        logger.info("Setting Vendor Cache for Workspace %s", workspace_id)
-        cache.set(key=f"vendor_cache_{workspace_id}", value=datetime.now(timezone.utc), timeout=86400)
-    else:
-        logger.info("Vendor Cache found for Workspace %s, last cached at %s", workspace_id, vendor_cache_timestamp)
 
     if configuration.reimbursable_expenses_object:
         expense_group_ids = ExpenseGroup.objects.filter(

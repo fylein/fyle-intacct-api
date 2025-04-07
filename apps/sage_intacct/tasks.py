@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
+from django.core.cache import cache
 from django.db.models.functions import Lower
 
 from fyle_integrations_platform_connector import PlatformConnector
@@ -1767,21 +1768,22 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
     post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source)
 
 
-def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, expense_group_filters: dict) -> None:
+def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, expense_group_filters: dict, fund_source: str) -> None:
     """
     Search the vendors not present in Destination Attribute and upsert them
     :param workspace_id: Workspace ID
     :param configuration: Configuration
     :param expense_group_filters: filters for expense group in export queue
+    :param fund_source: Fund Source
     :return: None
     """
     vendors_list = set()
 
     # CCC Vendors
-    if configuration.corporate_credit_card_expenses_object:
-        ccc_group_ids = list(get_expense_group_ids(fund_source='CCC', expense_group_filters=expense_group_filters))
+    if fund_source == 'CCC' and configuration.corporate_credit_card_expenses_object:
+        ccc_group_ids = list(get_filtered_expense_group_ids(fund_source='CCC', expense_group_filters=expense_group_filters))
 
-        if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
+        if ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
             configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.use_merchant_in_journal_line
         ):
             vendors = Expense.objects.filter(
@@ -1791,13 +1793,13 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
             ).values_list('vendor', flat=True)
             vendors_list.update(v for v in vendors if v)
 
-        if configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
+        if ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
             employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=ccc_group_ids)
             vendors_list.update(name for name in employee_names if name)
 
     # Reimbursable Vendors
-    if configuration.reimbursable_expenses_object in ['BILL', 'JOURNAL_ENTRY'] and configuration.employee_field_mapping == 'VENDOR':
-        reimb_group_ids = list(get_expense_group_ids(fund_source='PERSONAL', expense_group_filters=expense_group_filters))
+    if fund_source == 'PERSONAL' and configuration.reimbursable_expenses_object in ['BILL', 'JOURNAL_ENTRY'] and configuration.employee_field_mapping == 'VENDOR':
+        reimb_group_ids = list(get_filtered_expense_group_ids(fund_source='PERSONAL', expense_group_filters=expense_group_filters))
 
         employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=reimb_group_ids)
         vendors_list.update(name for name in employee_names if name)
@@ -1816,10 +1818,10 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
         if missing_vendors:
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-            sage_intacct_connection.get_or_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
+            sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
 
 
-def get_expense_group_ids(fund_source: str, expense_group_filters: dict) -> list:
+def get_filtered_expense_group_ids(fund_source: str, expense_group_filters: dict) -> list:
     """
     Get expense group ids
     :param fund_source: Fund Source
@@ -1864,3 +1866,35 @@ def get_employee_as_vendors_name(workspace_id: int, expense_group_ids: list) -> 
     ).values_list('detail__full_name', flat=True)
 
     return unmapped_employee_names
+
+
+def check_cache_and_search_vendors(workspace_id: int, expense_group_ids: list, fund_source: str) -> None:
+    """
+    Check cache and search vendors in Intacct
+    :param workspace_id: Workspace ID
+    :param expense_group_ids: Expense Group ID
+    :param fund source: CCC/PERSONAL
+    """
+    expense_group_filters = {
+        'id__in': expense_group_ids,
+        'fund_source': fund_source
+    }
+
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+
+    vendor_cache_key = f"{fund_source}_vendor_cache_{workspace_id}"
+
+    vendor_cache_timestamp = cache.get(key=vendor_cache_key)
+
+    if not vendor_cache_timestamp:
+        logger.info("Vendor Cache not found for Workspace %s", workspace_id)
+        search_and_upsert_vendors(
+            workspace_id=workspace_id,
+            configuration=configuration,
+            expense_group_filters=expense_group_filters,
+            fund_source=fund_source
+        )
+        logger.info("Setting Vendor Cache for Workspace %s", workspace_id)
+        cache.set(key=vendor_cache_key, value=datetime.now(timezone.utc), timeout=86400)
+    else:
+        logger.info("Vendor Cache found for Workspace %s, last cached at %s", workspace_id, vendor_cache_timestamp)

@@ -1953,7 +1953,7 @@ class SageIntacctConnector:
 
         return json.loads(json.dumps(response, default=str))
 
-    def get_or_create_vendors(self, workspace_id: int, missing_vendors: list) -> None:
+    def search_and_create_vendors(self, workspace_id: int, missing_vendors: list) -> None:
         """
         Seach vendors in Intacct and Upsert Vendors in DB
         :param workspace_id: Workspace ID
