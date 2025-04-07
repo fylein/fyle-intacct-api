@@ -905,36 +905,41 @@ class SageIntacctConnector:
         if vendor_from_db:
             return vendor_from_db
 
-        logger.info('Searching for vendor: %s in Sage Intacct', vendor_name)
-        vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
-        vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
-
-        if 'VENDOR' in vendor:
-            if int(vendor['@totalcount']) > 1:
-                sorted_vendor_data = sorted(vendor['VENDOR'], key=lambda x: datetime.strptime(x["WHENMODIFIED"], "%m/%d/%Y %H:%M:%S"), reverse=True)
-                vendor = sorted_vendor_data[0]
-            else:
-                vendor = vendor['VENDOR'][0]
-
-            vendor = vendor if vendor['STATUS'] == 'active' else None
-        else:
-            vendor = None
-
-        if not vendor:
+        try:
             if create:
                 vendor_id = self.sanitize_vendor_name(vendor_name)
                 created_vendor = self.post_vendor(vendor_id, vendor_name, email)
                 return self.create_destination_attribute(
                     'vendor', vendor_name, created_vendor['VENDORID'], email)
-            else:
-                return
-        else:
-            return self.create_destination_attribute(
-                'vendor',
-                vendor['NAME'],
-                vendor['VENDORID'],
-                vendor['DISPLAYCONTACT.EMAIL1']
-            )
+        except WrongParamsError as e:
+            logger.info("Error while creating vendor %s in Workspace %s: %s", vendor_name, self.workspace_id, e.response)
+
+            if 'error' in e.response:
+                sage_intacct_errors = e.response['error']
+
+                if "Another record with the value" in sage_intacct_errors[0]['description2']:
+                    logger.info('Searching for vendor: %s in Sage Intacct in Workspace %s', vendor_name, self.workspace_id)
+                    vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
+                    vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
+
+                    if 'VENDOR' in vendor:
+                        if int(vendor['@totalcount']) > 1:
+                            sorted_vendor_data = sorted(vendor['VENDOR'], key=lambda x: datetime.strptime(x["WHENMODIFIED"], "%m/%d/%Y %H:%M:%S"), reverse=True)
+                            vendor = sorted_vendor_data[0]
+                        else:
+                            vendor = vendor['VENDOR'][0]
+
+                        vendor = vendor if vendor['STATUS'] == 'active' else None
+                    else:
+                        vendor = None
+
+                    if vendor:
+                        return self.create_destination_attribute(
+                            'vendor',
+                            vendor['NAME'],
+                            vendor['VENDORID'],
+                            vendor['DISPLAYCONTACT.EMAIL1']
+                        )
 
     def get_expense_link(self, lineitem: ChargeCardTransactionLineitem | ExpenseReportLineitem | JournalEntryLineitem | BillLineitem) -> str:
         """
@@ -1947,3 +1952,41 @@ class SageIntacctConnector:
         response = [row for responses in generator for row in responses] if resource_type != 'dimensions' else generator
 
         return json.loads(json.dumps(response, default=str))
+
+    def get_or_create_vendors(self, workspace_id: int, missing_vendors: list) -> None:
+        """
+        Seach vendors in Intacct and Upsert Vendors in DB
+        :param workspace_id: Workspace ID
+        :param missing_vendors: Missing Vendors List
+        """
+        vendors_list = [vendor.replace("'", "\\'") for vendor in missing_vendors]
+
+        and_filter = [('in', 'NAME', vendors_list), ('equalto', 'STATUS', 'active')]
+
+        fields = ['NAME', 'VENDORID', 'DISPLAYCONTACT.EMAIL1', 'WHENMODIFIED']
+
+        vendors = self.connection.vendors.get_by_query(and_filter=and_filter, fields=fields)
+
+        # To Keep only most recently modified vendor for each name
+        unique_vendors = {}
+
+        for vendor in vendors:
+            name_key = vendor.get('NAME', '')
+            when_modified_str = vendor.get('WHENMODIFIED')
+            when_modified = datetime.strptime(when_modified_str, "%m/%d/%Y %H:%M:%S")
+
+            if name_key not in unique_vendors:
+                unique_vendors[name_key] = (vendor, when_modified)
+            else:
+                _, existing_date = unique_vendors[name_key]
+                if when_modified > existing_date:
+                    unique_vendors[name_key] = (vendor, when_modified)
+
+        for vendor, _ in unique_vendors.values():
+            logger.info("Upserting Vendor %s in Workspace %s", vendor['NAME'], workspace_id)
+            self.create_destination_attribute(
+                'vendor',
+                vendor['NAME'],
+                vendor['VENDORID'],
+                vendor.get('DISPLAYCONTACT.EMAIL1')
+            )

@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
+from django.db.models.functions import Lower
 
 from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import (
@@ -1764,3 +1765,102 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
 
     update_complete_expenses(expense_group.expenses.all(), url)
     post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source)
+
+
+def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, expense_group_filters: dict) -> None:
+    """
+    Search the vendors not present in Destination Attribute and upsert them
+    :param workspace_id: Workspace ID
+    :param configuration: Configuration
+    :param expense_group_filters: filters for expense group in export queue
+    :return: None
+    """
+    vendors_list = set()
+
+    # CCC Vendors
+    if configuration.corporate_credit_card_expenses_object:
+        ccc_group_ids = list(get_expense_group_ids(fund_source='CCC', expense_group_filters=expense_group_filters))
+
+        if configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
+            configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.use_merchant_in_journal_line
+        ):
+            vendors = Expense.objects.filter(
+                workspace_id=workspace_id,
+                expensegroup__id__in=ccc_group_ids,
+                vendor__isnull=False
+            ).values_list('vendor', flat=True)
+            vendors_list.update(v for v in vendors if v)
+
+        if configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
+            employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=ccc_group_ids)
+            vendors_list.update(name for name in employee_names if name)
+
+    # Reimbursable Vendors
+    if configuration.reimbursable_expenses_object in ['BILL', 'JOURNAL_ENTRY'] and configuration.employee_field_mapping == 'VENDOR':
+        reimb_group_ids = list(get_expense_group_ids(fund_source='PERSONAL', expense_group_filters=expense_group_filters))
+
+        employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=reimb_group_ids)
+        vendors_list.update(name for name in employee_names if name)
+
+    # Final DB check for missing vendors
+    if vendors_list:
+        existing_vendors = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id,
+            attribute_type='VENDOR',
+        ).annotate(lower_value=Lower('value')).filter(
+            lower_value__in=[vendor.lower() for vendor in vendors_list]
+        ).values_list('value', flat=True)
+
+        missing_vendors = list(set(vendors_list) - set(existing_vendors))
+
+        if missing_vendors:
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+            sage_intacct_connection.get_or_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
+
+
+def get_expense_group_ids(fund_source: str, expense_group_filters: dict):
+    """
+    Get expense group ids
+    :param fund_source: Fund Source
+    :param expense_group_filters: Expense group filter
+    """
+    return ExpenseGroup.objects.filter(
+        fund_source=fund_source,
+        **expense_group_filters
+    ).values_list('id', flat=True)
+
+
+def get_employee_as_vendors_name(workspace_id: int, expense_group_ids: list):
+    """
+    Get employee as vendors
+    :param workspace_id: Workspace ID
+    :param expense_group_ids: Expense Group ID
+    """
+    employee_email_list = Expense.objects.filter(
+        workspace_id=workspace_id,
+        expensegroup__id__in=expense_group_ids,
+        employee_email__isnull=False
+    ).values_list('employee_email', flat=True)
+
+    employee_attr_ids = ExpenseAttribute.objects.filter(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        value__in=employee_email_list
+    ).values_list('id', flat=True)
+
+    mapped_expense_attribute_ids = EmployeeMapping.objects.filter(
+        workspace_id=workspace_id,
+        destination_vendor_id__isnull=False,
+        source_employee_id__in=employee_attr_ids
+    ).values_list('source_employee_id', flat=True)
+
+    unmapped_employee_ids = set(employee_attr_ids) - set(mapped_expense_attribute_ids)
+
+    unmapped_employee_names = ExpenseAttribute.objects.filter(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        id__in=unmapped_employee_ids
+    ).values_list('detail__full_name', flat=True)
+
+    return unmapped_employee_names
