@@ -1819,7 +1819,7 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
             sage_intacct_connection.get_or_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
 
 
-def get_expense_group_ids(fund_source: str, expense_group_filters: dict):
+def get_expense_group_ids(fund_source: str, expense_group_filters: dict) -> list:
     """
     Get expense group ids
     :param fund_source: Fund Source
@@ -1831,7 +1831,7 @@ def get_expense_group_ids(fund_source: str, expense_group_filters: dict):
     ).values_list('id', flat=True)
 
 
-def get_employee_as_vendors_name(workspace_id: int, expense_group_ids: list):
+def get_employee_as_vendors_name(workspace_id: int, expense_group_ids: list) -> list:
     """
     Get employee as vendors
     :param workspace_id: Workspace ID
