@@ -1,6 +1,8 @@
 from dateutil import parser
 from datetime import datetime
 
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+
 from apps.fyle.models import (
     Expense,
     ExpenseGroup,
@@ -478,7 +480,7 @@ def test_support_post_date_integrations(mocker, db, api_client, test_connection)
     expense_group_settings.ccc_export_date_type = 'posted_at'
     expense_group_settings.save()
 
-    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log, imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     task_log = TaskLog.objects.get(id=task_log.id)
 

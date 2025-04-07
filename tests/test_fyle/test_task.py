@@ -3,7 +3,7 @@ import pytest
 import json
 from unittest import mock
 
-from django.db.models import Q
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -13,15 +13,14 @@ from fyle.platform.exceptions import InvalidTokenError, InternalServerError
 from tests.helper import dict_compare_keys
 
 from apps.tasks.models import Error, TaskLog
-from apps.fyle.actions import mark_expenses_as_skipped
 from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, Workspace
 from apps.fyle.models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
 from apps.fyle.tasks import (
     create_expense_groups,
     re_run_skip_export_rule,
     schedule_expense_group_creation,
-    post_accounting_export_summary,
-    update_non_exported_expenses
+    update_non_exported_expenses,
+    import_and_export_expenses
 )
 from .fixtures import data
 
@@ -64,7 +63,7 @@ def test_create_expense_groups(mocker, db):
     expense_group_settings.ccc_export_date_type = 'last_spent_at'
     expense_group_settings.save()
 
-    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log, ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     task_log = TaskLog.objects.get(id=task_log.id)
 
@@ -73,7 +72,7 @@ def test_create_expense_groups(mocker, db):
     expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
     expense_group_settings.delete()
 
-    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log, ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     task_log = TaskLog.objects.get(id=task_log.id)
     assert task_log.status == 'FATAL'
@@ -88,16 +87,16 @@ def test_create_expense_groups(mocker, db):
             'status': 'IN_PROGRESS'
         }
     )
-    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log, ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     task_log = TaskLog.objects.get(id=task_log.id)
     assert task_log.status == 'FAILED'
 
     mock_call.side_effect = InternalServerError('Error')
-    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log, ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     mock_call.side_effect = InvalidTokenError('Invalid Token')
-    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log)
+    create_expense_groups(workspace_id, ['PERSONAL', 'CCC'], task_log, ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     assert mock_call.call_count == 2
 
@@ -140,7 +139,7 @@ def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
         expense_group_count = len(ExpenseGroup.objects.filter(workspace_id=1))
         expenses_count = len(Expense.objects.filter(org_id='or79Cob97KSh'))
 
-        create_expense_groups(1, ['PERSONAL', 'CCC'], task_log)
+        create_expense_groups(1, ['PERSONAL', 'CCC'], task_log, ExpenseImportSourceEnum.DASHBOARD_SYNC)
         expense_group = ExpenseGroup.objects.filter(workspace_id=1)
         expenses = Expense.objects.filter(org_id='or79Cob97KSh')
 
@@ -150,33 +149,6 @@ def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
         for expense in expenses:
             if expense.employee_email == 'jhonsnow@fyle.in':
                 assert expense.is_skipped == True
-
-
-def test_post_accounting_export_summary(db, mocker):
-    """
-    Test post accounting export summary
-    """
-    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
-    expense_id = expense_group.expenses.first().id
-    expense_group.expenses.remove(expense_id)
-
-    workspace = Workspace.objects.get(id=1)
-
-    expense = Expense.objects.filter(id=expense_id).first()
-    expense.workspace_id = 1
-    expense.save()
-
-    mark_expenses_as_skipped(Q(), [expense_id], workspace)
-
-    assert Expense.objects.filter(id=expense_id).first().accounting_export_summary['synced'] == False
-
-    mocker.patch(
-        'fyle_integrations_platform_connector.apis.Expenses.post_bulk_accounting_export_summary',
-        return_value=[]
-    )
-    post_accounting_export_summary('or79Cob97KSh', 1)
-
-    assert Expense.objects.filter(id=expense_id).first().accounting_export_summary['synced'] == True
 
 
 def test_update_non_exported_expenses(db, create_temp_workspace, mocker, api_client):
@@ -349,3 +321,22 @@ def test_re_run_skip_export_rule(db, create_temp_workspace, mocker, api_client, 
     # Confirm the LastExportDetail update
     last_export_detail = LastExportDetail.objects.filter(workspace_id=1).first()
     assert last_export_detail.failed_expense_groups_count == 0
+
+
+def test_import_and_export_expenses(mocker, db, test_connection):
+    """
+    Test import and export expenses
+    """
+    mock_call = mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses_webhook']
+    )
+
+    import_and_export_expenses(
+        report_id='rp1s1L3QtMpF',
+        org_id='or79Cob97KSh',
+        is_state_change_event=True,
+        imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC
+    )
+
+    assert mock_call.call_count == 1

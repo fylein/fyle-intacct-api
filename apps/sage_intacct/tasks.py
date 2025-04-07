@@ -29,11 +29,11 @@ from apps.fyle.models import ExpenseGroup, Expense
 from fyle_intacct_api.exceptions import BulkError
 from fyle_intacct_api.logging_middleware import get_logger
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.fyle.tasks import post_accounting_export_summary
 from apps.fyle.actions import (
     update_expenses_in_progress,
     update_failed_expenses,
-    update_complete_expenses
+    update_complete_expenses,
+    post_accounting_export_summary
 )
 from apps.workspaces.models import (
     SageIntacctCredential,
