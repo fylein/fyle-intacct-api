@@ -53,7 +53,7 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
             expense_group_filters=expense_group_filters
         )
         logger.info("Setting Vendor Cache for Workspace %s", workspace_id)
-        cache.set(key=f"vendor_cache_{workspace_id}", value=datetime.now(timezone.utc), timeout=14400)
+        cache.set(key=f"vendor_cache_{workspace_id}", value=datetime.now(timezone.utc), timeout=86400)
     else:
         logger.info("Vendor Cache found for Workspace %s, last cached at %s", workspace_id, vendor_cache_timestamp)
 
