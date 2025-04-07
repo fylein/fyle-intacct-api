@@ -12,6 +12,7 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from fyle_intacct_api.utils import LookupFieldMixin
 
@@ -75,6 +76,7 @@ class ExpenseGroupView(LookupFieldMixin, generics.ListCreateAPIView):
             kwargs['workspace_id'],
             fund_source=fund_source,
             task_log=task_log,
+            imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC
         )
 
         return Response(
@@ -510,7 +512,7 @@ class ExpenseGroupSyncView(generics.CreateAPIView):
         """
         task_log, fund_source = get_task_log_and_fund_source(kwargs['workspace_id'])
 
-        create_expense_groups(kwargs['workspace_id'], fund_source, task_log)
+        create_expense_groups(kwargs['workspace_id'], fund_source, task_log, imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
         return Response(
             status=status.HTTP_200_OK
