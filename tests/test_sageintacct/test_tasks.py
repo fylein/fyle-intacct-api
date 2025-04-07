@@ -9,6 +9,7 @@ from django.conf import settings
 from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
 from fyle_intacct_api.exceptions import BulkError
@@ -1399,7 +1400,7 @@ def test_schedule_journal_entries_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_journal_entries_creation(workspace_id, [1], False, 1)
+    schedule_journal_entries_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_JOURNAL_ENTRIES').count() != 0
 
@@ -1410,7 +1411,7 @@ def test_schedule_expense_reports_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_expense_reports_creation(workspace_id, [1], False, 1)
+    schedule_expense_reports_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_EXPENSE_REPORTS').count() != 0
 
@@ -1421,7 +1422,7 @@ def test_schedule_bills_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_bills_creation(workspace_id, [1], False, 1)
+    schedule_bills_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_BILLS').count() != 0
 
@@ -1432,7 +1433,7 @@ def test_schedule_charge_card_transaction_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1)
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_CHARGE_CARD_TRANSACTIONS').count() != 0
 
