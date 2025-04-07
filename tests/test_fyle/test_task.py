@@ -327,7 +327,7 @@ def test_import_and_export_expenses(mocker, db, test_connection):
     """
     Test import and export expenses
     """
-    mocker.patch(
+    mock_call = mocker.patch(
         'fyle_integrations_platform_connector.apis.Expenses.get',
         return_value=data['expenses_webhook']
     )
@@ -339,4 +339,4 @@ def test_import_and_export_expenses(mocker, db, test_connection):
         imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC
     )
 
-    assert 1 == 1
+    assert mock_call.call_count == 1
