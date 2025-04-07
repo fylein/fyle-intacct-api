@@ -1783,9 +1783,9 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
     if fund_source == 'CCC' and configuration.corporate_credit_card_expenses_object:
         ccc_group_ids = list(get_filtered_expense_group_ids(expense_group_filters=expense_group_filters))
 
-        if ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
+        if ccc_group_ids and (configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
             configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.use_merchant_in_journal_line
-        ):
+        )):
             vendors = Expense.objects.filter(
                 workspace_id=workspace_id,
                 expensegroup__id__in=ccc_group_ids,
