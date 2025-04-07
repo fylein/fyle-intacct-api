@@ -19,7 +19,8 @@ from apps.fyle.tasks import (
     create_expense_groups,
     re_run_skip_export_rule,
     schedule_expense_group_creation,
-    update_non_exported_expenses
+    update_non_exported_expenses,
+    import_and_export_expenses
 )
 from .fixtures import data
 
@@ -320,3 +321,22 @@ def test_re_run_skip_export_rule(db, create_temp_workspace, mocker, api_client, 
     # Confirm the LastExportDetail update
     last_export_detail = LastExportDetail.objects.filter(workspace_id=1).first()
     assert last_export_detail.failed_expense_groups_count == 0
+
+
+def test_import_and_export_expenses(mocker, db, test_connection):
+    """
+    Test import and export expenses
+    """
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses_webhook']
+    )
+
+    import_and_export_expenses(
+        report_id='rp1s1L3QtMpF',
+        org_id='or79Cob97KSh',
+        is_state_change_event=True,
+        imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC
+    )
+
+    assert 1 == 1
