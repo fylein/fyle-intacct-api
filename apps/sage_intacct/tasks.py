@@ -1781,7 +1781,7 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
 
     # CCC Vendors
     if fund_source == 'CCC' and configuration.corporate_credit_card_expenses_object:
-        ccc_group_ids = list(get_filtered_expense_group_ids(fund_source='CCC', expense_group_filters=expense_group_filters))
+        ccc_group_ids = list(get_filtered_expense_group_ids(expense_group_filters=expense_group_filters))
 
         if ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
             configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.use_merchant_in_journal_line
@@ -1799,7 +1799,7 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
 
     # Reimbursable Vendors
     if fund_source == 'PERSONAL' and configuration.reimbursable_expenses_object in ['BILL', 'JOURNAL_ENTRY'] and configuration.employee_field_mapping == 'VENDOR':
-        reimb_group_ids = list(get_filtered_expense_group_ids(fund_source='PERSONAL', expense_group_filters=expense_group_filters))
+        reimb_group_ids = list(get_filtered_expense_group_ids(expense_group_filters=expense_group_filters))
 
         employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=reimb_group_ids)
         vendors_list.update(name for name in employee_names if name)
@@ -1821,14 +1821,13 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
             sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
 
 
-def get_filtered_expense_group_ids(fund_source: str, expense_group_filters: dict) -> list:
+def get_filtered_expense_group_ids(expense_group_filters: dict) -> list:
     """
     Get expense group ids
     :param fund_source: Fund Source
     :param expense_group_filters: Expense group filter
     """
     return ExpenseGroup.objects.filter(
-        fund_source=fund_source,
         **expense_group_filters
     ).values_list('id', flat=True)
 
