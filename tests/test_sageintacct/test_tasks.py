@@ -1933,7 +1933,7 @@ def test_search_and_upsert_vendors_ccc(db, mocker):
 
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
     configuration.use_merchant_in_journal_line = False
-    configuration.employee_field_mapping == 'VENDOR'
+    configuration.employee_field_mapping = 'VENDOR'
     configuration.save()
 
     search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='CCC')
@@ -1950,7 +1950,7 @@ def test_search_and_upsert_vendors_personal(db, mocker):
     expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
 
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
-    configuration.employee_field_mapping == 'VENDOR'
+    configuration.employee_field_mapping = 'VENDOR'
     configuration.save()
 
     mock_search_and_create_vendors = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.search_and_create_vendors')
