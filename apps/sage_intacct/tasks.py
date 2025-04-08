@@ -112,7 +112,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_grou
 
         supdoc_base_id = expense_group.id
         attachment_number = 1
-        final_supdoc_id = None
+        final_supdoc_id = False
 
         for file_ids in file_ids_list:
             for file_id in file_ids:
