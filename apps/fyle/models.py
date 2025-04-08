@@ -9,6 +9,8 @@ from django.db.models.fields.json import KeyTextTransform
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
+from fyle_accounting_library.fyle_platform.constants import IMPORTED_FROM_CHOICES
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from apps.users.models import User
 from apps.workspaces.models import Workspace, Configuration
@@ -134,6 +136,7 @@ class Expense(models.Model):
     cost_center = models.CharField(max_length=255, null=True, blank=True, help_text='Fyle Expense Cost Center')
     purpose = models.TextField(null=True, blank=True, help_text='Purpose')
     report_id = models.CharField(max_length=255, help_text='Report ID')
+    imported_from = models.CharField(choices=IMPORTED_FROM_CHOICES, max_length=255, help_text='Imported from source', null=True)
     bank_transaction_id = models.CharField(max_length=255, null=True, blank=True, help_text='Bank Transaction ID')
     spent_at = models.DateTimeField(null=True, help_text='Expense spent at')
     approved_at = models.DateTimeField(null=True, help_text='Expense approved at')
@@ -164,7 +167,7 @@ class Expense(models.Model):
         db_table = 'expenses'
 
     @staticmethod
-    def create_expense_objects(expenses: list[dict], workspace_id: int, skip_update: bool = False) -> list["Expense"]:
+    def create_expense_objects(expenses: list[dict], workspace_id: int, skip_update: bool = False, imported_from: ExpenseImportSourceEnum = None) -> list["Expense"]:
         """
         Bulk create expense objects
         """
@@ -223,10 +226,17 @@ class Expense(models.Model):
             if expense_data_to_append:
                 defaults.update(expense_data_to_append)
 
-            expense_object, _ = Expense.objects.update_or_create(
+            expense_object, created = Expense.objects.update_or_create(
                 expense_id=expense['id'],
                 defaults=defaults
             )
+
+            # Only set imported_from for newly created expenses
+            if created and imported_from:
+                expense_object.imported_from = imported_from
+                expense_object.save(
+                    update_fields=['imported_from']
+                )
 
             if not ExpenseGroup.objects.filter(expenses__id=expense_object.id).first():
                 expense_objects.append(expense_object)

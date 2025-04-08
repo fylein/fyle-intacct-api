@@ -9,6 +9,7 @@ from django.conf import settings
 from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
 from fyle_intacct_api.exceptions import BulkError
@@ -1276,12 +1277,12 @@ def test_check_sage_intacct_object_status(mocker, db):
     Test check_sage_intacct_object_status
     """
     mocker.patch(
-        'sageintacctsdk.apis.Bills.get',
-        return_value=data['get_bill']
+        'sageintacctsdk.apis.Bills.get_by_query',
+        return_value=data['get_by_query']
     )
     mocker.patch(
-        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_report',
-        return_value=data['expense_report_response']['data']
+        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_reports',
+        return_value=data['expense_report_get_bulk']
     )
     workspace_id = 1
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -1321,7 +1322,7 @@ def test_check_sage_intacct_object_status(mocker, db):
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
 
-    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_report') as mock_call:
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_reports') as mock_call:
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         check_sage_intacct_object_status(workspace_id)
 
@@ -1399,7 +1400,7 @@ def test_schedule_journal_entries_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_journal_entries_creation(workspace_id, [1], False, 1)
+    schedule_journal_entries_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_JOURNAL_ENTRIES').count() != 0
 
@@ -1410,7 +1411,7 @@ def test_schedule_expense_reports_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_expense_reports_creation(workspace_id, [1], False, 1)
+    schedule_expense_reports_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_EXPENSE_REPORTS').count() != 0
 
@@ -1421,7 +1422,7 @@ def test_schedule_bills_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_bills_creation(workspace_id, [1], False, 1)
+    schedule_bills_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_BILLS').count() != 0
 
@@ -1432,7 +1433,7 @@ def test_schedule_charge_card_transaction_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1)
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_CHARGE_CARD_TRANSACTIONS').count() != 0
 

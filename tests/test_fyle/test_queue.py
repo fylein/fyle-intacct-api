@@ -118,3 +118,24 @@ def test_validate_failing_export(db):
     skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, expense_group=expense_group)
 
     assert skip_export is False
+
+
+# This test is just for cov :D (2)
+def test_async_import_and_export_expenses_2(db):
+    """
+    Test async_import_and_export_expenses_2
+    """
+    body = {
+        'action': 'STATE_CHANGE_PAYMENT_PROCESSING',
+        'data': {
+            'id': 'rp1s1L3QtMpF',
+            'org_id': 'or79Cob97KSh',
+            'state': 'APPROVED'
+        }
+    }
+
+    worksapce, _ = Workspace.objects.update_or_create(
+        fyle_org_id = 'or79Cob97KSh'
+    )
+
+    async_import_and_export_expenses(body, worksapce.id)
