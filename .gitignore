@@ -164,3 +164,6 @@ cache.db
 fyle_integrations_platform_connector/
 fyle_accounting_mappings/
 ./fyle
+fyle_accounting_library/
+common/
+consumer/

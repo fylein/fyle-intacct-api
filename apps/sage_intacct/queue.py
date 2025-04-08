@@ -6,6 +6,7 @@ from typing import List
 from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from apps.tasks.models import TaskLog
 from apps.fyle.models import ExpenseGroup
@@ -40,7 +41,8 @@ def schedule_journal_entries_creation(
     workspace_id: int,
     expense_group_ids: list[str],
     is_auto_export: bool,
-    interval_hours: int
+    interval_hours: int,
+    triggered_by: ExpenseImportSourceEnum
 ) -> None:
     """
     Schedule journal entries creation
@@ -81,11 +83,14 @@ def schedule_journal_entries_creation(
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_JOURNAL_ENTRIES'
+                    'type': 'CREATING_JOURNAL_ENTRIES',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
 
             last_export = False
@@ -135,7 +140,7 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
     return False
 
 
-def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int) -> None:
+def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
     """
     Schedule expense reports creation
     :param expense_group_ids: List of expense group ids
@@ -167,11 +172,14 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_EXPENSE_REPORTS'
+                    'type': 'CREATING_EXPENSE_REPORTS',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
 
             last_export = False
@@ -189,7 +197,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
             __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
 
 
-def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int) -> None:
+def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
     """
     Schedule bill creation
     :param expense_group_ids: List of expense group ids
@@ -228,11 +236,14 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_BILLS'
+                    'type': 'CREATING_BILLS',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
 
             last_export = False
@@ -250,7 +261,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
             __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
 
 
-def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int) -> None:
+def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
     """
     Schedule charge card transaction creation
     :param expense_group_ids: List of expense group ids
@@ -289,11 +300,14 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_CHARGE_CARD_TRANSACTIONS'
+                    'type': 'CREATING_CHARGE_CARD_TRANSACTIONS',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
 
             last_export = False
