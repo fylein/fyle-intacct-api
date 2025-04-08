@@ -1793,7 +1793,7 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
             ).values_list('vendor', flat=True)
             vendors_list.update(v for v in vendors if v)
 
-        if ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
+        elif ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
             employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=ccc_group_ids)
             vendors_list.update(name for name in employee_names if name)
 

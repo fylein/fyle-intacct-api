@@ -6,9 +6,10 @@ from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 
 from django.conf import settings
+from django.core.cache import cache
 from django_q.models import Schedule
 
-from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute
+from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
 from fyle_intacct_api.exceptions import BulkError
@@ -42,6 +43,7 @@ from apps.sage_intacct.queue import (
 from apps.sage_intacct.tasks import (
     __validate_employee_mapping,
     __validate_expense_group,
+    check_cache_and_search_vendors,
     check_sage_intacct_object_status,
     create_ap_payment,
     create_bill,
@@ -50,11 +52,13 @@ from apps.sage_intacct.tasks import (
     create_journal_entry,
     create_or_update_employee_mapping,
     create_sage_intacct_reimbursement,
+    get_employee_as_vendors_name,
     get_or_create_credit_card_vendor,
     handle_sage_intacct_errors,
     load_attachments,
     mark_paid_on_fyle,
     process_fyle_reimbursements,
+    search_and_upsert_vendors,
     update_last_export_details,
     validate_for_skipping_payment
 )
@@ -1837,3 +1841,121 @@ def test_mark_paid_on_fyle(db, mocker):
 
     # Verify expenses are marked as paid despite the error
     assert not Expense.objects.filter(report_id__in=reports_to_be_marked, workspace_id=workspace_id, paid_on_fyle=False).exists()
+
+
+def test_check_cache_and_search_vendors(db, mocker):
+    """
+    Test check_cache_and_search_vendors
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
+    fund_source = expense_group.fund_source
+    expense_group_ids = [expense_group.id]
+
+    cache.delete(f"{fund_source}_vendor_cache_{workspace_id}")
+
+    mock_search_and_upsert_vendors = mocker.patch(
+        'apps.sage_intacct.tasks.search_and_upsert_vendors'
+    )
+
+    check_cache_and_search_vendors(workspace_id, expense_group_ids, fund_source)
+
+    assert mock_search_and_upsert_vendors.call_count == 1
+
+    cache.set(f"{fund_source}_vendor_cache_{workspace_id}", datetime.now(tz=timezone.utc))
+
+    check_cache_and_search_vendors(workspace_id, expense_group_ids, fund_source)
+
+    assert mock_search_and_upsert_vendors.call_count == 1
+
+
+def test_get_filtered_expense_group_ids(db):
+    """
+    Test get_filtered_expense_group_ids
+    """
+    expense_group_filters = {
+        'fund_source': 'PERSONAL',
+        'workspace_id': 1
+    }
+
+    expense_group = ExpenseGroup.objects.filter(**expense_group_filters).first()
+
+    assert expense_group.workspace.id == 1
+    assert expense_group.fund_source == 'PERSONAL'
+
+
+def test_get_employee_as_vendors_name(db):
+    """
+    Test get_employee_as_vendors_name
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).last()
+    expense_group_ids = [expense_group.id]
+    expense_group.expenses.update(workspace_id=workspace_id, employee_email='hrishabh.test@test.com')
+    expense_group.save()
+
+    employee = ExpenseAttribute.objects.filter(value='ashwin.t@fyle.in').first()
+
+    employee.id = 10
+    employee.value = 'hrishabh.test@test.com'
+    employee.workspace_id = workspace_id
+    employee.detail = {'full_name': 'Ashwin T'}
+    employee.save()
+
+    employee_as_vendors = get_employee_as_vendors_name(workspace_id, expense_group_ids)
+
+    assert list(employee_as_vendors) == ['Ashwin T']
+
+
+def test_search_and_upsert_vendors_ccc(db, mocker):
+    """
+    Test search_and_upsert_vendors ccc
+    """
+    workspace_id = 1
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
+
+    configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    configuration.save()
+
+    expense_group.fund_source = 'CCC'
+    expense_group.expenses.update(vendor='Test Vendor', workspace_id=workspace_id)
+    expense_group.save()
+
+    mock_search_and_create_vendors = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.search_and_create_vendors')
+    mocker.patch('apps.sage_intacct.tasks.get_filtered_expense_group_ids', return_value=[expense_group.id])
+    mocker.patch('apps.sage_intacct.tasks.get_employee_as_vendors_name', return_value=['Ashwin T'])
+
+    search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='CCC')
+
+    assert mock_search_and_create_vendors.call_count == 1
+
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.use_merchant_in_journal_line = False
+    configuration.employee_field_mapping == 'VENDOR'
+    configuration.save()
+
+    search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='CCC')
+
+    assert mock_search_and_create_vendors.call_count == 2
+
+
+def test_search_and_upsert_vendors_personal(db, mocker):
+    """
+    Test search_and_upsert_vendors personal
+    """
+    workspace_id = 1
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
+
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.employee_field_mapping == 'VENDOR'
+    configuration.save()
+
+    mock_search_and_create_vendors = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.search_and_create_vendors')
+    mocker.patch('apps.sage_intacct.tasks.get_filtered_expense_group_ids', return_value=[expense_group.id])
+    mocker.patch('apps.sage_intacct.tasks.get_employee_as_vendors_name', return_value=['Ashwin T'])
+
+    search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='PERSONAL')
+
+    assert mock_search_and_create_vendors.call_count == 1
