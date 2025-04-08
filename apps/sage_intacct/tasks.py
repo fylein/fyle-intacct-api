@@ -453,16 +453,7 @@ def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Conf
         })
 
         if employee_attribute:
-            error, created = Error.objects.update_or_create(
-                workspace_id=workspace_id,
-                expense_attribute=employee_attribute,
-                defaults={
-                    'type': 'EMPLOYEE_MAPPING',
-                    'error_title': employee_attribute.value,
-                    'error_detail': 'Employee mapping is missing',
-                    'is_resolved': False
-                }
-            )
+            error, created = Error.get_or_create_error_with_expense_group(expense_group, employee_attribute)
             error.increase_repetition_count_by_one(created)
 
     if bulk_errors:
@@ -561,16 +552,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
             })
 
             if category_attribute:
-                error, created = Error.objects.update_or_create(
-                    workspace_id=expense_group.workspace_id,
-                    expense_attribute=category_attribute,
-                    defaults={
-                        'type': 'CATEGORY_MAPPING',
-                        'error_title': category_attribute.value,
-                        'error_detail': 'Category mapping is missing',
-                        'is_resolved': False
-                    }
-                )
+                error, created = Error.get_or_create_error_with_expense_group(expense_group, category_attribute)
                 error.increase_repetition_count_by_one(created)
 
         if configuration.import_tax_codes:
