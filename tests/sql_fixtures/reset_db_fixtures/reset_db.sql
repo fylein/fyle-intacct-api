@@ -5860,6 +5860,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 220	rabbitmq	0002_alter_failedevent_error_traceback	2025-04-07 15:36:06.386096+00
 221	rabbitmq	0003_alter_failedevent_created_at_and_more	2025-04-07 15:36:06.392208+00
 222	tasks	0012_tasklog_triggered_by	2025-04-07 15:36:06.403887+00
+223	fyle	0040_expense_expenses_workspa_495459_idx_and_more	2025-04-09 07:16:34.327207+00
 \.
 
 
@@ -9891,7 +9892,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 222, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 223, true);
 
 
 --
@@ -11212,10 +11213,31 @@ CREATE INDEX expense_report_lineitems_expense_report_id_4c7e2508 ON public.expen
 
 
 --
+-- Name: expenses_account_ddcaed_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_account_ddcaed_idx ON public.expenses USING btree (accounting_export_summary);
+
+
+--
 -- Name: expenses_expense_id_0e3511ea_like; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX expenses_expense_id_0e3511ea_like ON public.expenses USING btree (expense_id varchar_pattern_ops);
+
+
+--
+-- Name: expenses_fund_so_eb83bb_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_fund_so_eb83bb_idx ON public.expenses USING btree (fund_source);
+
+
+--
+-- Name: expenses_workspa_495459_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_workspa_495459_idx ON public.expenses USING btree (workspace_id);
 
 
 --

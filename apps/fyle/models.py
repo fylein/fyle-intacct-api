@@ -165,6 +165,11 @@ class Expense(models.Model):
 
     class Meta:
         db_table = 'expenses'
+        indexes = [
+            models.Index(fields=['workspace_id']),
+            models.Index(fields=['accounting_export_summary']),
+            models.Index(fields=['fund_source'])
+        ]
 
     @staticmethod
     def create_expense_objects(expenses: list[dict], workspace_id: int, skip_update: bool = False, imported_from: ExpenseImportSourceEnum = None) -> list["Expense"]:
