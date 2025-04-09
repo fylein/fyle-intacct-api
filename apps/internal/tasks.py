@@ -1,5 +1,6 @@
 import logging
-from datetime import datetime, timedelta
+from random import randint
+from datetime import datetime, timedelta, timezone
 
 from django.db.models import Q
 from django_q.models import OrmQ, Schedule
@@ -8,7 +9,7 @@ from apps.fyle.actions import update_failed_expenses
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
-from apps.workspaces.models import Workspace
+from apps.workspaces.models import LastExportDetail, Workspace
 
 
 logger = logging.getLogger(__name__)
@@ -63,3 +64,63 @@ def re_export_stuck_exports() -> None:
                 export_expense_group_ids = expense_groups.filter(workspace_id=workspace_id).values_list('id', flat=True)
                 logger.info('Re-triggering export for expense group %s since no 1 hour schedule for workspace  %s', export_expense_group_ids, workspace_id)
                 export_to_intacct(workspace_id, 'AUTO', export_expense_group_ids)
+
+
+def pause_and_resume_export_schedules() -> None:
+    """
+    Pauses and resumes export schedules based on the current time.
+    If the export failure count > 50 and the run_sync_schedule is present move it to +30 days,
+    if the error count is < 50 and run_sync_schedule has moved to >25 days, move it to now + interval hours
+    """
+    current_time = datetime.now(timezone.utc)
+    workspaces_with_gt_50_failed_exports = list(LastExportDetail.objects.filter(
+        failed_expense_groups_count__gt=50,
+        updated_at__gte=current_time - timedelta(hours=12),
+    ).values_list('workspace_id', flat=True))
+
+    workspaces_with_lt_50_failed_exports = list(LastExportDetail.objects.filter(
+        failed_expense_groups_count__lt=50,
+        updated_at__gte=current_time - timedelta(hours=12),
+    ).values_list('workspace_id', flat=True))
+
+    schedules_to_pause = []
+    paused_workspace_ids = []
+
+    schedules = Schedule.objects.filter(
+        args__in=(str(workspace_id) for workspace_id in workspaces_with_gt_50_failed_exports),
+        func='apps.workspaces.tasks.run_sync_schedule',
+        next_run__lt=current_time + timedelta(days=25)
+    ).all()
+
+    if schedules:
+        for schedule in schedules:
+            schedule.next_run = current_time + timedelta(days=30) + timedelta(hours=randint(0, 5)) + timedelta(minutes=randint(0, 60))  # just for scattering schedules
+            schedules_to_pause.append(schedule)
+            paused_workspace_ids.append(schedule.args)
+
+        Schedule.objects.bulk_update(
+            schedules_to_pause,
+            ['next_run']
+        )
+        logger.info('Paused export schedules for workspaces with > 50 failed exports: %s', paused_workspace_ids)
+
+    schedules_to_resume = []
+    resumed_workspace_ids = []
+
+    schedules = Schedule.objects.filter(
+        args__in=(str(workspace_id) for workspace_id in workspaces_with_lt_50_failed_exports),
+        func='apps.workspaces.tasks.run_sync_schedule',
+        next_run__gt=current_time + timedelta(days=25)
+    ).all()
+
+    if schedules:
+        for schedule in schedules:
+            schedule.next_run = current_time + timedelta(hours=randint(0, 5)) + timedelta(minutes=randint(0, 60))  # just for scattering schedules
+            schedules_to_resume.append(schedule)
+            resumed_workspace_ids.append(schedule.args)
+
+        Schedule.objects.bulk_update(
+            schedules_to_resume,
+            ['next_run']
+        )
+        logger.info('Resumed export schedules for workspaces with < 50 failed exports: %s', resumed_workspace_ids)
