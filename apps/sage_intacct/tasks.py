@@ -39,8 +39,7 @@ from apps.workspaces.models import (
     SageIntacctCredential,
     FyleCredential,
     Configuration,
-    LastExportDetail,
-    Workspace
+    LastExportDetail
 )
 from apps.sage_intacct.models import (
     ExpenseReport,
