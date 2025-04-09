@@ -100,33 +100,36 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
 
 def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_group: ExpenseGroup) -> str:
     """
-    Get attachments from fyle
+    Get attachments from Fyle and upload them to Sage Intacct
     :param sage_intacct_connection: Sage Intacct Connection
-    :param key: expense report / bills key
     :param expense_group: Expense group
+    :return: Final supdoc_id string if successful, else None
     """
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
-        file_ids = expense_group.expenses.values_list('file_ids', flat=True)
+        file_ids_list = expense_group.expenses.values_list('file_ids', flat=True)
         platform = PlatformConnector(fyle_credentials)
 
-        files_list = []
-        attachments = []
-        for file_id in file_ids:
-            for id in file_id:
-                file_object = {'id': id}
-                files_list.append(file_object)
+        supdoc_base_id = expense_group.id
+        attachment_number = 1
+        final_supdoc_id = False
 
-        if files_list:
-            attachments = platform.files.bulk_generate_file_urls(files_list)
+        for file_ids in file_ids_list:
+            for file_id in file_ids:
+                attachment = platform.files.bulk_generate_file_urls([{'id': file_id}])
+                supdoc_id = sage_intacct_connection.post_attachments(attachment, supdoc_base_id, attachment_number)
 
-        supdoc_id = expense_group.id
-        return sage_intacct_connection.post_attachments(attachments, supdoc_id)
+                if supdoc_id and attachment_number == 1:
+                    final_supdoc_id = supdoc_id
+
+                attachment_number += 1
+
+        return final_supdoc_id
 
     except Exception:
         error = traceback.format_exc()
         logger.info(
-            'Attachment failed for expense group id %s / workspace id %s Error: %s',
+            'Attachment failed for expense group id %s / workspace id %s. Error: %s',
             expense_group.id, expense_group.workspace_id, {'error': error}
         )
 
