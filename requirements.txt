@@ -29,11 +29,10 @@ sendgrid==6.11.0
 python-dateutil==2.8.2
 django-filter==24.3
 pytz==2024.2
-wheel==0.42.0
 
 # Linting
 flake8==7.1.1
 flake8-docstrings==1.7.0
 flake8-annotations==3.1.1
 
-git+https://github.com/fylein/pgevents.git@master#egg=pgevents
+git+https://github.com/fylein/pgevents.git@main#egg=pgevents
