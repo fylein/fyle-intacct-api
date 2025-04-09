@@ -1851,7 +1851,6 @@ def test_check_cache_and_search_vendors(db, mocker):
     workspace_id = 1
     expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
     fund_source = expense_group.fund_source
-    expense_group_ids = [expense_group.id]
 
     cache.delete(f"{fund_source}_vendor_cache_{workspace_id}")
 
@@ -1859,13 +1858,13 @@ def test_check_cache_and_search_vendors(db, mocker):
         'apps.sage_intacct.tasks.search_and_upsert_vendors'
     )
 
-    check_cache_and_search_vendors(workspace_id, expense_group_ids, fund_source)
+    check_cache_and_search_vendors(workspace_id, fund_source)
 
     assert mock_search_and_upsert_vendors.call_count == 1
 
     cache.set(f"{fund_source}_vendor_cache_{workspace_id}", datetime.now(tz=timezone.utc))
 
-    check_cache_and_search_vendors(workspace_id, expense_group_ids, fund_source)
+    check_cache_and_search_vendors(workspace_id, fund_source)
 
     assert mock_search_and_upsert_vendors.call_count == 1
 

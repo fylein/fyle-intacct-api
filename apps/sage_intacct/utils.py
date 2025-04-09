@@ -1959,34 +1959,37 @@ class SageIntacctConnector:
         :param workspace_id: Workspace ID
         :param missing_vendors: Missing Vendors List
         """
-        vendors_list = [vendor.replace("'", "\\'") for vendor in missing_vendors]
+        missing_vendors_batch = [missing_vendors[i:i + 50] for i in range(0, len(missing_vendors), 50)]
 
-        and_filter = [('in', 'NAME', vendors_list), ('equalto', 'STATUS', 'active')]
+        for missing_vendors_batch in missing_vendors_batch:
+            vendors_list = [vendor.replace("'", "\\'") for vendor in missing_vendors_batch]
 
-        fields = ['NAME', 'VENDORID', 'DISPLAYCONTACT.EMAIL1', 'WHENMODIFIED']
+            and_filter = [('in', 'NAME', vendors_list), ('equalto', 'STATUS', 'active')]
 
-        vendors = self.connection.vendors.get_by_query(and_filter=and_filter, fields=fields)
+            fields = ['NAME', 'VENDORID', 'DISPLAYCONTACT.EMAIL1', 'WHENMODIFIED']
 
-        # To Keep only most recently modified vendor for each name
-        unique_vendors = {}
+            vendors = self.connection.vendors.get_by_query(and_filter=and_filter, fields=fields)
 
-        for vendor in vendors:
-            name_key = vendor.get('NAME', '')
-            when_modified_str = vendor.get('WHENMODIFIED')
-            when_modified = datetime.strptime(when_modified_str, "%m/%d/%Y %H:%M:%S")
+            # To Keep only most recently modified vendor for each name
+            unique_vendors = {}
 
-            if name_key not in unique_vendors:
-                unique_vendors[name_key] = (vendor, when_modified)
-            else:
-                _, existing_date = unique_vendors[name_key]
-                if when_modified > existing_date:
+            for vendor in vendors:
+                name_key = vendor.get('NAME', '')
+                when_modified_str = vendor.get('WHENMODIFIED')
+                when_modified = datetime.strptime(when_modified_str, "%m/%d/%Y %H:%M:%S")
+
+                if name_key not in unique_vendors:
                     unique_vendors[name_key] = (vendor, when_modified)
+                else:
+                    _, existing_date = unique_vendors[name_key]
+                    if when_modified > existing_date:
+                        unique_vendors[name_key] = (vendor, when_modified)
 
-        for vendor, _ in unique_vendors.values():
-            logger.info("Upserting Vendor %s in Workspace %s", vendor['NAME'], workspace_id)
-            self.create_destination_attribute(
-                'vendor',
-                vendor['NAME'],
-                vendor['VENDORID'],
-                vendor.get('DISPLAYCONTACT.EMAIL1')
-            )
+            for vendor, _ in unique_vendors.values():
+                logger.info("Upserting Vendor %s in Workspace %s", vendor['NAME'], workspace_id)
+                self.create_destination_attribute(
+                    'vendor',
+                    vendor['NAME'],
+                    vendor['VENDORID'],
+                    vendor.get('DISPLAYCONTACT.EMAIL1')
+                )

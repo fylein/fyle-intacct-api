@@ -1867,7 +1867,7 @@ def get_employee_as_vendors_name(workspace_id: int, expense_group_ids: list) -> 
     return unmapped_employee_names
 
 
-def check_cache_and_search_vendors(workspace_id: int, expense_group_ids: list, fund_source: str) -> None:
+def check_cache_and_search_vendors(workspace_id: int, fund_source: str) -> None:
     """
     Check cache and search vendors in Intacct
     :param workspace_id: Workspace ID
@@ -1875,7 +1875,8 @@ def check_cache_and_search_vendors(workspace_id: int, expense_group_ids: list, f
     :param fund source: CCC/PERSONAL
     """
     expense_group_filters = {
-        'id__in': expense_group_ids,
+        'workspace_id': workspace_id,
+        'exported_at__isnull': True,
         'fund_source': fund_source
     }
 

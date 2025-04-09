@@ -30,7 +30,7 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], is_auto_e
 
     for task in chain_tasks:
         if task['target'] == 'apps.sage_intacct.tasks.check_cache_and_search_vendors':
-            chain.append(task['target'], workspace_id=workspace_id, expense_group_ids=task['expense_group_ids'], fund_source=task['fund_source'])
+            chain.append(task['target'], workspace_id=workspace_id, fund_source=task['fund_source'])
             continue
         chain.append(task['target'], task['expense_group'], task['task_log_id'], task['last_export'], is_auto_export)
 
@@ -67,7 +67,6 @@ def schedule_journal_entries_creation(
 
         chain_tasks.append({
             'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
-            'expense_group_ids': expense_group_ids,
             'fund_source': fund_source,
         })
 
@@ -220,7 +219,6 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
 
         chain_tasks.append({
             'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
-            'expense_group_ids': expense_group_ids,
             'fund_source': fund_source,
         })
 
@@ -285,7 +283,6 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
 
         chain_tasks.append({
             'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
-            'expense_group_ids': expense_group_ids,
             'fund_source': fund_source,
         })
 
