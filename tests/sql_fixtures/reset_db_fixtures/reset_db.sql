@@ -2195,7 +2195,8 @@ CREATE TABLE public.errors (
     article_link text,
     attribute_type character varying(255),
     is_parsed boolean NOT NULL,
-    repetition_count integer NOT NULL
+    repetition_count integer NOT NULL,
+    mapping_error_expense_group_ids integer[] NOT NULL
 );
 
 
@@ -3052,6 +3053,36 @@ ALTER TABLE public.fyle_rest_auth_authtokens_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE public.fyle_rest_auth_authtokens_id_seq OWNED BY public.auth_tokens.id;
 
+
+--
+-- Name: huge_export_failing_orgs_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.huge_export_failing_orgs_view AS
+ SELECT last_export_details.workspace_id,
+    last_export_details.failed_expense_groups_count AS count
+   FROM public.last_export_details
+  WHERE ((last_export_details.failed_expense_groups_count > 50) AND (last_export_details.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)));
+
+
+ALTER TABLE public.huge_export_failing_orgs_view OWNER TO postgres;
+
+--
+-- Name: huge_export_volume_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.huge_export_volume_view AS
+ SELECT task_logs.workspace_id,
+    count(*) AS count
+   FROM public.task_logs
+  WHERE (((task_logs.status)::text = ANY ((ARRAY['ENQUEUED'::character varying, 'IN_PROGRESS'::character varying])::text[])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND (task_logs.updated_at >= (now() - '1 day'::interval)))
+  GROUP BY task_logs.workspace_id
+ HAVING (count(*) > 200);
+
+
+ALTER TABLE public.huge_export_volume_view OWNER TO postgres;
 
 --
 -- Name: import_logs_fatal_failed_in_progress_tasks_view; Type: VIEW; Schema: public; Owner: postgres
@@ -5871,6 +5902,9 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 225	internal	0007_auto_generated_sql	2025-04-10 16:29:32.570096+00
 226	internal	0008_auto_generated_sql	2025-04-10 16:29:32.573865+00
 227	tasks	0013_alter_tasklog_triggered_by	2025-04-10 16:29:32.590805+00
+228	internal	0009_auto_generate_sql	2025-04-10 19:15:23.717883+00
+229	tasks	0013_error_mapping_error_expense_group_ids	2025-04-10 19:15:23.729634+00
+230	tasks	0014_merge_20250410_1914	2025-04-10 19:15:23.73096+00
 \.
 
 
@@ -5967,7 +6001,7 @@ COPY public.employee_mappings (id, created_at, updated_at, destination_card_acco
 -- Data for Name: errors; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed, repetition_count) FROM stdin;
+COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed, repetition_count, mapping_error_expense_group_ids) FROM stdin;
 \.
 
 
@@ -9903,7 +9937,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 227, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 230, true);
 
 
 --
