@@ -1951,9 +1951,9 @@ class SageIntacctConnector:
         :param workspace_id: Workspace ID
         :param missing_vendors: Missing Vendors List
         """
-        missing_vendors_batch = [missing_vendors[i:i + 50] for i in range(0, len(missing_vendors), 50)]
+        missing_vendors_batches = [missing_vendors[i:i + 50] for i in range(0, len(missing_vendors), 50)]
 
-        for missing_vendors_batch in missing_vendors_batch:
+        for missing_vendors_batch in missing_vendors_batches:
             vendors_list = [vendor.replace("'", "\\'") for vendor in missing_vendors_batch]
 
             and_filter = [('in', 'NAME', vendors_list), ('equalto', 'STATUS', 'active')]
