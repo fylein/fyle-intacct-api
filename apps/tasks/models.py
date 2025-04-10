@@ -23,6 +23,7 @@ ERROR_TYPE_CHOICES = (
 
 TRIGGERED_BY_CHOICES = IMPORTED_FROM_CHOICES + (('INTERNAL', 'INTERNAL'),)
 
+
 def get_default() -> dict:
     """
     Default value for JSONField
