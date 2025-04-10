@@ -159,6 +159,12 @@ BEGIN
     RAISE NOTICE 'Deleted % dependent_field_settings', rcount;
 
     DELETE
+    FROM dimension_details dd
+    WHERE dd.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % dimension_details', rcount;
+
+    DELETE
     FROM cost_types ct
     WHERE ct.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
@@ -5860,6 +5866,10 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 220	rabbitmq	0002_alter_failedevent_error_traceback	2025-04-07 15:36:06.386096+00
 221	rabbitmq	0003_alter_failedevent_created_at_and_more	2025-04-07 15:36:06.392208+00
 222	tasks	0012_tasklog_triggered_by	2025-04-07 15:36:06.403887+00
+223	fyle	0040_expense_expenses_account_ddcaed_idx_and_more	2025-04-09 18:47:15.966589+00
+224	internal	0007_auto_generated_sql	2025-04-09 18:47:15.968763+00
+225	fyle	0040_expense_expenses_account_ff34f0_idx_and_more	2025-04-10 08:50:42.897786+00
+226	internal	0008_auto_generated_sql	2025-04-10 08:50:42.911293+00
 \.
 
 
@@ -5882,6 +5892,7 @@ COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repe
 4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-5	2022-09-30 08:46:25.0608+00	3bdcf280bd6c42a197ad24f932ce39c7	\N	1440	\N	\N	\N
 6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-4	2022-09-30 08:47:19.647275+00	334370e333c54c669f6bc9e876d3ec60	\N	1440	\N	\N	\N
 93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-03-05 13:25:42.96495+00	\N	\N	60	\N	import	\N
+188	apps.internal.tasks.pause_and_resume_export_schedules	\N	\N	\N	I	-1	2025-04-09 18:57:15.967713+00	\N	\N	1440	\N	import	\N
 \.
 
 
@@ -9814,14 +9825,14 @@ COPY public.workspaces_user (id, workspace_id, user_id, created_at) FROM stdin;
 -- Name: ap_payment_lineitems_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ap_payment_lineitems_id_seq', 8, true);
+SELECT pg_catalog.setval('public.ap_payment_lineitems_id_seq', 16, true);
 
 
 --
 -- Name: ap_payments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ap_payments_id_seq', 8, true);
+SELECT pg_catalog.setval('public.ap_payments_id_seq', 16, true);
 
 
 --
@@ -9849,28 +9860,28 @@ SELECT pg_catalog.setval('public.auth_permission_id_seq', 208, true);
 -- Name: category_mappings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.category_mappings_id_seq', 140, true);
+SELECT pg_catalog.setval('public.category_mappings_id_seq', 172, true);
 
 
 --
 -- Name: cost_types_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.cost_types_id_seq', 1, false);
+SELECT pg_catalog.setval('public.cost_types_id_seq', 34, true);
 
 
 --
 -- Name: dependent_fields_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.dependent_fields_id_seq', 1, false);
+SELECT pg_catalog.setval('public.dependent_fields_id_seq', 36, true);
 
 
 --
 -- Name: dimension_details_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.dimension_details_id_seq', 1, false);
+SELECT pg_catalog.setval('public.dimension_details_id_seq', 36, true);
 
 
 --
@@ -9891,42 +9902,42 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 222, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 226, true);
 
 
 --
 -- Name: django_q_ormq_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 89, true);
+SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 173, true);
 
 
 --
 -- Name: django_q_schedule_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 93, true);
+SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 282, true);
 
 
 --
 -- Name: employee_mappings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.employee_mappings_id_seq', 5, true);
+SELECT pg_catalog.setval('public.employee_mappings_id_seq', 11, true);
 
 
 --
 -- Name: errors_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.errors_id_seq', 1, false);
+SELECT pg_catalog.setval('public.errors_id_seq', 28, true);
 
 
 --
 -- Name: expense_attributes_deletion_cache_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.expense_attributes_deletion_cache_id_seq', 1, false);
+SELECT pg_catalog.setval('public.expense_attributes_deletion_cache_id_seq', 8, true);
 
 
 --
@@ -9940,70 +9951,70 @@ SELECT pg_catalog.setval('public.expense_fields_id_seq', 1, false);
 -- Name: expense_filters_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.expense_filters_id_seq', 1, false);
+SELECT pg_catalog.setval('public.expense_filters_id_seq', 8, true);
 
 
 --
 -- Name: expense_group_settings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.expense_group_settings_id_seq', 5, true);
+SELECT pg_catalog.setval('public.expense_group_settings_id_seq', 13, true);
 
 
 --
 -- Name: failed_events_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.failed_events_id_seq', 1, false);
+SELECT pg_catalog.setval('public.failed_events_id_seq', 4, true);
 
 
 --
 -- Name: fyle_accounting_mappings_destinationattribute_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_destinationattribute_id_seq', 955, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_destinationattribute_id_seq', 1491, true);
 
 
 --
 -- Name: fyle_accounting_mappings_expenseattribute_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_expenseattribute_id_seq', 3278, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_expenseattribute_id_seq', 4244, true);
 
 
 --
 -- Name: fyle_accounting_mappings_mapping_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_mapping_id_seq', 74, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_mapping_id_seq', 270, true);
 
 
 --
 -- Name: fyle_accounting_mappings_mappingsetting_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_accounting_mappings_mappingsetting_id_seq', 15, true);
+SELECT pg_catalog.setval('public.fyle_accounting_mappings_mappingsetting_id_seq', 67, true);
 
 
 --
 -- Name: fyle_expense_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_expense_id_seq', 13, true);
+SELECT pg_catalog.setval('public.fyle_expense_id_seq', 97, true);
 
 
 --
 -- Name: fyle_expensegroup_expenses_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_expensegroup_expenses_id_seq', 25, true);
+SELECT pg_catalog.setval('public.fyle_expensegroup_expenses_id_seq', 95, true);
 
 
 --
 -- Name: fyle_expensegroup_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_expensegroup_id_seq', 9, true);
+SELECT pg_catalog.setval('public.fyle_expensegroup_id_seq', 59, true);
 
 
 --
@@ -10017,28 +10028,28 @@ SELECT pg_catalog.setval('public.fyle_rest_auth_authtokens_id_seq', 1, true);
 -- Name: import_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.import_logs_id_seq', 1, false);
+SELECT pg_catalog.setval('public.import_logs_id_seq', 60, true);
 
 
 --
 -- Name: journal_entries_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.journal_entries_id_seq', 10, true);
+SELECT pg_catalog.setval('public.journal_entries_id_seq', 20, true);
 
 
 --
 -- Name: journal_entry_lineitems_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.journal_entry_lineitems_id_seq', 10, true);
+SELECT pg_catalog.setval('public.journal_entry_lineitems_id_seq', 20, true);
 
 
 --
 -- Name: last_export_details_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.last_export_details_id_seq', 4, true);
+SELECT pg_catalog.setval('public.last_export_details_id_seq', 6, true);
 
 
 --
@@ -10059,126 +10070,126 @@ SELECT pg_catalog.setval('public.mappings_generalmapping_id_seq', 1, true);
 -- Name: reimbursements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.reimbursements_id_seq', 260, true);
+SELECT pg_catalog.setval('public.reimbursements_id_seq', 262, true);
 
 
 --
 -- Name: sage_intacct_bill_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_bill_id_seq', 24, true);
+SELECT pg_catalog.setval('public.sage_intacct_bill_id_seq', 48, true);
 
 
 --
 -- Name: sage_intacct_billlineitem_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_billlineitem_id_seq', 24, true);
+SELECT pg_catalog.setval('public.sage_intacct_billlineitem_id_seq', 48, true);
 
 
 --
 -- Name: sage_intacct_chargecardtransaction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_chargecardtransaction_id_seq', 10, true);
+SELECT pg_catalog.setval('public.sage_intacct_chargecardtransaction_id_seq', 26, true);
 
 
 --
 -- Name: sage_intacct_chargecardtransactionlineitem_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_chargecardtransactionlineitem_id_seq', 10, true);
+SELECT pg_catalog.setval('public.sage_intacct_chargecardtransactionlineitem_id_seq', 20, true);
 
 
 --
 -- Name: sage_intacct_expensereport_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_expensereport_id_seq', 26, true);
+SELECT pg_catalog.setval('public.sage_intacct_expensereport_id_seq', 54, true);
 
 
 --
 -- Name: sage_intacct_expensereportlineitem_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_expensereportlineitem_id_seq', 26, true);
+SELECT pg_catalog.setval('public.sage_intacct_expensereportlineitem_id_seq', 54, true);
 
 
 --
 -- Name: sage_intacct_reimbursement_lineitems_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_reimbursement_lineitems_id_seq', 18, true);
+SELECT pg_catalog.setval('public.sage_intacct_reimbursement_lineitems_id_seq', 36, true);
 
 
 --
 -- Name: sage_intacct_reimbursements_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_reimbursements_id_seq', 18, true);
+SELECT pg_catalog.setval('public.sage_intacct_reimbursements_id_seq', 36, true);
 
 
 --
 -- Name: tasks_tasklog_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.tasks_tasklog_id_seq', 42, true);
+SELECT pg_catalog.setval('public.tasks_tasklog_id_seq', 104, true);
 
 
 --
 -- Name: update_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.update_logs_id_seq', 1, false);
+SELECT pg_catalog.setval('public.update_logs_id_seq', 312, true);
 
 
 --
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_user_id_seq', 15, true);
+SELECT pg_catalog.setval('public.users_user_id_seq', 29, true);
 
 
 --
 -- Name: workspace_schedules_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.workspace_schedules_id_seq', 6, true);
+SELECT pg_catalog.setval('public.workspace_schedules_id_seq', 14, true);
 
 
 --
 -- Name: workspaces_fylecredential_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.workspaces_fylecredential_id_seq', 3, true);
+SELECT pg_catalog.setval('public.workspaces_fylecredential_id_seq', 7, true);
 
 
 --
 -- Name: workspaces_sageintacctcredential_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.workspaces_sageintacctcredential_id_seq', 3, true);
+SELECT pg_catalog.setval('public.workspaces_sageintacctcredential_id_seq', 5, true);
 
 
 --
 -- Name: workspaces_workspace_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.workspaces_workspace_id_seq', 3, true);
+SELECT pg_catalog.setval('public.workspaces_workspace_id_seq', 5, true);
 
 
 --
 -- Name: workspaces_workspace_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.workspaces_workspace_user_id_seq', 4, true);
+SELECT pg_catalog.setval('public.workspaces_workspace_user_id_seq', 6, true);
 
 
 --
 -- Name: workspaces_workspacegeneralsettings_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.workspaces_workspacegeneralsettings_id_seq', 3, true);
+SELECT pg_catalog.setval('public.workspaces_workspacegeneralsettings_id_seq', 21, true);
 
 
 --
@@ -11212,10 +11223,38 @@ CREATE INDEX expense_report_lineitems_expense_report_id_4c7e2508 ON public.expen
 
 
 --
+-- Name: expenses_account_ddcaed_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_account_ddcaed_idx ON public.expenses USING btree (accounting_export_summary);
+
+
+--
+-- Name: expenses_account_ff34f0_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_account_ff34f0_idx ON public.expenses USING btree (accounting_export_summary, workspace_id);
+
+
+--
 -- Name: expenses_expense_id_0e3511ea_like; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX expenses_expense_id_0e3511ea_like ON public.expenses USING btree (expense_id varchar_pattern_ops);
+
+
+--
+-- Name: expenses_fund_so_386913_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_fund_so_386913_idx ON public.expenses USING btree (fund_source, workspace_id);
+
+
+--
+-- Name: expenses_fund_so_eb83bb_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_fund_so_eb83bb_idx ON public.expenses USING btree (fund_source);
 
 
 --
