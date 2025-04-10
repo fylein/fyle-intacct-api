@@ -10,7 +10,7 @@ from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.models import LastExportDetail, Workspace
-
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -63,7 +63,7 @@ def re_export_stuck_exports() -> None:
             if not (schedule and schedule.next_run < datetime.now(tz=schedule.next_run.tzinfo) + timedelta(minutes=60)):
                 export_expense_group_ids = expense_groups.filter(workspace_id=workspace_id).values_list('id', flat=True)
                 logger.info('Re-triggering export for expense group %s since no 1 hour schedule for workspace  %s', export_expense_group_ids, workspace_id)
-                export_to_intacct(workspace_id, 'AUTO', export_expense_group_ids)
+                export_to_intacct(workspace_id, 'AUTO', export_expense_group_ids, triggered_by=ExpenseImportSourceEnum.INTERNAL)
 
 
 def pause_and_resume_export_schedules() -> None:
