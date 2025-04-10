@@ -1725,54 +1725,46 @@ class SageIntacctConnector:
         journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems, supdocid, recordno)
         return self.connection.journal_entries.update(journal_entry_payload)
 
-    def post_attachments(self, attachments: list[dict], supdoc_id: str) -> str | bool:
+    def post_attachments(self, attachments: list[dict], supdoc_id: str, attachment_number: int) -> str | bool:
         """
         Post attachments to Sage Intacct
-        :param attachments: attachment[dict()]
-        :param supdoc_id: supdoc id
-        :return: supdocid in sage intacct
+        :param attachments: List of attachment dictionaries
+        :param supdoc_id: Supporting document ID to be used in Sage Intacct
+        :param attachment_number: Number used to uniquely name attachments
+        :return: supdoc_id if first attachment is successfully posted, else False
         """
-        if attachments:
-            attachment_number = 1
-            attachments_list = []
-            for attachment in attachments:
-                attachment_type = attachment['name'].split('.')[-1]
-                attachment_to_append = {
-                    'attachmentname': '{0} - {1}'.format(attachment['id'], attachment_number),
-                    'attachmenttype': attachment_type,
-                    'attachmentdata': attachment['download_url'],
-                }
+        if not attachments:
+            return False
 
-                attachments_list.append(attachment_to_append)
-                attachment_number = attachment_number + 1
+        for attachment in attachments:
+            attachment_type = attachment['name'].split('.')[-1]
+            attachment_data = {
+                'attachmentname': f"{attachment['id']} - {attachment_number}",
+                'attachmenttype': attachment_type,
+                'attachmentdata': attachment['download_url'],
+            }
 
-            first_attachment = [attachments_list[0]]
-
-            data = {
+            payload = {
                 'supdocid': supdoc_id,
                 'supdocfoldername': 'FyleAttachments',
                 'attachments': {
-                    'attachment': first_attachment
+                    'attachment': [attachment_data]
                 }
             }
 
-            created_attachment = self.connection.attachments.post(data)
+            if attachment_number == 1:
+                created_attachment = self.connection.attachments.post(payload)
+            else:
+                try:
+                    self.connection.attachments.update(payload)
+                except Exception:
+                    logger.info(f"Error updating attachment {attachment_number} for supdoc {supdoc_id}")
+                    continue
 
-            if len(attachments_list) > 1:
-                for attachment in attachments_list[1:]:
-                    attachment_data = {
-                        'supdocid': supdoc_id,
-                        'supdocfoldername': 'FyleAttachments',
-                        'attachments': {
-                            'attachment': [attachment]
-                        }
-                    }
-                    self.connection.attachments.update(attachment_data)
+        if attachment_number == 1 and created_attachment.get('status') == 'success' and created_attachment.get('key'):
+            return supdoc_id
 
-            if created_attachment['status'] == 'success' and created_attachment['key']:
-                return supdoc_id
-
-            return False
+        return False
 
     @staticmethod
     def __construct_ap_payment(ap_payment: APPayment, ap_payment_lineitems: list[APPaymentLineitem]) -> dict:

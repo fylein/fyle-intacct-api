@@ -818,7 +818,7 @@ def test_post_attachments(mocker, db):
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
-    supdoc_id = sage_intacct_connection.post_attachments([{'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}], 'asd')
+    supdoc_id = sage_intacct_connection.post_attachments([{'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}], 'asd', 1)
 
     assert supdoc_id == 'asd'
 
@@ -842,14 +842,17 @@ def test_post_attachments_2(mocker, db):
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
-    attachment = [
-        {'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'},
+    attachment_1 = [
+        {'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}
+    ]
+    supdoc_id = sage_intacct_connection.post_attachments(attachment_1, 'asd', 1)
+    assert supdoc_id == 'asd'
+
+    attachment_2 = [
         {'download_url': 'abcd', 'name': 'abc.abc.abc', 'id': 'abc'}
     ]
-
-    supdoc_id = sage_intacct_connection.post_attachments(attachment, 'asd')
-
-    assert supdoc_id == 'asd'
+    supdoc_id = sage_intacct_connection.post_attachments(attachment_2, 'asd', 2)
+    assert supdoc_id == False
 
 
 def test_get_expense_link(mocker, db, create_journal_entry):
