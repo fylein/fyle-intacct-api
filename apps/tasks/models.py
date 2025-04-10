@@ -21,8 +21,6 @@ ERROR_TYPE_CHOICES = (
     ('INTACCT_ERROR', 'INTACCT_ERROR')
 )
 
-TRIGGERED_BY_CHOICES = IMPORTED_FROM_CHOICES + (('INTERNAL', 'INTERNAL'),)
-
 
 def get_default() -> dict:
     """
@@ -61,7 +59,7 @@ class TaskLog(models.Model):
     is_retired = models.BooleanField(default=False, help_text='Is retired from exporting')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
-    triggered_by = models.CharField(max_length=255, help_text="Triggered by", null=True, choices=TRIGGERED_BY_CHOICES)
+    triggered_by = models.CharField(max_length=255, help_text="Triggered by", null=True, choices=IMPORTED_FROM_CHOICES)
 
     class Meta:
         db_table = 'task_logs'

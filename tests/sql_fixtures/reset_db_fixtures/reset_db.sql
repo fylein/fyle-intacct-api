@@ -5866,9 +5866,11 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 220	rabbitmq	0002_alter_failedevent_error_traceback	2025-04-07 15:36:06.386096+00
 221	rabbitmq	0003_alter_failedevent_created_at_and_more	2025-04-07 15:36:06.392208+00
 222	tasks	0012_tasklog_triggered_by	2025-04-07 15:36:06.403887+00
-223	fyle	0040_expense_expenses_account_ff34f0_idx_and_more	2025-04-10 10:28:06.079288+00
-224	internal	0007_auto_generated_sql	2025-04-10 10:28:06.084049+00
-225	internal	0008_auto_generated_sql	2025-04-10 10:28:06.089861+00
+223	fyle	0040_expense_expenses_account_ff34f0_idx_and_more	2025-04-10 16:29:32.548516+00
+224	fyle	0041_alter_expense_imported_from	2025-04-10 16:29:32.566886+00
+225	internal	0007_auto_generated_sql	2025-04-10 16:29:32.570096+00
+226	internal	0008_auto_generated_sql	2025-04-10 16:29:32.573865+00
+227	tasks	0013_alter_tasklog_triggered_by	2025-04-10 16:29:32.590805+00
 \.
 
 
@@ -5891,7 +5893,7 @@ COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repe
 4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-5	2022-09-30 08:46:25.0608+00	3bdcf280bd6c42a197ad24f932ce39c7	\N	1440	\N	\N	\N
 6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-4	2022-09-30 08:47:19.647275+00	334370e333c54c669f6bc9e876d3ec60	\N	1440	\N	\N	\N
 93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-03-05 13:25:42.96495+00	\N	\N	60	\N	import	\N
-94	apps.internal.tasks.pause_and_resume_export_schedules	\N	\N	\N	I	-1	2025-04-10 10:38:06.082381+00	\N	\N	1440	\N	import	\N
+94	apps.internal.tasks.pause_and_resume_export_schedules	\N	\N	\N	I	-1	2025-04-10 16:39:32.568532+00	\N	\N	1440	\N	import	\N
 \.
 
 
@@ -9901,7 +9903,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 225, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 227, true);
 
 
 --
