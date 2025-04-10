@@ -1,4 +1,4 @@
-from django.db import models, transaction
+from django.db import models
 from django.db.models import JSONField
 from django.contrib.postgres.fields import ArrayField
 
@@ -123,23 +123,22 @@ class Error(models.Model):
         Get or create an Error record and ensure that the expense_group.id
         is present in mapping_error_expense_group_ids (without duplicates).
         """
-        with transaction.atomic():
-            error_type = get_error_type_mapping(expense_attribute.attribute_type)
-            error_detail = f"{expense_attribute.display_name} mapping is missing"
+        error_type = get_error_type_mapping(expense_attribute.attribute_type)
+        error_detail = f"{expense_attribute.display_name} mapping is missing"
 
-            error, created = Error.objects.get_or_create(
-                workspace_id=expense_group.workspace_id,
-                expense_attribute=expense_attribute,
-                defaults={
-                    'type': error_type,
-                    'error_detail': error_detail,
-                    'error_title': expense_attribute.value,
-                    'is_resolved': False,
-                    'mapping_error_expense_group_ids': [expense_group.id],
-                }
-            )
+        error, created = Error.objects.get_or_create(
+            workspace_id=expense_group.workspace_id,
+            expense_attribute=expense_attribute,
+            defaults={
+                'type': error_type,
+                'error_detail': error_detail,
+                'error_title': expense_attribute.value,
+                'is_resolved': False,
+                'mapping_error_expense_group_ids': [expense_group.id],
+            }
+        )
 
-            if not created and expense_group.id not in error.mapping_error_expense_group_ids:
-                error.mapping_error_expense_group_ids = list(set(error.mapping_error_expense_group_ids + [expense_group.id]))
-                error.save(update_fields=['mapping_error_expense_group_ids'])
-            return error, created
+        if not created and expense_group.id not in error.mapping_error_expense_group_ids:
+            error.mapping_error_expense_group_ids = list(set(error.mapping_error_expense_group_ids + [expense_group.id]))
+            error.save(update_fields=['mapping_error_expense_group_ids'])
+        return error, created
