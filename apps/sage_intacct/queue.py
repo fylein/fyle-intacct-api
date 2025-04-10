@@ -29,6 +29,9 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], is_auto_e
     chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
 
     for task in chain_tasks:
+        if task['target'] == 'apps.sage_intacct.tasks.check_cache_and_search_vendors':
+            chain.append(task['target'], workspace_id=workspace_id, fund_source=task['fund_source'])
+            continue
         chain.append(task['target'], task['expense_group'], task['task_log_id'], task['last_export'], is_auto_export)
 
     chain.run()
@@ -59,6 +62,13 @@ def schedule_journal_entries_creation(
         ).all()
 
         chain_tasks = []
+
+        fund_source = expense_groups.first().fund_source
+
+        chain_tasks.append({
+            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            'fund_source': fund_source,
+        })
 
         for index, expense_group in enumerate(expense_groups):
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
@@ -213,6 +223,13 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
 
         chain_tasks = []
 
+        fund_source = expense_groups.first().fund_source
+
+        chain_tasks.append({
+            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            'fund_source': fund_source,
+        })
+
         for index, expense_group in enumerate(expense_groups):
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
 
@@ -269,6 +286,13 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
         ).all()
 
         chain_tasks = []
+
+        fund_source = expense_groups.first().fund_source
+
+        chain_tasks.append({
+            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            'fund_source': fund_source,
+        })
 
         for index, expense_group in enumerate(expense_groups):
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)

@@ -905,36 +905,41 @@ class SageIntacctConnector:
         if vendor_from_db:
             return vendor_from_db
 
-        logger.info('Searching for vendor: %s in Sage Intacct', vendor_name)
-        vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
-        vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
-
-        if 'VENDOR' in vendor:
-            if int(vendor['@totalcount']) > 1:
-                sorted_vendor_data = sorted(vendor['VENDOR'], key=lambda x: datetime.strptime(x["WHENMODIFIED"], "%m/%d/%Y %H:%M:%S"), reverse=True)
-                vendor = sorted_vendor_data[0]
-            else:
-                vendor = vendor['VENDOR'][0]
-
-            vendor = vendor if vendor['STATUS'] == 'active' else None
-        else:
-            vendor = None
-
-        if not vendor:
+        try:
             if create:
                 vendor_id = self.sanitize_vendor_name(vendor_name)
                 created_vendor = self.post_vendor(vendor_id, vendor_name, email)
                 return self.create_destination_attribute(
                     'vendor', vendor_name, created_vendor['VENDORID'], email)
-            else:
-                return
-        else:
-            return self.create_destination_attribute(
-                'vendor',
-                vendor['NAME'],
-                vendor['VENDORID'],
-                vendor['DISPLAYCONTACT.EMAIL1']
-            )
+        except WrongParamsError as e:
+            logger.info("Error while creating vendor %s in Workspace %s: %s", vendor_name, self.workspace_id, e.response)
+
+            if 'error' in e.response:
+                sage_intacct_errors = e.response['error']
+
+                if "Another record with the value" in sage_intacct_errors[0]['description2']:
+                    logger.info('Searching for vendor: %s in Sage Intacct in Workspace %s', vendor_name, self.workspace_id)
+                    vendor = self.connection.vendors.get(field='NAME', value=vendor_name.replace("'", "\\'"))
+                    vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
+
+                    if 'VENDOR' in vendor:
+                        if int(vendor['@totalcount']) > 1:
+                            sorted_vendor_data = sorted(vendor['VENDOR'], key=lambda x: datetime.strptime(x["WHENMODIFIED"], "%m/%d/%Y %H:%M:%S"), reverse=True)
+                            vendor = sorted_vendor_data[0]
+                        else:
+                            vendor = vendor['VENDOR'][0]
+
+                        vendor = vendor if vendor['STATUS'] == 'active' else None
+                    else:
+                        vendor = None
+
+                    if vendor:
+                        return self.create_destination_attribute(
+                            'vendor',
+                            vendor['NAME'],
+                            vendor['VENDORID'],
+                            vendor['DISPLAYCONTACT.EMAIL1']
+                        )
 
     def get_expense_link(self, lineitem: ChargeCardTransactionLineitem | ExpenseReportLineitem | JournalEntryLineitem | BillLineitem) -> str:
         """
@@ -1720,54 +1725,46 @@ class SageIntacctConnector:
         journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems, supdocid, recordno)
         return self.connection.journal_entries.update(journal_entry_payload)
 
-    def post_attachments(self, attachments: list[dict], supdoc_id: str) -> str | bool:
+    def post_attachments(self, attachments: list[dict], supdoc_id: str, attachment_number: int) -> str | bool:
         """
         Post attachments to Sage Intacct
-        :param attachments: attachment[dict()]
-        :param supdoc_id: supdoc id
-        :return: supdocid in sage intacct
+        :param attachments: List of attachment dictionaries
+        :param supdoc_id: Supporting document ID to be used in Sage Intacct
+        :param attachment_number: Number used to uniquely name attachments
+        :return: supdoc_id if first attachment is successfully posted, else False
         """
-        if attachments:
-            attachment_number = 1
-            attachments_list = []
-            for attachment in attachments:
-                attachment_type = attachment['name'].split('.')[-1]
-                attachment_to_append = {
-                    'attachmentname': '{0} - {1}'.format(attachment['id'], attachment_number),
-                    'attachmenttype': attachment_type,
-                    'attachmentdata': attachment['download_url'],
-                }
+        if not attachments:
+            return False
 
-                attachments_list.append(attachment_to_append)
-                attachment_number = attachment_number + 1
+        for attachment in attachments:
+            attachment_type = attachment['name'].split('.')[-1]
+            attachment_data = {
+                'attachmentname': f"{attachment['id']} - {attachment_number}",
+                'attachmenttype': attachment_type,
+                'attachmentdata': attachment['download_url'],
+            }
 
-            first_attachment = [attachments_list[0]]
-
-            data = {
+            payload = {
                 'supdocid': supdoc_id,
                 'supdocfoldername': 'FyleAttachments',
                 'attachments': {
-                    'attachment': first_attachment
+                    'attachment': [attachment_data]
                 }
             }
 
-            created_attachment = self.connection.attachments.post(data)
+            if attachment_number == 1:
+                created_attachment = self.connection.attachments.post(payload)
+            else:
+                try:
+                    self.connection.attachments.update(payload)
+                except Exception:
+                    logger.info(f"Error updating attachment {attachment_number} for supdoc {supdoc_id}")
+                    continue
 
-            if len(attachments_list) > 1:
-                for attachment in attachments_list[1:]:
-                    attachment_data = {
-                        'supdocid': supdoc_id,
-                        'supdocfoldername': 'FyleAttachments',
-                        'attachments': {
-                            'attachment': [attachment]
-                        }
-                    }
-                    self.connection.attachments.update(attachment_data)
+        if attachment_number == 1 and created_attachment.get('status') == 'success' and created_attachment.get('key'):
+            return supdoc_id
 
-            if created_attachment['status'] == 'success' and created_attachment['key']:
-                return supdoc_id
-
-            return False
+        return False
 
     @staticmethod
     def __construct_ap_payment(ap_payment: APPayment, ap_payment_lineitems: list[APPaymentLineitem]) -> dict:
@@ -1947,3 +1944,44 @@ class SageIntacctConnector:
         response = [row for responses in generator for row in responses] if resource_type != 'dimensions' else generator
 
         return json.loads(json.dumps(response, default=str))
+
+    def search_and_create_vendors(self, workspace_id: int, missing_vendors: list) -> None:
+        """
+        Seach vendors in Intacct and Upsert Vendors in DB
+        :param workspace_id: Workspace ID
+        :param missing_vendors: Missing Vendors List
+        """
+        missing_vendors_batches = [missing_vendors[i:i + 50] for i in range(0, len(missing_vendors), 50)]
+
+        for missing_vendors_batch in missing_vendors_batches:
+            vendors_list = [vendor.replace("'", "\\'") for vendor in missing_vendors_batch]
+
+            and_filter = [('in', 'NAME', vendors_list), ('equalto', 'STATUS', 'active')]
+
+            fields = ['NAME', 'VENDORID', 'DISPLAYCONTACT.EMAIL1', 'WHENMODIFIED']
+
+            vendors = self.connection.vendors.get_by_query(and_filter=and_filter, fields=fields)
+
+            # To Keep only most recently modified vendor for each name
+            unique_vendors = {}
+
+            for vendor in vendors:
+                name_key = vendor.get('NAME', '')
+                when_modified_str = vendor.get('WHENMODIFIED')
+                when_modified = datetime.strptime(when_modified_str, "%m/%d/%Y %H:%M:%S")
+
+                if name_key not in unique_vendors:
+                    unique_vendors[name_key] = (vendor, when_modified)
+                else:
+                    _, existing_date = unique_vendors[name_key]
+                    if when_modified > existing_date:
+                        unique_vendors[name_key] = (vendor, when_modified)
+
+            for vendor, _ in unique_vendors.values():
+                logger.info("Upserting Vendor %s in Workspace %s", vendor['NAME'], workspace_id)
+                self.create_destination_attribute(
+                    'vendor',
+                    vendor['NAME'],
+                    vendor['VENDORID'],
+                    vendor.get('DISPLAYCONTACT.EMAIL1')
+                )

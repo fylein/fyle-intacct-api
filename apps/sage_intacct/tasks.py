@@ -7,6 +7,8 @@ from django.db.models import Q
 from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
+from django.core.cache import cache
+from django.db.models.functions import Lower
 
 from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import (
@@ -39,8 +41,7 @@ from apps.workspaces.models import (
     SageIntacctCredential,
     FyleCredential,
     Configuration,
-    LastExportDetail,
-    Workspace
+    LastExportDetail
 )
 from apps.sage_intacct.models import (
     ExpenseReport,
@@ -74,7 +75,6 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     :return: Last Export Detail
     """
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
-    workspace = Workspace.objects.get(id=workspace_id)
 
     failed_exports = TaskLog.objects.filter(
         ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
@@ -93,40 +93,46 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     last_export_detail.save()
 
     patch_integration_settings(workspace_id, errors=failed_exports)
-    post_accounting_export_summary(workspace.fyle_org_id, workspace_id)
+    try:
+        post_accounting_export_summary(workspace_id)
+    except Exception as e:
+        logger.error(f"Error posting accounting export summary: {e} for workspace id {workspace_id}")
 
     return last_export_detail
 
 
 def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_group: ExpenseGroup) -> str:
     """
-    Get attachments from fyle
+    Get attachments from Fyle and upload them to Sage Intacct
     :param sage_intacct_connection: Sage Intacct Connection
-    :param key: expense report / bills key
     :param expense_group: Expense group
+    :return: Final supdoc_id string if successful, else None
     """
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
-        file_ids = expense_group.expenses.values_list('file_ids', flat=True)
+        file_ids_list = expense_group.expenses.values_list('file_ids', flat=True)
         platform = PlatformConnector(fyle_credentials)
 
-        files_list = []
-        attachments = []
-        for file_id in file_ids:
-            for id in file_id:
-                file_object = {'id': id}
-                files_list.append(file_object)
+        supdoc_base_id = expense_group.id
+        attachment_number = 1
+        final_supdoc_id = False
 
-        if files_list:
-            attachments = platform.files.bulk_generate_file_urls(files_list)
+        for file_ids in file_ids_list:
+            for file_id in file_ids:
+                attachment = platform.files.bulk_generate_file_urls([{'id': file_id}])
+                supdoc_id = sage_intacct_connection.post_attachments(attachment, supdoc_base_id, attachment_number)
 
-        supdoc_id = expense_group.id
-        return sage_intacct_connection.post_attachments(attachments, supdoc_id)
+                if supdoc_id and attachment_number == 1:
+                    final_supdoc_id = supdoc_id
+
+                attachment_number += 1
+
+        return final_supdoc_id
 
     except Exception:
         error = traceback.format_exc()
         logger.info(
-            'Attachment failed for expense group id %s / workspace id %s Error: %s',
+            'Attachment failed for expense group id %s / workspace id %s. Error: %s',
             expense_group.id, expense_group.workspace_id, {'error': error}
         )
 
@@ -387,7 +393,7 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
     task_log.save()
 
     update_failed_expenses(expense_group.expenses.all(), False)
-    post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+    post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
 
 def get_employee_mapping(employee_email: str, workspace_id: int, configuration: Configuration) -> EmployeeMapping:
@@ -698,7 +704,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -723,7 +729,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
@@ -845,7 +851,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -859,7 +865,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -884,7 +890,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -997,7 +1003,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -1011,7 +1017,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -1036,7 +1042,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
@@ -1150,7 +1156,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -1164,7 +1170,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
 
         if last_export:
             last_export_failed = True
@@ -1189,7 +1195,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         task_log.status = 'FATAL'
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
+        post_accounting_export_summary(expense_group.workspace_id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source, True)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
@@ -1720,9 +1726,8 @@ def update_expense_and_post_summary(in_progress_expenses: list[Expense], workspa
     :param fund_source: Fund source
     :return: None
     """
-    fyle_org_id = Workspace.objects.get(pk=workspace_id).fyle_org_id
     update_expenses_in_progress(in_progress_expenses)
-    post_accounting_export_summary(fyle_org_id, workspace_id, [expense.id for expense in in_progress_expenses], fund_source)
+    post_accounting_export_summary(workspace_id, [expense.id for expense in in_progress_expenses], fund_source)
 
 
 def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
@@ -1745,4 +1750,143 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
     expense_group.save()
 
     update_complete_expenses(expense_group.expenses.all(), url)
-    post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source)
+    post_accounting_export_summary(expense_group.workspace.id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source)
+
+
+def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, expense_group_filters: dict, fund_source: str) -> bool:
+    """
+    Search the vendors not present in Destination Attribute and upsert them
+    :param workspace_id: Workspace ID
+    :param configuration: Configuration
+    :param expense_group_filters: filters for expense group in export queue
+    :param fund_source: Fund Source
+    :return: True if missing vendors are present else False
+    """
+    vendors_list = set()
+
+    # CCC Vendors
+    if fund_source == 'CCC' and configuration.corporate_credit_card_expenses_object:
+        ccc_group_ids = list(get_filtered_expense_group_ids(expense_group_filters=expense_group_filters))
+
+        if ccc_group_ids and (configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
+            configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.use_merchant_in_journal_line
+        )):
+            vendors = Expense.objects.filter(
+                workspace_id=workspace_id,
+                expensegroup__id__in=ccc_group_ids,
+                vendor__isnull=False
+            ).values_list('vendor', flat=True)
+            vendors_list.update(v for v in vendors if v)
+
+        elif ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
+            employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=ccc_group_ids)
+            vendors_list.update(name for name in employee_names if name)
+
+    # Reimbursable Vendors
+    if fund_source == 'PERSONAL' and configuration.reimbursable_expenses_object in ['BILL', 'JOURNAL_ENTRY'] and configuration.employee_field_mapping == 'VENDOR':
+        reimb_group_ids = list(get_filtered_expense_group_ids(expense_group_filters=expense_group_filters))
+
+        employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=reimb_group_ids)
+        vendors_list.update(name for name in employee_names if name)
+
+    # Final DB check for missing vendors
+    if vendors_list:
+        existing_vendors = DestinationAttribute.objects.filter(
+            workspace_id=workspace_id,
+            attribute_type='VENDOR',
+        ).annotate(lower_value=Lower('value')).filter(
+            lower_value__in=[vendor.lower() for vendor in vendors_list]
+        ).values_list('value', flat=True)
+
+        missing_vendors = list(set(vendors_list) - set(existing_vendors))
+
+        if missing_vendors:
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+            sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
+            return True
+
+    return False
+
+
+def get_filtered_expense_group_ids(expense_group_filters: dict) -> list:
+    """
+    Get expense group ids
+    :param fund_source: Fund Source
+    :param expense_group_filters: Expense group filter
+    """
+    return ExpenseGroup.objects.filter(
+        **expense_group_filters
+    ).values_list('id', flat=True)
+
+
+def get_employee_as_vendors_name(workspace_id: int, expense_group_ids: list) -> list:
+    """
+    Get employee as vendors
+    :param workspace_id: Workspace ID
+    :param expense_group_ids: Expense Group ID
+    """
+    employee_email_list = Expense.objects.filter(
+        workspace_id=workspace_id,
+        expensegroup__id__in=expense_group_ids,
+        employee_email__isnull=False
+    ).values_list('employee_email', flat=True)
+
+    employee_attr_ids = ExpenseAttribute.objects.filter(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        value__in=employee_email_list
+    ).values_list('id', flat=True)
+
+    mapped_expense_attribute_ids = EmployeeMapping.objects.filter(
+        workspace_id=workspace_id,
+        destination_vendor_id__isnull=False,
+        source_employee_id__in=employee_attr_ids
+    ).values_list('source_employee_id', flat=True)
+
+    unmapped_employee_ids = set(employee_attr_ids) - set(mapped_expense_attribute_ids)
+
+    unmapped_employee_names = ExpenseAttribute.objects.filter(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        id__in=unmapped_employee_ids
+    ).values_list('detail__full_name', flat=True)
+
+    return unmapped_employee_names
+
+
+def check_cache_and_search_vendors(workspace_id: int, fund_source: str) -> None:
+    """
+    Check cache and search vendors in Intacct
+    :param workspace_id: Workspace ID
+    :param expense_group_ids: Expense Group ID
+    :param fund source: CCC/PERSONAL
+    """
+    expense_group_filters = {
+        'workspace_id': workspace_id,
+        'exported_at__isnull': True,
+        'fund_source': fund_source
+    }
+
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+
+    vendor_cache_key = f"{fund_source}_vendor_cache_{workspace_id}"
+
+    vendor_cache_timestamp = cache.get(key=vendor_cache_key)
+
+    is_upserted = False
+
+    if not vendor_cache_timestamp:
+        logger.info("Vendor Cache not found for Workspace %s", workspace_id)
+        is_upserted = search_and_upsert_vendors(
+            workspace_id=workspace_id,
+            configuration=configuration,
+            expense_group_filters=expense_group_filters,
+            fund_source=fund_source
+        )
+
+    if is_upserted:
+        logger.info("Setting Vendor Cache for Workspace %s", workspace_id)
+        cache.set(key=vendor_cache_key, value=datetime.now(timezone.utc), timeout=86400)
+    elif vendor_cache_timestamp and not is_upserted:
+        logger.info("Vendor Cache found for Workspace %s, last cached at %s", workspace_id, vendor_cache_timestamp)

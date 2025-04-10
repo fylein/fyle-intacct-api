@@ -246,7 +246,7 @@ def create_generator_and_post_in_batches(accounting_export_summary_batches: list
             __handle_post_accounting_export_summary_exception(exception, workspace_id)
 
 
-def post_accounting_export_summary(org_id: str, workspace_id: int, expense_ids: List = None, fund_source: str = None, is_failed: bool = False) -> None:
+def post_accounting_export_summary(workspace_id: int, expense_ids: List = None, fund_source: str = None, is_failed: bool = False) -> None:
     """
     Post accounting export summary to Fyle
     :param org_id: org id
@@ -258,7 +258,7 @@ def post_accounting_export_summary(org_id: str, workspace_id: int, expense_ids: 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
     filters = {
-        'org_id': org_id,
+        'workspace_id': workspace_id,
         'accounting_export_summary__synced': False
     }
 

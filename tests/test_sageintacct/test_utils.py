@@ -818,7 +818,7 @@ def test_post_attachments(mocker, db):
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
-    supdoc_id = sage_intacct_connection.post_attachments([{'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}], 'asd')
+    supdoc_id = sage_intacct_connection.post_attachments([{'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}], 'asd', 1)
 
     assert supdoc_id == 'asd'
 
@@ -842,14 +842,17 @@ def test_post_attachments_2(mocker, db):
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
-    attachment = [
-        {'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'},
+    attachment_1 = [
+        {'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}
+    ]
+    supdoc_id = sage_intacct_connection.post_attachments(attachment_1, 'asd', 1)
+    assert supdoc_id == 'asd'
+
+    attachment_2 = [
         {'download_url': 'abcd', 'name': 'abc.abc.abc', 'id': 'abc'}
     ]
-
-    supdoc_id = sage_intacct_connection.post_attachments(attachment, 'asd')
-
-    assert supdoc_id == 'asd'
+    supdoc_id = sage_intacct_connection.post_attachments(attachment_2, 'asd', 2)
+    assert supdoc_id == False
 
 
 def test_get_expense_link(mocker, db, create_journal_entry):
@@ -913,7 +916,7 @@ def test_get_or_create_vendor(mocker, db):
 
     vendor = sage_intacct_connection.get_or_create_vendor('Non existing vendor in DB', 'ashwin.t@fyle.in', False)
 
-    assert vendor.value == 'Ashwin'
+    assert vendor is None
 
     # case insensitive search in db
     vendor_from_db = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').first()
@@ -928,17 +931,6 @@ def test_get_or_create_vendor(mocker, db):
     assert vendor.value == vendor_from_db.value
     assert vendor.id == vendor_from_db.id
 
-    # case insensitive not found in db -> search in intacct and found
-    data['get_vendor'][0]['NAME'] = 'Non existing vendor in DB use all cases'
-
-    get_call_mock.return_value = {'VENDOR': data['get_vendor'], '@totalcount': 2}
-
-    vendor = sage_intacct_connection.get_or_create_vendor('non exiSting VENDOR iN Db UsE aLl CaSeS', create=True)
-
-    assert vendor.value == 'Non existing vendor in DB use all cases'
-    assert DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='Non existing vendor in DB use all cases').exists() is True
-
-    # case insensitive not found in db -> search in intacct and not found -> create new in intacct
     get_call_mock.return_value = {}
 
     new_post_vendors_data = data['post_vendors']
@@ -1238,3 +1230,41 @@ def test_sync_cost_codes(db, mocker, create_dependent_field_setting):
     assert attribute.detail['project_name'] == 'Sage Project 10'
     assert attribute.code == '111'
     assert attribute.destination_id == '111'
+
+
+def test_search_and_create_vendors(db, mocker):
+    """
+    Test search and create vendors
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    missing_vendors = ['Missing Vendor 1', 'Missing Vendor 2']
+
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.get_by_query',
+        return_value=[
+            {'NAME': 'Missing Vendor 1', 'VENDORID': '20002', 'DISPLAYCONTACT.EMAIL1': None, 'WHENMODIFIED': '11/27/2023 06:51:12'},
+            {'NAME': 'Missing Vendor 2', 'VENDORID': '20003', 'DISPLAYCONTACT.EMAIL1': None, 'WHENMODIFIED': '07/01/2022 08:30:59'},
+            {'NAME': 'Missing Vendor 2', 'VENDORID': '20004', 'DISPLAYCONTACT.EMAIL1': None, 'WHENMODIFIED': '07/01/2023 08:30:59'}
+
+        ]
+    )
+
+    sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
+    vendor_1 = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='Missing Vendor 1').first()
+
+    assert vendor_1 is not None
+    assert vendor_1.value == 'Missing Vendor 1'
+    assert vendor_1.destination_id == '20002'
+
+    vendor_2 = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='Missing Vendor 2').first()
+
+    assert vendor_2 is not None
+    assert vendor_2.value == 'Missing Vendor 2'
+    assert vendor_2.destination_id == '20004'
