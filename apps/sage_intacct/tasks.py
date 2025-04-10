@@ -1771,14 +1771,14 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
     post_accounting_export_summary(expense_group.workspace.fyle_org_id, expense_group.workspace.id, [expense.id for expense in expense_group.expenses.all()], expense_group.fund_source)
 
 
-def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, expense_group_filters: dict, fund_source: str) -> None:
+def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, expense_group_filters: dict, fund_source: str) -> bool:
     """
     Search the vendors not present in Destination Attribute and upsert them
     :param workspace_id: Workspace ID
     :param configuration: Configuration
     :param expense_group_filters: filters for expense group in export queue
     :param fund_source: Fund Source
-    :return: None
+    :return: True if missing vendors are present else False
     """
     vendors_list = set()
 
@@ -1822,6 +1822,9 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
             sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
             sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
+            return True
+
+    return False
 
 
 def get_filtered_expense_group_ids(expense_group_filters: dict) -> list:
@@ -1889,15 +1892,19 @@ def check_cache_and_search_vendors(workspace_id: int, fund_source: str) -> None:
 
     vendor_cache_timestamp = cache.get(key=vendor_cache_key)
 
+    is_upserted = False
+
     if not vendor_cache_timestamp:
         logger.info("Vendor Cache not found for Workspace %s", workspace_id)
-        search_and_upsert_vendors(
+        is_upserted = search_and_upsert_vendors(
             workspace_id=workspace_id,
             configuration=configuration,
             expense_group_filters=expense_group_filters,
             fund_source=fund_source
         )
+
+    if is_upserted:
         logger.info("Setting Vendor Cache for Workspace %s", workspace_id)
         cache.set(key=vendor_cache_key, value=datetime.now(timezone.utc), timeout=86400)
-    else:
+    elif vendor_cache_timestamp and not is_upserted:
         logger.info("Vendor Cache found for Workspace %s, last cached at %s", workspace_id, vendor_cache_timestamp)
