@@ -1,6 +1,6 @@
 import logging
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime
 
 from django.db import transaction
 from django_q.tasks import async_task
@@ -93,7 +93,6 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
     :param workspace_id: workspace id
     :param fund_source: expense fund source
     """
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
     try:
         with transaction.atomic():
             workspace = Workspace.objects.get(pk=workspace_id)
