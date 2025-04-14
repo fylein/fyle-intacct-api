@@ -8,7 +8,7 @@ from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from apps.tasks.models import TaskLog
+from apps.tasks.models import TaskLog, Error
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
@@ -115,6 +115,14 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
     :param expense_group: Expense Group
     :return: bool
     """
+    mapping_error = Error.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        mapping_error_expense_group_ids__contains=[expense_group.id],
+        is_resolved=False
+    ).first()
+    if mapping_error:
+        return True
+
     if is_auto_export and interval_hours:
         task_log = TaskLog.objects.filter(expense_group=expense_group, workspace_id=expense_group.workspace.id).first()
         now = datetime.now(tz=timezone.utc)
