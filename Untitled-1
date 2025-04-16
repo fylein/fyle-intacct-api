@@ -1,0 +1,25 @@
+from apps.fyle.models import Expense, ExpenseGroup
+from apps.workspaces.models import Configuration
+
+workspace_id = 680
+configuration = Configuration.objects.get(workspace_id=workspace_id)
+
+# First update the expenses
+Expense.objects.filter(
+    is_skipped=True,
+    claim_number__in=['C/2025/04/R/7', 'C/2025/04/R/6', 'C/2025/04/R/5', 'C/2025/04/R/4', 'C/2025/04/R/3'],
+    expensegroup__isnull=True,
+    workspace_id=workspace_id
+).update(is_skipped=False)
+
+# Then fetch the updated expenses
+filtered_expenses = Expense.objects.filter(
+    claim_number__in=['C/2025/04/R/7', 'C/2025/04/R/6', 'C/2025/04/R/5', 'C/2025/04/R/4', 'C/2025/04/R/3'],
+    expensegroup__isnull=True,
+    workspace_id=workspace_id
+)
+
+print(len(filtered_expenses))
+ExpenseGroup.create_expense_groups_by_report_id_fund_source(
+    filtered_expenses, configuration, workspace_id
+) 
