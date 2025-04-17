@@ -139,7 +139,7 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.list_all',
+        'fyle.platform.apis.v1.admin.ExpenseFields.list_all',
         return_value=fyle_data['get_all_expense_fields']
     )
 
@@ -237,7 +237,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.list_all',
+        'fyle.platform.apis.v1.admin.ExpenseFields.list_all',
         return_value=fyle_data['get_all_expense_fields']
     )
 

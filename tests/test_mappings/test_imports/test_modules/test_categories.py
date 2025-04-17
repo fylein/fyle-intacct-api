@@ -69,7 +69,7 @@ def test_sync_expense_atrributes(mocker, db):
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Categories.list_all',
+        'fyle.platform.apis.v1.admin.Categories.list_all',
         return_value=[]
     )
 
@@ -83,7 +83,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert category_count == 619
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Categories.list_all',
+        'fyle.platform.apis.v1.admin.Categories.list_all',
         return_value=category_data['create_new_auto_create_categories_expense_attributes_1']
     )
 
@@ -109,7 +109,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
     ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='CATEGORY').delete()
 
     # create new case for categories import
-    with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Categories.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.Categories.post_bulk',
             return_value=[]
@@ -146,7 +146,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         assert mappings_count == 12
 
     # disable case for categories import
-    with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Categories.list_all') as mock_call:
         mocker.patch(
             'sageintacctsdk.apis.ExpenseTypes.count',
             return_value=12
@@ -196,7 +196,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
         assert post_run_expense_attribute_disabled_count == pre_run_expense_attribute_disabled_count + 4
 
     # not re-enable case for project import
-    with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Categories.list_all') as mock_call:
         mocker.patch(
             'sageintacctsdk.apis.ExpenseTypes.count',
             return_value=12
@@ -237,7 +237,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
     category.sync_after = None
 
     # create new case for categories import for Accounts case
-    with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Categories.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.Categories.post_bulk',
             return_value=[]
@@ -279,7 +279,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
     configuration.corporate_credit_card_expenses_object = 'BILL'
     configuration.save()
 
-    with mock.patch('fyle.platform.apis.v1beta.admin.Categories.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Categories.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.Categories.post_bulk',
             return_value=[]

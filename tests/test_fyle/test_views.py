@@ -324,32 +324,32 @@ def test_fyle_sync_dimension(api_client, test_connection, mocker):
     Test fyle sync dimension
     """
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Employees.list_all',
+        'fyle.platform.apis.v1.admin.Employees.list_all',
         return_value=data['get_all_employees']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Categories.list_all',
+        'fyle.platform.apis.v1.admin.Categories.list_all',
         return_value=data['get_all_categories']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Projects.list_all',
+        'fyle.platform.apis.v1.admin.Projects.list_all',
         return_value=data['get_all_projects']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CostCenters.list_all',
+        'fyle.platform.apis.v1.admin.CostCenters.list_all',
         return_value=data['get_all_cost_centers']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.list_all',
+        'fyle.platform.apis.v1.admin.ExpenseFields.list_all',
         return_value=data['get_all_expense_fields']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CorporateCards.list_all',
+        'fyle.platform.apis.v1.admin.CorporateCards.list_all',
         return_value=data['get_all_corporate_cards']
     )
 
@@ -405,32 +405,32 @@ def test_fyle_refresh_dimension(api_client, test_connection, mocker):
     Test fyle refresh dimension
     """
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Employees.list_all',
+        'fyle.platform.apis.v1.admin.Employees.list_all',
         return_value=data['get_all_employees']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Categories.list_all',
+        'fyle.platform.apis.v1.admin.Categories.list_all',
         return_value=data['get_all_categories']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Projects.list_all',
+        'fyle.platform.apis.v1.admin.Projects.list_all',
         return_value=data['get_all_projects']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CostCenters.list_all',
+        'fyle.platform.apis.v1.admin.CostCenters.list_all',
         return_value=data['get_all_cost_centers']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.list_all',
+        'fyle.platform.apis.v1.admin.ExpenseFields.list_all',
         return_value=data['get_all_expense_fields']
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CorporateCards.list_all',
+        'fyle.platform.apis.v1.admin.CorporateCards.list_all',
         return_value=data['get_all_corporate_cards']
     )
 
@@ -546,7 +546,7 @@ def test_custom_fields(mocker, api_client, test_connection):
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.expense_fields.list_all',
+        'fyle.platform.apis.v1.admin.expense_fields.list_all',
         return_value=data['get_all_custom_fields']
     )
 

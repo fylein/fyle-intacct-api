@@ -56,7 +56,7 @@ def test_sync_expense_atrributes(mocker, db):
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Projects.list_all',
+        'fyle.platform.apis.v1.admin.Projects.list_all',
         return_value=[]
     )
 
@@ -70,7 +70,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert projects_count == 1244
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Projects.list_all',
+        'fyle.platform.apis.v1.admin.Projects.list_all',
         return_value=destination_attributes_data['create_new_auto_create_projects_expense_attributes_0']
     )
     project.sync_expense_attributes(platform)
@@ -172,7 +172,7 @@ def test_auto_create_destination_attributes(mocker, db):
     ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').delete()
 
     # create new case for projects import
-    with mock.patch('fyle.platform.apis.v1beta.admin.Projects.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Projects.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.Projects.post_bulk',
             return_value=[]
@@ -209,7 +209,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert mappings_count == 2
 
     # disable case for project import
-    with mock.patch('fyle.platform.apis.v1beta.admin.Projects.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Projects.list_all') as mock_call:
         mocker.patch(
             'sageintacctsdk.apis.Projects.count',
             return_value=18
@@ -260,7 +260,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert post_run_expense_attribute_disabled_count == 3
 
     # not re-enable case for project import
-    with mock.patch('fyle.platform.apis.v1beta.admin.Projects.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Projects.list_all') as mock_call:
         mocker.patch(
             'sageintacctsdk.apis.Projects.count',
             return_value=18
@@ -337,7 +337,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
     # Setting import_log to COMPLETE since there are no destination_attributes
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Projects.list_all',
+        'fyle.platform.apis.v1.admin.Projects.list_all',
         return_value=[]
     )
     mocker.patch(
