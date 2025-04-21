@@ -24,7 +24,7 @@ def test_sync_expense_atrributes(mocker, db):
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CostCenters.list_all',
+        'fyle.platform.apis.v1.admin.CostCenters.list_all',
         return_value=[]
     )
 
@@ -38,7 +38,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert cost_center_count == 566
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CostCenters.list_all',
+        'fyle.platform.apis.v1.admin.CostCenters.list_all',
         return_value=cost_center_data['create_new_auto_create_cost_centers_expense_attributes_1']
     )
 
@@ -64,7 +64,7 @@ def test_auto_create_destination_attributes(mocker, db):
     ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='COST_CENTER').delete()
 
     # create new case for projects import
-    with mock.patch('fyle.platform.apis.v1beta.admin.CostCenters.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.CostCenters.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
             return_value=[]
@@ -101,7 +101,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert mappings_count == 7
 
     # create new project sub-sequent run (we will be adding 2 new CLASSES)
-    with mock.patch('fyle.platform.apis.v1beta.admin.CostCenters.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.CostCenters.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
             return_value=[]
