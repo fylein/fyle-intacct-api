@@ -53,7 +53,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert tax_group_count == 0
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.TaxGroups.list_all',
+        'fyle.platform.apis.v1.admin.TaxGroups.list_all',
         return_value=[]
     )
 
@@ -64,7 +64,7 @@ def test_sync_expense_atrributes(mocker, db):
     assert tax_group_count == 0
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.TaxGroups.list_all',
+        'fyle.platform.apis.v1.admin.TaxGroups.list_all',
         return_value=tax_groups_data['create_new_auto_create_tax_groups_expense_attributes_0']
     )
 
@@ -90,7 +90,7 @@ def test_auto_create_destination_attributes(mocker, db):
     ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='TAX_GROUP').delete()
 
     # create new case for tax-groups import
-    with mock.patch('fyle.platform.apis.v1beta.admin.TaxGroups.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.TaxGroups.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.TaxGroups.post_bulk',
             return_value=[]
@@ -128,7 +128,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert mappings_count == 59
 
     # create new tax-groups sub-sequent run (we will be adding 2 new tax-details)
-    with mock.patch('fyle.platform.apis.v1beta.admin.TaxGroups.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.TaxGroups.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.TaxGroups.post_bulk',
             return_value=[]
