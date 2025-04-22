@@ -11,7 +11,7 @@ from fyle.platform.exceptions import (
     InternalServerError
 )
 
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
@@ -114,6 +114,9 @@ def async_auto_map_employees(workspace_id: int) -> None:
 
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
+
+    except WrongParamsError:
+        logger.info('Error while syncing employee/vendor from Sage Intacct in workspace - %s', workspace_id)
 
     except NoPrivilegeError:
         logger.info('Insufficient permission to access the requested module')
