@@ -1667,7 +1667,8 @@ CREATE TABLE public.configurations (
     auto_create_merchants_as_vendors boolean NOT NULL,
     import_code_fields character varying(100)[] NOT NULL,
     created_by character varying(255),
-    updated_by character varying(255)
+    updated_by character varying(255),
+    skip_accounting_export_summary_post boolean NOT NULL
 );
 
 
@@ -2253,7 +2254,10 @@ CREATE TABLE public.expense_attributes_deletion_cache (
     id integer NOT NULL,
     category_ids character varying(255)[] NOT NULL,
     project_ids character varying(255)[] NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    cost_center_ids character varying(255)[] NOT NULL,
+    custom_field_list jsonb NOT NULL,
+    merchant_list character varying(255)[] NOT NULL
 );
 
 
@@ -3052,6 +3056,36 @@ ALTER TABLE public.fyle_rest_auth_authtokens_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE public.fyle_rest_auth_authtokens_id_seq OWNED BY public.auth_tokens.id;
 
+
+--
+-- Name: huge_export_failing_orgs_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.huge_export_failing_orgs_view AS
+ SELECT last_export_details.workspace_id,
+    last_export_details.failed_expense_groups_count AS count
+   FROM public.last_export_details
+  WHERE ((last_export_details.failed_expense_groups_count > 50) AND (last_export_details.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)));
+
+
+ALTER TABLE public.huge_export_failing_orgs_view OWNER TO postgres;
+
+--
+-- Name: huge_export_volume_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.huge_export_volume_view AS
+ SELECT task_logs.workspace_id,
+    count(*) AS count
+   FROM public.task_logs
+  WHERE (((task_logs.status)::text = ANY (ARRAY[('ENQUEUED'::character varying)::text, ('IN_PROGRESS'::character varying)::text])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND (task_logs.updated_at >= (now() - '1 day'::interval)))
+  GROUP BY task_logs.workspace_id
+ HAVING (count(*) > 200);
+
+
+ALTER TABLE public.huge_export_volume_view OWNER TO postgres;
 
 --
 -- Name: import_logs_fatal_failed_in_progress_tasks_view; Type: VIEW; Schema: public; Owner: postgres
@@ -4590,8 +4624,8 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 -- Data for Name: configurations; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by) FROM stdin;
-1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	t	f	{}	\N	\N
+COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by, skip_accounting_export_summary_post) FROM stdin;
+1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	t	f	{}	\N	\N	f
 \.
 
 
@@ -5871,6 +5905,9 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 225	internal	0007_auto_generated_sql	2025-04-10 16:29:32.570096+00
 226	internal	0008_auto_generated_sql	2025-04-10 16:29:32.573865+00
 227	tasks	0013_alter_tasklog_triggered_by	2025-04-10 16:29:32.590805+00
+228	fyle_accounting_mappings	0029_expenseattributesdeletioncache_cost_center_ids_and_more	2025-04-23 16:42:25.513892+00
+229	internal	0009_auto_generate_sql	2025-04-23 16:42:25.51728+00
+230	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-23 16:42:25.52648+00
 \.
 
 
@@ -9238,7 +9275,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 -- Data for Name: expense_attributes_deletion_cache; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id) FROM stdin;
+COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id, cost_center_ids, custom_field_list, merchant_list) FROM stdin;
 \.
 
 
@@ -9903,7 +9940,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 227, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 230, true);
 
 
 --

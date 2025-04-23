@@ -154,6 +154,7 @@ class Configuration(AutoAddCreateUpdateInfoMixin, models.Model):
         help_text='Array Field to store code-naming preference',
         blank=True, default=list
     )
+    skip_accounting_export_summary_post = models.BooleanField(default=False, help_text='Skip accounting export summary post')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
