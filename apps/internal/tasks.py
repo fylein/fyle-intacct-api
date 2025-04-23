@@ -62,7 +62,7 @@ def re_export_stuck_exports() -> None:
             # If schedule exist and it's within 1 hour, need not trigger it immediately
             if not (schedule and schedule.next_run < datetime.now(tz=schedule.next_run.tzinfo) + timedelta(minutes=60)):
                 export_expense_group_ids = expense_groups.filter(workspace_id=workspace_id).values_list('id', flat=True)
-                if expense_groups.count() < 200:
+                if len(export_expense_group_ids) < 200:
                     logger.info('Re-triggering export for expense group %s since no 1 hour schedule for workspace  %s', export_expense_group_ids, workspace_id)
                     export_to_intacct(workspace_id, 'AUTO', export_expense_group_ids, triggered_by=ExpenseImportSourceEnum.INTERNAL)
 
