@@ -2196,7 +2196,8 @@ CREATE TABLE public.errors (
     article_link text,
     attribute_type character varying(255),
     is_parsed boolean NOT NULL,
-    repetition_count integer NOT NULL
+    repetition_count integer NOT NULL,
+    mapping_error_expense_group_ids integer[] NOT NULL
 );
 
 
@@ -3079,7 +3080,7 @@ CREATE VIEW public.huge_export_volume_view AS
  SELECT task_logs.workspace_id,
     count(*) AS count
    FROM public.task_logs
-  WHERE (((task_logs.status)::text = ANY (ARRAY[('ENQUEUED'::character varying)::text, ('IN_PROGRESS'::character varying)::text])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+  WHERE (((task_logs.status)::text = ANY ((ARRAY['ENQUEUED'::character varying, 'IN_PROGRESS'::character varying])::text[])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
            FROM public.prod_workspaces_view)) AND (task_logs.updated_at >= (now() - '1 day'::interval)))
   GROUP BY task_logs.workspace_id
  HAVING (count(*) > 200);
@@ -5908,6 +5909,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 228	fyle_accounting_mappings	0029_expenseattributesdeletioncache_cost_center_ids_and_more	2025-04-23 16:42:25.513892+00
 229	internal	0009_auto_generate_sql	2025-04-23 16:42:25.51728+00
 230	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-23 16:42:25.52648+00
+230	tasks	0013_error_mapping_error_expense_group_ids	2025-04-10 19:15:23.729634+00
+231	tasks	0014_merge_20250410_1914	2025-04-10 19:15:23.73096+00
 \.
 
 
@@ -6004,7 +6007,7 @@ COPY public.employee_mappings (id, created_at, updated_at, destination_card_acco
 -- Data for Name: errors; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed, repetition_count) FROM stdin;
+COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed, repetition_count, mapping_error_expense_group_ids) FROM stdin;
 \.
 
 
