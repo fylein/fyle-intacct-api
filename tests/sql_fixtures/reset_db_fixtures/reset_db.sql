@@ -1667,7 +1667,8 @@ CREATE TABLE public.configurations (
     auto_create_merchants_as_vendors boolean NOT NULL,
     import_code_fields character varying(100)[] NOT NULL,
     created_by character varying(255),
-    updated_by character varying(255)
+    updated_by character varying(255),
+    skip_accounting_export_summary_post boolean NOT NULL
 );
 
 
@@ -2254,7 +2255,10 @@ CREATE TABLE public.expense_attributes_deletion_cache (
     id integer NOT NULL,
     category_ids character varying(255)[] NOT NULL,
     project_ids character varying(255)[] NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    cost_center_ids character varying(255)[] NOT NULL,
+    custom_field_list jsonb NOT NULL,
+    merchant_list character varying(255)[] NOT NULL
 );
 
 
@@ -3076,7 +3080,7 @@ CREATE VIEW public.huge_export_volume_view AS
  SELECT task_logs.workspace_id,
     count(*) AS count
    FROM public.task_logs
-  WHERE (((task_logs.status)::text = ANY ((ARRAY['ENQUEUED'::character varying, 'IN_PROGRESS'::character varying])::text[])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+  WHERE (((task_logs.status)::text = ANY (ARRAY[('ENQUEUED'::character varying)::text, ('IN_PROGRESS'::character varying)::text])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
            FROM public.prod_workspaces_view)) AND (task_logs.updated_at >= (now() - '1 day'::interval)))
   GROUP BY task_logs.workspace_id
  HAVING (count(*) > 200);
@@ -4621,8 +4625,8 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 -- Data for Name: configurations; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by) FROM stdin;
-1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	t	f	{}	\N	\N
+COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by, skip_accounting_export_summary_post) FROM stdin;
+1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	t	f	{}	\N	\N	f
 \.
 
 
@@ -5905,6 +5909,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 228	internal	0009_auto_generate_sql	2025-04-10 19:15:23.717883+00
 229	tasks	0013_error_mapping_error_expense_group_ids	2025-04-10 19:15:23.729634+00
 230	tasks	0014_merge_20250410_1914	2025-04-10 19:15:23.73096+00
+231	fyle_accounting_mappings	0029_expenseattributesdeletioncache_cost_center_ids_and_more	2025-04-24 16:15:00.272838+00
+232	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-24 16:15:00.283053+00
 \.
 
 
@@ -9272,7 +9278,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 -- Data for Name: expense_attributes_deletion_cache; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id) FROM stdin;
+COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id, cost_center_ids, custom_field_list, merchant_list) FROM stdin;
 \.
 
 
@@ -9937,7 +9943,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 230, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 232, true);
 
 
 --
