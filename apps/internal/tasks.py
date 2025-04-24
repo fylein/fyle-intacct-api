@@ -66,7 +66,7 @@ def re_export_stuck_exports() -> None:
                     logger.info('Re-triggering export for expense group %s since no 1 hour schedule for workspace  %s', export_expense_group_ids, workspace_id)
                     export_to_intacct(workspace_id, 'AUTO', export_expense_group_ids, triggered_by=ExpenseImportSourceEnum.INTERNAL)
                 else:
-                    logger.info('Skipping export for expense group %s since it has more than 200 expense groups', export_expense_group_ids)
+                    logger.info('Skipping export for workspace %s since it has more than 200 expense groups', workspace_id)
 
 
 def pause_and_resume_export_schedules() -> None:
