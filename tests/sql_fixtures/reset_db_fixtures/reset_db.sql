@@ -3080,7 +3080,7 @@ CREATE VIEW public.huge_export_volume_view AS
  SELECT task_logs.workspace_id,
     count(*) AS count
    FROM public.task_logs
-  WHERE (((task_logs.status)::text = ANY ((ARRAY['ENQUEUED'::character varying, 'IN_PROGRESS'::character varying])::text[])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+  WHERE (((task_logs.status)::text = ANY (ARRAY[('ENQUEUED'::character varying)::text, ('IN_PROGRESS'::character varying)::text])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
            FROM public.prod_workspaces_view)) AND (task_logs.updated_at >= (now() - '1 day'::interval)))
   GROUP BY task_logs.workspace_id
  HAVING (count(*) > 200);
@@ -5906,11 +5906,11 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 225	internal	0007_auto_generated_sql	2025-04-10 16:29:32.570096+00
 226	internal	0008_auto_generated_sql	2025-04-10 16:29:32.573865+00
 227	tasks	0013_alter_tasklog_triggered_by	2025-04-10 16:29:32.590805+00
-228	fyle_accounting_mappings	0029_expenseattributesdeletioncache_cost_center_ids_and_more	2025-04-23 16:42:25.513892+00
-229	internal	0009_auto_generate_sql	2025-04-23 16:42:25.51728+00
-230	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-23 16:42:25.52648+00
-230	tasks	0013_error_mapping_error_expense_group_ids	2025-04-10 19:15:23.729634+00
-231	tasks	0014_merge_20250410_1914	2025-04-10 19:15:23.73096+00
+228	internal	0009_auto_generate_sql	2025-04-10 19:15:23.717883+00
+229	tasks	0013_error_mapping_error_expense_group_ids	2025-04-10 19:15:23.729634+00
+230	tasks	0014_merge_20250410_1914	2025-04-10 19:15:23.73096+00
+231	fyle_accounting_mappings	0029_expenseattributesdeletioncache_cost_center_ids_and_more	2025-04-24 16:15:00.272838+00
+232	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-24 16:15:00.283053+00
 \.
 
 
@@ -9943,7 +9943,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 230, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 232, true);
 
 
 --
