@@ -32,7 +32,7 @@ def test_create_dependent_custom_field_in_fyle(mocker, db):
     Test create_dependent_custom_field_in_fyle
     """
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.post',
+        'fyle.platform.apis.v1.admin.ExpenseFields.post',
         return_value={'id': 123}
     )
     workspace_id = 1
@@ -49,7 +49,7 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
     """
     workspace_id = 1
     mock = mocker.patch(
-        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -91,7 +91,7 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     """
     workspace_id = 1
     mock = mocker.patch(
-        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -132,7 +132,7 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
     """
     workspace_id = 1
     mock = mocker.patch(
-        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
 
@@ -282,7 +282,7 @@ def test_post_dependent_cost_code_standalone(db, mocker, add_project_mappings, c
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
 
@@ -317,7 +317,7 @@ def test_disable_and_post_cost_code_from_destination_table(db, mocker, add_proje
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
+        'fyle.platform.apis.v1.admin.DependentExpenseFieldValues.bulk_post_dependent_expense_field_values',
         return_value=None
     )
 

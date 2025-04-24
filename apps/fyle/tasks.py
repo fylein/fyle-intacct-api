@@ -1,6 +1,6 @@
 import logging
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime
 
 from django.db import transaction
 from django_q.tasks import async_task
@@ -93,7 +93,6 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
     :param workspace_id: workspace id
     :param fund_source: expense fund source
     """
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
     try:
         with transaction.atomic():
             workspace = Workspace.objects.get(pk=workspace_id)
@@ -143,34 +142,7 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
 
             workspace.save()
 
-            expense_objects = Expense.create_expense_objects(expenses, workspace_id, imported_from=imported_from)
-
-            expense_filters = ExpenseFilter.objects.filter(workspace_id=workspace_id).order_by('rank')
-            filtered_expenses = expense_objects
-            if expense_filters:
-                expenses_object_ids = [expense_object.id for expense_object in expense_objects]
-                final_query = construct_expense_filter_query(expense_filters)
-                Expense.objects.filter(
-                    final_query,
-                    id__in=expenses_object_ids,
-                    expensegroup__isnull=True,
-                    org_id=workspace.fyle_org_id
-                ).update(is_skipped=True, updated_at=datetime.now(timezone.utc))
-
-                filtered_expenses = Expense.objects.filter(
-                    is_skipped=False,
-                    id__in=expenses_object_ids,
-                    expensegroup__isnull=True,
-                    org_id=workspace.fyle_org_id)
-
-            ExpenseGroup.create_expense_groups_by_report_id_fund_source(
-                filtered_expenses,
-                configuration,
-                workspace_id
-            )
-
-            task_log.status = 'COMPLETE'
-            task_log.save()
+            group_expenses_and_save(expenses, task_log, workspace, imported_from=imported_from)
 
     except NoPrivilegeError:
         logger.info('Invalid Fyle Credentials / Admin is disabled')
@@ -242,7 +214,7 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog, workspace: 
         skipped_expenses = mark_expenses_as_skipped(final_query, expenses_object_ids, workspace)
         if skipped_expenses:
             try:
-                post_accounting_export_summary(workspace.id, [expense.id for expense in skipped_expenses])
+                post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
             except Exception:
                 logger.exception('Error posting accounting export summary for workspace_id: %s', workspace.id)
 
@@ -368,7 +340,7 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
             workspace
         )
         if skipped_expenses:
-            post_accounting_export_summary(workspace.id, [expense.id for expense in skipped_expenses])
+            post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
             expense_groups = ExpenseGroup.objects.filter(exported_at__isnull=True, workspace_id=workspace.id)
             deleted_failed_expense_groups_count = 0
             for expense_group in expense_groups:
