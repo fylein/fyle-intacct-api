@@ -71,7 +71,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspac
         org_id=workspace.fyle_org_id,
         is_skipped=False
     )
-
+    skipped_expenses_list = list(expenses_to_be_skipped)
     expense_to_be_updated = []
     for expense in expenses_to_be_skipped:
         expense_to_be_updated.append(
@@ -92,7 +92,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspac
         __bulk_update_expenses(expense_to_be_updated)
 
     # Return the updated expense objects
-    return expenses_to_be_skipped
+    return skipped_expenses_list
 
 
 def mark_accounting_export_summary_as_synced(expenses: list[Expense]) -> None:
