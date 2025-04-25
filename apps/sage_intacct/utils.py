@@ -1328,6 +1328,109 @@ class SageIntacctConnector:
         logger.info("| Payload for the charge card transaction creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, CHARGE_CARD_TRANSACTION_PAYLOAD = {}}}".format(self.workspace_id, charge_card_transaction.expense_group.id, charge_card_transaction_payload))
         return charge_card_transaction_payload
 
+    def __get_dimensions_values(self, lineitem: JournalEntryLineitem, workspace_id: int) -> dict:
+        """
+        Get dimension values for a line item, handling allocation if present
+        :param lineitem: JournalEntryLineitem object
+        :param workspace_id: Workspace ID
+        :return: Dictionary of dimension values
+        """
+        dimensions_values = {
+            'project_id': lineitem.project_id,
+            'location_id': lineitem.location_id,
+            'department_id': lineitem.department_id,
+            'class_id': lineitem.class_id,
+            'customer_id': lineitem.customer_id,
+            'item_id': lineitem.item_id,
+            'task_id': lineitem.task_id,
+            'cost_type_id': lineitem.cost_type_id
+        }
+
+        if lineitem.allocation_id:
+            allocation_mapping = {
+                'LOCATIONID': 'location_id',
+                'DEPARTMENTID': 'department_id',
+                'CLASSID': 'class_id',
+                'CUSTOMERID': 'customer_id',
+                'ITEMID': 'item_id',
+                'TASKID': 'task_id',
+                'COSTTYPEID': 'cost_type_id',
+                'PROJECTID': 'project_id'
+            }
+
+            allocation_detail = DestinationAttribute.objects.filter(
+                workspace_id=workspace_id,
+                attribute_type='ALLOCATION',
+                value=lineitem.allocation_id
+            ).first().detail
+
+            for allocation_dimension, dimension_variable_name in allocation_mapping.items():
+                if allocation_dimension in allocation_detail.keys():
+                    dimensions_values[dimension_variable_name] = None
+
+            allocation_dimensions = set(allocation_detail.keys())
+            lineitem.user_defined_dimensions = [
+                user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions
+                if list(user_defined_dimension.keys())[0] not in allocation_dimensions
+            ]
+
+        return dimensions_values
+
+    def __construct_single_itemized_credit_line(self, journal_entry_lineitems: list[JournalEntryLineitem], general_mappings: GeneralMapping, journal_entry: JournalEntry, configuration: Configuration) -> dict:
+        """
+        Create a single credit line with summed amounts
+        :param journal_entry_lineitems: List of JournalEntryLineItem objects
+        :param general_mappings: GeneralMapping object
+        :param journal_entry: JournalEntry object
+        :param configuration: Configuration object
+        :return: Single credit line dictionary
+        """
+        total_amount = sum(lineitem.amount for lineitem in journal_entry_lineitems)
+
+        return {
+            'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
+            'currency': journal_entry.currency,
+            'department': general_mappings.default_department_id,
+            'location': general_mappings.default_location_id,
+            'vendorid': journal_entry_lineitems[0].vendor_id,
+            'employeeid': journal_entry_lineitems[0].employee_id,
+            'amount': total_amount,
+            'tr_type': -1,
+            'description': 'Total Credit Line',
+            'customfields': {}
+        }
+
+    def __construct_base_line_item(self, lineitem: JournalEntryLineitem, dimensions_values: dict, journal_entry: JournalEntry, expense_link: str) -> dict:
+        """
+        Create base line item with common fields
+        :param lineitem: JournalEntryLineitem object
+        :param dimensions_values: Dictionary of dimension values
+        :param journal_entry: JournalEntry object
+        :param expense_link: Expense link URL
+        :return: Base line item dictionary
+        """
+        return {
+            'currency': journal_entry.currency,
+            'description': lineitem.memo,
+            'department': dimensions_values['department_id'],
+            'location': dimensions_values['location_id'],
+            'projectid': dimensions_values['project_id'],
+            'customerid': dimensions_values['customer_id'],
+            'vendorid': lineitem.vendor_id,
+            'employeeid': lineitem.employee_id,
+            'classid': dimensions_values['class_id'],
+            'itemid': dimensions_values['item_id'],
+            'taskid': dimensions_values['task_id'],
+            'costtypeid': dimensions_values['cost_type_id'],
+            'allocation': lineitem.allocation_id,
+            'customfields': {
+                'customfield': [{
+                    'customfieldname': 'FYLE_EXPENSE_URL',
+                    'customfieldvalue': expense_link
+                }]
+            }
+        }
+
     def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], recordno: str = None) -> dict:
         """
         Create a journal_entry
@@ -1335,144 +1438,117 @@ class SageIntacctConnector:
         :param journal_entry_lineitems: JournalEntryLineItem objects extracted from database
         :return: constructed journal_entry
         """
-        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
-        general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
+        try:
+            configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+            general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
+        except (Configuration.DoesNotExist, GeneralMapping.DoesNotExist) as e:
+            logger.error(f"Failed to fetch configuration or mappings: {str(e)}")
+            raise
 
         journal_entry_payload = []
 
+        # Process debit lines for all line items (consistent behavior)
         for lineitem in journal_entry_lineitems:
-            dimensions_values = {
-                'project_id': lineitem.project_id,
-                'location_id': lineitem.location_id,
-                'department_id': lineitem.department_id,
-                'class_id': lineitem.class_id,
-                'customer_id': lineitem.customer_id,
-                'item_id': lineitem.item_id,
-                'task_id': lineitem.task_id,
-                'cost_type_id': lineitem.cost_type_id
-            }
-
-            if lineitem.allocation_id:
-                allocation_mapping = {
-                    'LOCATIONID': 'location_id',
-                    'DEPARTMENTID': 'department_id',
-                    'CLASSID': 'class_id',
-                    'CUSTOMERID': 'customer_id',
-                    'ITEMID': 'item_id',
-                    'TASKID': 'task_id',
-                    'COSTTYPEID': 'cost_type_id',
-                    'PROJECTID': 'project_id'
-                }
-
-                allocation_detail = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='ALLOCATION', value=lineitem.allocation_id).first().detail
-
-                for allocation_dimension, dimension_variable_name in allocation_mapping.items():
-                    if allocation_dimension in allocation_detail.keys():
-                        dimensions_values[dimension_variable_name] = None
-
-                allocation_dimensions = set(allocation_detail.keys())
-                lineitem.user_defined_dimensions = [user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
-
+            dimensions_values = self.__get_dimensions_values(lineitem, self.workspace_id)
             expense_link = self.get_expense_link(lineitem)
-            credit_line = {
-                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
-                'currency': journal_entry.currency,
-                'amount': lineitem.amount,
-                'tr_type': -1,
-                'description': lineitem.memo,
-                'department': dimensions_values['department_id'],
-                'location': dimensions_values['location_id'],
-                'projectid': dimensions_values['project_id'],
-                'customerid': dimensions_values['customer_id'],
-                'vendorid': lineitem.vendor_id,
-                'employeeid': lineitem.employee_id,
-                'classid': dimensions_values['class_id'],
-                'itemid': dimensions_values['item_id'],
-                'taskid': dimensions_values['task_id'],
-                'costtypeid': dimensions_values['cost_type_id'],
-                'billable': lineitem.billable if configuration.is_journal_credit_billable else None,
-                'allocation':lineitem.allocation_id,
-                'customfields': {
-                    'customfield': [{
-                        'customfieldname': 'FYLE_EXPENSE_URL',
-                        'customfieldvalue': expense_link
-                    }]
-                }
-            }
             tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
-            debit_line = {
+            # Create base line item
+            base_line_item = self.__construct_base_line_item(lineitem, dimensions_values, journal_entry, expense_link)
+
+            # Create debit line
+            debit_line = base_line_item.copy()
+            debit_line.update({
                 'accountno': lineitem.gl_account_number,
-                'currency': journal_entry.currency,
                 'amount': round((lineitem.amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount,
                 'tr_type': 1,
-                'description': lineitem.memo,
-                'department': dimensions_values['department_id'],
-                'location': dimensions_values['location_id'],
-                'projectid': dimensions_values['project_id'],
-                'customerid': dimensions_values['customer_id'],
-                'vendorid': lineitem.vendor_id,
-                'employeeid': lineitem.employee_id,
-                'itemid': dimensions_values['item_id'],
-                'taskid': dimensions_values['task_id'],
-                'costtypeid': dimensions_values['cost_type_id'],
-                'classid': dimensions_values['class_id'],
                 'billable': lineitem.billable,
-                'allocation': lineitem.allocation_id,
                 'taxentries': {
                     'taxentry': {
                         'trx_tax': lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_amount,
                         'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
                     }
-                },
-                'customfields': {
-                    'customfield': [{
-                        'customfieldname': 'FYLE_EXPENSE_URL',
-                        'customfieldvalue': expense_link
-                    }]
                 }
-            }
+            })
 
-            # case of a refund
+            # Handle refund case
             if lineitem.amount < 0:
                 amount = abs(lineitem.amount)
                 debit_line['amount'] = amount
-                credit_line['amount'] = round(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount, 2)
-                debit_line['tr_type'], credit_line['tr_type'] = credit_line['tr_type'], debit_line['tr_type']
-                credit_line['taxentries'] = debit_line['taxentries'].copy()
-                debit_line.pop('taxentries')
+                debit_line['tr_type'] = -1
 
+            # Add user defined dimensions
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
-                    credit_line[name] = value
                     debit_line[name] = value
 
-            journal_entry_payload.append(credit_line)
             journal_entry_payload.append(debit_line)
 
+        # Handle credit lines based on configuration
+        if configuration.je_single_credit_line:
+            # Create single credit line for all line items
+            credit_line = self.__construct_single_itemized_credit_line(journal_entry_lineitems, general_mappings, journal_entry, configuration)
+            journal_entry_payload.insert(0, credit_line)  # Insert at beginning to maintain order
+        else:
+            # Process credit lines for each line item
+            for i, lineitem in enumerate(journal_entry_lineitems):
+                dimensions_values = self.__get_dimensions_values(lineitem, self.workspace_id)
+                expense_link = self.get_expense_link(lineitem)
+
+                # Create base line item
+                base_line_item = self.__construct_base_line_item(lineitem, dimensions_values, journal_entry, expense_link)
+
+                # Create credit line
+                credit_line = base_line_item.copy()
+                credit_line.update({
+                    'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
+                    'amount': lineitem.amount,
+                    'tr_type': -1,
+                    'billable': lineitem.billable if configuration.is_journal_credit_billable else None
+                })
+
+                # Handle refund case
+                if lineitem.amount < 0:
+                    amount = abs(lineitem.amount)
+                    credit_line['amount'] = round(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount, 2)
+                    credit_line['tr_type'] = 1
+                    # Copy tax entries to credit line in refund case
+                    credit_line['taxentries'] = journal_entry_payload[i]['taxentries'].copy()
+                    journal_entry_payload[i].pop('taxentries')
+
+                # Add user defined dimensions
+                for dimension in lineitem.user_defined_dimensions:
+                    for name, value in dimension.items():
+                        credit_line[name] = value
+
+                journal_entry_payload.insert(i * 2, credit_line)  # Insert before corresponding debit line
+
+        # Format transaction date
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
 
+        # Construct final payload
         journal_entry_payload = {
             'recordno': recordno if recordno else None,
             'journal': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
             'batch_date': transaction_date,
             'batch_title': journal_entry.memo,
             'supdocid': journal_entry.supdoc_id if journal_entry.supdoc_id else None,
-            'entries':[
-                {
-                    'glentry': journal_entry_payload
-                }
-            ]
+            'entries': [{
+                'glentry': journal_entry_payload
+            }]
         }
 
+        # Add tax implications if configured
         if configuration.import_tax_codes:
             journal_entry_payload.update({
                 'taximplications': 'Inbound',
                 'taxsolutionid': self.get_tax_solution_id_or_none(journal_entry_lineitems),
             })
 
-        logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(self.workspace_id, journal_entry.expense_group.id, journal_entry_payload))
+        logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(
+            self.workspace_id, journal_entry.expense_group.id, journal_entry_payload
+        ))
         return journal_entry_payload
 
     def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: list[ExpenseReportLineitem]) -> dict:

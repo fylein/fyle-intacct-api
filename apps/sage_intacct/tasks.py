@@ -1738,7 +1738,7 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
     """
     try:
         export_id = expense_group.response_logs['url_id']
-        url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
+        url = 'https://www-p07.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
             export_id=export_id
         )
     except Exception as error:
