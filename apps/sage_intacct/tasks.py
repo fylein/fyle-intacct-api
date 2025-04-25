@@ -1738,12 +1738,12 @@ def generate_export_url_and_update_expense(expense_group: ExpenseGroup) -> None:
     """
     try:
         export_id = expense_group.response_logs['url_id']
-        url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
+        url = 'https://www.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
             export_id=export_id
         )
     except Exception as error:
         # Defaulting it to Intacct app url, worst case scenario if we're not able to parse it properly
-        url = 'https://www-p02.intacct.com'
+        url = 'https://www.intacct.com'
         logger.error('Error while generating export url %s', error)
 
     expense_group.export_url = url

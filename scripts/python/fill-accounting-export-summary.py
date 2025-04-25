@@ -54,7 +54,7 @@ for workspace in workspaces:
             else:
                 if expense_group.response_logs and 'url_id' in expense_group.response_logs:
                     export_id = expense_group.response_logs['url_id']
-                    url = 'https://www-p02.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
+                    url = 'https://www.intacct.com/ia/acct/ur.phtml?.r={export_id}'.format(
                         export_id=export_id
                     )
             for expense in expense_group.expenses.filter(accounting_export_summary__state__isnull=True):
