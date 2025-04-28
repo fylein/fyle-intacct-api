@@ -12,12 +12,11 @@ from fyle.platform.exceptions import InvalidTokenError, InternalServerError
 
 from tests.helper import dict_compare_keys
 
-from apps.tasks.models import Error, TaskLog
-from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, Workspace
-from apps.fyle.models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+from apps.tasks.models import TaskLog
+from apps.workspaces.models import FyleCredential, Workspace
+from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
 from apps.fyle.tasks import (
     create_expense_groups,
-    re_run_skip_export_rule,
     schedule_expense_group_creation,
     update_non_exported_expenses,
     import_and_export_expenses
@@ -206,6 +205,7 @@ def test_update_non_exported_expenses(db, create_temp_workspace, mocker, api_cli
     url = reverse('exports', kwargs={'workspace_id': 2})
     response = api_client.post(url, data=payload, format='json')
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
 
 def test_import_and_export_expenses(mocker, db, test_connection):
     """
