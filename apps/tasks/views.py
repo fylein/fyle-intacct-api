@@ -1,3 +1,4 @@
+from fyle_intacct_api.utils import LookupFieldMixin
 from django.db.models import Q
 
 from rest_framework import generics
@@ -9,6 +10,7 @@ from fyle_intacct_api.utils import assert_valid
 
 from apps.tasks.models import TaskLog
 from apps.tasks.serializers import TaskLogSerializer
+from django_filters.rest_framework import DjangoFilterBackend
 
 
 class TasksView(generics.ListAPIView):
@@ -33,34 +35,12 @@ class TasksView(generics.ListAPIView):
         return task_logs
 
 
-class NewTaskView(generics.ListAPIView):
-    """
-    New Tasks view
-    """
+class NewTaskView(LookupFieldMixin, generics.ListAPIView):
+    
+    queryset = TaskLog.objects.all().order_by('-updated_at')
     serializer_class = TaskLogSerializer
-
-    def get_queryset(self) -> TaskLog:
-        """
-        Return task logs in workspace
-        """
-        task_type = self.request.query_params.get('task_type')
-        expense_group_ids = self.request.query_params.get('expense_group_ids')
-        task_status = self.request.query_params.get('status')
-
-        filters = {
-            'workspace_id': self.kwargs['workspace_id']
-        }
-
-        if task_type:
-            filters['type__in'] = task_type.split(',')
-
-        if expense_group_ids:
-            filters['expense_group_id__in'] = expense_group_ids.split(',')
-
-        if task_status:
-            filters['status__in'] = task_status.split(',')
-
-        return TaskLog.objects.filter(**filters).order_by('-updated_at').all()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = {'type':{'in'}, 'expense_group_id':{'in'}, 'status': {'in'}}
 
 
 class TasksByIdView(generics.RetrieveAPIView):
