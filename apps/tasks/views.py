@@ -39,10 +39,11 @@ class NewTaskView(LookupFieldMixin, generics.ListAPIView):
     """
     Task logs view with filtering capabilities for type, expense_group_id, and status
     """
-    queryset = TaskLog.objects.all().order_by('-updated_at')
+    queryset = TaskLog.objects.all()
     serializer_class = TaskLogSerializer
     filter_backends = (DjangoFilterBackend,)
-    filterset_fields = {'type':{'in'}, 'expense_group_id':{'in'}, 'status': {'in'}}
+    filterset_fields = {'type': {'exact', 'in'}, 'expense_group_id': {'exact', 'in'}, 'status': {'exact', 'in'}}
+    ordering_fields = ('-updated_at',)
 
 
 class TasksByIdView(generics.RetrieveAPIView):
