@@ -1376,29 +1376,38 @@ class SageIntacctConnector:
 
         return dimensions_values
 
-    def __construct_single_itemized_credit_line(self, journal_entry_lineitems: list[JournalEntryLineitem], general_mappings: GeneralMapping, journal_entry: JournalEntry, configuration: Configuration) -> dict:
+    def __construct_single_itemized_credit_line(self, journal_entry_lineitems: list[JournalEntryLineitem], general_mappings: GeneralMapping, journal_entry: JournalEntry, configuration: Configuration) -> list[dict]:
         """
-        Create a single credit line with summed amounts
+        Create credit lines grouped by vendor with summed amounts
         :param journal_entry_lineitems: List of JournalEntryLineItem objects
         :param general_mappings: GeneralMapping object
         :param journal_entry: JournalEntry object
         :param configuration: Configuration object
-        :return: Single credit line dictionary
+        :return: List of credit line dictionaries grouped by vendor
         """
-        total_amount = sum(lineitem.amount for lineitem in journal_entry_lineitems)
+        # Group lineitems by vendor
+        vendor_groups = {}
+        for lineitem in journal_entry_lineitems:
+            vendor_id = lineitem.vendor_id
+            if vendor_id not in vendor_groups:
+                vendor_groups[vendor_id] = []
+            vendor_groups[vendor_id].append(lineitem)
 
-        return {
-            'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
-            'currency': journal_entry.currency,
-            'department': general_mappings.default_department_id,
-            'location': general_mappings.default_location_id,
-            'vendorid': journal_entry_lineitems[0].vendor_id,
-            'employeeid': journal_entry_lineitems[0].employee_id,
-            'amount': total_amount,
-            'tr_type': -1,
-            'description': 'Total Credit Line',
-            'customfields': {}
-        }
+        credit_lines = []
+        for vendor_id, lineitems in vendor_groups.items():
+            total_amount = sum(lineitem.amount for lineitem in lineitems)
+            credit_line = {
+                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
+                'currency': journal_entry.currency,
+                'vendorid': vendor_id,
+                'employeeid': lineitems[0].employee_id,
+                'amount': total_amount,
+                'tr_type': -1,
+                'description': f'Total Credit Line - Vendor {vendor_id}'
+            }
+            credit_lines.append(credit_line)
+
+        return credit_lines
 
     def __construct_base_line_item(self, lineitem: JournalEntryLineitem, dimensions_values: dict, journal_entry: JournalEntry, expense_link: str) -> dict:
         """
@@ -1486,9 +1495,11 @@ class SageIntacctConnector:
 
         # Handle credit lines based on configuration
         if configuration.je_single_credit_line:
-            # Create single credit line for all line items
-            credit_line = self.__construct_single_itemized_credit_line(journal_entry_lineitems, general_mappings, journal_entry, configuration)
-            journal_entry_payload.insert(0, credit_line)  # Insert at beginning to maintain order
+            # Create credit lines grouped by vendor
+            credit_lines = self.__construct_single_itemized_credit_line(journal_entry_lineitems, general_mappings, journal_entry, configuration)
+            # Insert all credit lines at the beginning to maintain order
+            for credit_line in reversed(credit_lines):
+                journal_entry_payload.insert(0, credit_line)
         else:
             # Process credit lines for each line item
             for i, lineitem in enumerate(journal_entry_lineitems):
