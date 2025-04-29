@@ -29,9 +29,9 @@ def test_new_task_get_queryset(api_client, test_connection):
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
 
     response = api_client.get(url, {
-        'expense_group_id__in': '4',
+        'expense_group_id__in': '1',
         'type__in': 'CREATING_EXPENSE',
-        'status__in': 'ALL'
+        'status__in': 'IN_PROGRESS'
     })
     assert response.status_code == 200
 
