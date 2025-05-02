@@ -105,6 +105,6 @@ class ValueErrorWithResponse(ValueError):
     """
     Custom ValueError to return a response
     """
-    def __init__(self, message, response):
+    def __init__(self, message: any, response: any) -> None:
         super().__init__(message)
         self.response = response
