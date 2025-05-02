@@ -7,6 +7,7 @@ from django.db.models import JSONField, Value, CharField
 from django.db.models.functions import Concat
 from django.utils.module_loading import import_string
 
+from apps.exceptions import ValueErrorWithResponse
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import (
@@ -1322,7 +1323,11 @@ class ChargeCardTransaction(models.Model):
 
         merchant = expense.vendor if expense.vendor else None
         if not vendor_id:
-            vendor_id = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
+            credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+            if credit_card_misc_vendor:
+                vendor_id = credit_card_misc_vendor.destination_id
+            else:
+                raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,

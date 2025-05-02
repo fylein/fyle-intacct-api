@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 
 from django.conf import settings
 from django.core.cache import cache
+from apps.exceptions import ValueErrorWithResponse
 from django_q.models import Schedule
 
 from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute
@@ -724,6 +725,16 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
 
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
         create_charge_card_transaction(expense_group, task_log.id, True, False)
+
+        mock_call.side_effect = ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
+
+        task_log = TaskLog.objects.get(id=task_log.id)
+        assert task_log.status == 'FAILED'
+
+        error = Error.objects.filter(expense_group=expense_group).first()
+        assert error.error_detail == 'Credit Card Misc vendor not found in Sage Intacct. Please create a vendor with the name "Credit Card Misc" in your Sage Intacct account and try again.'
+        assert error.error_title == 'Credit Card Misc vendor not found'
 
 
 def test_post_journal_entry_success(mocker, create_task_logs, db):
