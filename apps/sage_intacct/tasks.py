@@ -363,8 +363,9 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
         errors.append(exception.response)
 
     if 'Credit Card Misc vendor not found' in exception.response:
-        error_msg = 'Credit Card Misc vendor not found in Sage Intacct. Please create a vendor with the name "Credit Card Misc" in your Sage Intacct account and try again.'
-        error_title = 'Credit Card Misc vendor not found'
+        brand_name = 'Fyle' if settings.BRAND_ID == 'fyle' else 'Expense Management'
+        error_msg = '''Merchant from expense not found as a vendor in Sage Intacct. {0} couldn't auto-create the default vendor "Credit Card Misc". Please manually create this vendor in Sage Intacct, then retry.'''.format(brand_name)
+        error_title = 'Vendor creation failed in Sage Intacct'
 
     error_msg = remove_support_id(error_msg)
     error_dict = error_matcher(error_msg)
@@ -739,6 +740,12 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             last_export_failed = True
 
     except (InvalidTokenError, NoPrivilegeError) as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
+
+        if last_export:
+            last_export_failed = True
+
+    except ValueErrorWithResponse as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
 
         if last_export:

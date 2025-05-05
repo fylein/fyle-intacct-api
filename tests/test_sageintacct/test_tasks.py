@@ -733,8 +733,9 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
         assert task_log.status == 'FAILED'
 
         error = Error.objects.filter(expense_group=expense_group).first()
-        assert error.error_detail == 'Credit Card Misc vendor not found in Sage Intacct. Please create a vendor with the name "Credit Card Misc" in your Sage Intacct account and try again.'
-        assert error.error_title == 'Credit Card Misc vendor not found'
+        brand_name = 'Fyle' if settings.BRAND_ID == 'fyle' else 'Expense Management'
+        assert error.error_detail == '''Merchant from expense not found as a vendor in Sage Intacct. {0} couldn't auto-create the default vendor "Credit Card Misc". Please manually create this vendor in Sage Intacct, then retry.'''.format(brand_name)
+        assert error.error_title == 'Vendor creation failed in Sage Intacct'
 
 
 def test_post_journal_entry_success(mocker, create_task_logs, db):
@@ -880,6 +881,17 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
 
         mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
         create_journal_entry(expense_group, task_log.id, True, False)
+
+        mock_call.side_effect = ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
+        create_journal_entry(expense_group, task_log.id, True, False)
+
+        task_log = TaskLog.objects.get(id=task_log.id)
+        assert task_log.status == 'FAILED'
+
+        error = Error.objects.filter(expense_group=expense_group).first()
+        brand_name = 'Fyle' if settings.BRAND_ID == 'fyle' else 'Expense Management'
+        assert error.error_detail == '''Merchant from expense not found as a vendor in Sage Intacct. {0} couldn't auto-create the default vendor "Credit Card Misc". Please manually create this vendor in Sage Intacct, then retry.'''.format(brand_name)
+        assert error.error_title == 'Vendor creation failed in Sage Intacct'
 
 
 def test_post_expense_report_success(mocker, create_task_logs, db):

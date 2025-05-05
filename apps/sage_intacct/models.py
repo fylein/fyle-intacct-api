@@ -1232,10 +1232,11 @@ class JournalEntryLineitem(models.Model):
                     ).order_by('-updated_at').first()
 
                 if not vendor:
-                    vendor = DestinationAttribute.objects.filter(
-                        value='Credit Card Misc',
-                        workspace_id=expense_group.workspace_id
-                    ).first()
+                    credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+                    if credit_card_misc_vendor:
+                        vendor_id = credit_card_misc_vendor.destination_id
+                    else:
+                        raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
                 vendor_id = vendor.destination_id
 
