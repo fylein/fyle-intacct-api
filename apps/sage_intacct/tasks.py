@@ -10,6 +10,7 @@ from django.db import transaction
 from django.core.cache import cache
 from django.db.models.functions import Lower
 
+from apps.exceptions import ValueErrorWithResponse
 from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import (
     NoPrivilegeError,
@@ -360,6 +361,11 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
         error_msg = errors[0]['long_description']
     else:
         errors.append(exception.response)
+
+    if 'Credit Card Misc vendor not found' in exception.response:
+        brand_name = 'Fyle' if settings.BRAND_ID == 'fyle' else 'Expense Management'
+        error_msg = '''Merchant from expense not found as a vendor in Sage Intacct. {0} couldn't auto-create the default vendor "Credit Card Misc". Please manually create this vendor in Sage Intacct, then retry.'''.format(brand_name)
+        error_title = 'Vendor creation failed in Sage Intacct'
 
     error_msg = remove_support_id(error_msg)
     error_dict = error_matcher(error_msg)
@@ -716,6 +722,12 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
             last_export_failed = True
 
     except (InvalidTokenError, NoPrivilegeError) as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
+
+        if last_export:
+            last_export_failed = True
+
+    except ValueErrorWithResponse as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
 
         if last_export:
@@ -1182,6 +1194,12 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
             last_export_failed = True
 
     except (InvalidTokenError, NoPrivilegeError) as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+
+        if last_export:
+            last_export_failed = True
+
+    except ValueErrorWithResponse as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
         if last_export:
