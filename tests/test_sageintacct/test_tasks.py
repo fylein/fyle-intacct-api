@@ -184,6 +184,130 @@ def test_handle_intacct_errors(db):
     assert 'error' not in task_log.sage_intacct_errors
 
 
+def test_get_or_create_error_with_expense_group_create_new(db):
+    """
+    Test creating a new error record
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        display_name='Employee',
+        value='john.doe@fyle.in',
+        source_id='test123'
+    )
+
+    error, created = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    assert created == True
+    assert error.workspace_id == workspace_id
+    assert error.type == 'EMPLOYEE_MAPPING'
+    assert error.error_title == 'john.doe@fyle.in'
+    assert error.error_detail == 'Employee mapping is missing'
+    assert error.is_resolved == False
+    assert error.mapping_error_expense_group_ids == [expense_group.id]
+
+
+def test_get_or_create_error_with_expense_group_update_existing(db):
+    """
+    Test updating an existing error record with new expense group ID
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        display_name='Employee',
+        value='john.doe@fyle.in',
+        source_id='test123'
+    )
+
+    # Create initial error
+    error1, created1 = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    # Get another expense group
+    expense_group2 = ExpenseGroup.objects.get(id=2)
+
+    # Try to create error with same attribute but different expense group
+    error2, created2 = Error.get_or_create_error_with_expense_group(
+        expense_group2,
+        expense_attribute
+    )
+
+    assert created2 == False
+    assert error2.id == error1.id
+    assert set(error2.mapping_error_expense_group_ids) == {expense_group.id, expense_group2.id}
+
+
+def test_get_or_create_error_with_expense_group_category_mapping(db):
+    """
+    Test creating category mapping error
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    category_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='CATEGORY',
+        display_name='Category',
+        value='Travel Test',
+        source_id='test456'
+    )
+
+    error, created = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        category_attribute
+    )
+
+    assert created == True
+    assert error.type == 'CATEGORY_MAPPING'
+    assert error.error_title == 'Travel Test'
+    assert error.error_detail == 'Category mapping is missing'
+    assert error.mapping_error_expense_group_ids == [expense_group.id]
+
+
+def test_get_or_create_error_with_expense_group_duplicate_expense_group(db):
+    """
+    Test that adding same expense group ID twice doesn't create duplicate
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        display_name='Employee',
+        value='john.doe@fyle.in',
+        source_id='test123'
+    )
+
+    # Create initial error
+    error1, _ = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    # Try to add same expense group again
+    error2, created2 = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    assert created2 == False
+    assert error2.id == error1.id
+    assert len(error2.mapping_error_expense_group_ids) == 1
+    assert error2.mapping_error_expense_group_ids == [expense_group.id]
+
+
 def test_get_or_create_credit_card_vendor(mocker, db):
     """
     Test get_or_create_credit_card_vendor
@@ -405,7 +529,8 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-            })
+            }
+        )
         create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -417,7 +542,8 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-            })
+            }
+        )
         create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
