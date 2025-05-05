@@ -3573,7 +3573,8 @@ CREATE TABLE public.sage_intacct_credentials (
     si_user_password text NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    is_expired boolean NOT NULL
 );
 
 
@@ -5911,6 +5912,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 230	tasks	0014_merge_20250410_1914	2025-04-10 19:15:23.73096+00
 231	fyle_accounting_mappings	0029_expenseattributesdeletioncache_cost_center_ids_and_more	2025-04-24 16:15:00.272838+00
 232	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-24 16:15:00.283053+00
+233	workspaces	0044_sageintacctcredential_is_expired	2025-05-04 20:48:08.575604+00
 \.
 
 
@@ -9787,8 +9789,8 @@ COPY public.reimbursements (id, settlement_id, reimbursement_id, state, created_
 -- Data for Name: sage_intacct_credentials; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id) FROM stdin;
-1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1
+COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired) FROM stdin;
+1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f
 \.
 
 
@@ -9943,7 +9945,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 52, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 232, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 233, true);
 
 
 --
