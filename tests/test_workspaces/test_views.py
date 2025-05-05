@@ -1,6 +1,6 @@
 import json
 from unittest import mock
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.urls import reverse
 from django.contrib.auth import get_user_model
@@ -84,36 +84,36 @@ def test_token_health_view(api_client, test_connection, mocker):
     mock_instance = mocker.MagicMock()
     mock_connector.return_value = mock_instance
     mock_instance.connection.locations.count.side_effect = Exception("Invalid")
-    
+
     # Mock invalidate function
     mocker.patch('apps.workspaces.views.invalidate_intacct_credentials', return_value=None)
 
     response = api_client.get(url)
-    
+
     assert response.status_code == 400
     assert response.data["message"] == "Intacct connection expired"
-    
+
     # Testing successful connection
     mocker.resetall()
     mock_connector = mocker.patch('apps.workspaces.views.SageIntacctConnector')
     mock_instance = mocker.MagicMock()
     mock_connector.return_value = mock_instance
     mock_instance.connection.locations.count.return_value = 1
-    
+
     response = api_client.get(url)
 
     assert response.status_code == 200
     assert response.data["message"] == "Intacct connection is active"
-    
+
     # Testing with cache
     cache.set(cache_key, True, timeout=timedelta(hours=24).total_seconds())
 
     assert cache.get(cache_key) == True
-    
+
     # Reset mock to verify it's not called when cache is present
     mock_connector.reset_mock()
     response = api_client.get(url)
-    
+
     assert response.status_code == 200
     assert response.data["message"] == "Intacct connection is active"
     mock_connector.assert_not_called()

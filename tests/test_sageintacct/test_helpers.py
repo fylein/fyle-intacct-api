@@ -93,13 +93,13 @@ def test_patch_integration_settings(db, mocker):
     # Test exception handling
     patch_request_mock.reset_mock()
     patch_request_mock.side_effect = Exception('Test exception')
-    
+
     logger_mock = mocker.patch('apps.sage_intacct.helpers.logger.error')
 
     patch_integration_settings(workspace_id, errors=15)
 
     # Verify patch_request was called
     patch_request_mock.assert_called_once()
-    
+
     # Verify logger.error was called with the exception
     logger_mock.assert_called_once()

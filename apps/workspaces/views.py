@@ -55,7 +55,7 @@ class TokenHealthView(viewsets.ViewSet):
     """
     Sage Intacct Connect View
     """
-    
+
     def get(self, request: Request, **kwargs) -> Response:
         status_code = status.HTTP_200_OK
         message = "Intacct connection is active"
