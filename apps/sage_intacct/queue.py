@@ -12,7 +12,7 @@ from apps.tasks.models import TaskLog, Error
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
-
+from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
@@ -75,6 +75,7 @@ def schedule_journal_entries_creation(
 
             if skip_export:
                 logger.info('Skipping export for expense group %s', expense_group.id)
+                post_accounting_export_summary_for_skipped_exports(expense_group=expense_group, workspace_id=workspace_id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -175,6 +176,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
 
             if skip_export:
                 logger.info('Skipping export for expense group %s', expense_group.id)
+                post_accounting_export_summary_for_skipped_exports(expense_group=expense_group, workspace_id=workspace_id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -238,6 +240,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
 
             if skip_export:
                 logger.info('Skipping export for expense group %s', expense_group.id)
+                post_accounting_export_summary_for_skipped_exports(expense_group=expense_group, workspace_id=workspace_id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -301,6 +304,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
                 logger.info('Skipping export for expense group %s', expense_group.id)
+                post_accounting_export_summary_for_skipped_exports(expense_group=expense_group, workspace_id=workspace_id)
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
