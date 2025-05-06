@@ -300,7 +300,14 @@ def post_accounting_export_summary(workspace_id: int, expense_ids: List = None, 
     create_generator_and_post_in_batches(accounting_export_summary_batches, platform, workspace_id)
 
 
-def post_accounting_export_summary_for_skipped_exports(expense_group: ExpenseGroup, workspace_id: int, is_mapping_error: bool = True):
+def post_accounting_export_summary_for_skipped_exports(expense_group: ExpenseGroup, workspace_id: int, is_mapping_error: bool = True) -> None:
+    """
+    Post accounting export summary for skipped exports to Fyle
+    :param expense_group: Expense group object
+    :param workspace_id: Workspace id
+    :param is_mapping_error: Whether the error is a mapping error
+    :return: None
+    """
     first_expense = expense_group.expenses.first()
     update_expenses_in_progress([first_expense])
     post_accounting_export_summary(workspace_id=workspace_id, expense_ids=[first_expense.id])
