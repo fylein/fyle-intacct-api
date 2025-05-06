@@ -194,6 +194,7 @@ Q_CLUSTER = {
     # The number of tasks will be stored in django q tasks
     "save_limit": 100000,
     'retry': 86400,
+    'timeout': None,
     'catch_up': False,
     'workers': 4,
     # How many tasks are kept in memory by a single cluster.
