@@ -120,9 +120,10 @@ def test_validate_failing_export(db):
     assert skip_export is False
 
     # is_auto_export is True, created_at and updated_at are same, interval hours is 24h
-    time = datetime.now(tz=timezone.utc)
+    created_time = datetime.now(tz=timezone.utc)
+    update_time = created_time + timedelta(seconds=2)
 
-    TaskLog.objects.filter(workspace_id=1).update(updated_at=time, created_at=time)
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=created_time)
 
     skip_export = validate_failing_export(is_auto_export=True, interval_hours=24, expense_group=expense_group)
 
