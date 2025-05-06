@@ -141,6 +141,9 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
 
             # if the task log is created is the last month
             if task_log.created_at > now - relativedelta(months=1):
+                created_updated_diff = task_log.updated_at - task_log.created_at
+                if created_updated_diff <= timedelta(seconds=5):
+                    return False
                 if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(hours=24):
                     return True
 

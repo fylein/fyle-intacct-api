@@ -74,7 +74,7 @@ def test_validate_failing_export(db):
 
     skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, expense_group=expense_group)
 
-    assert skip_export is True
+    assert skip_export is False
     task_log.refresh_from_db()
     assert task_log.is_retired is False
 
@@ -116,6 +116,15 @@ def test_validate_failing_export(db):
 
     # is_auto_export is False
     skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, expense_group=expense_group)
+
+    assert skip_export is False
+
+    # is_auto_export is True, created_at and updated_at are same, interval hours is 24h
+    time = datetime.now(tz=timezone.utc)
+
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=time, created_at=time)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=24, expense_group=expense_group)
 
     assert skip_export is False
 
