@@ -193,8 +193,8 @@ Q_CLUSTER = {
     'name': 'fyle_intacct_api',
     # The number of tasks will be stored in django q tasks
     "save_limit": 100000,
-    'retry': 14400,
-    'timeout': 2700, # 45 mins
+    'retry': 86400,
+    'timeout': None,
     'catch_up': False,
     'workers': 4,
     # How many tasks are kept in memory by a single cluster.
