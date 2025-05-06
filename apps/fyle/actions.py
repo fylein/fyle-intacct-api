@@ -9,7 +9,7 @@ from fyle.platform.internals.decorators import retry
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InternalServerError, RetryException
 
-from apps.fyle.models import Expense
+from apps.fyle.models import Expense, ExpenseGroup
 from apps.workspaces.models import Workspace, FyleCredential, Configuration
 
 from apps.fyle.helpers import get_updated_accounting_export_summary, get_batched_expenses
@@ -298,3 +298,18 @@ def post_accounting_export_summary(workspace_id: int, expense_ids: List = None, 
         accounting_export_summary_batches
     )
     create_generator_and_post_in_batches(accounting_export_summary_batches, platform, workspace_id)
+
+
+def post_accounting_export_summary_for_skipped_exports(expense_group: ExpenseGroup, workspace_id: int, is_mapping_error: bool = True) -> None:
+    """
+    Post accounting export summary for skipped exports to Fyle
+    :param expense_group: Expense group object
+    :param workspace_id: Workspace id
+    :param is_mapping_error: Whether the error is a mapping error
+    :return: None
+    """
+    first_expense = expense_group.expenses.first()
+    update_expenses_in_progress([first_expense])
+    post_accounting_export_summary(workspace_id=workspace_id, expense_ids=[first_expense.id])
+    update_failed_expenses(expense_group.expenses.all(), is_mapping_error)
+    post_accounting_export_summary(workspace_id=workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], is_failed=True)
