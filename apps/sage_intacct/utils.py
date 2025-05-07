@@ -2,6 +2,7 @@ import re
 import json
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
 import unidecode
 from django.db.models import Q
@@ -1376,6 +1377,33 @@ class SageIntacctConnector:
 
         return dimensions_values
 
+    def __get_location_id(self, workspace_id: int) -> Optional[str]:
+        """
+        Get location ID based on configuration.
+
+        :param workspace_id: Workspace ID
+        :return: Location ID or None if not found
+        """
+        general_mapping = (
+            GeneralMapping.objects
+            .filter(workspace_id=workspace_id)
+            .values('default_location_id')
+            .first()
+        )
+        if general_mapping and general_mapping['default_location_id']:
+            return general_mapping['default_location_id']
+
+        location_mapping = (
+            LocationEntityMapping.objects
+            .filter(workspace_id=workspace_id)
+            .values('location_entity_name', 'destination_id')
+            .first()
+        )
+        if location_mapping and location_mapping['location_entity_name'] != 'Top Level':
+            return location_mapping['destination_id']
+
+        return None
+
     def __construct_single_itemized_credit_line(self, journal_entry_lineitems: list[JournalEntryLineitem], general_mappings: GeneralMapping, journal_entry: JournalEntry, configuration: Configuration) -> list[dict]:
         """
         Create credit lines grouped by vendor with summed amounts
@@ -1400,6 +1428,7 @@ class SageIntacctConnector:
                 'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
                 'currency': journal_entry.currency,
                 'vendorid': vendor_id,
+                'location': self.__get_location_id(self.workspace_id),
                 'employeeid': lineitems[0].employee_id,
                 'amount': total_amount,
                 'tr_type': -1,
