@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from django.db.models import Q
 from django_q.models import OrmQ, Schedule
 
-from apps.fyle.actions import update_failed_expenses
+from apps.fyle.actions import update_failed_expenses, post_accounting_export_summary
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
@@ -33,8 +33,8 @@ def re_export_stuck_exports() -> None:
     if task_logs.count() > 0:
         logger.info('Re-exporting stuck task_logs')
         logger.info('%s stuck task_logs found', task_logs.count())
-        workspace_ids = task_logs.values_list('workspace_id', flat=True).distinct()
-        expense_group_ids = task_logs.values_list('expense_group_id', flat=True)
+        workspace_ids = list(task_logs.values_list('workspace_id', flat=True).distinct())
+        expense_group_ids = list(task_logs.values_list('expense_group_id', flat=True))
         ormqs = OrmQ.objects.all()
         for orm in ormqs:
             if 'chain' in orm.task and orm.task['chain']:
@@ -51,7 +51,10 @@ def re_export_stuck_exports() -> None:
             expenses.extend(expense_group.expenses.all())
         workspace_ids_list = list(workspace_ids)
         task_logs.update(status='FAILED', updated_at=datetime.now())
-        update_failed_expenses(expenses, True)
+        for workspace_id in workspace_ids_list:
+            errored_expenses = [expense for expense in expenses if expense.workspace_id == workspace_id]
+            update_failed_expenses(errored_expenses, True)
+            post_accounting_export_summary(workspace_id=workspace_id,  expense_ids=[expense.id for expense in errored_expenses], is_failed=True)
         schedules = Schedule.objects.filter(
             args__in=[str(workspace_id) for workspace_id in workspace_ids_list],
             func='apps.workspaces.tasks.run_sync_schedule'
@@ -61,8 +64,8 @@ def re_export_stuck_exports() -> None:
             schedule = schedules.filter(args=str(workspace_id)).first()
             # If schedule exist and it's within 1 hour, need not trigger it immediately
             if not (schedule and schedule.next_run < datetime.now(tz=schedule.next_run.tzinfo) + timedelta(minutes=60)):
-                export_expense_group_ids = expense_groups.filter(workspace_id=workspace_id).values_list('id', flat=True)
-                if len(export_expense_group_ids) < 200:
+                export_expense_group_ids = list(expense_groups.filter(workspace_id=workspace_id).values_list('id', flat=True))
+                if export_expense_group_ids and len(export_expense_group_ids) < 200:
                     logger.info('Re-triggering export for expense group %s since no 1 hour schedule for workspace  %s', export_expense_group_ids, workspace_id)
                     export_to_intacct(workspace_id, 'AUTO', export_expense_group_ids, triggered_by=ExpenseImportSourceEnum.INTERNAL)
                 else:

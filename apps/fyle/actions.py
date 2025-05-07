@@ -9,7 +9,7 @@ from fyle.platform.internals.decorators import retry
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InternalServerError, RetryException
 
-from apps.fyle.models import Expense
+from apps.fyle.models import Expense, ExpenseGroup
 from apps.workspaces.models import Workspace, FyleCredential, Configuration
 
 from apps.fyle.helpers import get_updated_accounting_export_summary, get_batched_expenses
@@ -71,7 +71,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspac
         org_id=workspace.fyle_org_id,
         is_skipped=False
     )
-
+    skipped_expenses_list = list(expenses_to_be_skipped)
     expense_to_be_updated = []
     for expense in expenses_to_be_skipped:
         expense_to_be_updated.append(
@@ -92,7 +92,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspac
         __bulk_update_expenses(expense_to_be_updated)
 
     # Return the updated expense objects
-    return expenses_to_be_skipped
+    return skipped_expenses_list
 
 
 def mark_accounting_export_summary_as_synced(expenses: list[Expense]) -> None:
@@ -278,7 +278,7 @@ def post_accounting_export_summary(workspace_id: int, expense_ids: List = None, 
     expenses_count = Expense.objects.filter(**filters).count()
 
     accounting_export_summary_batches = []
-    page_size = 200
+    page_size = 20
     for offset in range(0, expenses_count, page_size):
         limit = offset + page_size
         paginated_expenses = Expense.objects.filter(**filters).order_by('id')[offset:limit]
@@ -298,3 +298,18 @@ def post_accounting_export_summary(workspace_id: int, expense_ids: List = None, 
         accounting_export_summary_batches
     )
     create_generator_and_post_in_batches(accounting_export_summary_batches, platform, workspace_id)
+
+
+def post_accounting_export_summary_for_skipped_exports(expense_group: ExpenseGroup, workspace_id: int, is_mapping_error: bool = True) -> None:
+    """
+    Post accounting export summary for skipped exports to Fyle
+    :param expense_group: Expense group object
+    :param workspace_id: Workspace id
+    :param is_mapping_error: Whether the error is a mapping error
+    :return: None
+    """
+    first_expense = expense_group.expenses.first()
+    update_expenses_in_progress([first_expense])
+    post_accounting_export_summary(workspace_id=workspace_id, expense_ids=[first_expense.id])
+    update_failed_expenses(expense_group.expenses.all(), is_mapping_error)
+    post_accounting_export_summary(workspace_id=workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], is_failed=True)

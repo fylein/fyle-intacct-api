@@ -7,6 +7,7 @@ from django.db.models import JSONField, Value, CharField
 from django.db.models.functions import Concat
 from django.utils.module_loading import import_string
 
+from apps.exceptions import ValueErrorWithResponse
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import (
@@ -485,10 +486,10 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
         return expense_group.description['approved_at']
     elif 'verified_at' in expense_group.description and expense_group.description['verified_at']:
         return expense_group.description['verified_at']
-    elif 'last_spent_at' in expense_group.description and expense_group.description['last_spent_at']:
-        return expense_group.description['last_spent_at']
     elif 'spent_at' in expense_group.description and expense_group.description['spent_at']:
         return expense_group.description['spent_at']
+    elif 'last_spent_at' in expense_group.description and expense_group.description['last_spent_at']:
+        return expense_group.description['last_spent_at']
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
@@ -1231,10 +1232,11 @@ class JournalEntryLineitem(models.Model):
                     ).order_by('-updated_at').first()
 
                 if not vendor:
-                    vendor = DestinationAttribute.objects.filter(
-                        value='Credit Card Misc',
-                        workspace_id=expense_group.workspace_id
-                    ).first()
+                    credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+                    if credit_card_misc_vendor:
+                        vendor_id = credit_card_misc_vendor.destination_id
+                    else:
+                        raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
                 vendor_id = vendor.destination_id
 
@@ -1322,7 +1324,11 @@ class ChargeCardTransaction(models.Model):
 
         merchant = expense.vendor if expense.vendor else None
         if not vendor_id:
-            vendor_id = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
+            credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+            if credit_card_misc_vendor:
+                vendor_id = credit_card_misc_vendor.destination_id
+            else:
+                raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
