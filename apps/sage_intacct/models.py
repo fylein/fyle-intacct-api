@@ -105,6 +105,8 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
+            if not lineitem.custom_properties:
+                return None
             attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
@@ -145,6 +147,8 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
+            if not lineitem.custom_properties:
+                return None
             attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field, workspace_id=expense_group.workspace_id).first()
             if attribute:
                 source_value = lineitem.custom_properties.get(attribute.display_name, None)
@@ -192,6 +196,8 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
+            if not lineitem.custom_properties:
+                return None
             attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
@@ -250,6 +256,8 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             elif customer_setting.source_field == 'COST_CENTER':
                 source_value = lineitem.cost_center
             else:
+                if not lineitem.custom_properties:
+                    return None
                 attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field, workspace_id=expense_group.workspace_id).first()
                 source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
@@ -286,6 +294,8 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         elif item_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
+            if not lineitem.custom_properties:
+                return None
             attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
@@ -434,6 +444,8 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         elif class_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
+            if not lineitem.custom_properties:
+                return None
             attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field, workspace_id=expense_group.workspace_id).first()
             source_value = lineitem.custom_properties.get(attribute.display_name, None)
 
@@ -779,6 +791,7 @@ class Bill(models.Model):
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
+        vendor_id = None
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = EmployeeMapping.objects.get(
@@ -787,7 +800,16 @@ class Bill(models.Model):
             ).destination_vendor.destination_id
 
         elif expense_group.fund_source == 'CCC':
-            vendor_id = general_mappings.default_ccc_vendor_id
+            ccc_mapping = Mapping.objects.filter(
+                source_type="CORPORATE_CARD",
+                destination_type="VENDOR",
+                workspace_id=expense_group.workspace_id,
+                source__source_id=expense.corporate_card_id,
+            ).first()
+            if ccc_mapping:
+                vendor_id = ccc_mapping.destination.destination_id
+            else:
+                vendor_id = general_mappings.default_ccc_vendor_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
