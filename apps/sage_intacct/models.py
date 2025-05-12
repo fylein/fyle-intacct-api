@@ -398,21 +398,19 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
             task_id = cost_type.task_id
     else:
         if prepend_code_to_name:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id)
+                project_id=str(project_id)
             ).annotate(
-                combined_code_name=Concat('code', Value(': '), 'value', output_field=CharField())
+                combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
             ).filter(
                 combined_code_name=selected_cost_code
             ).first()
         else:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id),
-                value=selected_cost_code
+                project_id=str(project_id),
+                task_name=selected_cost_code
             ).first()
 
         if task:
