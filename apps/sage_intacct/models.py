@@ -1736,3 +1736,24 @@ class CostType(models.Model):
 
         if cost_types_to_be_created:
             CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+
+
+class CostCode(models.Model):
+    """
+    Cost Code Model to store Tasks
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    task_id = models.CharField(max_length=255, help_text='Task Id', null=True)
+    task_name = models.CharField(max_length=255, help_text='Task Name', null=True)
+    project_id = models.CharField(max_length=255, help_text='Project Id', null=True)
+    project_name = models.CharField(max_length=255, help_text='Project Name', null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cost_codes'
+        unique_together = ('workspace', 'task_id', 'project_id')
+        indexes = [
+            models.Index(fields=['workspace', 'task_id']),
+            models.Index(fields=['workspace', 'project_id']),
+        ]
