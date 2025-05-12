@@ -793,7 +793,16 @@ class Bill(models.Model):
             ).destination_vendor.destination_id
 
         elif expense_group.fund_source == 'CCC':
-            vendor_id = general_mappings.default_ccc_vendor_id
+            ccc_mapping = Mapping.objects.filter(
+                source_type="CORPORATE_CARD",
+                destination_type="VENDOR",
+                workspace_id=expense_group.workspace_id,
+                source__source_id=expense.corporate_card_id,
+            ).first()
+            if ccc_mapping:
+                vendor_id = ccc_mapping.destination.destination_id
+            else:
+                vendor_id = general_mappings.default_ccc_vendor_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,

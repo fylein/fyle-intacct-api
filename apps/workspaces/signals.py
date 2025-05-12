@@ -15,6 +15,22 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
+CORP_CARD_MAPPING = {
+    'CHARGE_CARD_TRANSACTION': {
+        'destination_field': 'CHARGE_CARD_NUMBER',
+        'source_field': 'CORPORATE_CARD',
+        'import_to_fyle': False,
+        'is_custom': False,
+    },
+    'BILL': {
+        'destination_field': 'VENDOR',
+        'source_field': 'CORPORATE_CARD',
+        'import_to_fyle': False,
+        'is_custom': False,
+    }
+}
+
+
 @receiver(post_save, sender=Configuration)
 def run_post_configration_triggers(sender: type[Configuration], instance: Configuration, **kwargs) -> None:
     """
@@ -24,28 +40,26 @@ def run_post_configration_triggers(sender: type[Configuration], instance: Config
     """
     logger.info('Running post configuration triggers for workspace_id: %s', instance.workspace_id)
 
-    if instance.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
-        add_expense_id_to_expense_group_settings(int(instance.workspace_id))
-
-        MappingSetting.objects.update_or_create(
-            destination_field='CHARGE_CARD_NUMBER',
-            workspace_id=instance.workspace_id,
-            defaults={
-                'source_field': 'CORPORATE_CARD',
-                'import_to_fyle': False,
-                'is_custom': False
-            }
-        )
-
-    if instance.corporate_credit_card_expenses_object != 'CHARGE_CARD_TRANSACTION':
-        mapping_setting = MappingSetting.objects.filter(
-            workspace_id=instance.workspace_id,
-            source_field='CORPORATE_CARD',
-            destination_field='CHARGE_CARD_NUMBER'
-        ).first()
-
-        if mapping_setting:
-            mapping_setting.delete()
+    selected = instance.corporate_credit_card_expenses_object
+    for export_module_type, params in CORP_CARD_MAPPING.items():
+        if selected == export_module_type:
+            MappingSetting.objects.update_or_create(
+                workspace_id=instance.workspace_id,
+                destination_field=params['destination_field'],
+                defaults={
+                    'source_field':     params['source_field'],
+                    'import_to_fyle':   params['import_to_fyle'],
+                    'is_custom':        params['is_custom'],
+                }
+            )
+            if export_module_type == 'CHARGE_CARD_TRANSACTION':
+                add_expense_id_to_expense_group_settings(int(instance.workspace_id))
+        else:
+            MappingSetting.objects.filter(
+                workspace_id=instance.workspace_id,
+                destination_field=params['destination_field'],
+                source_field=params['source_field']
+            ).delete()
 
     if (
         not instance.reimbursable_expenses_object
