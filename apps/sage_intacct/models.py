@@ -84,6 +84,19 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) ->
     return allocation_id, allocation_detail
 
 
+def _get_custom_field_value(lineitem: Expense, field_name: str, workspace_id: int) -> Optional[str]:
+    """
+    Returns the custom property value for the given field_name, or None.
+    """
+    display_name = (
+        ExpenseAttribute.objects
+        .filter(attribute_type=field_name, workspace_id=workspace_id)
+        .values_list('display_name', flat=True)
+        .first()
+    )
+    return (lineitem.custom_properties or {}).get(display_name) if display_name else None
+
+
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
     Get project id or none with priority:
@@ -105,8 +118,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, project_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=project_setting.source_field,
@@ -145,9 +157,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            if attribute:
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, department_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=department_setting.source_field,
@@ -192,8 +202,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, location_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=location_setting.source_field,
@@ -250,8 +259,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             elif customer_setting.source_field == 'COST_CENTER':
                 source_value = lineitem.cost_center
             else:
-                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field, workspace_id=expense_group.workspace_id).first()
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+                source_value = _get_custom_field_value(lineitem, customer_setting.source_field, expense_group.workspace_id)
 
             mapping: Mapping = Mapping.objects.filter(
                 source_type=customer_setting.source_field,
@@ -286,8 +294,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         elif item_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, item_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=item_setting.source_field,
@@ -434,8 +441,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         elif class_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, class_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=class_setting.source_field,
