@@ -1425,14 +1425,22 @@ class SageIntacctConnector:
         credit_lines = []
         for vendor_id, lineitems in vendor_groups.items():
             total_amount = sum(lineitem.amount for lineitem in lineitems)
+            # Skip if total amount is zero
+            if total_amount == 0:
+                continue
+                
+            # Handle refund case
+            tr_type = 1 if total_amount < 0 else -1
+            amount = abs(total_amount)
+
             credit_line = {
                 'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
                 'currency': journal_entry.currency,
                 'vendorid': vendor_id,
                 'location': self.__get_location_id_for_journal_entry(self.workspace_id),
                 'employeeid': lineitems[0].employee_id,
-                'amount': total_amount,
-                'tr_type': -1,
+                'amount': amount,
+                'tr_type': tr_type,
                 'description': f'Total Credit Line - Vendor {vendor_id}'
             }
             credit_lines.append(credit_line)
