@@ -1399,13 +1399,13 @@ def test_construct_journal_entry_with_single_credit_line(create_journal_entry, d
     general_mappings.save()
 
     journal_entry, journal_entry_lineitems = create_journal_entry
-    
+
     # Test case 1: Multiple line items for same vendor
     journal_entry_lineitems[0].vendor_id = 'VENDOR1'
     journal_entry_lineitems[0].amount = 100
     journal_entry_lineitems[0].employee_id = 'EMP1'
     journal_entry_lineitems[0].user_defined_dimensions = []  # Initialize empty list
-    
+
     # Add second line item for same vendor with a different expense_id
     second_lineitem = journal_entry_lineitems[0].__class__.objects.create(
         journal_entry=journal_entry,
@@ -1427,7 +1427,7 @@ def test_construct_journal_entry_with_single_credit_line(create_journal_entry, d
     )
 
     # Verify credit lines are grouped by vendor
-    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
                    if entry['tr_type'] == -1 and entry.get('description') == 'Total Credit Line']
     assert len(credit_lines) == 1
     assert credit_lines[0]['vendorid'] == 'VENDOR1'
@@ -1446,7 +1446,7 @@ def test_construct_journal_entry_with_single_credit_line(create_journal_entry, d
     )
 
     # Verify credit lines for multiple vendors
-    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
                    if entry['tr_type'] == -1 and entry.get('description', '').startswith('Total Credit Line')]
     assert len(credit_lines) == 2
     vendor_amounts = {line['vendorid']: line['amount'] for line in credit_lines}
@@ -1465,7 +1465,7 @@ def test_construct_journal_entry_with_single_credit_line(create_journal_entry, d
     )
 
     # Verify refund handling - should have one credit line with positive amount
-    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
                    if entry['tr_type'] == 1 and entry.get('description') == 'Total Credit Line']
     assert len(credit_lines) == 1
     assert credit_lines[0]['amount'] == 300  # Sum of absolute values
@@ -1479,7 +1479,7 @@ def test_construct_journal_entry_with_single_credit_line(create_journal_entry, d
     )
 
     # Verify zero amount handling
-    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
                    if entry['tr_type'] == 1 and entry.get('description', '').startswith('Total Credit Line')]
     assert len(credit_lines) == 1  # Only VENDOR1 should be present with non-zero amount
     assert credit_lines[0]['vendorid'] == 'VENDOR1'
@@ -1494,6 +1494,6 @@ def test_construct_journal_entry_with_single_credit_line(create_journal_entry, d
     )
 
     # Verify CCC fund source handling
-    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
                    if entry['tr_type'] == 1 and entry.get('description', '').startswith('Total Credit Line')]
     assert credit_lines[0]['accountno'] == general_mappings.default_credit_card_id
