@@ -30,6 +30,7 @@ from apps.workspaces.models import (
 
 from apps.sage_intacct.models import (
     Bill,
+    CostCode,
     CostType,
     APPayment,
     DimensionDetail,
@@ -413,23 +414,17 @@ class SageIntacctConnector:
 
         for tasks in tasks_generator:
             for task in tasks:
-                detail = {
-                    'project_id': task['PROJECTID'],
-                    'project_name': task['PROJECTNAME'],
-                    'record_no': task['RECORDNO']
-                }
+                tasks_attribute.append(
+                    CostCode(
+                        task_name=task['NAME'],
+                        task_id=task['TASKID'],
+                        project_id=task['PROJECTID'],
+                        project_name=task['PROJECTNAME'],
+                        workspace_id=self.workspace_id,
+                    )
+                )
 
-                tasks_attribute.append({
-                    'attribute_type': 'COST_CODE',
-                    'display_name': 'Cost Code',
-                    'value': task['NAME'],
-                    'destination_id': task['TASKID'],
-                    'active': True,
-                    'detail': detail,
-                    'code': task['TASKID']
-                })
-
-            DestinationAttribute.bulk_create_or_update_destination_attributes(tasks_attribute, 'COST_CODE', self.workspace_id, True)
+            CostCode.objects.bulk_create(tasks_attribute, batch_size=50)
             tasks_attribute = []
 
         dependent_field_setting.last_synced_at = datetime.now()

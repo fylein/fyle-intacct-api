@@ -2,11 +2,11 @@ import logging
 from time import sleep
 from datetime import datetime, timezone
 
-from django.db.models import F, Func, Value, CharField, JSONField
+from django.db.models import F, Func, Value, JSONField
 from django.db.models.functions import JSONObject
 from django.contrib.postgres.aggregates import JSONBAgg
 
-from fyle_accounting_mappings.models import ExpenseAttribute, DestinationAttribute
+from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 
@@ -17,7 +17,7 @@ from sageintacctsdk.exceptions import (
 )
 
 from apps.mappings.models import ImportLog
-from apps.sage_intacct.models import CostType
+from apps.sage_intacct.models import CostCode, CostType
 from apps.fyle.models import DependentFieldSetting
 from apps.fyle.helpers import connect_to_platform
 from apps.mappings.helpers import prepend_code_to_name
@@ -108,8 +108,8 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
 
         SQL Query:
         SELECT
-            detail ->> 'project_name' AS project_name,
-            detail ->> 'project_id' AS project_id,
+            project_name AS project_name,
+            project_id AS project_id,
             JSON_AGG(
                 JSON_BUILD_OBJECT(
                     'cost_code_name', value,
@@ -117,27 +117,22 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                 )
             ) AS cost_codes
         FROM
-            destination_attributes
+            cost_codes
         WHERE
             workspace_id = 1
-            AND attribute_type = 'COST_CODE'
         GROUP BY
             project_name,
             project_id;
     """
-    if 'attribute_type' in filters:
+    if not dependent_field_setting.is_cost_type_import_enabled:
         projects_batch = (
-            DestinationAttribute.objects.filter(**filters)
-            .annotate(
-                project_name=Func(F('detail'), Value('project_name'), function='jsonb_extract_path_text', output_field=CharField()),
-                project_id=Func(F('detail'), Value('project_id'), function='jsonb_extract_path_text', output_field=CharField())
-            )
+            CostCode.objects.filter(**filters)
             .values('project_name', 'project_id')
             .annotate(
                 cost_codes=JSONBAgg(
                     JSONObject(
-                        cost_code_name=F('value'),  # value -> task_name
-                        cost_code_code=F('destination_id')  # destination_id -> task_id
+                        cost_code_name=F('task_name'),  # value -> task_name
+                        cost_code_code=F('task_id')  # destination_id -> task_id
                     ),
                     output_field=JSONField(),
                     distinct=True
@@ -304,8 +299,7 @@ def post_dependent_cost_code_standalone(workspace_id: int, dependent_field_setti
     :return: None
     """
     filters = {
-        'workspace_id': workspace_id,
-        'attribute_type': 'COST_CODE'
+        'workspace_id': workspace_id
     }
 
     if dependent_field_setting.last_successful_import_at:
@@ -465,7 +459,7 @@ def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: dict,
         if dependent_field_setting.is_cost_type_import_enabled:
             disable_and_post_cost_code_from_cost_type_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
         else:
-            disable_and_post_cost_code_from_destination_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
+            disable_and_post_cost_code_from_cost_code_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
 
 
 def disable_and_post_cost_code_from_cost_type_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
@@ -515,9 +509,9 @@ def disable_and_post_cost_code_from_cost_type_table(workspace_id: int, cost_code
             CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
 
 
-def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
+def disable_and_post_cost_code_from_cost_code_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
     """
-    Disable and post cost codes from destination table
+    Disable and post cost codes from cost code table
     :param workspace_id: Workspace ID
     :param cost_codes_to_disable: Cost codes to disable
     :param platform: Platform connector object
@@ -525,9 +519,8 @@ def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_co
     :return: None
     """
     filters = {
-        'detail__project_id__in': list(cost_codes_to_disable.keys()),
-        'workspace_id': workspace_id,
-        'attribute_type': 'COST_CODE'
+        'project_id__in': list(cost_codes_to_disable.keys()),
+        'workspace_id': workspace_id
     }
     cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
     # This call will disable the cost codes in Fyle that has old project name
@@ -538,31 +531,30 @@ def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_co
     BATCH_SIZE = 500
 
     for _, value in cost_codes_to_disable.items():
-        cost_codes_queryset = DestinationAttribute.objects.filter(
+        cost_codes_queryset = CostCode.objects.filter(
             workspace_id=workspace_id,
-            detail__project_id=value['code']
-        ).exclude(detail__project_name=value['updated_value'], detail__project_id=value['updated_code'])
+            project_id=value['code']
+        ).exclude(project_name=value['updated_value'], project_id=value['updated_code'])
 
         bulk_update_payload = []
 
         for cost_code in cost_codes_queryset.iterator(chunk_size=BATCH_SIZE):
-            detail = cost_code.detail
-            detail['project_id'] = value['updated_code']
-            detail['project_name'] = value['updated_value']
-            cost_code.detail = detail
+            cost_code.project_id = value['updated_code']
+            cost_code.project_name = value['updated_value']
+
             # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
             cost_code.updated_at = datetime.now(timezone.utc)
             bulk_update_payload.append(cost_code)
 
             if len(bulk_update_payload) >= BATCH_SIZE:
                 logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-                DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+                CostCode.objects.bulk_update(bulk_update_payload, ['project_id', 'project_name', 'updated_at'], batch_size=50)
                 bulk_update_payload = []
 
         # Final update for any remaining objects in the last batch
         if bulk_update_payload:
             logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-            DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+            CostCode.objects.bulk_update(bulk_update_payload, ['project_id', 'project_name', 'updated_at'], batch_size=50)
 
 
 def reset_flag_and_disable_cost_type_field(workspace_id: int, reset_flag: bool) -> None:

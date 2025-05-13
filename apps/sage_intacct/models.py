@@ -398,21 +398,19 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
             task_id = cost_type.task_id
     else:
         if prepend_code_to_name:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id)
+                project_id=str(project_id)
             ).annotate(
-                combined_code_name=Concat('code', Value(': '), 'value', output_field=CharField())
+                combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
             ).filter(
                 combined_code_name=selected_cost_code
             ).first()
         else:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id),
-                value=selected_cost_code
+                project_id=str(project_id),
+                task_name=selected_cost_code
             ).first()
 
         if task:
@@ -1736,3 +1734,24 @@ class CostType(models.Model):
 
         if cost_types_to_be_created:
             CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+
+
+class CostCode(models.Model):
+    """
+    Cost Code Model to store Tasks
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    task_id = models.CharField(max_length=255, help_text='Task Id', null=True)
+    task_name = models.CharField(max_length=255, help_text='Task Name', null=True)
+    project_id = models.CharField(max_length=255, help_text='Project Id', null=True)
+    project_name = models.CharField(max_length=255, help_text='Project Name', null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cost_codes'
+        unique_together = ('workspace', 'task_id', 'project_id')
+        indexes = [
+            models.Index(fields=['workspace', 'task_id']),
+            models.Index(fields=['workspace', 'project_id']),
+        ]
