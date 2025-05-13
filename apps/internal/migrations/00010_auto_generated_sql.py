@@ -3,7 +3,7 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    dependencies = [('internal', '0009_auto_generated_sql')]
+    dependencies = [('internal', '0009_auto_generate_sql')]
 
     operations = [
         migrations.RunSQL(
