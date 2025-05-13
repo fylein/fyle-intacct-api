@@ -47,9 +47,9 @@ def run_post_configration_triggers(sender: type[Configuration], instance: Config
                 workspace_id=instance.workspace_id,
                 destination_field=params['destination_field'],
                 defaults={
-                    'source_field':     params['source_field'],
-                    'import_to_fyle':   params['import_to_fyle'],
-                    'is_custom':        params['is_custom'],
+                    'source_field': params['source_field'],
+                    'import_to_fyle': params['import_to_fyle'],
+                    'is_custom': params['is_custom'],
                 }
             )
             if export_module_type == 'CHARGE_CARD_TRANSACTION':

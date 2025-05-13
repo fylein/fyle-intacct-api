@@ -10,7 +10,7 @@ from django.core.cache import cache
 from apps.exceptions import ValueErrorWithResponse
 from django_q.models import Schedule
 
-from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute
+from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute, Mapping
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
@@ -2108,3 +2108,143 @@ def test_search_and_upsert_vendors_personal(db, mocker):
     search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='PERSONAL')
 
     assert mock_search_and_create_vendors.call_count == 1
+
+
+def test_post_bill_success(mocker, create_task_logs, db):
+    """
+    Test post_bill success
+    """
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.post',
+        return_value=data['bill_response']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.get',
+        return_value=data['bill_response']['data']
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.load_attachments',
+        return_value=['sdfgh']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.update_attachment',
+        return_value=data['bill_response']
+    )
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_ap_payment',
+    )
+
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expenses = expense_group.expenses.all()
+
+    expense_group.id = random.randint(100, 1500000)
+    expense_group.save()
+
+    for expense in expenses:
+        expense.expense_group_id = expense_group.id
+        expense.save()
+
+    expense_group.expenses.set(expenses)
+
+    create_bill(expense_group, task_log.id, True, False)
+
+    task_log = TaskLog.objects.get(pk=task_log.id)
+    bill = Bill.objects.get(expense_group_id=expense_group.id)
+    assert task_log.status == 'COMPLETE'
+    assert bill.currency == 'USD'
+    assert bill.vendor_id == 'Ashwin'
+
+    task_log.status = 'READY'
+    task_log.save()
+
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.update_bill') as mock_call:
+        mock_call.side_effect = Exception()
+        create_bill(expense_group, task_log.id, True, False)
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        create_bill(expense_group, task_log.id, True, False)
+
+
+def test_post_bill_with_vendor_mapping(mocker, db):
+    """
+    Test post_bill success
+    """
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.post',
+        return_value=data['bill_response']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.get',
+        return_value=data['bill_response']['data']
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.load_attachments',
+        return_value=['sdfgh']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.update_attachment',
+        return_value=data['bill_response']
+    )
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_ap_payment',
+    )
+
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.fund_source = 'CCC'
+    expense_group.save()
+    expenses = expense_group.expenses.all()
+
+    expenses.update(
+        fund_source='CCC',
+        corporate_card_id='baccjpfvrtsPg9'
+    )
+
+    vendor = DestinationAttribute.objects.create(
+        value='abcd',
+        destination_id='ABCD',
+        attribute_type='VENDOR',
+        display_name='Vendor',
+        workspace_id=1,
+        active=True,
+        detail={
+            'email': 'vendor123@fyle.in'
+        }
+    )
+
+    corporate_card = ExpenseAttribute.objects.create(
+        attribute_type='CORPORATE_CARD',
+        value='American Express - 61662',
+        display_name='Corporate Card',
+        source_id='baccjpfvrtsPg9',
+        workspace_id=1,
+        active=True
+    )
+
+    mapping = Mapping.objects.create(
+        workspace_id=1,
+        source_id=corporate_card.id,
+        destination_id=vendor.id,
+        source_type='CORPORATE_CARD',
+        destination_type='VENDOR',
+    )
+
+    create_bill(expense_group, task_log.id, True, False)
+
+    task_log = TaskLog.objects.get(pk=task_log.id)
+    bill = Bill.objects.get(expense_group_id=expense_group.id)
+    assert task_log.status == 'COMPLETE'
+    assert bill.vendor_id == 'ABCD'
