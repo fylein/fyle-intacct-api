@@ -1423,7 +1423,7 @@ class SageIntacctConnector:
             # Skip if total amount is zero
             if total_amount == 0:
                 continue
-                
+
             # Handle refund case
             tr_type = 1 if total_amount < 0 else -1
             amount = abs(total_amount)
