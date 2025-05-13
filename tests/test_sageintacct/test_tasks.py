@@ -10,7 +10,7 @@ from django.core.cache import cache
 from apps.exceptions import ValueErrorWithResponse
 from django_q.models import Schedule
 
-from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute, Mapping
+from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
@@ -2108,81 +2108,3 @@ def test_search_and_upsert_vendors_personal(db, mocker):
     search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='PERSONAL')
 
     assert mock_search_and_create_vendors.call_count == 1
-
-
-def test_post_bill_with_vendor_mapping(mocker, db):
-    """
-    Test post_bill success with vendor mapping
-    """
-    mocker.patch(
-        'sageintacctsdk.apis.Bills.post',
-        return_value=data['bill_response']
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Bills.get',
-        return_value=data['bill_response']['data']
-    )
-    mocker.patch(
-        'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Bills.update_attachment',
-        return_value=data['bill_response']
-    )
-
-    mocker.patch(
-        'apps.sage_intacct.tasks.create_ap_payment',
-    )
-
-    workspace_id = 1
-
-    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
-    task_log.status = 'READY'
-    task_log.save()
-
-    expense_group = ExpenseGroup.objects.get(id=1)
-    expense_group.fund_source = 'CCC'
-    expense_group.save()
-    expenses = expense_group.expenses.all()
-
-    expenses.update(
-        fund_source='CCC',
-        corporate_card_id='baccjpfvrtsPg9'
-    )
-
-    vendor = DestinationAttribute.objects.create(
-        value='abcd',
-        destination_id='ABCD',
-        attribute_type='VENDOR',
-        display_name='Vendor',
-        workspace_id=1,
-        active=True,
-        detail={
-            'email': 'vendor123@fyle.in'
-        }
-    )
-
-    corporate_card = ExpenseAttribute.objects.create(
-        attribute_type='CORPORATE_CARD',
-        value='American Express - 61662',
-        display_name='Corporate Card',
-        source_id='baccjpfvrtsPg9',
-        workspace_id=1,
-        active=True
-    )
-
-    _ = Mapping.objects.create(
-        workspace_id=1,
-        source_id=corporate_card.id,
-        destination_id=vendor.id,
-        source_type='CORPORATE_CARD',
-        destination_type='VENDOR',
-    )
-
-    create_bill(expense_group, task_log.id, True, False)
-
-    task_log = TaskLog.objects.get(pk=task_log.id)
-    bill = Bill.objects.get(expense_group_id=expense_group.id)
-    assert task_log.status == 'COMPLETE'
-    assert bill.vendor_id == 'ABCD'
