@@ -1436,7 +1436,7 @@ class SageIntacctConnector:
                 'employeeid': lineitems[0].employee_id,
                 'amount': amount,
                 'tr_type': tr_type,
-                'description': f'Total Credit Line - Vendor {vendor_id}'
+                'description': f'Total Credit Line'
             }
             credit_lines.append(credit_line)
 

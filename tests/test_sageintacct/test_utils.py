@@ -1269,3 +1269,231 @@ def test_search_and_create_vendors(db, mocker):
     assert vendor_2 is not None
     assert vendor_2.value == 'Missing Vendor 2'
     assert vendor_2.destination_id == '20004'
+
+
+def test_construct_single_itemized_credit_line(create_journal_entry, db):
+    """
+    Test construct single itemized credit line
+    """
+    workspace_id = 1
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    general_mappings.default_credit_card_id = 'CC123'
+    general_mappings.default_gl_account_id = 'GL456'
+    general_mappings.save()
+
+    journal_entry, journal_entry_lineitems = create_journal_entry
+
+    # Test case 1: Multiple line items for same vendor
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[0].employee_id = 'EMP1'
+    journal_entry_lineitems[0].user_defined_dimensions = []  # Initialize empty list
+
+    # Add second line item for same vendor with a different expense_id
+    second_lineitem = journal_entry_lineitems[0].__class__.objects.create(
+        journal_entry=journal_entry,
+        vendor_id='VENDOR1',
+        amount=200,
+        employee_id='EMP1',
+        expense_id=journal_entry_lineitems[0].expense_id + 1,  # Use a different expense_id
+        user_defined_dimensions=[]  # Initialize empty list
+    )
+    journal_entry_lineitems.append(second_lineitem)
+
+    # Ensure fund source is not CCC
+    journal_entry.expense_group.fund_source = 'PERSONAL'
+    journal_entry.expense_group.save()
+
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 1
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+    assert credit_lines[0]['amount'] == 300  # Sum of 100 + 200
+    assert credit_lines[0]['tr_type'] == -1  # Positive amount
+    assert credit_lines[0]['accountno'] == general_mappings.default_gl_account_id
+
+    # Test case 2: Multiple vendors
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[1].vendor_id = 'VENDOR2'
+    journal_entry_lineitems[1].amount = 200
+
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 2
+    vendor_amounts = {line['vendorid']: line['amount'] for line in credit_lines}
+    assert vendor_amounts['VENDOR1'] == 100
+    assert vendor_amounts['VENDOR2'] == 200
+
+    # Test case 3: Refund case (negative amount)
+    journal_entry_lineitems[0].amount = -100
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 2
+    assert credit_lines[0]['amount'] == 100  # Absolute value
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+
+    # Test case 4: Zero amount line item
+    journal_entry_lineitems[0].amount = 0
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 1  # Only VENDOR2 should be present
+    assert credit_lines[0]['vendorid'] == 'VENDOR2'
+
+    # Test case 5: CCC fund source
+    journal_entry.expense_group.fund_source = 'CCC'
+    journal_entry.expense_group.save()
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert credit_lines[0]['accountno'] == general_mappings.default_credit_card_id
+
+
+def test_construct_journal_entry_with_single_credit_line(create_journal_entry, db):
+    """
+    Test construct journal entry with single credit line enabled
+    """
+    workspace_id = 1
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    # Enable single credit line and tax codes
+    general_settings = Configuration.objects.filter(workspace_id=workspace_id).first()
+    general_settings.import_tax_codes = True
+    general_settings.je_single_credit_line = True
+    general_settings.save()
+
+    general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    general_mappings.default_tax_code_id = 4
+    general_mappings.default_credit_card_id = 'CC123'
+    general_mappings.default_gl_account_id = 'GL456'
+    general_mappings.save()
+
+    journal_entry, journal_entry_lineitems = create_journal_entry
+    
+    # Test case 1: Multiple line items for same vendor
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[0].employee_id = 'EMP1'
+    journal_entry_lineitems[0].user_defined_dimensions = []  # Initialize empty list
+    
+    # Add second line item for same vendor with a different expense_id
+    second_lineitem = journal_entry_lineitems[0].__class__.objects.create(
+        journal_entry=journal_entry,
+        vendor_id='VENDOR1',
+        amount=200,
+        employee_id='EMP1',
+        expense_id=journal_entry_lineitems[0].expense_id + 1,  # Use a different expense_id
+        user_defined_dimensions=[]  # Initialize empty list
+    )
+    journal_entry_lineitems.append(second_lineitem)
+
+    # Ensure fund source is not CCC
+    journal_entry.expense_group.fund_source = 'PERSONAL'
+    journal_entry.expense_group.save()
+
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify credit lines are grouped by vendor
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+                   if entry['tr_type'] == -1 and entry.get('description') == 'Total Credit Line']
+    assert len(credit_lines) == 1
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+    assert credit_lines[0]['amount'] == 300  # Sum of 100 + 200
+    assert credit_lines[0]['accountno'] == general_mappings.default_gl_account_id
+
+    # Test case 2: Multiple vendors
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[1].vendor_id = 'VENDOR2'
+    journal_entry_lineitems[1].amount = 200
+
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify credit lines for multiple vendors
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+                   if entry['tr_type'] == -1 and entry.get('description', '').startswith('Total Credit Line')]
+    assert len(credit_lines) == 2
+    vendor_amounts = {line['vendorid']: line['amount'] for line in credit_lines}
+    assert vendor_amounts['VENDOR1'] == 100
+    assert vendor_amounts['VENDOR2'] == 200
+
+    # Test case 3: Refund case (negative amount)
+    # Set both line items to negative amounts for the same vendor
+    journal_entry_lineitems[0].amount = -100
+    journal_entry_lineitems[1].amount = -200
+    journal_entry_lineitems[1].vendor_id = 'VENDOR1'  # Ensure both are for same vendor
+
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify refund handling - should have one credit line with positive amount
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+                   if entry['tr_type'] == 1 and entry.get('description') == 'Total Credit Line']
+    assert len(credit_lines) == 1
+    assert credit_lines[0]['amount'] == 300  # Sum of absolute values
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+
+    # Test case 4: Zero amount line item
+    journal_entry_lineitems[0].amount = 0
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify zero amount handling
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+                   if entry['tr_type'] == 1 and entry.get('description', '').startswith('Total Credit Line')]
+    assert len(credit_lines) == 1  # Only VENDOR1 should be present with non-zero amount
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+    assert credit_lines[0]['amount'] == 200  # Only the non-zero amount
+
+    # Test case 5: CCC fund source
+    journal_entry.expense_group.fund_source = 'CCC'
+    journal_entry.expense_group.save()
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify CCC fund source handling
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry'] 
+                   if entry['tr_type'] == 1 and entry.get('description', '').startswith('Total Credit Line')]
+    assert credit_lines[0]['accountno'] == general_mappings.default_credit_card_id
