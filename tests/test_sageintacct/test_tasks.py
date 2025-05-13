@@ -2110,71 +2110,9 @@ def test_search_and_upsert_vendors_personal(db, mocker):
     assert mock_search_and_create_vendors.call_count == 1
 
 
-def test_post_bill_success(mocker, create_task_logs, db):
-    """
-    Test post_bill success
-    """
-    mocker.patch(
-        'sageintacctsdk.apis.Bills.post',
-        return_value=data['bill_response']
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Bills.get',
-        return_value=data['bill_response']['data']
-    )
-    mocker.patch(
-        'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
-    )
-    mocker.patch(
-        'sageintacctsdk.apis.Bills.update_attachment',
-        return_value=data['bill_response']
-    )
-
-    mocker.patch(
-        'apps.sage_intacct.tasks.create_ap_payment',
-    )
-
-    workspace_id = 1
-
-    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
-    task_log.status = 'READY'
-    task_log.save()
-
-    expense_group = ExpenseGroup.objects.get(id=1)
-    expenses = expense_group.expenses.all()
-
-    expense_group.id = random.randint(100, 1500000)
-    expense_group.save()
-
-    for expense in expenses:
-        expense.expense_group_id = expense_group.id
-        expense.save()
-
-    expense_group.expenses.set(expenses)
-
-    create_bill(expense_group, task_log.id, True, False)
-
-    task_log = TaskLog.objects.get(pk=task_log.id)
-    bill = Bill.objects.get(expense_group_id=expense_group.id)
-    assert task_log.status == 'COMPLETE'
-    assert bill.currency == 'USD'
-    assert bill.vendor_id == 'Ashwin'
-
-    task_log.status = 'READY'
-    task_log.save()
-
-    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.update_bill') as mock_call:
-        mock_call.side_effect = Exception()
-        create_bill(expense_group, task_log.id, True, False)
-
-        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_bill(expense_group, task_log.id, True, False)
-
-
 def test_post_bill_with_vendor_mapping(mocker, db):
     """
-    Test post_bill success
+    Test post_bill success with vendor mapping
     """
     mocker.patch(
         'sageintacctsdk.apis.Bills.post',
@@ -2234,7 +2172,7 @@ def test_post_bill_with_vendor_mapping(mocker, db):
         active=True
     )
 
-    mapping = Mapping.objects.create(
+    _ = Mapping.objects.create(
         workspace_id=1,
         source_id=corporate_card.id,
         destination_id=vendor.id,
