@@ -1377,7 +1377,7 @@ class SageIntacctConnector:
 
         return dimensions_values
 
-    def __get_location_id(self, workspace_id: int) -> Optional[str]:
+    def __get_location_id_for_journal_entry(self, workspace_id: int) -> Optional[str]:
         """
         Get location ID based on configuration.
 
@@ -1386,20 +1386,21 @@ class SageIntacctConnector:
         """
         general_mapping = (
             GeneralMapping.objects
-            .filter(workspace_id=workspace_id)
+            .filter(workspace_id=workspace_id, default_location_id__isnull=False)
             .values('default_location_id')
             .first()
         )
-        if general_mapping and general_mapping['default_location_id']:
+        if general_mapping:
             return general_mapping['default_location_id']
 
         location_mapping = (
             LocationEntityMapping.objects
             .filter(workspace_id=workspace_id)
+            .exclude(location_entity_name='Top Level')
             .values('location_entity_name', 'destination_id')
             .first()
         )
-        if location_mapping and location_mapping['location_entity_name'] != 'Top Level':
+        if location_mapping:
             return location_mapping['destination_id']
 
         return None
@@ -1428,7 +1429,7 @@ class SageIntacctConnector:
                 'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
                 'currency': journal_entry.currency,
                 'vendorid': vendor_id,
-                'location': self.__get_location_id(self.workspace_id),
+                'location': self.__get_location_id_for_journal_entry(self.workspace_id),
                 'employeeid': lineitems[0].employee_id,
                 'amount': total_amount,
                 'tr_type': -1,
@@ -1469,19 +1470,17 @@ class SageIntacctConnector:
             }
         }
 
-    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], recordno: str = None) -> dict:
+    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], supdocid: str = None, recordno: str = None) -> dict:
         """
         Create a journal_entry
         :param journal_entry: JournalEntry object extracted from database
         :param journal_entry_lineitems: JournalEntryLineItem objects extracted from database
+        :param supdocid: SupDocId
+        :param recordno: RecordNo
         :return: constructed journal_entry
         """
-        try:
-            configuration = Configuration.objects.get(workspace_id=self.workspace_id)
-            general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
-        except (Configuration.DoesNotExist, GeneralMapping.DoesNotExist) as e:
-            logger.error(f"Failed to fetch configuration or mappings: {str(e)}")
-            raise
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        general_mappings = GeneralMapping.objects.get(workspace_id=self.workspace_id)
 
         journal_entry_payload = []
 
@@ -1567,13 +1566,18 @@ class SageIntacctConnector:
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
 
+        if journal_entry.supdoc_id:
+            supdocid = journal_entry.supdoc_id
+        elif supdocid:
+            supdocid = supdocid
+
         # Construct final payload
         journal_entry_payload = {
             'recordno': recordno if recordno else None,
             'journal': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
             'batch_date': transaction_date,
             'batch_title': journal_entry.memo,
-            'supdocid': journal_entry.supdoc_id if journal_entry.supdoc_id else None,
+            'supdocid': supdocid,
             'entries': [{
                 'glentry': journal_entry_payload
             }]
