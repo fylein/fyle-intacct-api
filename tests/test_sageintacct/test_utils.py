@@ -14,7 +14,7 @@ from fyle_accounting_mappings.models import (
 
 from tests.helper import dict_compare_keys
 
-from apps.sage_intacct.models import CostType
+from apps.sage_intacct.models import CostCode, CostType
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import (
     Workspace,
@@ -1213,7 +1213,8 @@ def test_sync_cost_codes(db, mocker, create_dependent_field_setting):
     sage_intacct_mock.return_value = 1
 
     data = [[
-        {'RECORDNO': '38', 'TASKID': '111', 'PARENTKEY': None, 'PARENTID': None, 'NAME': 'HrishabhCostCode', 'PARENTTASKNAME': None, 'PROJECTKEY': '172', 'PROJECTID': '1171', 'PROJECTNAME': 'Sage Project 10', 'ITEMKEY': None, 'ITEMID': None, 'ITEMNAME': None, 'DESCRIPTION': None, 'BILLABLE': 'false', 'TASKNO': None, 'TASKSTATUS': 'In Progress', 'CLASSID': None, 'CLASSNAME': None, 'CLASSKEY': None, 'ROOTPARENTKEY': '38', 'ROOTPARENTID': '111', 'ROOTPARENTNAME': 'HrishabhCostType_v3'}
+        {'RECORDNO': '38', 'TASKID': '111', 'PARENTKEY': None, 'PARENTID': None, 'NAME': 'HrishabhCostCode', 'PARENTTASKNAME': None, 'PROJECTKEY': '172', 'PROJECTID': '1171', 'PROJECTNAME': 'Sage Project 10', 'ITEMKEY': None, 'ITEMID': None, 'ITEMNAME': None, 'DESCRIPTION': None, 'BILLABLE': 'false', 'TASKNO': None, 'TASKSTATUS': 'In Progress', 'CLASSID': None, 'CLASSNAME': None, 'CLASSKEY': None, 'ROOTPARENTKEY': '38', 'ROOTPARENTID': '111', 'ROOTPARENTNAME': 'HrishabhCostType_v3'},
+        {'RECORDNO': '39', 'TASKID': '111', 'PARENTKEY': None, 'PARENTID': None, 'NAME': 'HrishabhCostCode', 'PARENTTASKNAME': None, 'PROJECTKEY': '173', 'PROJECTID': '1172', 'PROJECTNAME': 'Sage Project 11', 'ITEMKEY': None, 'ITEMID': None, 'ITEMNAME': None, 'DESCRIPTION': None, 'BILLABLE': 'false', 'TASKNO': None, 'TASKSTATUS': 'In Progress', 'CLASSID': None, 'CLASSNAME': None, 'CLASSKEY': None, 'ROOTPARENTKEY': '39', 'ROOTPARENTID': '112', 'ROOTPARENTNAME': 'HrishabhCostType_v4'}
     ]]
 
     mocker.patch('sageintacctsdk.apis.Tasks.get_all_generator', return_value=data)
@@ -1223,13 +1224,13 @@ def test_sync_cost_codes(db, mocker, create_dependent_field_setting):
 
     sage_intacct_connection.sync_cost_codes()
 
-    attribute = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CODE').first()
+    assert CostCode.objects.filter(workspace_id=workspace_id).count() == 2
+    attribute = CostCode.objects.filter(workspace_id=workspace_id, project_id='1171').first()
 
-    assert attribute.value == 'HrishabhCostCode'
-    assert attribute.detail['project_id'] == '1171'
-    assert attribute.detail['project_name'] == 'Sage Project 10'
-    assert attribute.code == '111'
-    assert attribute.destination_id == '111'
+    assert attribute.task_name == 'HrishabhCostCode'
+    assert attribute.project_id == '1171'
+    assert attribute.project_name == 'Sage Project 10'
+    assert attribute.task_id == '111'
 
 
 def test_search_and_create_vendors(db, mocker):
