@@ -1569,10 +1569,7 @@ class SageIntacctConnector:
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
 
-        if journal_entry.supdoc_id:
-            supdocid = journal_entry.supdoc_id
-        elif supdocid:
-            supdocid = supdocid
+        supdocid = journal_entry.supdoc_id or supdocid
 
         # Construct final payload
         journal_entry_payload = {
