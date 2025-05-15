@@ -225,7 +225,7 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog, workspace: 
             org_id=workspace.fyle_org_id
         )
     filtered_expenses = [expense for expense in filtered_expenses if not expense.is_skipped]
-    skipped_expense_ids =ExpenseGroup.create_expense_groups_by_report_id_fund_source(
+    skipped_expense_ids = ExpenseGroup.create_expense_groups_by_report_id_fund_source(
         filtered_expenses, configuration, workspace.id
     )
 
