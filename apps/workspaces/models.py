@@ -155,6 +155,7 @@ class Configuration(AutoAddCreateUpdateInfoMixin, models.Model):
         blank=True, default=list
     )
     skip_accounting_export_summary_post = models.BooleanField(default=False, help_text='Skip accounting export summary post')
+    je_single_credit_line = models.BooleanField(default=False, help_text='Single credit line in journal entry')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 

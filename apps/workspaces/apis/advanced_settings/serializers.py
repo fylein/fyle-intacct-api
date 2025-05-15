@@ -37,7 +37,8 @@ class ConfigurationSerializer(serializers.ModelSerializer):
             'sync_sage_intacct_to_fyle_payments',
             'auto_create_destination_entity',
             'memo_structure',
-            'auto_create_merchants_as_vendors'
+            'auto_create_merchants_as_vendors',
+            'je_single_credit_line'
         ]
 
 
@@ -198,7 +199,8 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
                 'auto_create_destination_entity': configurations.get('auto_create_destination_entity'),
                 'change_accounting_period': configurations.get('change_accounting_period'),
                 'memo_structure': configurations.get('memo_structure'),
-                'auto_create_merchants_as_vendors': configurations.get('auto_create_merchants_as_vendors')
+                'auto_create_merchants_as_vendors': configurations.get('auto_create_merchants_as_vendors'),
+                'je_single_credit_line': configurations.get('je_single_credit_line')
             },
             user=user
         )
