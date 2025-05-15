@@ -1536,6 +1536,7 @@ class SageIntacctConnector:
             for i, lineitem in enumerate(journal_entry_lineitems):
                 dimensions_values = self.__get_dimensions_values(lineitem, self.workspace_id)
                 expense_link = self.get_expense_link(lineitem)
+                tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
                 # Create base line item
                 base_line_item = self.__construct_base_line_item(lineitem, dimensions_values, journal_entry, expense_link)
