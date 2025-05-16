@@ -262,7 +262,7 @@ def post_accounting_export_summary(workspace_id: int, expense_ids: List = None, 
 
     worker_logger = get_logger()
     caller_info = get_caller_info()
-    
+
     # Iterate through all expenses which are not synced and post accounting export summary to Fyle in batches
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
