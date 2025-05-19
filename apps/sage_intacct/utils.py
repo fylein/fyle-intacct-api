@@ -1434,7 +1434,7 @@ class SageIntacctConnector:
                 'vendorid': vendor_id,
                 'location': self.__get_location_id_for_journal_entry(self.workspace_id),
                 'employeeid': lineitems[0].employee_id,
-                'amount': amount,
+                'amount': round(amount, 2),
                 'tr_type': tr_type,
                 'description': 'Total Credit Line'
             }
@@ -1545,7 +1545,7 @@ class SageIntacctConnector:
                 credit_line = base_line_item.copy()
                 credit_line.update({
                     'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
-                    'amount': lineitem.amount,
+                    'amount': round(lineitem.amount, 2),
                     'tr_type': -1,
                     'billable': lineitem.billable if configuration.is_journal_credit_billable else None
                 })
