@@ -1556,8 +1556,9 @@ class SageIntacctConnector:
                     credit_line['amount'] = round(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount, 2)
                     credit_line['tr_type'] = 1
                     # Copy tax entries to credit line in refund case
-                    credit_line['taxentries'] = journal_entry_payload[i]['taxentries'].copy()
-                    journal_entry_payload[i].pop('taxentries')
+                    debit_line_index = i * 2  # Calculate actual index of debit line after credit line insertion
+                    credit_line['taxentries'] = journal_entry_payload[debit_line_index]['taxentries'].copy()
+                    journal_entry_payload[debit_line_index].pop('taxentries')
 
                 # Add user defined dimensions
                 for dimension in lineitem.user_defined_dimensions:
