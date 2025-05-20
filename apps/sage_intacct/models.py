@@ -84,6 +84,19 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) ->
     return allocation_id, allocation_detail
 
 
+def _get_custom_field_value(lineitem: Expense, field_name: str, workspace_id: int) -> Optional[str]:
+    """
+    Returns the custom property value for the given field_name, or None.
+    """
+    display_name = (
+        ExpenseAttribute.objects
+        .filter(attribute_type=field_name, workspace_id=workspace_id)
+        .values_list('display_name', flat=True)
+        .first()
+    )
+    return (lineitem.custom_properties or {}).get(display_name) if display_name else None
+
+
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
     Get project id or none with priority:
@@ -105,8 +118,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, project_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=project_setting.source_field,
@@ -145,9 +157,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            if attribute:
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, department_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=department_setting.source_field,
@@ -192,8 +202,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, location_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=location_setting.source_field,
@@ -250,8 +259,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             elif customer_setting.source_field == 'COST_CENTER':
                 source_value = lineitem.cost_center
             else:
-                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field, workspace_id=expense_group.workspace_id).first()
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+                source_value = _get_custom_field_value(lineitem, customer_setting.source_field, expense_group.workspace_id)
 
             mapping: Mapping = Mapping.objects.filter(
                 source_type=customer_setting.source_field,
@@ -286,8 +294,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         elif item_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, item_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=item_setting.source_field,
@@ -391,21 +398,19 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
             task_id = cost_type.task_id
     else:
         if prepend_code_to_name:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id)
+                project_id=str(project_id)
             ).annotate(
-                combined_code_name=Concat('code', Value(': '), 'value', output_field=CharField())
+                combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
             ).filter(
                 combined_code_name=selected_cost_code
             ).first()
         else:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id),
-                value=selected_cost_code
+                project_id=str(project_id),
+                task_name=selected_cost_code
             ).first()
 
         if task:
@@ -434,8 +439,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         elif class_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, class_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=class_setting.source_field,
@@ -787,7 +791,18 @@ class Bill(models.Model):
             ).destination_vendor.destination_id
 
         elif expense_group.fund_source == 'CCC':
-            vendor_id = general_mappings.default_ccc_vendor_id
+            ccc_mapping = None
+            if expense.corporate_card_id:
+                ccc_mapping = Mapping.objects.filter(
+                    source_type="CORPORATE_CARD",
+                    destination_type="VENDOR",
+                    workspace_id=expense_group.workspace_id,
+                    source__source_id=expense.corporate_card_id,
+                ).first()
+            if ccc_mapping:
+                vendor_id = ccc_mapping.destination.destination_id
+            else:
+                vendor_id = general_mappings.default_ccc_vendor_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
@@ -1730,3 +1745,24 @@ class CostType(models.Model):
 
         if cost_types_to_be_created:
             CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+
+
+class CostCode(models.Model):
+    """
+    Cost Code Model to store Tasks
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    task_id = models.CharField(max_length=255, help_text='Task Id', null=True)
+    task_name = models.CharField(max_length=255, help_text='Task Name', null=True)
+    project_id = models.CharField(max_length=255, help_text='Project Id', null=True)
+    project_name = models.CharField(max_length=255, help_text='Project Name', null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cost_codes'
+        unique_together = ('workspace', 'task_id', 'project_id')
+        indexes = [
+            models.Index(fields=['workspace', 'task_id']),
+            models.Index(fields=['workspace', 'project_id']),
+        ]
