@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 from unittest import mock
 
 from django.urls import reverse
