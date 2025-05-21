@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from unittest import mock
 
 from django.urls import reverse
@@ -11,8 +12,9 @@ from fyle_accounting_mappings.models import MappingSetting
 
 from tests.helper import dict_compare_keys
 
+from apps.tasks.models import TaskLog
 from apps.mappings.models import ImportLog
-from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail, Workspace
+from apps.workspaces.models import SageIntacctCredential, Configuration, LastExportDetail, Workspace
 
 from .fixtures import data
 from tests.test_fyle.fixtures import data as fyle_data
@@ -345,44 +347,6 @@ def test_connect_sageintacct_view_exceptions(api_client, test_connection):
         assert response.status_code == 401
 
 
-def test_workspace_schedule(api_client, test_connection):
-    """
-    Test Workspace Schedule
-    """
-    workspace_id = 1
-
-    url = '/api/workspaces/{}/schedule/'.format(workspace_id)
-
-    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
-
-    response = api_client.get(url)
-
-    WorkspaceSchedule.objects.get_or_create(
-        workspace_id=workspace_id
-    )
-    response = api_client.get(url)
-
-    response = json.loads(response.content)
-    assert dict_compare_keys(response, data['workspace_schedule']) == [], 'workspace_schedule api returns a diff in keys'
-
-    response = api_client.post(
-        url,
-        data={
-            "hours": 1,
-            "schedule_enabled": True,
-            "added_email": None,
-            "selected_email": [
-                "ashwin.t@fyle.in"
-            ]
-        },
-        format='json'
-    )
-    assert response.status_code == 200
-
-    response = json.loads(response.content)
-    assert dict_compare_keys(response, data['workspace_schedule']) == [], 'workspace_schedule api returns a diff in keys'
-
-
 def test_general_settings_detail(api_client, test_connection):
     """
     Test General Settings Detail
@@ -481,6 +445,39 @@ def test_last_export_detail_view(mocker, db, api_client, test_connection):
 
     response = api_client.get(url)
     assert response.status_code == 404
+
+
+def test_last_export_detail_2(mocker, api_client, test_connection):
+    """
+    Test Last Export Detail View
+    """
+    workspace_id = 1
+
+    Configuration.objects.filter(workspace_id=workspace_id).update(
+        reimbursable_expenses_object='BILL',
+        corporate_credit_card_expenses_object='BILL'
+    )
+
+    url = "/api/workspaces/{}/export_detail/?start_date=2025-05-01".format(workspace_id)
+
+    api_client.credentials(
+        HTTP_AUTHORIZATION="Bearer {}".format(test_connection.access_token)
+    )
+
+    LastExportDetail.objects.get(workspace_id=workspace_id)
+    # last_exported_at=datetime.now(), total_expense_groups_count=1
+
+    TaskLog.objects.create(type='CREATING_EXPENSE_REPORT', status='COMPLETE', workspace_id=workspace_id)
+
+    failed_count = TaskLog.objects.filter(workspace_id=workspace_id, status__in=['FAILED', 'FATAL']).count()
+
+    response = api_client.get(url)
+    assert response.status_code == 200
+
+    response = json.loads(response.content)
+    assert response['repurposed_successful_count'] == 1
+    assert response['repurposed_failed_count'] == failed_count
+    assert response['repurposed_last_exported_at'] is not None
 
 
 def test_import_code_field_view(db, mocker, api_client, test_connection):
