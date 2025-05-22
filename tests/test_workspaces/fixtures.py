@@ -63,6 +63,5 @@ data = {
             'is_posted_at_null': True,
             'masked_corporate_card_number': '**** 4567'
         }
-    ],
-    'workspace_schedule': {'id': 1, 'enabled': True, 'start_datetime': '2022-09-26T13:08:16.281604Z', 'interval_hours': 1, 'error_count': None, 'additional_email_options': [], 'emails_selected': ['ashwin.t@fyle.in'], 'workspace': 1, 'schedule': 9, 'updated_at': '2022-05-13', 'created_at': '2022-05-13'}
+    ]
 }

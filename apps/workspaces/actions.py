@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group_ids: list = [], triggered_by: ExpenseImportSourceEnum = None) -> None:
+def export_to_intacct(workspace_id: int, expense_group_ids: list = [], triggered_by: ExpenseImportSourceEnum = None) -> None:
     """
     Export expenses to Intacct
     :param workspace_id: Workspace ID
@@ -33,7 +33,7 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
 
     last_exported_at = datetime.now()
     is_expenses_exported = False
-    export_mode = export_mode or 'MANUAL'
+    export_mode = 'MANUAL' if triggered_by in (ExpenseImportSourceEnum.DASHBOARD_SYNC, ExpenseImportSourceEnum.DIRECT_EXPORT, ExpenseImportSourceEnum.CONFIGURATION_UPDATE) else 'AUTO'
     expense_group_filters = {
         'exported_at__isnull': True,
         'workspace_id': workspace_id

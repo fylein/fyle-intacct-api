@@ -40,7 +40,10 @@ data = {
                 "Fyle Categories": "",
             },
             "bank_transaction_id": None,
-            "is_posted_at_null": False
+            "is_posted_at_null": False,
+            "report_title": "#5:  May 2024",
+            "payment_number": "P/2023/8/T/1221",
+            "masked_corporate_card_number": "**** 4567"
         },
     ],
     "raw_expense": {
