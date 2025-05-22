@@ -581,13 +581,14 @@ def get_memo(
         return memo
 
 
-def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str, configuration: Configuration) -> str:
+def get_memo_or_purpose(workspace_id: int, lineitem: Expense, category: str, configuration: Configuration, is_top_level: bool = False) -> str:
     """
-    Get the expense purpose
+    Get the expense purpose or memo if its a top level item
     :param workspace_id: Workspace ID
     :param lineitem: Expense
     :param category: Category
     :param configuration: Configuration
+    :param is_top_level: Whether the item is a top level item
     :return: The expense purpose
     """
     workspace = Workspace.objects.get(id=workspace_id)
@@ -607,19 +608,34 @@ def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str, con
         fyle_url, lineitem.expense_id, org_id
     )
 
-    memo_structure = configuration.memo_structure
+    memo_structure = (
+        configuration.top_level_memo_structure
+        if is_top_level
+        else configuration.memo_structure
+    )
 
-    details = {
-        'employee_email': lineitem.employee_email,
-        'employee_name': lineitem.employee_name,
-        'card_number': '{0}'.format(lineitem.masked_corporate_card_number) if lineitem.masked_corporate_card_number else '',
-        'merchant': '{0}'.format(lineitem.vendor) if lineitem.vendor else '',
-        'category': '{0}'.format(category) if lineitem.category else '',
-        'purpose': '{0}'.format(lineitem.purpose) if lineitem.purpose else '',
-        'report_number': '{0}'.format(lineitem.claim_number),
-        'spent_on': '{0}'.format(lineitem.spent_at.date()) if lineitem.spent_at else '',
-        'expense_link': expense_link
-    }
+    if is_top_level:
+        expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+        group_by_key = 'claim_number' if expense_group_settings.description.get('claim_number') else 'expense_number'
+        group_by_value = getattr(lineitem, group_by_key)
+
+        details = {
+            'employee_email': lineitem.employee_email or '',
+            'employee_name': lineitem.employee_name or '',
+            'group_by': group_by_value
+        }
+    else:
+        details = {
+            'employee_email': lineitem.employee_email or '',
+            'employee_name': lineitem.employee_name or '',
+            'card_number': lineitem.masked_corporate_card_number or '',
+            'merchant': lineitem.vendor or '',
+            'category': category or '',
+            'purpose': lineitem.purpose or '',
+            'report_number': lineitem.claim_number or '',
+            'spent_on': lineitem.spent_at.date().isoformat() if lineitem.spent_at else '',
+            'expense_link': expense_link
+        }
 
     purpose = ''
 
@@ -782,7 +798,12 @@ class Bill(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True)
+        else:
+            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = EmployeeMapping.objects.get(
@@ -974,7 +995,11 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=ExpenseReport, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True)
+        else:
+            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -1134,7 +1159,11 @@ class JournalEntry(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=JournalEntry, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True)
+        else:
+            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
 
         journal_entry_object, _ = JournalEntry.objects.update_or_create(
             expense_group=expense_group,
@@ -1329,7 +1358,11 @@ class ChargeCardTransaction(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True)
+        else:
+            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
         expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=expense_group.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         charge_card_id = get_ccc_account_id(general_mappings, expense, description)
