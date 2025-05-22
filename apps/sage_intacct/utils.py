@@ -394,7 +394,7 @@ class SageIntacctConnector:
         Sync Cost Codes
         """
         attribute_count = self.connection.tasks.count(field=None, value=None)
-        logger.info("attribute_count: %s", attribute_count)
+        logger.info("Cost Code count for workspace %s: %s", self.worksapce_id, attribute_count)
 
         if not self.is_sync_allowed(attribute_type = 'cost_codes', attribute_count = attribute_count):
             logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
@@ -410,22 +410,9 @@ class SageIntacctConnector:
             args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
 
         tasks_generator = self.connection.tasks.get_all_generator(field=None, value=None, fields=fields, updated_at=args.get('updated_at', None))
-        tasks_attribute = []
 
         for tasks in tasks_generator:
-            for task in tasks:
-                tasks_attribute.append(
-                    CostCode(
-                        task_name=task['NAME'],
-                        task_id=task['TASKID'],
-                        project_id=task['PROJECTID'],
-                        project_name=task['PROJECTNAME'],
-                        workspace_id=self.workspace_id,
-                    )
-                )
-
-            CostCode.objects.bulk_create(tasks_attribute, batch_size=50)
-            tasks_attribute = []
+            CostCode.bulk_create_or_update(tasks, self.workspace_id)
 
         dependent_field_setting.last_synced_at = datetime.now()
         dependent_field_setting.save()

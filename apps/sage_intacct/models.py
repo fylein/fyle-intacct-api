@@ -414,7 +414,7 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
             ).first()
 
         if task:
-            task_id = task.destination_id
+            task_id = task.task_id
 
     return task_id
 
@@ -1755,3 +1755,48 @@ class CostCode(models.Model):
             models.Index(fields=['workspace', 'task_id']),
             models.Index(fields=['workspace', 'project_id']),
         ]
+
+    @staticmethod
+    def bulk_create_or_update(cost_codes: list[dict], workspace_id: int) -> None:
+        """
+        Bulk create or update cost codes
+        :param cost_codes: List of cost codes
+        :param workspace_id: Workspace ID
+        """
+        if not cost_codes:
+            return
+
+        # Get all task_ids and project_ids from the incoming cost codes
+        task_ids = [cost_code['TASKID'] for cost_code in cost_codes]
+        project_ids = [cost_code['PROJECTID'] for cost_code in cost_codes]
+
+        # Get existing cost codes
+        existing_cost_codes = CostCode.objects.filter(
+            workspace_id=workspace_id,
+            task_id__in=task_ids,
+            project_id__in=project_ids
+        )
+
+        # Create a set of existing (task_id, project_id) combinations
+        existing_cost_code_keys = {
+            (cost_code.task_id, cost_code.project_id)
+            for cost_code in existing_cost_codes
+        }
+
+        # Create new cost codes only for combinations that don't exist
+        cost_codes_to_be_created = []
+        for cost_code in cost_codes:
+            key = (cost_code['TASKID'], cost_code['PROJECTID'])
+            if key not in existing_cost_code_keys:
+                cost_codes_to_be_created.append(
+                    CostCode(
+                        task_id=cost_code['TASKID'],
+                        task_name=cost_code['NAME'],
+                        project_id=cost_code['PROJECTID'],
+                        project_name=cost_code['PROJECTNAME'],
+                        workspace_id=workspace_id
+                    )
+                )
+
+        if cost_codes_to_be_created:
+            CostCode.objects.bulk_create(cost_codes_to_be_created, batch_size=50)
