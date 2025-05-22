@@ -189,7 +189,7 @@ def run_email_notification(workspace_id: int) -> None:
                         'workspace_id': workspace_id,
                         'export_time': export_time.date() if export_time else datetime.now(),
                         'year': date.today().year,
-                        'app_url': "{0}/app/settings/#/integrations/native_apps?integrationIframeTarget=integrations/intacct".format(settings.FYLE_APP_URL),
+                        'app_url': "{0}/app/admin/#/integrations?integrationIframeTarget=integrations/intacct".format(settings.FYLE_APP_URL),
                         'fyle_url': settings.FYLE_EXPENSE_URL,
                         'integrations_app_url': settings.INTEGRATIONS_APP_URL,
                         'sage_intacct_company_id': intacct.si_company_id
