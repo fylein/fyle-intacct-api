@@ -394,7 +394,7 @@ class SageIntacctConnector:
         Sync Cost Codes
         """
         attribute_count = self.connection.tasks.count(field=None, value=None)
-        logger.info("Cost Code count for workspace %s: %s", self.worksapce_id, attribute_count)
+        logger.info("Cost Code count for workspace %s: %s", self.workspace_id, attribute_count)
 
         if not self.is_sync_allowed(attribute_type = 'cost_codes', attribute_count = attribute_count):
             logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
