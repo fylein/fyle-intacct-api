@@ -7,6 +7,7 @@ data = {
             "auto_create_destination_entity": False,
             "memo_structure": ["merchant", "purpose"],
             "auto_create_merchants_as_vendors": False,
+            "je_single_credit_line": False,
         },
         "general_mappings": {
             "payment_account": {"id": "100", "name": "First Community Bank"},
@@ -33,6 +34,7 @@ data = {
             "auto_create_destination_entity": False,
             "memo_structure": ["merchant", "purpose"],
             "auto_create_merchants_as_vendors": False,
+            "je_single_credit_line": False,
         },
         "general_mappings": {
             "payment_account": {"id": "100", "name": "First Community Bank"},
