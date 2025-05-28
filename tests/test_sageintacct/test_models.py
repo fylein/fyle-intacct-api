@@ -682,21 +682,20 @@ def test_get_memo_or_purpose_top_level(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True)
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=False)
 
         # Should fall back to regular memo structure
         expected_memo = 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
         assert top_level_memo == expected_memo
 
     # Test when expense_group_settings has expense_number instead of claim_number
-    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
-    original_description = expense_group_settings.description
+    expense_group = ExpenseGroup.objects.get(workspace_id=workspace_id, expenses__in=expenses)
 
     # Modify description to not have claim_number
-    expense_group_settings.description = {'expense_number': 'E/2022/09/T/22'}
-    expense_group_settings.save()
+    expense_group.description = {'expense_number': 'E/2022/09/T/22'}
+    expense_group.save()
 
-    workspace_general_settings.top_level_memo_structure = ['employee_email', 'group_by']
+    workspace_general_settings.top_level_memo_structure = ['employee_email', 'expense_number']
     workspace_general_settings.save()
 
     for lineitem in expenses:
@@ -708,10 +707,6 @@ def test_get_memo_or_purpose_top_level(db):
         # Should use expense_number as group_by
         expected_memo = 'ashwin.t@fyle.in - E/2022/09/T/22'
         assert top_level_memo == expected_memo
-
-    # Restore original description
-    expense_group_settings.description = original_description
-    expense_group_settings.save()
 
 
 def test_get_transaction_date(db):

@@ -615,8 +615,8 @@ def get_memo_or_purpose(workspace_id: int, lineitem: Expense, category: str, con
     )
 
     if is_top_level:
-        expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
-        group_by_key = 'claim_number' if expense_group_settings.description.get('claim_number') else 'expense_number'
+        expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id, expenses__in=[lineitem]).first()
+        group_by_key = 'claim_number' if expense_group.description.get('claim_number') else 'expense_number'
         group_by_value = getattr(lineitem, group_by_key)
 
         details = {
@@ -999,7 +999,7 @@ class ExpenseReport(models.Model):
         if configuration.top_level_memo_structure:
             memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True)
         else:
-            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
+            memo = get_memo(expense_group, ExportTable=ExpenseReport, workspace_id=expense_group.workspace_id)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -1163,7 +1163,7 @@ class JournalEntry(models.Model):
         if configuration.top_level_memo_structure:
             memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True)
         else:
-            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
+            memo = get_memo(expense_group, ExportTable=JournalEntry, workspace_id=expense_group.workspace_id)
 
         journal_entry_object, _ = JournalEntry.objects.update_or_create(
             expense_group=expense_group,
@@ -1362,7 +1362,7 @@ class ChargeCardTransaction(models.Model):
         if configuration.top_level_memo_structure:
             memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True)
         else:
-            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
+            memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
         expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=expense_group.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         charge_card_id = get_ccc_account_id(general_mappings, expense, description)
