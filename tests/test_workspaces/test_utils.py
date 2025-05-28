@@ -7,6 +7,9 @@ from typing import Generator
 
 @pytest.fixture
 def mock_sendgrid() -> Generator[tuple[MagicMock, MagicMock], None, None]:
+    """
+    Mock SendGridAPIClient and Mail
+    """
     with patch('apps.workspaces.utils.SendGridAPIClient') as mock_sg, \
          patch('apps.workspaces.utils.Mail') as mock_mail:
         mock_instance = MagicMock()
@@ -17,6 +20,9 @@ def mock_sendgrid() -> Generator[tuple[MagicMock, MagicMock], None, None]:
 
 
 def test_send_email(mock_sendgrid) -> None:
+    """
+    Test send_email
+    """
     mock_sg, mock_mail = mock_sendgrid
 
     # Test data
