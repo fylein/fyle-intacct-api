@@ -13,7 +13,7 @@ from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from sageintacctsdk.exceptions import InvalidTokenError
 
 from apps.sage_intacct.helpers import sync_dimensions
@@ -220,7 +220,7 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
         """
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            SageIntacctCredential.objects.get(workspace_id=workspace.id)
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
 
             async_task(
                 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
@@ -231,11 +231,20 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_200_OK
             )
 
-        except (SageIntacctCredential.DoesNotExist, InvalidTokenError) as exception:
-            logger.info('Sage Intacct credentials not found / invalid in workspace', exception.__dict__)
+        except SageIntacctCredential.DoesNotExist:
+            logger.info('Sage Intacct credentials not found workspace_id - %s', kwargs['workspace_id'])
             return Response(
                 data={
-                    'message': 'Sage Intacct credentials not found / invalid in workspace'
+                    'message': 'Sage Intacct credentials not found workspace_id - %s' % kwargs['workspace_id']
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except InvalidTokenError:
+            invalidate_sage_intacct_credentials(workspace.id, sage_intacct_credentials)
+            logger.info('Invalid Sage Intact Token for workspace_id - %s', kwargs['workspace_id'])
+            return Response(
+                data={
+                    'message': 'Invalid Sage Intact Token for workspace_id - %s' % kwargs['workspace_id']
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -269,11 +278,20 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_200_OK
             )
 
-        except (SageIntacctCredential.DoesNotExist, InvalidTokenError) as exception:
-            logger.info('Sage Intacct credentials not found / invalid in workspace', exception.__dict__)
+        except SageIntacctCredential.DoesNotExist:
+            logger.info('Sage Intacct credentials not found workspace_id - %s', kwargs['workspace_id'])
             return Response(
                 data={
-                    'message': 'Sage Intacct credentials not found / invalid in workspace'
+                    'message': 'Sage Intacct credentials not found workspace_id - %s' % kwargs['workspace_id']
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except InvalidTokenError:
+            invalidate_sage_intacct_credentials(workspace.id, sage_intacct_credentials)
+            logger.info('Invalid Sage Intact Token for workspace_id - %s', kwargs['workspace_id'])
+            return Response(
+                data={
+                    'message': 'Invalid Sage Intact Token for workspace_id - %s' % kwargs['workspace_id']
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )

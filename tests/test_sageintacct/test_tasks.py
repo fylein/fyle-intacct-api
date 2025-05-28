@@ -669,6 +669,17 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
+        mock_call.side_effect = SageIntacctCredential.DoesNotExist()
+        create_sage_intacct_reimbursement(workspace_id)
+
+        task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
+        assert task_log.status == 'FAILED'
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        create_sage_intacct_reimbursement(workspace_id)
+
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.post_sage_intacct_reimbursement') as mock_call:
         mock_call.side_effect = InvalidTokenError(
             msg={
                 'Message': 'Invalid parametrs'
@@ -683,16 +694,6 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
-
-        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
-        mock_call.side_effect = SageIntacctCredential.DoesNotExist()
-        create_sage_intacct_reimbursement(workspace_id)
-
-        task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
-        assert task_log.status == 'FAILED'
-
-        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_sage_intacct_reimbursement(workspace_id)
 
     with mock.patch('apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement') as mock_call:
         expense_report.expense_group.expenses.all().update(paid_on_fyle=True)

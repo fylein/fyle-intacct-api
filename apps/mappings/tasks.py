@@ -10,7 +10,7 @@ from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
     InternalServerError
 )
-
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
 from apps.mappings.models import GeneralMapping
@@ -109,8 +109,12 @@ def async_auto_map_employees(workspace_id: int) -> None:
             destination_attribute_type=destination_type,
         )
 
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage Intacct Credentials does not exist - %s', workspace_id)
+    except SageIntacctCredential.DoesNotExist:
+        logger.info('Sage Intacct credentials does not exist workspace_id - {0}'.format(workspace_id))
+
+    except InvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id)
+        logger.info('Invalid Sage Intacct Token Error for workspace_id - {0}'.format(workspace_id))
 
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')

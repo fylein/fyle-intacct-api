@@ -11,6 +11,7 @@ from django.core.cache import cache
 from django.db.models.functions import Lower
 
 from apps.exceptions import ValueErrorWithResponse
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import (
     NoPrivilegeError,
@@ -721,7 +722,15 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         if last_export:
             last_export_failed = True
 
-    except (InvalidTokenError, NoPrivilegeError) as exception:
+    except NoPrivilegeError as exception:
+
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
+
+        if last_export:
+            last_export_failed = True
+
+    except InvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
 
         if last_export:
@@ -888,7 +897,14 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
         if last_export:
             last_export_failed = True
 
-    except (InvalidTokenError, NoPrivilegeError) as exception:
+    except NoPrivilegeError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
+
+        if last_export:
+            last_export_failed = True
+
+    except InvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
         if last_export:
@@ -1040,7 +1056,14 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
         if last_export:
             last_export_failed = True
 
-    except (InvalidTokenError, NoPrivilegeError) as exception:
+    except NoPrivilegeError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
+
+        if last_export:
+            last_export_failed = True
+
+    except InvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
         if last_export:
@@ -1193,7 +1216,14 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
         if last_export:
             last_export_failed = True
 
-    except (InvalidTokenError, NoPrivilegeError) as exception:
+    except NoPrivilegeError as exception:
+        handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+
+        if last_export:
+            last_export_failed = True
+
+    except InvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
         if last_export:
@@ -1390,6 +1420,7 @@ def create_ap_payment(workspace_id: int) -> None:
                         task_log.save()
 
                 except InvalidTokenError as exception:
+                    invalidate_sage_intacct_credentials(task_log.workspace_id, sage_intacct_credentials)
                     logger.info(exception.response)
                     task_log.status = 'FAILED'
                     task_log.detail = exception.response
@@ -1521,6 +1552,7 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                     task_log.save()
 
             except InvalidTokenError as exception:
+                invalidate_sage_intacct_credentials(task_log.workspace_id, sage_intacct_credentials)
                 logger.info(exception.response)
                 task_log.status = 'FAILED'
                 task_log.detail = exception.response
@@ -1588,8 +1620,12 @@ def check_sage_intacct_object_status(workspace_id: int) -> None:
     try:
         sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError, NoPrivilegeError):
-        logger.info('Invalid Token or SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
+    except (SageIntacctCredential.DoesNotExist, NoPrivilegeError):
+        logger.info('SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
+        return
+    except InvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
+        logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
         return
 
     bills = Bill.objects.filter(

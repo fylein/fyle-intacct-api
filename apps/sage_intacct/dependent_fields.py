@@ -9,6 +9,7 @@ from django.contrib.postgres.aggregates import JSONBAgg
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 from sageintacctsdk.exceptions import (
     InvalidTokenError,
@@ -381,9 +382,13 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
                 post_dependent_cost_code_standalone(workspace_id=workspace_id, dependent_field_setting=dependent_field, platform=platform, cost_code_import_log=cost_code_import_log)
             else:
                 logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        exception = "Invalid Token or Sage Intacct credentials does not exist"
-        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    except SageIntacctCredential.DoesNotExist:
+        exception = "Sage Intacct credentials does not exist workspace_id - {0}".format(workspace_id)
+        logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
+    except InvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id)
+        exception = "Invalid Sage Intacct Token Error for workspace_id - {0}".format(workspace_id)
+        logger.info('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
     except NoPrivilegeError:
         exception = "Insufficient permission to access the requested module"
         logger.info('Insufficient permission to access the requested module - %s', workspace_id)

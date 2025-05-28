@@ -15,6 +15,7 @@ from fyle.platform.exceptions import (
 
 from apps.mappings.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -48,8 +49,14 @@ def handle_import_exceptions(func: callable) -> callable:
             error['alert'] = True
             import_log.status = 'FAILED'
 
-        except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-            error['message'] = 'Invalid Token or Sage Intacct credentials does not exist workspace_id - {0}'.format(workspace_id)
+        except SageIntacctCredential.DoesNotExist:
+            error['message'] = 'Sage Intacct credentials does not exist workspace_id - {0}'.format(workspace_id)
+            error['alert'] = False
+            import_log.status = 'FAILED'
+
+        except InvalidTokenError:
+            invalidate_sage_intacct_credentials(workspace_id)
+            error['message'] = 'Invalid Sage Intacct Token Error for workspace_id - {0}'.format(workspace_id)
             error['alert'] = False
             import_log.status = 'FAILED'
 
