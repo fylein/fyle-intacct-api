@@ -622,7 +622,7 @@ def get_memo_or_purpose(workspace_id: int, lineitem: Expense, category: str, con
         details = {
             'employee_email': lineitem.employee_email or '',
             'employee_name': lineitem.employee_name or '',
-            'group_by': group_by_value
+            group_by_key: group_by_value
         }
     else:
         details = {
@@ -955,7 +955,7 @@ class BillLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
                     'allocation_id': allocation_id
                 }
             )
@@ -1123,7 +1123,7 @@ class ExpenseReportLineitem(models.Model):
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration)
                 }
             )
 
@@ -1319,7 +1319,7 @@ class JournalEntryLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
                     'allocation_id': allocation_id
                 }
             )
@@ -1493,7 +1493,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
                     'user_defined_dimensions': user_defined_dimensions
                 }
             )
