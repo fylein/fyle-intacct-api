@@ -69,15 +69,15 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
     ws_schedule, _ = WorkspaceSchedule.objects.get_or_create(
         workspace_id=workspace_id
     )
+    ws_schedule.is_real_time_export_enabled = is_real_time_export_enabled
+    ws_schedule.enabled = schedule_enabled
 
     schedule_email_notification(workspace_id=workspace_id, schedule_enabled=schedule_enabled, hours=hours)
 
     if schedule_enabled:
-        ws_schedule.enabled = schedule_enabled
         ws_schedule.start_datetime = datetime.now()
         ws_schedule.interval_hours = hours
         ws_schedule.emails_selected = emails_selected
-        ws_schedule.is_real_time_export_enabled = is_real_time_export_enabled
 
         if email_added:
             ws_schedule.additional_email_options.append(email_added)
@@ -105,10 +105,11 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
 
     elif not schedule_enabled and ws_schedule.schedule:
         schedule = ws_schedule.schedule
-        ws_schedule.enabled = schedule_enabled
         ws_schedule.schedule = None
         ws_schedule.save()
         schedule.delete()
+    else:
+        ws_schedule.save()
 
     return ws_schedule
 
