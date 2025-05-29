@@ -780,6 +780,10 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
         return_value=DestinationAttribute.objects.get(id=633)
     )
+    mocker.patch(
+        'apps.workspaces.models.SageIntacctCredential.get_active_sage_intacct_credentials',
+        return_value=SageIntacctCredential.objects.get(id=1)
+    )
 
     workspace_id = 1
 
@@ -932,10 +936,14 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
         create_journal_entry(expense_group, task_log.id, True, False)
 
 
-def test_post_create_journal_entry_exceptions(create_task_logs, db):
+def test_post_create_journal_entry_exceptions(mocker, create_task_logs, db):
     """
     Test post_create_journal_entry exceptions
     """
+    mocker.patch(
+        'apps.workspaces.models.SageIntacctCredential.get_active_sage_intacct_credentials',
+        return_value=SageIntacctCredential.objects.get(id=1)
+    )
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()

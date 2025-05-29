@@ -279,7 +279,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             workspace_id = kwargs['workspace_id']
             workspace = Workspace.objects.get(pk=workspace_id)
 
-            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+            sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
             sender_id = settings.SI_SENDER_ID
             sender_password = settings.SI_SENDER_PASSWORD
             encryption_key = settings.ENCRYPTION_KEY
