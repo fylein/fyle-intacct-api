@@ -181,8 +181,14 @@ class SageIntacctCredential(models.Model):
         db_table = 'sage_intacct_credentials'
 
     @staticmethod
-    def get_active_sage_intacct_credentials(workspace_id):
+    def get_active_sage_intacct_credentials(workspace_id: int) -> 'SageIntacctCredential':
+        """
+        Get active Sage Intacct credentials
+        :param workspace_id: Workspace ID
+        :return: Sage Intacct credentials
+        """
         return SageIntacctCredential.objects.get(workspace_id=workspace_id, is_expired=False)
+
 
 class FyleCredential(models.Model):
     """
