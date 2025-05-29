@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 from workers.export.worker import ExportWorker
 from fyle_accounting_library.rabbitmq.models import FailedEvent
 from common.event import BaseEvent
+from workers.export import actions
 
 
 @pytest.fixture
@@ -105,3 +106,13 @@ def test_consume(mock_worker_class, mock_signal):
     mock_worker.connect.assert_called_once()
     mock_worker.start_consuming.assert_called_once()
     assert mock_signal.call_count == 2  # Called for both SIGTERM and SIGINT
+
+
+def test_handle_exports_calls_import_and_export_expenses():
+    """
+    Test handle exports calls import and export expenses
+    """
+    with patch('workers.export.actions.import_and_export_expenses') as mock_import:
+        data = {'foo': 'bar'}
+        actions.handle_exports(data)
+        mock_import.assert_called_once_with(foo='bar')

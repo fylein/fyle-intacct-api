@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 from django.conf import settings
 from apps.workspaces.utils import send_email
 from typing import Generator
+from apps.workspaces.serializers import ConfigurationSerializer
 
 
 @pytest.fixture
@@ -50,3 +51,13 @@ def test_send_email(mock_sendgrid) -> None:
 
     # Verify mail was sent
     mock_sg.return_value.send.assert_called_once_with(mock_mail.return_value)
+
+
+def test_configuration_serializer_partial_validate():
+    """
+    Test ConfigurationSerializer.validate with partial=True
+    """
+    data = {'any': 'thing'}
+    serializer = ConfigurationSerializer(partial=True)
+    result = serializer.validate(data)
+    assert result == data
