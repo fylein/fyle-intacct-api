@@ -275,8 +275,12 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
     :return: Destination Attribute for Vendor
     """
     if not sage_intacct_connection:
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+        try:
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+        except SageIntacctCredential.DoesNotExist:
+            logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
+            return None
 
     vendor = None
 
@@ -619,7 +623,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
     try:
         __validate_expense_group(expense_group, configuration)
         logger.info('Validated Expense Group %s successfully', expense_group.id)
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
         if settings.BRAND_ID == 'fyle':
@@ -792,7 +796,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
     try:
         __validate_expense_group(expense_group, configuration)
         worker_logger.info('Validated Expense Group %s successfully', expense_group.id)
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
         if configuration.auto_map_employees and configuration.auto_create_destination_entity \
@@ -819,7 +823,7 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
                 expense_group, configuration
             )
 
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
 
             sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
@@ -963,7 +967,7 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
     try:
         __validate_expense_group(expense_group, configuration)
         worker_logger.info('Validated Expense Group %s successfully', expense_group.id)
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
         if configuration.auto_map_employees and configuration.auto_create_destination_entity \
@@ -1123,7 +1127,7 @@ def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int
     try:
         __validate_expense_group(expense_group, configuration)
         worker_logger.info('Validated Expense Group %s successfully', expense_group.id)
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=expense_group.workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
 
         merchant = expense_group.expenses.first().vendor
@@ -1360,7 +1364,7 @@ def create_ap_payment(workspace_id: int) -> None:
                             ap_payment_object.expense_group, record_key
                         )
 
-                        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+                        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
                         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
                         created_ap_payment = sage_intacct_connection.post_ap_payment(
                             ap_payment_object, ap_payment_lineitems_objects
@@ -1490,7 +1494,7 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                         record_key
                     )
 
-                    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+                    sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
                     sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
                     created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
                         sage_intacct_reimbursement_object,
@@ -1618,7 +1622,7 @@ def check_sage_intacct_object_status(workspace_id: int) -> None:
     :return: None
     """
     try:
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
         sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
     except (SageIntacctCredential.DoesNotExist, NoPrivilegeError):
         logger.info('SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
@@ -1855,10 +1859,14 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
         missing_vendors = list(set(vendors_list) - set(existing_vendors))
 
         if missing_vendors:
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
-            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-            sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
-            return True
+            try
+                sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+                sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+                sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
+                return True
+            except SageIntacctCredential.DoesNotExist:
+                logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
+                return False
 
     return False
 

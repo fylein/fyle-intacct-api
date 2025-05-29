@@ -279,7 +279,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             workspace_id = kwargs['workspace_id']
             workspace = Workspace.objects.get(pk=workspace_id)
 
-            sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
             sender_id = settings.SI_SENDER_ID
             sender_password = settings.SI_SENDER_PASSWORD
             encryption_key = settings.ENCRYPTION_KEY
@@ -325,6 +325,13 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             return Response(
                 data=SageIntacctCredentialSerializer(sage_intacct_credentials).data,
                 status=status.HTTP_200_OK
+            )
+        except SageIntacctCredential.DoesNotExist:
+            return Response(
+                {
+                    'message': 'Sage Intacct credentials does not exist workspace_id - %s' % workspace_id
+                },
+                status=status.HTTP_400_BAD_REQUEST
             )
         except sage_intacct_exc.InvalidTokenError:
             return Response(
@@ -373,7 +380,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
         """
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace=workspace)
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
 
             return Response(
                 data=SageIntacctCredentialSerializer(sage_intacct_credentials).data,

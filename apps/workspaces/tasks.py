@@ -157,7 +157,7 @@ def run_email_notification(workspace_id: int) -> None:
     workspace = Workspace.objects.get(id=workspace_id)
     admin_data = WorkspaceSchedule.objects.get(workspace_id=workspace_id)
     try:
-        intacct = SageIntacctCredential.objects.get(workspace=workspace)
+        intacct = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
     except SageIntacctCredential.DoesNotExist:
         logger.info('SageIntacct Credentials does not exist - %s', workspace_id)
         return

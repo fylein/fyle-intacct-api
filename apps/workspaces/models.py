@@ -180,6 +180,9 @@ class SageIntacctCredential(models.Model):
     class Meta:
         db_table = 'sage_intacct_credentials'
 
+    @staticmethod
+    def get_active_sage_intacct_credentials(workspace_id):
+        return SageIntacctCredential.objects.get(workspace_id=workspace_id, is_expired=False)
 
 class FyleCredential(models.Model):
     """

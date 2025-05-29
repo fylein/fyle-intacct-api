@@ -220,7 +220,7 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
         """
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
 
             async_task(
                 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
@@ -262,7 +262,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
 
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
 
             # If only specified dimensions are to be synced, sync them synchronously
             if dimensions_to_sync:
