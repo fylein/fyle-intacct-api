@@ -722,14 +722,11 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
 
     except WrongParamsError as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
-
         if last_export:
             last_export_failed = True
 
     except NoPrivilegeError as exception:
-
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Journal Entry')
-
         if last_export:
             last_export_failed = True
 
@@ -1859,7 +1856,7 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
         missing_vendors = list(set(vendors_list) - set(existing_vendors))
 
         if missing_vendors:
-            try
+            try:
                 sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
                 sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
                 sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
