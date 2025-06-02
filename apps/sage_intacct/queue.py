@@ -112,15 +112,11 @@ def schedule_journal_entries_creation(
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
-
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_journal_entry',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:
@@ -214,15 +210,11 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
-
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_expense_report',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:
@@ -279,15 +271,11 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
-
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_bill',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:
@@ -345,15 +333,11 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
-
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_charge_card_transaction',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:
