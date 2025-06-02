@@ -325,13 +325,6 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                 data=SageIntacctCredentialSerializer(sage_intacct_credentials).data,
                 status=status.HTTP_200_OK
             )
-        except SageIntacctCredential.DoesNotExist:
-            return Response(
-                {
-                    'message': 'Sage Intacct credentials does not exist workspace_id - %s' % workspace_id
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
         except sage_intacct_exc.InvalidTokenError:
             return Response(
                 {
