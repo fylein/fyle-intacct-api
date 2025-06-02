@@ -58,15 +58,18 @@ def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> bool:
     :return: Boolean
     """
     workspace = Workspace.objects.get(pk=workspace_id)
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+    try:
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
 
-    if workspace.destination_synced_at:
-        time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
+        if workspace.destination_synced_at:
+            time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
-    if workspace.destination_synced_at is None or time_interval.days > 0:
-        sync_dimensions(sage_intacct_credentials, workspace.id)
-        workspace.destination_synced_at = datetime.now()
-        workspace.save(update_fields=['destination_synced_at'])
+        if workspace.destination_synced_at is None or time_interval.days > 0:
+            sync_dimensions(sage_intacct_credentials, workspace.id)
+            workspace.destination_synced_at = datetime.now()
+            workspace.save(update_fields=['destination_synced_at'])
+    except SageIntacctCredential.DoesNotExist:
+        logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
 
 
 def is_dependent_field_import_enabled(workspace_id: int) -> bool:
@@ -114,16 +117,21 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
         workspace.save(update_fields=['destination_synced_at'])
 
 
-def patch_integration_settings(workspace_id: int, errors: int = 0) -> None:
+def patch_integration_settings(workspace_id: int, errors: int = None, is_token_expired: bool = None) -> None:
     """
     Patch integration settings
     """
     refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token
     url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
     payload = {
-        'tpa_name': 'Fyle Sage Intacct Integration',
-        'errors_count': errors
+        'tpa_name': 'Fyle Sage Intacct Integration'
     }
+
+    if errors is not None:
+        payload['errors_count'] = errors
+
+    if is_token_expired is not None:
+        payload['is_token_expired'] = is_token_expired
 
     try:
         patch_request(url, payload, refresh_token)

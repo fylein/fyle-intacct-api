@@ -208,7 +208,7 @@ class Base:
         Sync destination attributes
         :param sageintacct_attribute_type: Sage Intacct attribute type
         """
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=self.workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(self.workspace_id)
         sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=self.workspace_id)
 
         sync_methods = {
