@@ -13,6 +13,7 @@ from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from sageintacctsdk.exceptions import InvalidTokenError
 
@@ -124,7 +125,7 @@ class TriggerExportsView(generics.GenericAPIView):
         """
         Trigger exports
         """
-        export_to_intacct(workspace_id=self.kwargs['workspace_id'])
+        export_to_intacct(workspace_id=self.kwargs['workspace_id'], triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
         return Response(
             status=status.HTTP_200_OK
