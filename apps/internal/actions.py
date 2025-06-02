@@ -12,9 +12,11 @@ def get_intacct_connection(query_params: dict) -> SageIntacctConnector:
 
     workspace = Workspace.objects.get(fyle_org_id=org_id)
     workspace_id = workspace.id
-    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
-
-    return SageIntacctConnector(intacct_credentials, workspace_id)
+    try:
+        intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+        return SageIntacctConnector(intacct_credentials, workspace_id)
+    except SageIntacctCredential.DoesNotExist:
+        raise Exception('Sage Intacct credentials not found')
 
 
 def get_accounting_fields(query_params: dict) -> dict:

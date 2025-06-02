@@ -12,7 +12,7 @@ from fyle_accounting_mappings.models import (
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
 from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
-from apps.workspaces.models import Configuration, Workspace
+from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 from apps.sage_intacct.models import (
     Bill,
     APPayment,
@@ -1307,3 +1307,14 @@ def test_post_bill_with_no_vendor_mapping(mocker, db):
     bill = Bill.create_bill(expense_group)
     general_mappings = GeneralMapping.objects.get(workspace_id=1)
     assert bill.vendor_id == general_mappings.default_ccc_vendor_id
+
+
+def test_get_active_sage_intacct_credentials(mocker):
+    """
+    Test get active sage intacct credentials
+    """
+    mock_cred = mocker.Mock()
+    mock_get = mocker.patch('apps.workspaces.models.SageIntacctCredential.objects.get', return_value=mock_cred)
+    result = SageIntacctCredential.get_active_sage_intacct_credentials(123)
+    mock_get.assert_called_once_with(workspace_id=123, is_expired=False)
+    assert result == mock_cred

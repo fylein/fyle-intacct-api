@@ -76,7 +76,7 @@ def test_handle_import_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['message'] == 'Invalid Token or Sage Intacct credentials does not exist workspace_id - 1'
+    assert import_log.error_log['message'] == 'Invalid Sage Intacct Token Error for workspace_id - 1'
     assert import_log.error_log['alert'] == False
 
     # SageIntacctCredential.DoesNotExist
@@ -88,7 +88,7 @@ def test_handle_import_exceptions(db):
 
     assert import_log.status == 'FAILED'
     assert import_log.error_log['task'] == 'Import PROJECT to Fyle and Auto Create Mappings'
-    assert import_log.error_log['message'] == 'Invalid Token or Sage Intacct credentials does not exist workspace_id - 1'
+    assert import_log.error_log['message'] == 'Sage Intacct credentials does not exist workspace_id - 1'
     assert import_log.error_log['alert'] == False
 
     # NoPrivilegeError
