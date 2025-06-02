@@ -37,7 +37,8 @@ def test_schedule_sync(db):
         emails_selected=[
             'ashwin.t@fyle.in'
         ],
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        is_real_time_export_enabled=False
     )
 
     ws_schedule = WorkspaceSchedule.objects.filter(
@@ -53,7 +54,8 @@ def test_schedule_sync(db):
         emails_selected=[
             'ashwin.t@fyle.in'
         ],
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        is_real_time_export_enabled=False
     )
 
     ws_schedule = WorkspaceSchedule.objects.filter(
@@ -140,7 +142,8 @@ def test_email_notification(mocker,db):
         emails_selected=[
             'user5@fyleforgotham.in'
         ],
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        is_real_time_export_enabled=False
     )
 
     ws_schedule = WorkspaceSchedule.objects.filter(
