@@ -353,13 +353,6 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
             })
 
     if project_mapping and is_sync_allowed and dependent_fields and dependent_fields.is_import_enabled:
-        task_settings['custom_properties'] = {
-            'func': 'apps.mappings.tasks.sync_dependent_fields',
-            'args': {
-                'workspace_id': workspace_id
-            }
-        }
-
         task_settings['import_dependent_fields'] = {
             'func': 'apps.sage_intacct.dependent_fields.import_dependent_fields_to_fyle',
             'args': {
