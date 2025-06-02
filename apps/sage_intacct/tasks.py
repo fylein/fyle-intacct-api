@@ -275,12 +275,8 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
     :return: Destination Attribute for Vendor
     """
     if not sage_intacct_connection:
-        try:
-            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
-        except SageIntacctCredential.DoesNotExist:
-            logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
-            return None
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
 
     vendor = None
 

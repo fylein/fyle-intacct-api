@@ -222,11 +222,7 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     :param workspace_id: Workspace Id
     :return: None
     """
-    try:
-        sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-    except SageIntacctCredential.DoesNotExist:
-        logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
-        return
+    sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
 
     sage_intacct_connection = SageIntacctConnector(
         credentials_object=sage_intacct_credentials,
