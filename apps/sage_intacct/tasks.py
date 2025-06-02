@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.cache import cache
 from django.db.models.functions import Lower
+from apps.fyle.helpers import patch_request
 
 from apps.exceptions import ValueErrorWithResponse
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
@@ -26,7 +27,6 @@ from fyle_accounting_mappings.models import (
     DestinationAttribute,
 )
 
-from apps.sage_intacct.helpers import patch_integration_settings
 from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, Expense
@@ -68,6 +68,23 @@ from apps.sage_intacct.errors.helpers import (
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+
+def patch_integration_settings(workspace_id: int, errors: int = 0) -> None:
+    """
+    Patch integration settings
+    """
+    refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token
+    url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
+    payload = {
+        'tpa_name': 'Fyle Sage Intacct Integration',
+        'errors_count': errors
+    }
+
+    try:
+        patch_request(url, payload, refresh_token)
+    except Exception as error:
+        logger.error(error, exc_info=True)
 
 
 def update_last_export_details(workspace_id: int) -> LastExportDetail:
