@@ -11,7 +11,7 @@ from fyle_accounting_mappings.models import MappingSetting
 
 from tests.helper import dict_compare_keys
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import WorkspaceSchedule, SageIntacctCredential, Configuration, LastExportDetail, Workspace
 
 from .fixtures import data
@@ -491,8 +491,8 @@ def test_import_code_field_view(db, mocker, api_client, test_connection):
     url = reverse('import-code-fields-config', kwargs={'workspace_id': workspace_id})
     api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
 
-    department_log = ImportLog.update_or_create('COST_CENTER', workspace_id)
-    project_log = ImportLog.update_or_create('PROJECT', workspace_id)
+    department_log = ImportLog.update_or_create_in_progress_import_log('COST_CENTER', workspace_id)
+    project_log = ImportLog.update_or_create_in_progress_import_log('PROJECT', workspace_id)
 
     with mocker.patch('django.db.models.signals.post_save.send'):
         # Create MappingSetting object with the signal mocked

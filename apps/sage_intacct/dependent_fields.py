@@ -16,13 +16,13 @@ from sageintacctsdk.exceptions import (
     SageIntacctSDKError
 )
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.sage_intacct.models import CostCode, CostType
 from apps.fyle.models import DependentFieldSetting
 from apps.fyle.helpers import connect_to_platform
 from apps.mappings.helpers import prepend_code_to_name
 from apps.mappings.tasks import sync_sage_intacct_attributes
-from apps.mappings.exceptions import handle_import_exceptions
+from apps.mappings.exceptions import handle_import_exceptions_v2
 from apps.workspaces.models import Configuration, SageIntacctCredential
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: 
     return new_placeholder
 
 
-@handle_import_exceptions
+@handle_import_exceptions_v2
 def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: dict, is_enabled: bool = True) -> tuple:
     """
     Post dependent cost code to Fyle
@@ -212,7 +212,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
     return posted_cost_codes, is_errored
 
 
-@handle_import_exceptions
+@handle_import_exceptions_v2
 def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: dict) -> bool:
     """
     Post dependent cost type to Fyle
@@ -360,11 +360,11 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
     """
     dependent_field = DependentFieldSetting.objects.get(workspace_id=workspace_id)
 
-    cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_CODE', workspace_id=workspace_id)
     cost_type_import_log = None
 
     if dependent_field.is_cost_type_import_enabled:
-        cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+        cost_type_import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_TYPE', workspace_id=workspace_id)
 
     exception = None
     try:
@@ -476,7 +476,7 @@ def disable_and_post_cost_code_from_cost_type_table(workspace_id: int, cost_code
         'workspace_id': workspace_id
     }
 
-    cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log('COST_CODE', workspace_id)
     # This call will disable the cost codes in Fyle that has old project name
     posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
 
@@ -522,7 +522,7 @@ def disable_and_post_cost_code_from_cost_code_table(workspace_id: int, cost_code
         'project_id__in': list(cost_codes_to_disable.keys()),
         'workspace_id': workspace_id
     }
-    cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log('COST_CODE', workspace_id)
     # This call will disable the cost codes in Fyle that has old project name
     posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
 

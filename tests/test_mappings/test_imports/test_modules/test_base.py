@@ -10,7 +10,7 @@ from fyle_accounting_mappings.models import (
 from fyle_integrations_platform_connector import PlatformConnector
 
 from apps.tasks.models import Error
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.mappings.imports.modules.projects import Project
 from apps.mappings.imports.modules.categories import Category

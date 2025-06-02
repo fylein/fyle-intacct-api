@@ -9,11 +9,11 @@ from sageintacctsdk.exceptions import (
     SageIntacctSDKError
 )
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
 from apps.mappings.imports.modules.projects import Project
 from apps.exceptions import handle_view_exceptions
-from apps.mappings.exceptions import handle_import_exceptions
+from apps.mappings.exceptions import handle_import_exceptions_v2
 
 
 def test_handle_import_exceptions(db):
@@ -32,7 +32,7 @@ def test_handle_import_exceptions(db):
     project = Project(1, 'PROJECT', None)
 
     # WrongParamsError
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise WrongParamsError('This is WrongParamsError')
 
@@ -44,7 +44,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['alert'] == True
 
     # FyleInvalidTokenError
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise FyleInvalidTokenError('This is FyleInvalidTokenError')
 
@@ -56,7 +56,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['alert'] == False
 
     # InternalServerError
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InternalServerError('This is InternalServerError')
 
@@ -68,7 +68,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['alert'] == True
 
     # InvalidTokenError
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise InvalidTokenError('This is InvalidTokenError')
 
@@ -80,7 +80,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['alert'] == False
 
     # SageIntacctCredential.DoesNotExist
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise SageIntacctCredential.DoesNotExist('This is SageIntacctCredential.DoesNotExist')
 
@@ -92,7 +92,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['alert'] == False
 
     # NoPrivilegeError
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise NoPrivilegeError('This is NoPrivilegeError')
 
@@ -104,7 +104,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['alert'] == False
 
     # SageIntacctSDKError
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise SageIntacctSDKError('This is a sage intacct sdk error')
 
@@ -116,7 +116,7 @@ def test_handle_import_exceptions(db):
     assert import_log.error_log['alert'] == False
 
     # Exception
-    @handle_import_exceptions
+    @handle_import_exceptions_v2
     def to_be_decoreated(expense_attribute_instance, import_log):
         raise Exception('This is a general Exception')
 

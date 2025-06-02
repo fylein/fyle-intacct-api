@@ -60,6 +60,8 @@ INSTALLED_APPS = [
     'apps.tasks',
     'apps.mappings',
     'apps.internal',
+    'fyle_integrations_imports',
+
 
     'fyle_accounting_library.common_resources',
     'fyle_accounting_library.fyle_platform',

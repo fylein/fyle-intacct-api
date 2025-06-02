@@ -6,7 +6,7 @@ from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog, Error
 from apps.sage_intacct.tasks import update_last_export_details
 from apps.workspaces.models import Configuration, LastExportDetail
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 
 
 class ExportSettingsTrigger:

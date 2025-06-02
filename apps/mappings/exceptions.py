@@ -13,14 +13,14 @@ from fyle.platform.exceptions import (
     RetryException as FyleRetryException
 )
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def handle_import_exceptions(func: callable) -> callable:
+def handle_import_exceptions_v2(func: callable) -> callable:
     """
     Decorator to handle exceptions while importing to Fyle
     :param func: function

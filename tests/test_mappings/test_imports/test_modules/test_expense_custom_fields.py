@@ -8,7 +8,7 @@ from fyle_accounting_mappings.models import (
 )
 
 from apps.workspaces.models import Workspace, FyleCredential
-from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
+from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField
 
 from .fixtures import expense_custom_field_data
 from .helpers import get_platform_connection

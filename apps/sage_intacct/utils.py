@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
+from apps.workspaces.helpers import get_app_name
 import unidecode
 from django.db.models import Q
 from django.utils import timezone
@@ -67,9 +68,11 @@ SYNC_UPPER_LIMIT = {
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
-    'PROJECT': 'apps.mappings.imports.modules.projects.disable_projects',
-    'ACCOUNT': 'apps.mappings.imports.modules.categories.disable_categories',
-    'COST_CENTER': 'apps.mappings.imports.modules.cost_centers.disable_cost_centers'
+    'PROJECT': 'fyle_integrations_imports.modules.projects.disable_projects',
+    'ACCOUNT': 'fyle_integrations_imports.modules.categories.disable_categories',
+    'EXPENSE_TYPE': 'fyle_integrations_imports.modules.categories.disable_categories',
+    'COST_CENTER': 'fyle_integrations_imports.modules.cost_centers.disable_cost_centers',
+    'VENDOR': 'fyle_integrations_imports.modules.merchants.disable_merchants'
 }
 
 
@@ -97,6 +100,63 @@ class SageIntacctConnector:
         )
 
         self.workspace_id = workspace_id
+
+    def is_duplicate_deletion_skipped(self, attribute_type: str) -> bool:
+        """
+        Check if duplicate deletion is skipped for the attribute type
+        :param attribute_type: Type of the attribute
+        :return: Whether deletion is skipped
+        """
+        if attribute_type in [
+            'ACCOUNT', 'VENDOR', 'ITEM', 'CUSTOMER',
+            'DEPARTMENT', 'CLASS', 'EXPENSE_TYPE',
+            'PROJECT', 'LOCATION'
+        ]:
+            return False
+
+        return True
+
+    def is_import_enabled(self, attribute_type: str) -> bool:
+        """
+        Check if import is enabled for the attribute type
+        :param attribute_type: Type of the attribute
+        :return: Whether import is enabled
+        """
+        is_import_to_fyle_enabled = False
+
+        configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
+        if not configuration:
+            return is_import_to_fyle_enabled
+
+        if attribute_type in ['ACCOUNT', 'EXPENSE_TYPE'] and configuration.import_categories:
+            is_import_to_fyle_enabled = True
+
+        elif attribute_type == 'VENDOR' and configuration.import_vendors_as_merchants:
+            is_import_to_fyle_enabled = True
+
+        elif attribute_type in ['CUSTOMER', 'DEPARTMENT', 'CLASS', 'LOCATION', 'PROJECT', 'ITEM']:
+            mapping_setting = MappingSetting.objects.filter(workspace_id=self.workspace_id, destination_field=attribute_type).first()
+            if mapping_setting and mapping_setting.import_to_fyle:
+                is_import_to_fyle_enabled = True
+
+        return is_import_to_fyle_enabled
+
+    def get_attribute_disable_callback_path(self, attribute_type: str) -> Optional[str]:
+        """
+        Get the attribute disable callback path
+        :param attribute_type: Type of the attribute
+        :return: attribute disable callback path or none
+        """
+        if attribute_type in ['ACCOUNT', 'VENDOR', 'EXPENSE_TYPE']:
+            return ATTRIBUTE_DISABLE_CALLBACK_PATH.get(attribute_type)
+
+        mapping_setting = MappingSetting.objects.filter(
+            workspace_id=self.workspace_id,
+            destination_field=attribute_type
+        ).first()
+
+        if mapping_setting and not mapping_setting.is_custom:
+            return ATTRIBUTE_DISABLE_CALLBACK_PATH.get(mapping_setting.source_field)
 
     def get_tax_solution_id_or_none(self, lineitems: list[ExpenseReportLineitem | BillLineitem | JournalEntryLineitem | ChargeCardTransactionLineitem]) -> str:
         """
@@ -196,7 +256,7 @@ class SageIntacctConnector:
 
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
-        is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
+        is_account_import_enabled = self.is_import_enabled('ACCOUNT')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         account_generator = self.connection.accounts.get_all_generator(**params)
@@ -210,7 +270,7 @@ class SageIntacctConnector:
             for account in accounts:
                 account_attributes['account'].append({
                     'attribute_type': 'ACCOUNT',
-                    'display_name': 'account',
+                    'display_name': 'Account',
                     'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO'],
                     'active': account['STATUS'] == 'active',
@@ -227,8 +287,10 @@ class SageIntacctConnector:
                     attribute_type.upper(),
                     self.workspace_id,
                     True,
-                    attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
-                    is_import_to_fyle_enabled=is_account_import_enabled
+                    app_name=get_app_name(),
+                    attribute_disable_callback_path=self.get_attribute_disable_callback_path('ACCOUNT'),
+                    is_import_to_fyle_enabled=is_account_import_enabled,
+                    skip_deletion=self.is_duplicate_deletion_skipped('ACCOUNT')
                 )
         return []
 
@@ -241,11 +303,13 @@ class SageIntacctConnector:
             logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
-        fields = ['TITLE', 'DEPARTMENTID']
+        fields = ['TITLE', 'DEPARTMENTID', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='DEPARTMENT')
-        is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
+        is_import_enabled = self.is_import_enabled('DEPARTMENT')
 
-        department_generator = self.connection.departments.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+
+        department_generator = self.connection.departments.get_all_generator(**params)
 
         department_attributes = []
 
@@ -256,7 +320,7 @@ class SageIntacctConnector:
                     'display_name': 'department',
                     'value': department['TITLE'],
                     'destination_id': department['DEPARTMENTID'],
-                    'active': True,
+                    'active': department['STATUS'] == 'active',
                     'code': department['DEPARTMENTID']
                 })
 
@@ -265,8 +329,10 @@ class SageIntacctConnector:
             'DEPARTMENT',
             self.workspace_id,
             True,
-            attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT'),
-            is_import_to_fyle_enabled=is_import_enabled
+            app_name=get_app_name(),
+            attribute_disable_callback_path=self.get_attribute_disable_callback_path('DEPARTMENT'),
+            is_import_to_fyle_enabled=is_import_enabled,
+            skip_deletion=self.is_duplicate_deletion_skipped('DEPARTMENT')
         )
 
         return []
@@ -282,7 +348,7 @@ class SageIntacctConnector:
 
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
-        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
+        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         expense_type_generator = self.connection.expense_types.get_all_generator(**params)
@@ -309,8 +375,10 @@ class SageIntacctConnector:
             'EXPENSE_TYPE',
             self.workspace_id,
             True,
-            attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
-            is_import_to_fyle_enabled=is_expense_type_import_enabled
+            app_name=get_app_name(),
+            attribute_disable_callback_path=self.get_attribute_disable_callback_path('EXPENSE_TYPE'),
+            is_import_to_fyle_enabled=is_expense_type_import_enabled,
+            skip_deletion=self.is_duplicate_deletion_skipped('EXPENSE_TYPE')
         )
         return []
 
@@ -430,7 +498,7 @@ class SageIntacctConnector:
         fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-        is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
+        is_project_import_enabled = self.is_import_enabled('PROJECT')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         project_generator = self.connection.projects.get_all_generator(**params)
@@ -459,8 +527,10 @@ class SageIntacctConnector:
                 'PROJECT',
                 self.workspace_id,
                 True,
-                attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT'),
-                is_import_to_fyle_enabled=is_project_import_enabled
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('PROJECT'),
+                is_import_to_fyle_enabled=is_project_import_enabled,
+                skip_deletion=self.is_duplicate_deletion_skipped('PROJECT')
             )
 
         return []
@@ -474,10 +544,13 @@ class SageIntacctConnector:
             logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
-        fields = ['NAME', 'ITEMID', 'ITEMTYPE']
+        fields = ['NAME', 'ITEMID', 'ITEMTYPE', 'STATUS']
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
-        item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+
+        item_generator = self.connection.items.get_all_generator(**params)
 
         item_attributes = []
 
@@ -490,14 +563,18 @@ class SageIntacctConnector:
                         'display_name': 'item',
                         'value': item['NAME'],
                         'destination_id': item['ITEMID'],
-                        'active': True
+                        'active': item['STATUS'] == 'active'
                     })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 item_attributes,
                 'ITEM',
                 self.workspace_id,
-                True
+                True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('ITEM'),
+                skip_deletion=self.is_duplicate_deletion_skipped('ITEM'),
+                is_import_to_fyle_enabled=self.is_import_enabled('ITEM')
             )
 
         return []
@@ -510,9 +587,10 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'locations', attribute_count = attribute_count):
             logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-        fields = ['NAME', 'LOCATIONID']
+        fields = ['NAME', 'LOCATIONID', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION')
-        location_generator = self.connection.locations.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        location_generator = self.connection.locations.get_all_generator(**params)
 
         location_attributes = []
 
@@ -523,11 +601,16 @@ class SageIntacctConnector:
                     'display_name': 'location',
                     'value': location['NAME'],
                     'destination_id': location['LOCATIONID'],
-                    'active': True
+                    'active': location['STATUS'] == 'active'
                 })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            location_attributes, 'LOCATION', self.workspace_id, True)
+            location_attributes, 'LOCATION', self.workspace_id, True,
+            app_name=get_app_name(),
+            attribute_disable_callback_path=self.get_attribute_disable_callback_path('LOCATION'),
+            skip_deletion=self.is_duplicate_deletion_skipped('LOCATION'),
+            is_import_to_fyle_enabled=self.is_import_enabled('LOCATION')
+        )
 
         return []
 
@@ -739,8 +822,11 @@ class SageIntacctConnector:
             logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
+        fields = ['NAME', 'CLASSID', 'STATUS']
+
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
-        class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        class_generator = self.connection.classes.get_all_generator(**params)
         class_attributes = []
 
         for _classes in class_generator:
@@ -750,11 +836,16 @@ class SageIntacctConnector:
                     'display_name': 'class',
                     'value': _class['NAME'],
                     'destination_id': _class['CLASSID'],
-                    'active': True
+                    'active': _class['STATUS'] == 'active'
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                class_attributes, 'CLASS', self.workspace_id, True)
+                class_attributes, 'CLASS', self.workspace_id, True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('CLASS'),
+                skip_deletion=self.is_duplicate_deletion_skipped('CLASS'),
+                is_import_to_fyle_enabled=self.is_import_enabled('CLASS')
+            )
 
         return []
 
@@ -767,8 +858,11 @@ class SageIntacctConnector:
             logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
+        fields = ['NAME', 'CUSTOMERID', 'STATUS']
+
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
-        customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        customer_generator = self.connection.customers.get_all_generator(**params)
 
         customer_attributes = []
 
@@ -779,11 +873,16 @@ class SageIntacctConnector:
                     'display_name': 'customer',
                     'value': customer['NAME'],
                     'destination_id': customer['CUSTOMERID'],
-                    'active': True
+                    'active': customer['STATUS'] == 'active'
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                customer_attributes, 'CUSTOMER', self.workspace_id, True)
+                customer_attributes, 'CUSTOMER', self.workspace_id, True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('CUSTOMER'),
+                skip_deletion=self.is_duplicate_deletion_skipped('CUSTOMER'),
+                is_import_to_fyle_enabled=self.is_import_enabled('CUSTOMER')
+            )
 
         return []
 
@@ -1028,7 +1127,11 @@ class SageIntacctConnector:
 
         if vendor_attributes:
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                vendor_attributes, 'VENDOR', self.workspace_id, True
+                vendor_attributes, 'VENDOR', self.workspace_id, True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('VENDOR'),
+                skip_deletion=self.is_duplicate_deletion_skipped('VENDOR'),
+                is_import_to_fyle_enabled=self.is_import_enabled('VENDOR')
             )
 
         return []
@@ -1993,41 +2096,6 @@ class SageIntacctConnector:
             return sanitized_name
 
         return None
-
-    def get_disable_attribute_callback_func(self, destination_field: str) -> callable:
-        """
-        Get the callback function to disable the attribute
-        :param destination_field: Destination Field
-        :return: Callback Function
-        """
-        mapping_settings = MappingSetting.objects.filter(
-            workspace_id=self.workspace_id,
-            destination_field=destination_field
-        ).first()
-        if mapping_settings and mapping_settings.source_field in ATTRIBUTE_DISABLE_CALLBACK_PATH.keys():
-            return ATTRIBUTE_DISABLE_CALLBACK_PATH[mapping_settings.source_field]
-        return None
-
-    def is_import_enabled(self, attribute_type: str, workspace_id: int) -> bool:
-        """
-        Check if the import is enabled for the attribute type
-        :param attribute_type: Attribute Type
-        :param workspace_id: Workspace ID
-        :return: True if enabled, False otherwise
-        """
-        is_enabled = False
-
-        if attribute_type in ['PROJECT', 'DEPARTMENT']:
-            mapping = MappingSetting.objects.filter(workspace_id=workspace_id, destination_field=attribute_type).first()
-            if mapping and mapping.import_to_fyle:
-                is_enabled = True
-
-        elif attribute_type == 'ACCOUNT' or attribute_type == 'EXPENSE_TYPE':
-            configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
-            if configuration and configuration.import_categories:
-                is_enabled = True
-
-        return is_enabled
 
     def get_exported_entry(self, resource_type: str, export_id: str) -> dict:
         """

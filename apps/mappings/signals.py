@@ -19,9 +19,10 @@ from fyle_accounting_mappings.models import (
 from apps.tasks.models import Error
 from apps.fyle.helpers import update_dimension_details
 from apps.workspaces.models import Configuration, FyleCredential
-from apps.mappings.models import ImportLog, LocationEntityMapping
-from apps.mappings.imports.modules.expense_custom_fields import ExpenseCustomField
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
+from fyle_integrations_imports.models import ImportLog
+from apps.mappings.models import LocationEntityMapping
+from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField
+from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -159,6 +160,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
             import_log.status = 'IN_PROGRESS'
             import_log.save()
 
+            expense_custom_field.sync_expense_attributes(platform)
             expense_custom_field.construct_payload_and_import_to_fyle(platform, import_log)
             expense_custom_field.sync_expense_attributes(platform)
             update_dimension_details(platform=platform, workspace_id=workspace_id)

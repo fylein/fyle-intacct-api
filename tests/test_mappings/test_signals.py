@@ -18,7 +18,8 @@ from fyle_accounting_mappings.models import (
 
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, Workspace
-from apps.mappings.models import LocationEntityMapping, ImportLog
+from apps.mappings.models import LocationEntityMapping
+from fyle_integrations_imports.models import ImportLog
 
 from tests.test_fyle.fixtures import data as fyle_data
 
@@ -160,11 +161,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     mapping_setting = MappingSetting(
@@ -177,11 +178,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     mapping_setting = MappingSetting(
@@ -194,11 +195,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     mapping_setting = MappingSetting.objects.filter(
