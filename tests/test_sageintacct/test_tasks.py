@@ -62,9 +62,9 @@ from apps.sage_intacct.tasks import (
     mark_paid_on_fyle,
     process_fyle_reimbursements,
     search_and_upsert_vendors,
-    update_last_export_details,
     validate_for_skipping_payment
 )
+from apps.sage_intacct.actions import update_last_export_details
 from .fixtures import data
 
 logger = logging.getLogger(__name__)
@@ -2127,7 +2127,7 @@ def test_handle_skipped_exports(db, mocker):
     mock_post_summary = mocker.patch('apps.sage_intacct.queue.post_accounting_export_summary_for_skipped_exports', return_value=None)
     mock_update_last_export = mocker.patch('apps.sage_intacct.queue.update_last_export_details')
     mock_logger = mocker.patch('apps.sage_intacct.queue.logger')
-    mocker.patch('apps.sage_intacct.tasks.patch_integration_settings', return_value=None)
+    mocker.patch('apps.sage_intacct.actions.patch_integration_settings', return_value=None)
     mocker.patch('apps.fyle.actions.post_accounting_export_summary', return_value=None)
 
     # Create or get two expense groups
