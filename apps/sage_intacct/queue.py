@@ -90,7 +90,7 @@ def schedule_journal_entries_creation(
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
-                if task_log.triggered_by != triggered_by:
+                if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
@@ -192,7 +192,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
-                if task_log.triggered_by != triggered_by:
+                if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
@@ -257,7 +257,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
-                if task_log.triggered_by != triggered_by:
+                if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
@@ -322,7 +322,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
-                if task_log.triggered_by != triggered_by:
+                if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by
                 task_log.save()
 

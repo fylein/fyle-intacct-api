@@ -2796,7 +2796,8 @@ CREATE TABLE public.workspace_schedules (
     emails_selected character varying(255)[],
     error_count integer,
     created_at timestamp with time zone,
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    is_real_time_export_enabled boolean NOT NULL
 );
 
 
@@ -2857,7 +2858,8 @@ CREATE TABLE public.failed_events (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     error_traceback text,
-    workspace_id integer
+    workspace_id integer,
+    is_resolved boolean NOT NULL
 );
 
 
@@ -5960,7 +5962,9 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 232	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-24 16:15:00.283053+00
 233	workspaces	0044_configuration_je_single_credit_line	2025-05-07 18:31:07.544615+00
 234	sage_intacct	0031_costcode	2025-05-12 09:47:16.361962+00
-235	workspaces	0045_sageintacctcredential_is_expired	2025-05-28 05:59:09.335864+00
+235	rabbitmq	0004_failedevent_is_resolved	2025-05-21 17:02:59.151171+00
+236	workspaces	0045_workspaceschedule_is_real_time_export_enabled	2025-05-21 17:05:12.778782+00
+237	workspaces	0045_sageintacctcredential_is_expired	2025-05-28 05:59:09.335864+00
 \.
 
 
@@ -9410,7 +9414,7 @@ COPY public.expenses (id, employee_email, category, sub_category, project, expen
 -- Data for Name: failed_events; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.failed_events (id, routing_key, payload, created_at, updated_at, error_traceback, workspace_id) FROM stdin;
+COPY public.failed_events (id, routing_key, payload, created_at, updated_at, error_traceback, workspace_id, is_resolved) FROM stdin;
 \.
 
 
@@ -9890,7 +9894,7 @@ COPY public.users (password, last_login, id, email, user_id, full_name, active, 
 -- Data for Name: workspace_schedules; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, schedule_id, workspace_id, additional_email_options, emails_selected, error_count, created_at, updated_at) FROM stdin;
+COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, schedule_id, workspace_id, additional_email_options, emails_selected, error_count, created_at, updated_at, is_real_time_export_enabled) FROM stdin;
 \.
 
 
@@ -10001,6 +10005,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 --
 
 SELECT pg_catalog.setval('public.django_migrations_id_seq', 235, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 236, true);
 
 
 --
