@@ -40,7 +40,8 @@ from apps.sage_intacct.queue import (
     schedule_journal_entries_creation,
     schedule_charge_card_transaction_creation,
     schedule_sage_intacct_objects_status_sync,
-    schedule_sage_intacct_reimbursement_creation
+    schedule_sage_intacct_reimbursement_creation,
+    handle_skipped_exports
 )
 from apps.sage_intacct.tasks import (
     __validate_employee_mapping,
@@ -2108,3 +2109,51 @@ def test_search_and_upsert_vendors_personal(db, mocker):
     search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='PERSONAL')
 
     assert mock_search_and_create_vendors.call_count == 1
+
+
+def test_handle_skipped_exports(db, mocker):
+    """
+    Test handle skipped exports
+    """
+    mock_post_summary = mocker.patch('apps.sage_intacct.queue.post_accounting_export_summary_for_skipped_exports', return_value=None)
+    mock_update_last_export = mocker.patch('apps.sage_intacct.queue.update_last_export_details')
+    mock_logger = mocker.patch('apps.sage_intacct.queue.logger')
+    mocker.patch('apps.sage_intacct.tasks.patch_integration_settings', return_value=None)
+    mocker.patch('apps.fyle.actions.post_accounting_export_summary', return_value=None)
+
+    # Create or get two expense groups
+    eg1 = ExpenseGroup.objects.create(workspace_id=1, fund_source='PERSONAL')
+    eg2 = ExpenseGroup.objects.create(workspace_id=1, fund_source='PERSONAL')
+    expense_groups = ExpenseGroup.objects.filter(id__in=[eg1.id, eg2.id])
+
+    # Case 1: triggered_by is DIRECT_EXPORT, not last export
+    skip_export_count = 0
+    result = handle_skipped_exports(
+        expense_groups=expense_groups,
+        index=0,
+        skip_export_count=skip_export_count,
+        expense_group=eg1,
+        triggered_by=ExpenseImportSourceEnum.DIRECT_EXPORT
+    )
+    assert result == 1
+    mock_post_summary.assert_called_once_with(expense_group=eg1, workspace_id=eg1.workspace_id)
+    mock_update_last_export.assert_not_called()
+    mock_logger.info.assert_called()
+
+    mock_post_summary.reset_mock()
+    mock_update_last_export.reset_mock()
+    mock_logger.reset_mock()
+
+    # Case 2: last export, skip_export_count == total_count-1, should call update_last_export_details
+    skip_export_count = 1
+    result = handle_skipped_exports(
+        expense_groups=expense_groups,
+        index=1,
+        skip_export_count=skip_export_count,
+        expense_group=eg2,
+        triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC
+    )
+    assert result == 2
+    mock_post_summary.assert_not_called()
+    mock_update_last_export.assert_called_once_with(eg2.workspace_id)
+    mock_logger.info.assert_called()
