@@ -1,13 +1,10 @@
 import logging
 from datetime import datetime, timezone
 
-from django.conf import settings
 from django.utils.module_loading import import_string
 
-from apps.fyle.helpers import patch_request
 from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import (
-    FyleCredential,
     Workspace,
     Configuration,
     SageIntacctCredential
@@ -112,20 +109,3 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
 
         workspace.destination_synced_at = datetime.now()
         workspace.save(update_fields=['destination_synced_at'])
-
-
-def patch_integration_settings(workspace_id: int, errors: int = 0) -> None:
-    """
-    Patch integration settings
-    """
-    refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token
-    url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
-    payload = {
-        'tpa_name': 'Fyle Sage Intacct Integration',
-        'errors_count': errors
-    }
-
-    try:
-        patch_request(url, payload, refresh_token)
-    except Exception as error:
-        logger.error(error, exc_info=True)
