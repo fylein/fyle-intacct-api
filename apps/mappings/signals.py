@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from django.db.models import Q
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
+
 from rest_framework.exceptions import ValidationError
 
 from fyle.platform.exceptions import WrongParamsError
@@ -16,11 +17,14 @@ from fyle_accounting_mappings.models import (
     DestinationAttribute
 )
 
+
 from apps.tasks.models import Error
+from apps.mappings.constants import SYNC_METHODS
 from apps.fyle.helpers import update_dimension_details
-from apps.workspaces.models import Configuration, FyleCredential
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
 from fyle_integrations_imports.models import ImportLog
 from apps.mappings.models import LocationEntityMapping
+from apps.sage_intacct.utils import SageIntacctConnector
 from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField
 from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 
@@ -145,12 +149,17 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
                     import_log.save()
 
             # Creating the expense_custom_field object with the correct last_successful_run_at value
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+            sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+
             expense_custom_field = ExpenseCustomField(
                 workspace_id=workspace_id,
                 source_field=instance.source_field,
                 destination_field=instance.destination_field,
                 sync_after=last_successful_run_at,
-                prepend_code_to_name=prepend_code_to_name
+                prepend_code_to_name=prepend_code_to_name,
+                sdk_connection=sage_intacct_connection,
+                destination_sync_methods=[SYNC_METHODS[instance.destination_field]]
             )
 
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
