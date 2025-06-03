@@ -22,7 +22,6 @@ from .helpers import get_platform_connection
 from apps.mappings.constants import SYNC_METHODS
 
 from unittest.mock import patch, MagicMock
-from apps.mappings.imports.modules.base import Base
 
 
 def test_sync_destination_attributes(mocker, db):
