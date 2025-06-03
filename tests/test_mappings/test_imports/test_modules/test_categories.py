@@ -470,7 +470,9 @@ def test_disable_categories(
 
 
 def test_get_mapped_attributes_ids(db, mocker):
-    # Setup: create a Category instance
+    """
+    Test get mapped attributes ids for categories
+    """
     workspace_id = 1
     destination_field = 'EXPENSE_CATEGORY'
     sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
