@@ -13,7 +13,7 @@ from fyle.platform.exceptions import (
     InvalidTokenError as FyleInvalidTokenError,
     InternalServerError
 )
-
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
 from apps.mappings.constants import SYNC_METHODS
@@ -99,7 +99,7 @@ def async_auto_map_employees(workspace_id: int) -> None:
 
     try:
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
-        sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
         sage_intacct_connection = SageIntacctConnector(
             credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
 
@@ -116,8 +116,12 @@ def async_auto_map_employees(workspace_id: int) -> None:
             destination_attribute_type=destination_type,
         )
 
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        logger.info('Invalid Token or Sage Intacct Credentials does not exist - %s', workspace_id)
+    except SageIntacctCredential.DoesNotExist:
+        logger.info('Sage Intacct credentials does not exist workspace_id - {0}'.format(workspace_id))
+
+    except InvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id)
+        logger.info('Invalid Sage Intacct Token Error for workspace_id - {0}'.format(workspace_id))
 
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
@@ -225,7 +229,7 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     :param workspace_id: Workspace Id
     :return: None
     """
-    sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
 
     sage_intacct_connection = SageIntacctConnector(
         credentials_object=sage_intacct_credentials,

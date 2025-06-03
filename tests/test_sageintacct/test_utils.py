@@ -10,6 +10,7 @@ from fyle_accounting_mappings.models import (
     DestinationAttribute,
 )
 from tests.helper import dict_compare_keys
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from apps.sage_intacct.models import CostCode, CostType
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import (
@@ -1503,3 +1504,39 @@ def test_construct_journal_entry_with_single_credit_line(create_journal_entry, d
     credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
                    if entry['tr_type'] == 1 and entry.get('description', '').startswith('Total Credit Line')]
     assert credit_lines[0]['accountno'] == general_mappings.default_credit_card_id
+
+
+def test_invalidate_sage_intacct_credentials(mocker, db):
+    """
+    Test invalidate sage intacct credentials
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=workspace_id, is_expired=False).first()
+
+    mocked_patch = mocker.MagicMock()
+    mocker.patch('fyle_intacct_api.utils.patch_integration_settings', side_effect=mocked_patch)
+
+    # Should not fail if sage_intacct_credentials was not found
+    sage_intacct_credentials.delete()
+    invalidate_sage_intacct_credentials(workspace_id)
+    assert not mocked_patch.called
+
+    # Should not call patch_integration_settings if sage_intacct_credentials.is_expired is True
+    sage_intacct_credentials.is_expired = True
+    sage_intacct_credentials.save()
+    invalidate_sage_intacct_credentials(workspace_id)
+    assert not mocked_patch.called
+
+    # Should call patch_integration_settings with the correct arguments if sage_intacct_credentials.is_expired is False
+    sage_intacct_credentials.is_expired = False
+    sage_intacct_credentials.save()
+
+    invalidate_sage_intacct_credentials(workspace_id)
+
+    args, kwargs = mocked_patch.call_args
+    assert args[0] == workspace_id
+    assert kwargs['is_token_expired'] == True
+
+    # Verify the credentials were marked as expired
+    sage_intacct_credentials.refresh_from_db()
+    assert sage_intacct_credentials.is_expired == True

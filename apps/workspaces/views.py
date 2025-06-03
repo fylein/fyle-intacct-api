@@ -372,7 +372,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
         """
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace=workspace)
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
 
             return Response(
                 data=SageIntacctCredentialSerializer(sage_intacct_credentials).data,

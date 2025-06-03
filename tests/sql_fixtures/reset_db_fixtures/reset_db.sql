@@ -3608,7 +3608,8 @@ CREATE TABLE public.sage_intacct_credentials (
     si_user_password text NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    is_expired boolean NOT NULL
 );
 
 
@@ -5963,7 +5964,9 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 234	sage_intacct	0031_costcode	2025-05-12 09:47:16.361962+00
 235	rabbitmq	0004_failedevent_is_resolved	2025-05-21 17:02:59.151171+00
 236	workspaces	0045_workspaceschedule_is_real_time_export_enabled	2025-05-21 17:05:12.778782+00
-237	fyle_integrations_imports	0001_initial	2025-06-03 09:13:14.987582+00
+237	workspaces	0045_sageintacctcredential_is_expired	2025-06-03 13:10:42.732351+00
+238	workspaces	0046_merge_20250603_1307	2025-06-03 13:10:42.733986+00
+239	fyle_integrations_imports	0001_initial	2025-06-03 09:13:14.987582+00
 \.
 
 
@@ -9840,8 +9843,8 @@ COPY public.reimbursements (id, settlement_id, reimbursement_id, state, created_
 -- Data for Name: sage_intacct_credentials; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id) FROM stdin;
-1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1
+COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired) FROM stdin;
+1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f
 \.
 
 
@@ -10003,7 +10006,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 236, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 238, true);
 
 
 --

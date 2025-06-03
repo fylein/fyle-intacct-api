@@ -21,6 +21,9 @@ from .fixtures import data as destination_attributes_data
 from .helpers import get_platform_connection
 from apps.mappings.constants import SYNC_METHODS
 
+from unittest.mock import patch, MagicMock
+from apps.mappings.imports.modules.base import Base
+
 
 def test_sync_destination_attributes(mocker, db):
     """
@@ -479,3 +482,108 @@ def test_create_disable_attributes(mocker, db):
 
     new_projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', active=True).count()
     assert new_projects == 13
+
+
+class DummyError:
+    """
+    Dummy Error class
+    """
+    def __init__(self, id):
+        self.id = id
+
+
+class DummyImportLog:
+    """
+    Dummy Import Log class
+    """
+    def __init__(self):
+        self.status = 'IN_PROGRESS'
+        self.last_successful_run_at = None
+        self.error_log = []
+        self.total_batches_count = 0
+        self.processed_batches_count = 0
+
+    def save(self):
+        self.saved = True
+
+
+@patch('apps.mappings.imports.modules.base.Error.objects.filter')
+@patch('apps.mappings.imports.modules.base.Base._Base__get_mapped_attributes_ids')
+def test_resolve_expense_attribute_errors_no_errors(get_mapped_mock, error_filter_mock):
+    """
+    Test resolve expense attribute errors no errors
+    """
+    # No errored_attribute_ids
+    error_filter_mock.return_value.values_list.return_value = []
+    base = Base(1, 'CATEGORY', 'CATEGORY', 'categories', None)
+    base.resolve_expense_attribute_errors()
+    get_mapped_mock.assert_not_called()
+
+    # errored_attribute_ids present, but mapped_attribute_ids empty
+    error_filter_mock.return_value.values_list.return_value = [1, 2]
+    get_mapped_mock.return_value = []
+    base.resolve_expense_attribute_errors()
+    get_mapped_mock.assert_called()
+
+
+@patch('apps.mappings.imports.modules.base.Configuration.objects.filter')
+@patch('apps.mappings.imports.modules.base.CategoryMapping.bulk_create_ccc_category_mappings')
+def test_create_ccc_category_mappings_not_called(bulk_create_mock, config_filter_mock):
+    """
+    Test create ccc category mappings not called
+    """
+    # Condition not met
+    config = MagicMock()
+    config.reimbursable_expenses_object = 'BILL'
+    config.corporate_credit_card_expenses_object = 'BILL'
+    config_filter_mock.return_value.first.return_value = config
+    base = Base(1, 'CATEGORY', 'CATEGORY', 'categories', None)
+    base.create_ccc_category_mappings()
+    bulk_create_mock.assert_not_called()
+
+
+@patch('apps.mappings.imports.modules.base.ImportLog')
+def test_update_import_log_post_import_else(import_log_mock):
+    """
+    Test update import log post import else
+    """
+    # is_last_batch False
+    base = Base(1, 'CATEGORY', 'CATEGORY', 'categories', None)
+    import_log = MagicMock()
+    import_log.processed_batches_count = 0
+    base.update_import_log_post_import(False, import_log)
+    import_log.save.assert_called_once()
+    assert import_log.processed_batches_count == 1
+
+
+@patch('apps.mappings.imports.modules.base.ImportLog.objects.get_or_create')
+@patch('apps.mappings.imports.modules.base.Base.import_destination_attribute_to_fyle')
+def test_check_import_log_and_start_import_in_progress(import_dest_mock, get_or_create_mock):
+    """
+    Test check import log and start import in progress
+    """
+    # import_log in progress, not created
+    import_log = MagicMock()
+    import_log.status = 'IN_PROGRESS'
+    is_created = False
+    get_or_create_mock.return_value = (import_log, is_created)
+    base = Base(1, 'CATEGORY', 'CATEGORY', 'categories', None)
+    base.check_import_log_and_start_import()
+    import_dest_mock.assert_not_called()
+
+
+@patch('apps.mappings.imports.modules.base.ImportLog.objects.get_or_create')
+@patch('apps.mappings.imports.modules.base.Base.import_destination_attribute_to_fyle')
+def test_check_import_log_and_start_import_sync_after(import_dest_mock, get_or_create_mock):
+    """
+    Test check import log and start import sync after
+    """
+    # sync_after in the future
+    import_log = MagicMock()
+    import_log.status = 'COMPLETE'
+    is_created = True
+    get_or_create_mock.return_value = (import_log, is_created)
+    future_time = datetime.now(timezone.utc) + timedelta(hours=1)
+    base = Base(1, 'CATEGORY', 'CATEGORY', 'categories', future_time)
+    base.check_import_log_and_start_import()
+    import_dest_mock.assert_not_called()
