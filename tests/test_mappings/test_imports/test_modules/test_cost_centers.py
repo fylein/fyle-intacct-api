@@ -8,7 +8,7 @@ from fyle_accounting_mappings.models import (
 )
 
 from apps.workspaces.models import FyleCredential, Workspace, Configuration
-from apps.mappings.imports.modules.cost_centers import CostCenter, disable_cost_centers
+from fyle_integrations_imports.modules.cost_centers import CostCenter, disable_cost_centers
 from .fixtures import cost_center_data
 
 
@@ -265,7 +265,7 @@ def test_disable_cost_centers(
         active=True
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.cost_centers.PlatformConnector')
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.cost_centers.PlatformConnector')
     bulk_post_call = mocker.patch.object(mock_platform.return_value.cost_centers, 'post_bulk')
 
     disable_cost_centers(workspace_id, cost_centers_to_disable, is_import_to_fyle_enabled=True)

@@ -3,7 +3,7 @@ from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribu
 from apps.workspaces.models import Configuration
 from apps.sage_intacct.models import CostType, DependentFieldSetting
 from apps.sage_intacct.dependent_fields import update_and_disable_cost_code
-from apps.mappings.imports.modules.projects import Project, disable_projects
+from fyle_integrations_imports.modules.projects import Project, disable_projects
 from .fixtures import data
 
 
@@ -76,11 +76,11 @@ def test_disable_projects(
         active=True
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     bulk_post_call = mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
     sync_call = mocker.patch.object(mock_platform.return_value.projects, 'sync')
 
-    disable_cost_code_call = mocker.patch('apps.mappings.imports.modules.projects.update_and_disable_cost_code')
+    disable_cost_code_call = mocker.patch('fyle_integrations_imports.modules.projects.update_and_disable_cost_code')
 
     disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True)
 
@@ -182,7 +182,7 @@ def test_update_and_disable_cost_code(
         active=True
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock_platform.return_value.dependent_fields, 'bulk_post_dependent_expense_field_values')
 
     update_and_disable_cost_code(workspace_id, projects_to_disable, mock_platform, use_code_in_naming)

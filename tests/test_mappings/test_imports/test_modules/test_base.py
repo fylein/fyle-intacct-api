@@ -12,8 +12,8 @@ from fyle_integrations_platform_connector import PlatformConnector
 from apps.tasks.models import Error
 from fyle_integrations_imports.models import ImportLog
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.mappings.imports.modules.projects import Project
-from apps.mappings.imports.modules.categories import Category
+from fyle_integrations_imports.modules.projects import Project
+from fyle_integrations_imports.modules.categories import Category
 from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
 
 from .fixtures import data as destination_attributes_data

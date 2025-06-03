@@ -8,7 +8,7 @@ from fyle_accounting_mappings.models import (
 )
 
 from apps.workspaces.models import FyleCredential
-from apps.mappings.imports.modules.tax_groups import TaxGroup
+from fyle_integrations_imports.modules.tax_groups import TaxGroup
 from .fixtures import tax_groups_data
 
 

@@ -9,7 +9,7 @@ from fyle_accounting_mappings.models import (
 
 from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential
-from apps.mappings.imports.modules.merchants import Merchant
+from fyle_integrations_imports.modules.merchants import Merchant
 from .fixtures import merchants_data
 
 

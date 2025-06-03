@@ -1,7 +1,7 @@
 from fyle_integrations_platform_connector import PlatformConnector
 
 from apps.workspaces.models import FyleCredential
-from apps.mappings.imports.modules.base import Base
+from fyle_integrations_imports.modules.base import Base
 
 
 def get_base_class_instance(

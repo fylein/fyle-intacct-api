@@ -5713,7 +5713,7 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 46	sage_intacct	costtype
 47	tasks	error
 48	workspaces	lastexportdetail
-49	mappings	importlog
+49	fyle_integrations_imports	importlog
 50	fyle_accounting_mappings	expenseattributesdeletioncache
 51	common_resources	dimensiondetail
 52	rabbitmq	failedevent
@@ -5963,6 +5963,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 234	sage_intacct	0031_costcode	2025-05-12 09:47:16.361962+00
 235	rabbitmq	0004_failedevent_is_resolved	2025-05-21 17:02:59.151171+00
 236	workspaces	0045_workspaceschedule_is_real_time_export_enabled	2025-05-21 17:05:12.778782+00
+237	fyle_integrations_imports	0001_initial	2025-06-03 09:13:14.987582+00
 \.
 
 

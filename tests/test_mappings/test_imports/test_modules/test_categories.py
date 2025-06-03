@@ -1,5 +1,5 @@
 from unittest import mock
-from apps.mappings.imports.modules.categories import Category, disable_categories
+from fyle_integrations_imports.modules.categories import Category, disable_categories
 
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
@@ -446,7 +446,7 @@ def test_disable_categories(
         active=True
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.categories.PlatformConnector')
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.categories.PlatformConnector')
     bulk_post_call = mocker.patch.object(mock_platform.return_value.categories, 'post_bulk')
 
     disable_categories(workspace_id, categories_to_disable, is_import_to_fyle_enabled=True)

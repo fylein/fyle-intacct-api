@@ -11,7 +11,7 @@ from sageintacctsdk.exceptions import (
 
 from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import SageIntacctCredential
-from apps.mappings.imports.modules.projects import Project
+from fyle_integrations_imports.modules.projects import Project
 from apps.exceptions import handle_view_exceptions
 from apps.mappings.exceptions import handle_import_exceptions_v2
 

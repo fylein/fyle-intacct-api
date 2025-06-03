@@ -139,7 +139,7 @@ def test_sync_expense_types(mocker, db):
     )
 
     mocker.patch(
-        'apps.mappings.imports.modules.categories.disable_categories'
+        'fyle_integrations_imports.modules.categories.disable_categories'
     )
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -213,7 +213,7 @@ def test_sync_projects(mocker, db):
         return_value=5
     )
 
-    mock = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mock = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock.return_value.projects, 'post_bulk')
     mocker.patch.object(mock.return_value.projects, 'sync')
 
@@ -569,7 +569,7 @@ def tests_sync_accounts(mocker, db):
         return_value=data['get_accounts']
     )
 
-    mock = mocker.patch('apps.mappings.imports.modules.categories.PlatformConnector')
+    mock = mocker.patch('fyle_integrations_imports.modules.categories.PlatformConnector')
     mocker.patch.object(mock.return_value.categories, 'post_bulk')
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
