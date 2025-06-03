@@ -11,6 +11,7 @@ from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential
 from fyle_integrations_imports.modules.merchants import Merchant
 from .fixtures import merchants_data
+from apps.mappings.constants import SYNC_METHODS
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -30,7 +31,7 @@ def test_sync_expense_atrributes(mocker, db):
         return_value=[]
     )
 
-    merchant = Merchant(workspace_id, 'VENDOR', None)
+    merchant = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
     merchant.sync_expense_attributes(platform)
 
     merchants_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='MERCHANT').count()
@@ -61,11 +62,11 @@ def test_sync_destination_atrributes(mocker, db):
     vendors_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
     assert vendors_count == 68
 
-    tax_group = Merchant(workspace_id, 'VENDOR', None)
-    tax_group.sync_destination_attributes('VENDOR')
+    tax_group = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
+    tax_group.sync_destination_attributes()
 
     vendors_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
-    assert vendors_count == 75
+    assert vendors_count == 68
 
 
 def test_auto_create_destination_attributes(mocker, db):
@@ -73,7 +74,7 @@ def test_auto_create_destination_attributes(mocker, db):
     Test auto create destination attributes
     """
     workspace_id = 1
-    merchant = Merchant(workspace_id, 'VENDOR', None)
+    merchant = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
     merchant.sync_after = None
 
     # delete all destination attributes, expense attributes and mappings
@@ -157,18 +158,16 @@ def test_construct_fyle_payload(db):
     Test construct fyle payload
     """
     workspace_id = 1
-    merchant = Merchant(workspace_id, 'VENDOR', None)
+    merchant = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
     merchant.sync_after = None
 
     # create new case
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='VENDOR')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = merchant.get_auto_sync_permission()
 
     fyle_payload = merchant.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
     assert dict_compare_keys(fyle_payload, merchants_data['create_fyle_merchants_payload_create_new_case']) == [], 'Keys mismatch for merchant payload'

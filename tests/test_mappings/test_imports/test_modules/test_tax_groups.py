@@ -1,5 +1,6 @@
 from unittest import mock
 
+from apps.sage_intacct.utils import SageIntacctConnector
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
@@ -7,15 +8,19 @@ from fyle_accounting_mappings.models import (
     Mapping
 )
 
-from apps.workspaces.models import FyleCredential
+from apps.workspaces.models import FyleCredential, SageIntacctCredential
 from fyle_integrations_imports.modules.tax_groups import TaxGroup
 from .fixtures import tax_groups_data
+from apps.mappings.constants import SYNC_METHODS
 
 
 def test_sync_destination_atrributes(mocker, db):
     """
     Test sync destination attributes
     """
+    sage_creds = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_connection = SageIntacctConnector(sage_creds, 1)
+
     mocker.patch(
         'sageintacctsdk.apis.TaxDetails.count',
         return_value=100
@@ -29,8 +34,8 @@ def test_sync_destination_atrributes(mocker, db):
     tax_details_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='TAX_DETAIL').count()
     assert tax_details_count == 54
 
-    tax_group = TaxGroup(workspace_id, 'TAX_DETAIL', None)
-    tax_group.sync_destination_attributes('TAX_DETAIL')
+    tax_group = TaxGroup(workspace_id, 'TAX_DETAIL', None, sage_connection, [SYNC_METHODS['TAX_DETAIL']])
+    tax_group.sync_destination_attributes()
 
     tax_details_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='TAX_DETAIL').count()
     assert tax_details_count == 59
@@ -57,7 +62,7 @@ def test_sync_expense_atrributes(mocker, db):
         return_value=[]
     )
 
-    tax_group = TaxGroup(workspace_id, 'TAX_DETAIL', None)
+    tax_group = TaxGroup(workspace_id, 'TAX_DETAIL', None, mock.Mock(), [SYNC_METHODS['TAX_DETAIL']], False, True)
     tax_group.sync_expense_attributes(platform)
 
     tax_group_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='TAX_GROUP').count()
@@ -80,7 +85,9 @@ def test_auto_create_destination_attributes(mocker, db):
     Test auto create destination attributes
     """
     workspace_id = 1
-    tax_group = TaxGroup(workspace_id, 'TAX_DETAIL', None)
+    sage_creds = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_connection = SageIntacctConnector(sage_creds, 1)
+    tax_group = TaxGroup(workspace_id, 'TAX_DETAIL', None, sage_connection, [SYNC_METHODS['TAX_DETAIL']], False, False)
     tax_group.sync_after = None
 
     # delete all destination attributes, expense attributes and mappings
@@ -166,18 +173,16 @@ def test_construct_fyle_payload(db):
     """
     Test construct fyle payload
     """
-    tax_group = TaxGroup(1, 'TAX_DETAIL', None)
+    tax_group = TaxGroup(1, 'TAX_DETAIL', None, mock.Mock(), [SYNC_METHODS['TAX_DETAIL']], False, False)
     tax_group.sync_after = None
 
     # create new case
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='TAX_DETAIL')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = tax_group.get_auto_sync_permission()
 
     fyle_payload = tax_group.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
     assert fyle_payload == tax_groups_data['create_fyle_tax_details_payload_create_new_case']

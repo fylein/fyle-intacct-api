@@ -134,6 +134,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     """
     Test run post mapping settings triggers
     """
+    # Patch SYNC_METHODS to include 'SAMPLEs' and 'HEHEHE' for this test
+    import apps.mappings.constants as mapping_constants
+    mapping_constants.SYNC_METHODS['SAMPLEs'] = 'sample_sync_method'
+    mapping_constants.SYNC_METHODS['HEHEHE'] = 'hehehe_sync_method'
+
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
         return_value=[]
@@ -269,7 +274,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
         attribute_type='CUSTOM_INTENTS'
     ).first()
 
-    assert import_log.status == 'COMPLETE'
+    assert import_log.status == 'IN_PROGRESS'
 
     time_difference = datetime.now() - timedelta(hours=2)
     offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)

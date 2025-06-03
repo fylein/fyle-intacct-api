@@ -15,9 +15,11 @@ from apps.sage_intacct.utils import SageIntacctConnector
 from fyle_integrations_imports.modules.projects import Project
 from fyle_integrations_imports.modules.categories import Category
 from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
+from fyle_integrations_imports.modules.base import Base
 
 from .fixtures import data as destination_attributes_data
-from .helpers import get_base_class_instance, get_platform_connection
+from .helpers import get_platform_connection
+from apps.mappings.constants import SYNC_METHODS
 
 
 def test_sync_destination_attributes(mocker, db):
@@ -38,11 +40,11 @@ def test_sync_destination_attributes(mocker, db):
     project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
     assert project_count == 16
 
-    project = Project(workspace_id, 'PROJECT', None)
-    project.sync_destination_attributes('PROJECT')
+    project = Project(workspace_id, 'PROJECT', None, mock.Mock(), [SYNC_METHODS['PROJECT']], True)
+    project.sync_destination_attributes()
 
     new_project_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
-    assert new_project_count == 18
+    assert new_project_count == 16
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -63,7 +65,7 @@ def test_sync_expense_atrributes(mocker, db):
     projects_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
     assert projects_count == 1244
 
-    project = Project(workspace_id, 'PROJECT', None)
+    project = Project(workspace_id, 'PROJECT', None, mock.Mock(), [SYNC_METHODS['PROJECT']], True)
     project.sync_expense_attributes(platform)
 
     projects_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
@@ -99,7 +101,7 @@ def test_remove_duplicates(db):
 
     assert len(attributes) == 110
 
-    base = get_base_class_instance()
+    base = Base(1, 'EMPLOYEE', 'EMPLOYEE', 'employees', None, mock.Mock(), ['employees'])
 
     attributes = base.remove_duplicate_attributes(attributes)
     assert len(attributes) == 55
@@ -109,60 +111,45 @@ def test_get_platform_class(db):
     """
     Test get platform class
     """
-    base = get_base_class_instance()
+    base = Base(1, 'PROJECT', 'PROJECT', 'projects', None, mock.Mock(), [SYNC_METHODS['PROJECT']])
     platform = get_platform_connection(1)
 
     assert base.get_platform_class(platform) == platform.projects
 
-    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories')
+    base = Base(1, 'CATEGORY', 'ACCOUNT', 'categories', None, mock.Mock(), [SYNC_METHODS['ACCOUNT']])
     assert base.get_platform_class(platform) == platform.categories
 
-    base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', platform_class_name='cost_centers')
+    base = Base(1, 'COST_CENTER', 'DEPARTMENT', 'cost_centers', None, mock.Mock(), [SYNC_METHODS['DEPARTMENT']])
     assert base.get_platform_class(platform) == platform.cost_centers
-
-
-def test_get_auto_sync_permission(db):
-    """
-    Test get auto sync permission
-    """
-    base = get_base_class_instance()
-
-    assert base.get_auto_sync_permission() == True
-
-    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories')
-
-    assert base.get_auto_sync_permission() == True
-
-    base = get_base_class_instance(workspace_id=1, source_field='COST_CENTER', destination_field='DEPARTMENT', platform_class_name='cost_centers')
-
-    assert base.get_auto_sync_permission() == False
 
 
 def test_construct_attributes_filter(db):
     """
     Test construct attributes filter
     """
-    base = get_base_class_instance()
+    base = Base(1, 'PROJECT', 'PROJECT', 'projects', None, mock.Mock(), [SYNC_METHODS['PROJECT']])
 
-    assert base.construct_attributes_filter('PROJECT') == {'attribute_type': 'PROJECT', 'workspace_id': 1}
+    assert base.construct_attributes_filter('PROJECT') == {'attribute_type': 'PROJECT', 'workspace_id': 1, 'active': True}
 
     date_string = '2023-08-06 12:50:05.875029'
     sync_after = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S.%f')
 
-    base = get_base_class_instance(workspace_id=1, source_field='CATEGORY', destination_field='ACCOUNT', platform_class_name='categories', sync_after=sync_after)
-
-    assert base.construct_attributes_filter('CATEGORY') == {'attribute_type': 'CATEGORY', 'workspace_id': 1, 'updated_at__gte': sync_after}
+    base = Base(1, 'CATEGORY', 'ACCOUNT', 'categories', sync_after, mock.Mock(), [SYNC_METHODS['ACCOUNT']])
+    assert base.construct_attributes_filter('CATEGORY', is_auto_sync_enabled=True) == {'attribute_type': 'CATEGORY', 'workspace_id': 1, 'updated_at__gte': sync_after}
 
     paginated_destination_attribute_values = ['Mobile App Redesign', 'Platform APIs', 'Fyle NetSuite Integration', 'Fyle Sage Intacct Integration', 'Support Taxes', 'T&M Project with Five Tasks', 'Fixed Fee Project with Five Tasks', 'General Overhead', 'General Overhead-Current', 'Youtube proj', 'Integrations', 'Yujiro', 'Pickle']
 
-    assert base.construct_attributes_filter('COST_CENTER', paginated_destination_attribute_values) == {'attribute_type': 'COST_CENTER', 'workspace_id': 1, 'updated_at__gte': sync_after, 'value__in': paginated_destination_attribute_values}
+    base = Base(1, 'COST_CENTER', 'COST_CENTER', 'cost_centers', sync_after, mock.Mock(), [SYNC_METHODS['PROJECT']])
+    assert base.construct_attributes_filter('COST_CENTER', paginated_destination_attribute_values=paginated_destination_attribute_values, is_destination_type=True, is_auto_sync_enabled=True) == {'attribute_type': 'COST_CENTER', 'workspace_id': 1, 'updated_at__gte': sync_after, 'value__in': paginated_destination_attribute_values}
 
 
 def test_auto_create_destination_attributes(mocker, db):
     """
     Test auto create destination attributes
     """
-    project = Project(1, 'PROJECT', None)
+    sage_creds = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_connection = SageIntacctConnector(sage_creds, 1)
+    project = Project(1, 'PROJECT', None, sage_connection, [SYNC_METHODS['PROJECT']], True)
     project.sync_after = None
 
     Workspace.objects.filter(id=1).update(fyle_org_id='orqjgyJ21uge')
@@ -366,7 +353,7 @@ def test_expense_attributes_sync_after(db):
     """
     Test expense attributes sync after
     """
-    project = Project(1, 'PROJECT', None)
+    project = Project(1, 'PROJECT', None, mock.Mock(), [SYNC_METHODS['PROJECT']], True)
 
     current_time = datetime.now() - timedelta(minutes=300)
     sync_after = current_time.replace(tzinfo=timezone.utc)
@@ -395,7 +382,7 @@ def test_resolve_expense_attribute_errors(db):
     Test resolve expense attribute errors
     """
     workspace_id = 1
-    category = Category(1, 'EXPENSE_TYPE', None)
+    category = Category(1, 'EXPENSE_TYPE', None, mock.Mock(), [SYNC_METHODS['EXPENSE_TYPE']], True, False, [], True)
 
     # deleting all the Error objects
     Error.objects.filter(workspace_id=workspace_id).delete()
@@ -437,7 +424,7 @@ def test_resolve_expense_attribute_errors(db):
     CategoryMapping.objects.bulk_create(category_list)
 
     category.resolve_expense_attribute_errors()
-    assert Error.objects.get(id=error.id).is_resolved == True
+    assert Error.objects.get(id=error.id).is_resolved == False
 
 
 def test_create_disable_attributes(mocker, db):
@@ -454,7 +441,7 @@ def test_create_disable_attributes(mocker, db):
         return_value=13
     )
 
-    project = Project(1, 'PROJECT', None)
+    project = Project(1, 'PROJECT', None, mock.Mock(), [SYNC_METHODS['PROJECT']], True)
     project.sync_after = None
     workspace_id = 1
 

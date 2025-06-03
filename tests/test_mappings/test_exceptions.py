@@ -14,6 +14,8 @@ from apps.workspaces.models import SageIntacctCredential
 from fyle_integrations_imports.modules.projects import Project
 from apps.exceptions import handle_view_exceptions
 from apps.mappings.exceptions import handle_import_exceptions_v2
+from unittest import mock
+from apps.mappings.constants import SYNC_METHODS
 
 
 def test_handle_import_exceptions(db):
@@ -29,7 +31,7 @@ def test_handle_import_exceptions(db):
         error_log = []
     )
     import_log = ImportLog.objects.get(workspace_id=1, attribute_type='PROJECT')
-    project = Project(1, 'PROJECT', None)
+    project = Project(1, 'PROJECT', None, mock.Mock(), [SYNC_METHODS['PROJECT']], True)
 
     # WrongParamsError
     @handle_import_exceptions_v2

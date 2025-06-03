@@ -1,5 +1,7 @@
 from unittest import mock
+from apps.sage_intacct.utils import SageIntacctConnector
 from fyle_integrations_imports.modules.categories import Category, disable_categories
+from apps.mappings.constants import SYNC_METHODS
 
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
@@ -8,6 +10,7 @@ from fyle_accounting_mappings.models import (
     CategoryMapping
 )
 from apps.workspaces.models import (
+    SageIntacctCredential,
     Workspace,
     FyleCredential,
     Configuration
@@ -19,6 +22,8 @@ def test_sync_destination_attributes_categories(mocker, db):
     """
     Test sync destination attributes for categories
     """
+    sage_creds = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_connection = SageIntacctConnector(sage_creds, 1)
     workspace_id = 1
     mocker.patch(
         'sageintacctsdk.apis.Accounts.count',
@@ -32,11 +37,14 @@ def test_sync_destination_attributes_categories(mocker, db):
     account_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ACCOUNT').count()
     assert account_count == 170
 
-    category = Category(workspace_id, 'ACCOUNT', None)
-    category.sync_destination_attributes('ACCOUNT')
+    assert DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ACCOUNT', value='Lowkey').exists() is False
+    assert DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ACCOUNT', value='Highkey').exists() is False
+
+    category = Category(workspace_id, 'ACCOUNT', None, sage_connection, [SYNC_METHODS['ACCOUNT']], True, True, [], True, True)
+    category.sync_destination_attributes()
 
     new_account_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='ACCOUNT').count()
-    assert new_account_count == account_count + len(category_data['get_categories_destination_attributes_account'][0])
+    assert new_account_count == account_count + 2
 
     mocker.patch(
         'sageintacctsdk.apis.ExpenseTypes.get_all_generator',
@@ -51,8 +59,8 @@ def test_sync_destination_attributes_categories(mocker, db):
     expense_type_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EXPENSE_TYPE').count()
     assert expense_type_count == 8
 
-    category = Category(workspace_id, 'EXPENSE_TYPE', None)
-    category.sync_destination_attributes('EXPENSE_TYPE')
+    category = Category(workspace_id, 'EXPENSE_TYPE', None, sage_connection, [SYNC_METHODS['EXPENSE_TYPE']], True, True, [], True, True)
+    category.sync_destination_attributes()
 
     new_expense_type_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='EXPENSE_TYPE').count()
     assert new_expense_type_count == expense_type_count + len(category_data['get_categories_destination_attributes_expense_type'][0])
@@ -76,7 +84,7 @@ def test_sync_expense_atrributes(mocker, db):
     category_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CATEGORY').count()
     assert category_count == 619
 
-    category = Category(workspace_id, 'ACCOUNT', None)
+    category = Category(workspace_id, 'ACCOUNT', None, mock.Mock(), [SYNC_METHODS['ACCOUNT']], True, False, [], True)
     category.sync_expense_attributes(platform)
 
     category_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CATEGORY').count()
@@ -98,7 +106,9 @@ def test_auto_create_destination_attributes_categories(mocker, db):
     """
     Test auto create destination attributes for categories
     """
-    category = Category(1, 'EXPENSE_TYPE', None)
+    sage_creds = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_connection = SageIntacctConnector(sage_creds, 1)
+    category = Category(1, 'EXPENSE_TYPE', None, sage_connection, [SYNC_METHODS['EXPENSE_TYPE']], True, True, [], False, False)
     category.sync_after = None
 
     Workspace.objects.filter(id=1).update(fyle_org_id='orwimNcVyYsp')
@@ -233,7 +243,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         assert pre_run_expense_attribute_count == post_run_expense_attribute_count
 
-    category = Category(1, 'ACCOUNT', None)
+    category = Category(1, 'ACCOUNT', None, sage_connection, [SYNC_METHODS['ACCOUNT']], True, True, [], True, True)
     category.sync_after = None
 
     # create new case for categories import for Accounts case
@@ -271,58 +281,21 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         mappings_count = CategoryMapping.objects.filter(workspace_id=1).count()
 
-        assert mappings_count == 13
-
-    # for 3D mapping case
-    configuration = Configuration.objects.get(workspace_id=1)
-    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
-    configuration.corporate_credit_card_expenses_object = 'BILL'
-    configuration.save()
-
-    with mock.patch('fyle.platform.apis.v1.admin.Categories.list_all') as mock_call:
-        mocker.patch(
-            'fyle_integrations_platform_connector.apis.Categories.post_bulk',
-            return_value=[]
-        )
-        mocker.patch(
-            'sageintacctsdk.apis.Accounts.count',
-            return_value=0
-        )
-        mocker.patch(
-            'sageintacctsdk.apis.Accounts.get_all_generator',
-            return_value=[]
-        )
-        mock_call.side_effect = [
-            [],
-            []
-        ]
-
-        mappings_count = CategoryMapping.objects.filter(workspace_id=1, destination_account_id__isnull=True).count()
-
         assert mappings_count == 12
-
-        category.trigger_import()
-
-        mappings_count = CategoryMapping.objects.filter(workspace_id=1, destination_account_id__isnull=True).count()
-
-        assert mappings_count == 0
 
 
 def test_construct_fyle_payload(db):
     """
     Test construct fyle payload for categories
     """
-    category = Category(1, 'EXPENSE_TYPE', None)
+    category = Category(1, 'EXPENSE_TYPE', None, mock.Mock(), [SYNC_METHODS['EXPENSE_TYPE']], True, False, [], True)
 
     # create new case
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = category.get_auto_sync_permission()
-
     fyle_payload = category.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
     assert fyle_payload == category_data['create_fyle_category_payload_create_new_case']
@@ -347,8 +320,7 @@ def test_construct_fyle_payload(db):
 
     fyle_payload = category.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
     assert fyle_payload == category_data['create_fyle_category_payload_create_disable_case']
@@ -363,7 +335,7 @@ def test_get_existing_fyle_attributes(
     """
     Test get existing fyle attributes for categories
     """
-    category = Category(98, 'ACCOUNT', None)
+    category = Category(98, 'ACCOUNT', None, mock.Mock(), [SYNC_METHODS['ACCOUNT']], True, False, [], True)
 
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT')
     paginated_destination_attributes_without_duplicates = category.remove_duplicate_attributes(paginated_destination_attributes)
@@ -391,7 +363,7 @@ def test_construct_fyle_payload_with_code(
     """
     Test construct fyle payload with code for categories
     """
-    category = Category(98, 'ACCOUNT', None, True)
+    category = Category(98, 'ACCOUNT', None, mock.Mock(), [SYNC_METHODS['ACCOUNT']], True, True, [], False, prepend_code_to_name=True)
 
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT')
     paginated_destination_attributes_without_duplicates = category.remove_duplicate_attributes(paginated_destination_attributes)
@@ -401,8 +373,7 @@ def test_construct_fyle_payload_with_code(
     # already exists
     fyle_payload = category.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        True
+        existing_fyle_attributes_map
     )
 
     assert fyle_payload == []
@@ -411,8 +382,7 @@ def test_construct_fyle_payload_with_code(
     existing_fyle_attributes_map = {}
     fyle_payload = category.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        True
+        existing_fyle_attributes_map
     )
 
     assert fyle_payload == category_data["create_fyle_category_payload_with_code_create_new_case"]

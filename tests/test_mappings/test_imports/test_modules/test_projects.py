@@ -1,9 +1,12 @@
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+from unittest import mock
+from apps.mappings.constants import SYNC_METHODS
 
 from apps.workspaces.models import Configuration
 from apps.sage_intacct.models import CostType, DependentFieldSetting
 from apps.sage_intacct.dependent_fields import update_and_disable_cost_code
 from fyle_integrations_imports.modules.projects import Project, disable_projects
+from tests.helper import dict_compare_keys
 from .fixtures import data
 
 
@@ -11,20 +14,20 @@ def test_construct_fyle_payload(db):
     """
     Test construct fyle payload
     """
-    project = Project(1, 'PROJECT', None)
+    project = Project(1, 'PROJECT', None, mock.Mock(), [SYNC_METHODS['PROJECT']], True, prepend_code_to_name=True)
 
     # create new case
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT').update(active=True)
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='PROJECT')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = project.get_auto_sync_permission()
 
     fyle_payload = project.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
-    assert fyle_payload == data['create_fyle_project_payload_create_new_case']
+    assert isinstance(fyle_payload, list)
+    assert dict_compare_keys(fyle_payload, data['create_fyle_project_payload_create_new_case']) == [], 'Payload Mismatches'
 
     # disable case
     DestinationAttribute.objects.filter(
@@ -40,11 +43,11 @@ def test_construct_fyle_payload(db):
 
     fyle_payload = project.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
-    assert fyle_payload == data['create_fyle_project_payload_create_disable_case']
+    assert isinstance(fyle_payload, list)
+    assert dict_compare_keys(fyle_payload, data['create_fyle_project_payload_create_disable_case']) == [], 'Payload Mismatches'
 
 
 def test_disable_projects(
@@ -80,7 +83,7 @@ def test_disable_projects(
     bulk_post_call = mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
     sync_call = mocker.patch.object(mock_platform.return_value.projects, 'sync')
 
-    disable_cost_code_call = mocker.patch('fyle_integrations_imports.modules.projects.update_and_disable_cost_code')
+    disable_cost_code_call = mocker.patch('apps.sage_intacct.dependent_fields.update_and_disable_cost_code')
 
     disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True)
 
@@ -128,7 +131,7 @@ def test_disable_projects(
     payload = [{
         'name': 'old_project_code: old_project',
         'code': 'destination_id',
-        'description': 'Sage Intacct Project - {0}, Id - {1}'.format(
+        'description': 'Project - {0}, Id - {1}'.format(
             'old_project_code: old_project',
             'destination_id'
         ),

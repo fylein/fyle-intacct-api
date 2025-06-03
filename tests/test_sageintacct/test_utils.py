@@ -1,9 +1,7 @@
 import pytest
-
 import logging
 from unittest import mock
 from datetime import datetime
-
 from sageintacctsdk.exceptions import WrongParamsError
 from fyle_accounting_mappings.models import (
     Mapping,
@@ -11,9 +9,7 @@ from fyle_accounting_mappings.models import (
     ExpenseAttribute,
     DestinationAttribute,
 )
-
 from tests.helper import dict_compare_keys
-
 from apps.sage_intacct.models import CostCode, CostType
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import (
@@ -594,6 +590,10 @@ def test_sync_classes(mocker, db):
         'sageintacctsdk.apis.Classes.get_all_generator',
         return_value=data['get_classes']
     )
+    # Patch the mock data to include 'STATUS'
+    for class_list in data['get_classes']:
+        for class_dict in class_list:
+            class_dict['STATUS'] = 'active'
 
     mocker.patch(
         'sageintacctsdk.apis.Classes.count',
@@ -619,13 +619,19 @@ def test_sync_customers(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Customers.count',
-        return_value=5
-    )
-    mocker.patch(
         'sageintacctsdk.apis.Customers.get_all_generator',
         return_value=data['get_customers']
     )
+    # Patch the mock data to include 'STATUS'
+    for customer_list in data['get_customers']:
+        for customer_dict in customer_list:
+            customer_dict['STATUS'] = 'active'
+
+    mocker.patch(
+        'sageintacctsdk.apis.Customers.count',
+        return_value=5
+    )
+
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
