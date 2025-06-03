@@ -13,7 +13,7 @@ from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
 from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
-from apps.sage_intacct.tasks import update_last_export_details
+from apps.sage_intacct.actions import update_last_export_details
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 

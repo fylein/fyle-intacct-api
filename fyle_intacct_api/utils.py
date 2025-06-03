@@ -1,7 +1,7 @@
 from rest_framework.views import Response
 from rest_framework.serializers import ValidationError
 from apps.workspaces.models import SageIntacctCredential
-from apps.sage_intacct.helpers import patch_integration_settings
+from apps.sage_intacct.actions import patch_integration_settings
 
 
 def assert_valid(condition: bool, message: str) -> Response or None:
