@@ -5,7 +5,6 @@ from django.utils.module_loading import import_string
 
 from apps.workspaces.models import FyleCredential
 from apps.workspaces.models import LastExportDetail
-from apps.fyle.actions import post_accounting_export_summary
 from apps.tasks.models import TaskLog
 
 logger = logging.getLogger(__name__)
@@ -60,7 +59,7 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
 
     patch_integration_settings(workspace_id, errors=failed_exports)
     try:
-        post_accounting_export_summary(workspace_id=workspace_id)
+        import_string('apps.fyle.actions.post_accounting_export_summary')(workspace_id=workspace_id)
     except Exception as e:
         logger.error(f"Error posting accounting export summary: {e} for workspace id {workspace_id}")
 

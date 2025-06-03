@@ -328,7 +328,7 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
             'is_3d_mapping': True,
             'charts_of_accounts': [],
             'prepend_code_to_name': True if destination_field in configuration.import_code_fields else False,
-            'import_without_destination_id': True,
+            'import_without_destination_id': False,
             'use_mapping_table': False
         }
 
@@ -352,7 +352,7 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
                 'destination_sync_methods': [SYNC_METHODS[setting.destination_field]],
                 'is_auto_sync_enabled': True,
                 'is_custom': setting.is_custom,
-                'import_without_destination_id': True,
+                'import_without_destination_id': False,
                 'prepend_code_to_name': True if setting.destination_field in configuration.import_code_fields else False
             })
 
