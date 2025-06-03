@@ -5,11 +5,12 @@ from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     Mapping,
     ExpenseAttribute,
-    DestinationAttribute
+    DestinationAttribute,
+    MappingSetting
 )
 
 from apps.workspaces.models import SageIntacctCredential, Workspace, FyleCredential
-from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField
+from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField, disable_expense_custom_fields
 from apps.mappings.constants import SYNC_METHODS
 
 from .fixtures import expense_custom_field_data
@@ -164,3 +165,46 @@ def test_construct_fyle_expense_custom_field_payload(db):
     )
 
     assert fyle_payload['options'] == []
+
+
+def test_disable_expense_custom_fields(db, mocker):
+    """
+    Test disable_expense_custom_fields
+    """
+    workspace_id = 1
+    attribute_type = 'CLASS'  # destination_field in MappingSetting
+
+    # Create the ExpenseAttribute to be disabled
+    ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='LUKE',  # source_field in MappingSetting
+        display_name='Custom Field',
+        value='old_custom_field',
+        source_id='source_id',
+        active=True
+    )
+
+    # Create the MappingSetting so the filter in disable_expense_custom_fields works
+    MappingSetting.objects.create(
+        workspace_id=workspace_id,
+        source_field='LUKE',
+        destination_field=attribute_type
+    )
+
+    attributes_to_disable = {
+        'destination_id': {
+            'value': 'old_custom_field',
+            'updated_value': 'new_custom_field',
+            'code': 'old_custom_field_code',
+            'updated_code': 'old_custom_field_code'
+        }
+    }
+
+    # Patch prepend_code_to_name to just return the value for simplicity
+    mocker.patch('apps.mappings.helpers.prepend_code_to_name', side_effect=lambda prepend_code_in_name, value, code: value if not prepend_code_in_name else f"{code}: {value}")
+
+    # Actually call the function
+    disable_expense_custom_fields(workspace_id, attribute_type, attributes_to_disable)
+
+    # Should mark the attribute as inactive
+    assert not ExpenseAttribute.objects.get(workspace_id=workspace_id, value='old_custom_field').active

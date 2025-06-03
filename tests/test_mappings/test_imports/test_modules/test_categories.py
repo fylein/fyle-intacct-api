@@ -363,8 +363,8 @@ def test_construct_fyle_payload_with_code(
     """
     Test construct fyle payload with code for categories
     """
-    category = Category(98, 'ACCOUNT', None, mock.Mock(), [SYNC_METHODS['ACCOUNT']], True, True, [], False, prepend_code_to_name=True)
-
+    category = Category(98, 'ACCOUNT', None, mock.Mock(), [SYNC_METHODS['ACCOUNT']], True, True, [], True, prepend_code_to_name=True)
+    DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT').update(active=True)
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='ACCOUNT')
     paginated_destination_attributes_without_duplicates = category.remove_duplicate_attributes(paginated_destination_attributes)
     paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
@@ -467,3 +467,51 @@ def test_disable_categories(
 
     bulk_payload = disable_categories(workspace_id, categories_to_disable, is_import_to_fyle_enabled=True)
     assert bulk_payload == payload
+
+
+def test_get_mapped_attributes_ids(db, mocker):
+    # Setup: create a Category instance
+    workspace_id = 1
+    destination_field = 'EXPENSE_CATEGORY'
+    sage_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_connection = SageIntacctConnector(sage_credentials, workspace_id)
+    category = Category(
+        workspace_id=workspace_id,
+        destination_field=destination_field,
+        sync_after=None,
+        sdk_connection=sage_connection,
+        destination_sync_methods=['accounts'],
+        is_auto_sync_enabled=True,
+        is_3d_mapping=False,
+        charts_of_accounts=[]
+    )
+
+    # Mock CategoryMapping.objects.filter().values_list()
+    errored_attribute_ids = [101, 102, 103]
+    expected_mapped_ids = [101, 103]
+    mock_qs = mocker.MagicMock()
+    mock_qs.values_list.return_value = expected_mapped_ids
+    mock_filter = mocker.patch('fyle_accounting_mappings.models.CategoryMapping.objects.filter', return_value=mock_qs)
+
+    # Test for destination_field = 'EXPENSE_CATEGORY'
+    result = category.get_mapped_attributes_ids(errored_attribute_ids)
+    assert result == expected_mapped_ids
+    mock_filter.assert_called_once_with(
+        source_category_id__in=errored_attribute_ids,
+        destination_expense_head_id__isnull=False
+    )
+
+    # Test for destination_field = 'ACCOUNT'
+    category.destination_field = 'ACCOUNT'
+    mock_filter.reset_mock()
+    result = category.get_mapped_attributes_ids(errored_attribute_ids)
+    assert result == expected_mapped_ids
+    mock_filter.assert_called_once_with(
+        source_category_id__in=errored_attribute_ids,
+        destination_account_id__isnull=False
+    )
+
+    # Test for non-CATEGORY source_field
+    category.source_field = 'SOMETHING_ELSE'
+    result = category.get_mapped_attributes_ids(errored_attribute_ids)
+    assert result == []
