@@ -5964,7 +5964,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 234	sage_intacct	0031_costcode	2025-05-12 09:47:16.361962+00
 235	rabbitmq	0004_failedevent_is_resolved	2025-05-21 17:02:59.151171+00
 236	workspaces	0045_workspaceschedule_is_real_time_export_enabled	2025-05-21 17:05:12.778782+00
-237	workspaces	0045_sageintacctcredential_is_expired	2025-05-28 05:59:09.335864+00
+237	workspaces	0045_sageintacctcredential_is_expired	2025-06-03 13:10:42.732351+00
+238	workspaces	0046_merge_20250603_1307	2025-06-03 13:10:42.733986+00
 \.
 
 
@@ -10004,8 +10005,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 235, true);
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 236, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 238, true);
 
 
 --
