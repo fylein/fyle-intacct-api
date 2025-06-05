@@ -55,7 +55,8 @@ INSTALLED_APPS = [
     'apps.sage_intacct',
     'apps.tasks',
     'apps.mappings',
-    
+    'fyle_integrations_imports',
+
     'fyle_accounting_library.common_resources',
 ]
 

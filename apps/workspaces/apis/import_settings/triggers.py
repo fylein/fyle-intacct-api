@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fyle_accounting_mappings.models import MappingSetting, ExpenseAttribute
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import Configuration
 
 

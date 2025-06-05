@@ -101,36 +101,3 @@ def test_sync_dimensions(mock_get, mock_filter, mock_platform, mock_update):
     helpers.sync_dimensions(1)
     mock_platform_instance.import_fyle_dimensions.assert_called()
     mock_update.assert_called()
-
-
-# 7. Test handle_refresh_dimensions with all branches
-@patch('apps.fyle.helpers.sync_dimensions')
-@patch('apps.fyle.helpers.Chain')
-@patch('apps.fyle.helpers.MappingSetting.objects.filter')
-@patch('apps.fyle.helpers.Configuration.objects.filter')
-@patch('apps.fyle.helpers.Workspace.objects.get')
-def test_handle_refresh_dimensions(mock_get, mock_config_filter, mock_mapping_filter, mock_chain, mock_sync):
-    """
-    Test handle_refresh_dimensions with all branches
-    """
-    mock_workspace = MagicMock()
-    mock_get.return_value = mock_workspace
-    mock_config = MagicMock()
-    mock_config.import_code_fields = ['EXPENSE_TYPE']
-    mock_config.import_vendors_as_merchants = True
-    mock_config.import_categories = True
-    mock_config.reimbursable_expenses_object = 'EXPENSE_REPORT'
-    mock_config.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
-    mock_config_filter.return_value.first.return_value = mock_config
-    mock_mapping = MagicMock()
-    mock_mapping.source_field = 'PROJECT'
-    mock_mapping.destination_field = 'PROJECT'
-    mock_mapping.is_custom = False
-    mock_mapping_filter.return_value = [mock_mapping]
-    mock_chain_instance = MagicMock()
-    mock_chain.return_value = mock_chain_instance
-    mock_chain_instance.length.return_value = 1
-    helpers.handle_refresh_dimensions(1)
-    mock_chain_instance.run.assert_called_once()
-    mock_sync.assert_called_once_with(1)
-    mock_workspace.save.assert_called()

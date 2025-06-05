@@ -3,7 +3,7 @@ from django_q.models import Schedule
 from fyle_accounting_mappings.models import MappingSetting
 
 from apps.workspaces.models import Configuration
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks
+from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks
 
 
 def test_schedule_projects_creation(db):
@@ -25,11 +25,11 @@ def test_schedule_projects_creation(db):
     schedule_or_delete_fyle_import_tasks(configuration, mapping_setting)
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
 
     # Test delete schedule projects creation
     configuration = Configuration.objects.get(workspace_id=workspace_id)
@@ -46,7 +46,7 @@ def test_schedule_projects_creation(db):
     schedule_or_delete_fyle_import_tasks(configuration, mapping_setting)
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
@@ -63,11 +63,11 @@ def test_schedule_projects_creation(db):
     schedule_or_delete_fyle_import_tasks(configuration, mapping_setting)
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
 
     schedule = Schedule.objects.filter(
         func='apps.mappings.auto_import_and_map_fyle_fields',

@@ -4199,31 +4199,38 @@ cost_center_data = {
     'create_new_auto_create_cost_centers_destination_attributes': [[
         {
             'NAME':'Small Business',
-            'CLASSID':'400'
+            'CLASSID':'400',
+            'STATUS': 'active'
         },
         {
             'NAME':'Midsize Business',
-            'CLASSID':'500'
+            'CLASSID':'500',
+            'STATUS': 'active'
         },
         {
             'NAME':'Enterprise',
-            'CLASSID':'600'
+            'CLASSID':'600',
+            'STATUS': 'active'
         },
         {
             'NAME':'Service Line 2',
-            'CLASSID':'200'
+            'CLASSID':'200',
+            'STATUS': 'active'
         },
         {
             'NAME':'Service Line 1',
-            'CLASSID':'100'
+            'CLASSID':'100',
+            'STATUS': 'active'
         },
         {
             'NAME':'Service Line 3',
-            'CLASSID':'300'
+            'CLASSID':'300',
+            'STATUS': 'active'
         },
         {
             'NAME':'Killua Class',
-            'CLASSID':'9903'
+            'CLASSID':'9903',
+            'STATUS': 'active'
         }
     ]],
     "create_fyle_cost_center_payload_with_code_create_new_case":[
@@ -4241,39 +4248,48 @@ cost_center_data = {
     'create_new_auto_create_cost_centers_destination_attributes_subsequent_run': [[
         {
             'NAME':'Small Business',
-            'CLASSID':'400'
+            'CLASSID':'400',
+            'STATUS': 'active'
         },
         {
             'NAME':'Midsize Business',
-            'CLASSID':'500'
+            'CLASSID':'500',
+            'STATUS': 'active'
         },
         {
             'NAME':'Enterprise',
-            'CLASSID':'600'
+            'CLASSID':'600',
+            'STATUS': 'active'
         },
         {
             'NAME':'Service Line 2',
-            'CLASSID':'200'
+            'CLASSID':'200',
+            'STATUS': 'active'
         },
         {
             'NAME':'Service Line 1',
-            'CLASSID':'100'
+            'CLASSID':'100',
+            'STATUS': 'active'
         },
         {
             'NAME':'Service Line 3',
-            'CLASSID':'300'
+            'CLASSID':'300',
+            'STATUS': 'active'
         },
         {
             'NAME':'Killua Class',
-            'CLASSID':'9903'
+            'CLASSID':'9903',
+            'STATUS': 'active'
         },
         {
             'NAME':'Hokage',
-            'CLASSID':'389'
+            'CLASSID':'389',
+            'STATUS': 'active'
         },
         {
             'NAME':'Raikage',
-            'CLASSID':'9904'
+            'CLASSID':'9904',
+            'STATUS': 'active'
         }
     ]],
     'create_new_auto_create_cost_centers_expense_attributes_0': [

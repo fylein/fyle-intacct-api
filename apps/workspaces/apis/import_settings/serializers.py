@@ -6,7 +6,7 @@ from django_q.tasks import async_task
 from rest_framework import serializers
 from fyle_accounting_mappings.models import MappingSetting
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import Workspace, Configuration
