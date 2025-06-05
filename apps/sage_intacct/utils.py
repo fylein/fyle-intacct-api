@@ -666,7 +666,7 @@ class SageIntacctConnector:
                 for allocation_entries in allocation_entry_generator:
                     if not allocation_entries:
                         continue
-                        
+
                     detail = {}
                     for allocation_entry in allocation_entries:
                         value = allocation_entry['ALLOCATIONID']
