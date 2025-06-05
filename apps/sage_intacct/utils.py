@@ -664,6 +664,9 @@ class SageIntacctConnector:
             for allocation in allocations:
                 allocation_entry_generator = self.connection.allocation_entry.get_all_generator(field='allocation.ALLOCATIONID', value=allocation['ALLOCATIONID'])
                 for allocation_entries in allocation_entry_generator:
+                    if not allocation_entries:
+                        continue
+
                     detail = {}
                     for allocation_entry in allocation_entries:
                         value = allocation_entry['ALLOCATIONID']
