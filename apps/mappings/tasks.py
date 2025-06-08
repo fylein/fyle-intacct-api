@@ -349,7 +349,7 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
             task_settings['mapping_settings'].append({
                 'source_field': setting.source_field,
                 'destination_field': setting.destination_field,
-                'destination_sync_methods': [SYNC_METHODS[setting.destination_field]],
+                'destination_sync_methods': [SYNC_METHODS.get(setting.destination_field, 'user_defined_dimensions')],
                 'is_auto_sync_enabled': True,
                 'is_custom': setting.is_custom,
                 'import_without_destination_id': False,
