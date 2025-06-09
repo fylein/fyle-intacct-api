@@ -6,12 +6,14 @@ from typing import List
 from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from apps.tasks.models import TaskLog
+from apps.tasks.models import TaskLog, Error
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
-
+from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
+from apps.sage_intacct.actions import update_last_export_details
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
@@ -28,16 +30,37 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], is_auto_e
     chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
 
     for task in chain_tasks:
+        if task['target'] == 'apps.sage_intacct.tasks.check_cache_and_search_vendors':
+            chain.append(task['target'], workspace_id=workspace_id, fund_source=task['fund_source'])
+            continue
         chain.append(task['target'], task['expense_group'], task['task_log_id'], task['last_export'], is_auto_export)
 
     chain.run()
+
+
+def handle_skipped_exports(expense_groups: List[ExpenseGroup], index: int, skip_export_count: int, expense_group: ExpenseGroup, triggered_by: ExpenseImportSourceEnum) -> int:
+    """
+    Handle common export scheduling logic for skip tracking, logging, posting skipped export summaries, and last export updates.
+    """
+    total_count = expense_groups.count()
+    last_export = (index + 1) == total_count
+
+    logger.info('Skipping export for expense group %s', expense_group.id)
+    skip_export_count += 1
+    if triggered_by == ExpenseImportSourceEnum.DIRECT_EXPORT:
+        post_accounting_export_summary_for_skipped_exports(expense_group=expense_group, workspace_id=expense_group.workspace_id)
+    if last_export and skip_export_count == total_count:
+        update_last_export_details(expense_group.workspace_id)
+
+    return skip_export_count
 
 
 def schedule_journal_entries_creation(
     workspace_id: int,
     expense_group_ids: list[str],
     is_auto_export: bool,
-    interval_hours: int
+    interval_hours: int,
+    triggered_by: ExpenseImportSourceEnum
 ) -> None:
     """
     Schedule journal entries creation
@@ -58,11 +81,20 @@ def schedule_journal_entries_creation(
 
         chain_tasks = []
 
+        fund_source = expense_groups.first().fund_source
+
+        chain_tasks.append({
+            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            'fund_source': fund_source,
+        })
+
+        skip_export_count = 0
         for index, expense_group in enumerate(expense_groups):
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
-
             if skip_export:
-                logger.info('Skipping export for expense group %s', expense_group.id)
+                skip_export_count = handle_skipped_exports(
+                    expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
+                )
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -70,22 +102,21 @@ def schedule_journal_entries_creation(
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_JOURNAL_ENTRIES'
+                    'type': 'CREATING_JOURNAL_ENTRIES',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if triggered_by and task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
-
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
 
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_journal_entry',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:
@@ -100,6 +131,14 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
     :param expense_group: Expense Group
     :return: bool
     """
+    mapping_error = Error.objects.filter(
+        workspace_id=expense_group.workspace_id,
+        mapping_error_expense_group_ids__contains=[expense_group.id],
+        is_resolved=False
+    ).first()
+    if mapping_error:
+        return True
+
     if is_auto_export and interval_hours:
         task_log = TaskLog.objects.filter(expense_group=expense_group, workspace_id=expense_group.workspace.id).first()
         now = datetime.now(tz=timezone.utc)
@@ -118,13 +157,16 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
 
             # if the task log is created is the last month
             if task_log.created_at > now - relativedelta(months=1):
+                created_updated_diff = task_log.updated_at - task_log.created_at
+                if created_updated_diff <= timedelta(seconds=5):
+                    return False
                 if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(hours=24):
                     return True
 
     return False
 
 
-def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int) -> None:
+def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
     """
     Schedule expense reports creation
     :param expense_group_ids: List of expense group ids
@@ -144,11 +186,13 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
 
         chain_tasks = []
 
+        skip_export_count = 0
         for index, expense_group in enumerate(expense_groups):
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
-
             if skip_export:
-                logger.info('Skipping export for expense group %s', expense_group.id)
+                skip_export_count = handle_skipped_exports(
+                    expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
+                )
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -156,29 +200,28 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_EXPENSE_REPORTS'
+                    'type': 'CREATING_EXPENSE_REPORTS',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if triggered_by and task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
-
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
 
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_expense_report',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:
             __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
 
 
-def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int) -> None:
+def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
     """
     Schedule bill creation
     :param expense_group_ids: List of expense group ids
@@ -197,11 +240,20 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
 
         chain_tasks = []
 
+        fund_source = expense_groups.first().fund_source
+
+        chain_tasks.append({
+            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            'fund_source': fund_source,
+        })
+
+        skip_export_count = 0
         for index, expense_group in enumerate(expense_groups):
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
-
             if skip_export:
-                logger.info('Skipping export for expense group %s', expense_group.id)
+                skip_export_count = handle_skipped_exports(
+                    expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
+                )
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -209,29 +261,28 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_BILLS'
+                    'type': 'CREATING_BILLS',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if triggered_by and task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
-
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
 
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_bill',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:
             __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
 
 
-def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int) -> None:
+def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
     """
     Schedule charge card transaction creation
     :param expense_group_ids: List of expense group ids
@@ -251,10 +302,20 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
 
         chain_tasks = []
 
+        fund_source = expense_groups.first().fund_source
+
+        chain_tasks.append({
+            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            'fund_source': fund_source,
+        })
+
+        skip_export_count = 0
         for index, expense_group in enumerate(expense_groups):
             skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
-                logger.info('Skipping export for expense group %s', expense_group.id)
+                skip_export_count = handle_skipped_exports(
+                    expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
+                )
                 continue
 
             task_log, _ = TaskLog.objects.get_or_create(
@@ -262,22 +323,21 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
                 expense_group=expense_group,
                 defaults={
                     'status': 'ENQUEUED',
-                    'type': 'CREATING_CHARGE_CARD_TRANSACTIONS'
+                    'type': 'CREATING_CHARGE_CARD_TRANSACTIONS',
+                    'triggered_by': triggered_by
                 }
             )
             if task_log.status not in ['IN_PROGRESS', 'ENQUEUED']:
                 task_log.status = 'ENQUEUED'
+                if triggered_by and task_log.triggered_by != triggered_by:
+                    task_log.triggered_by = triggered_by
                 task_log.save()
-
-            last_export = False
-            if expense_groups.count() == index + 1:
-                last_export = True
 
             chain_tasks.append({
                 'target': 'apps.sage_intacct.tasks.create_charge_card_transaction',
                 'expense_group': expense_group,
                 'task_log_id': task_log.id,
-                'last_export': last_export
+                'last_export': (expense_groups.count() == index + 1)
             })
 
         if len(chain_tasks) > 0:

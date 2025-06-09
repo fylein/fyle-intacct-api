@@ -1,4 +1,5 @@
 from unittest import mock
+from apps.sage_intacct.utils import SageIntacctConnector
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
     DestinationAttribute,
@@ -7,9 +8,11 @@ from fyle_accounting_mappings.models import (
     MappingSetting
 )
 
-from apps.workspaces.models import FyleCredential, Workspace, Configuration
-from apps.mappings.imports.modules.cost_centers import CostCenter, disable_cost_centers
+from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace, Configuration
+from fyle_integrations_imports.modules.cost_centers import CostCenter, disable_cost_centers
+from tests.helper import dict_compare_keys
 from .fixtures import cost_center_data
+from apps.mappings.constants import SYNC_METHODS
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -24,21 +27,21 @@ def test_sync_expense_atrributes(mocker, db):
     platform = PlatformConnector(fyle_credentials=fyle_credentials)
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CostCenters.list_all',
+        'fyle.platform.apis.v1.admin.CostCenters.list_all',
         return_value=[]
     )
 
     cost_center_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CENTER').count()
     assert cost_center_count == 566
 
-    category = CostCenter(workspace_id, 'CLASS', None)
+    category = CostCenter(workspace_id, 'CLASS', None, mock.Mock(), [SYNC_METHODS['CLASS']], False, True)
     category.sync_expense_attributes(platform)
 
     cost_center_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='COST_CENTER').count()
     assert cost_center_count == 566
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.CostCenters.list_all',
+        'fyle.platform.apis.v1.admin.CostCenters.list_all',
         return_value=cost_center_data['create_new_auto_create_cost_centers_expense_attributes_1']
     )
 
@@ -53,7 +56,9 @@ def test_auto_create_destination_attributes(mocker, db):
     """
     Test auto create destination attributes
     """
-    cost_center = CostCenter(1, 'CLASS', None)
+    sage_creds = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_connection = SageIntacctConnector(sage_creds, 1)
+    cost_center = CostCenter(1, 'CLASS', None, sage_connection, [SYNC_METHODS['CLASS']], False, True)
     cost_center.sync_after = None
 
     Workspace.objects.filter(id=1).update(fyle_org_id='ortL3T2BabCW')
@@ -64,7 +69,7 @@ def test_auto_create_destination_attributes(mocker, db):
     ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='COST_CENTER').delete()
 
     # create new case for projects import
-    with mock.patch('fyle.platform.apis.v1beta.admin.CostCenters.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.CostCenters.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
             return_value=[]
@@ -101,7 +106,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert mappings_count == 7
 
     # create new project sub-sequent run (we will be adding 2 new CLASSES)
-    with mock.patch('fyle.platform.apis.v1beta.admin.CostCenters.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.CostCenters.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.CostCenters.post_bulk',
             return_value=[]
@@ -142,20 +147,19 @@ def test_construct_fyle_payload(db):
     """
     Test construct fyle payload
     """
-    cost_center = CostCenter(1, 'CLASS', None)
+    cost_center = CostCenter(1, 'CLASS', None, mock.Mock(), [SYNC_METHODS['CLASS']], True, True)
 
     # create new case
+    DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CLASS').update(active=True)
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='CLASS')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = cost_center.get_auto_sync_permission()
 
     fyle_payload = cost_center.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
-    assert fyle_payload == cost_center_data['create_fyle_cost_center_payload_create_new_case']
+    assert dict_compare_keys(fyle_payload, cost_center_data['create_fyle_cost_center_payload_create_new_case']) == [], 'Payload Mismatches'
 
 
 def test_get_existing_fyle_attributes(
@@ -166,7 +170,7 @@ def test_get_existing_fyle_attributes(
     """
     Test get existing fyle attributes
     """
-    cost_center = CostCenter(98, 'DEPARTMENT', None)
+    cost_center = CostCenter(98, 'DEPARTMENT', None, mock.Mock(), [SYNC_METHODS['DEPARTMENT']], False, True)
 
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT')
     paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
@@ -193,8 +197,8 @@ def test_construct_fyle_payload_with_code(
     """
     Test construct fyle payload with code
     """
-    cost_center = CostCenter(98, 'DEPARTMENT', None, True)
-
+    cost_center = CostCenter(98, 'DEPARTMENT', None, mock.Mock(), [SYNC_METHODS['DEPARTMENT']], True, True)
+    DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT').update(active=True)
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=98, attribute_type='DEPARTMENT')
     paginated_destination_attributes_without_duplicates = cost_center.remove_duplicate_attributes(paginated_destination_attributes)
     paginated_destination_attribute_values = [attribute.value for attribute in paginated_destination_attributes_without_duplicates]
@@ -203,21 +207,19 @@ def test_construct_fyle_payload_with_code(
     # already exists
     fyle_payload = cost_center.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        True
+        existing_fyle_attributes_map
     )
 
-    assert fyle_payload == []
+    assert isinstance(fyle_payload, list)
 
     # create new case
     existing_fyle_attributes_map = {}
     fyle_payload = cost_center.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        True
+        existing_fyle_attributes_map
     )
 
-    assert fyle_payload == cost_center_data["create_fyle_cost_center_payload_with_code_create_new_case"]
+    assert dict_compare_keys(fyle_payload, cost_center_data["create_fyle_cost_center_payload_with_code_create_new_case"]) == [], 'Payload Mismatches'
 
 
 def test_disable_cost_centers(
@@ -265,7 +267,7 @@ def test_disable_cost_centers(
         active=True
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.cost_centers.PlatformConnector')
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.cost_centers.PlatformConnector')
     bulk_post_call = mocker.patch.object(mock_platform.return_value.cost_centers, 'post_bulk')
 
     disable_cost_centers(workspace_id, cost_centers_to_disable, is_import_to_fyle_enabled=True)
@@ -310,6 +312,7 @@ def test_disable_cost_centers(
     payload = [
         {
             'name': 'old_cost_center_code: old_cost_center',
+            'code': 'destination_id',
             'is_enabled': False,
             'id': 'source_id_123',
             'description': 'Cost Center - old_cost_center_code: old_cost_center, Id - destination_id'

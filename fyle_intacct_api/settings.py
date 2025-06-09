@@ -60,8 +60,12 @@ INSTALLED_APPS = [
     'apps.tasks',
     'apps.mappings',
     'apps.internal',
+    'fyle_integrations_imports',
+
 
     'fyle_accounting_library.common_resources',
+    'fyle_accounting_library.fyle_platform',
+    'fyle_accounting_library.rabbitmq',
 ]
 
 MIDDLEWARE = [
@@ -170,6 +174,11 @@ LOGGING = {
             'propagate': True
         },
         'django.request': {'handlers': ['request_logs'], 'propagate': False},
+        'workers': {
+            'handlers': ['debug_logs'],
+            'level': 'INFO',
+            'propagate': True
+        },
     },
 }
 
@@ -186,8 +195,8 @@ Q_CLUSTER = {
     'name': 'fyle_intacct_api',
     # The number of tasks will be stored in django q tasks
     "save_limit": 100000,
-    'retry': 14400,
-    'timeout': 900, # 15 mins
+    'retry': 86400,
+    'timeout': None,
     'catch_up': False,
     'workers': 4,
     # How many tasks are kept in memory by a single cluster.

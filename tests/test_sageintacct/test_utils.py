@@ -1,9 +1,7 @@
 import pytest
-
 import logging
 from unittest import mock
 from datetime import datetime
-
 from sageintacctsdk.exceptions import WrongParamsError
 from fyle_accounting_mappings.models import (
     Mapping,
@@ -11,10 +9,9 @@ from fyle_accounting_mappings.models import (
     ExpenseAttribute,
     DestinationAttribute,
 )
-
 from tests.helper import dict_compare_keys
-
-from apps.sage_intacct.models import CostType
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from apps.sage_intacct.models import CostCode, CostType
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import (
     Workspace,
@@ -139,7 +136,7 @@ def test_sync_expense_types(mocker, db):
     )
 
     mocker.patch(
-        'apps.mappings.imports.modules.categories.disable_categories'
+        'fyle_integrations_imports.modules.categories.disable_categories'
     )
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -213,7 +210,7 @@ def test_sync_projects(mocker, db):
         return_value=5
     )
 
-    mock = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mock = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock.return_value.projects, 'post_bulk')
     mocker.patch.object(mock.return_value.projects, 'sync')
 
@@ -569,7 +566,7 @@ def tests_sync_accounts(mocker, db):
         return_value=data['get_accounts']
     )
 
-    mock = mocker.patch('apps.mappings.imports.modules.categories.PlatformConnector')
+    mock = mocker.patch('fyle_integrations_imports.modules.categories.PlatformConnector')
     mocker.patch.object(mock.return_value.categories, 'post_bulk')
 
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
@@ -594,6 +591,10 @@ def test_sync_classes(mocker, db):
         'sageintacctsdk.apis.Classes.get_all_generator',
         return_value=data['get_classes']
     )
+    # Patch the mock data to include 'STATUS'
+    for class_list in data['get_classes']:
+        for class_dict in class_list:
+            class_dict['STATUS'] = 'active'
 
     mocker.patch(
         'sageintacctsdk.apis.Classes.count',
@@ -619,13 +620,19 @@ def test_sync_customers(mocker, db):
     workspace_id = 1
 
     mocker.patch(
-        'sageintacctsdk.apis.Customers.count',
-        return_value=5
-    )
-    mocker.patch(
         'sageintacctsdk.apis.Customers.get_all_generator',
         return_value=data['get_customers']
     )
+    # Patch the mock data to include 'STATUS'
+    for customer_list in data['get_customers']:
+        for customer_dict in customer_list:
+            customer_dict['STATUS'] = 'active'
+
+    mocker.patch(
+        'sageintacctsdk.apis.Customers.count',
+        return_value=5
+    )
+
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
@@ -818,9 +825,41 @@ def test_post_attachments(mocker, db):
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
-    supdoc_id = sage_intacct_connection.post_attachments([{'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}], 'asd')
+    supdoc_id = sage_intacct_connection.post_attachments([{'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}], 'asd', 1)
 
     assert supdoc_id == 'asd'
+
+
+def test_post_attachments_2(mocker, db):
+    """
+    Test post attachments
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.post',
+        return_value={'status': 'success', 'key': '3032'}
+    )
+
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.update',
+        return_value={'status': 'success', 'key': '3032'}
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    attachment_1 = [
+        {'download_url': 'sdfghj', 'name': 'ert.sdf.sdf', 'id': 'dfgh'}
+    ]
+    supdoc_id = sage_intacct_connection.post_attachments(attachment_1, 'asd', 1)
+    assert supdoc_id == 'asd'
+
+    attachment_2 = [
+        {'download_url': 'abcd', 'name': 'abc.abc.abc', 'id': 'abc'}
+    ]
+    supdoc_id = sage_intacct_connection.post_attachments(attachment_2, 'asd', 2)
+    assert supdoc_id == False
 
 
 def test_get_expense_link(mocker, db, create_journal_entry):
@@ -884,7 +923,7 @@ def test_get_or_create_vendor(mocker, db):
 
     vendor = sage_intacct_connection.get_or_create_vendor('Non existing vendor in DB', 'ashwin.t@fyle.in', False)
 
-    assert vendor.value == 'Ashwin'
+    assert vendor is None
 
     # case insensitive search in db
     vendor_from_db = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').first()
@@ -899,17 +938,6 @@ def test_get_or_create_vendor(mocker, db):
     assert vendor.value == vendor_from_db.value
     assert vendor.id == vendor_from_db.id
 
-    # case insensitive not found in db -> search in intacct and found
-    data['get_vendor'][0]['NAME'] = 'Non existing vendor in DB use all cases'
-
-    get_call_mock.return_value = {'VENDOR': data['get_vendor'], '@totalcount': 2}
-
-    vendor = sage_intacct_connection.get_or_create_vendor('non exiSting VENDOR iN Db UsE aLl CaSeS', create=True)
-
-    assert vendor.value == 'Non existing vendor in DB use all cases'
-    assert DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='Non existing vendor in DB use all cases').exists() is True
-
-    # case insensitive not found in db -> search in intacct and not found -> create new in intacct
     get_call_mock.return_value = {}
 
     new_post_vendors_data = data['post_vendors']
@@ -1180,3 +1208,335 @@ def test_skip_sync_attributes(mocker, db):
 
     new_project_count = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='EXPENSE_TYPE').count()
     assert new_project_count == 0
+
+
+def test_sync_cost_codes(db, mocker, create_dependent_field_setting):
+    """
+    Test sync cost codes
+    """
+    workspace_id = 1
+
+    sage_intacct_mock = mocker.patch('sageintacctsdk.apis.Tasks.count')
+    sage_intacct_mock.return_value = 1
+
+    data = [[
+        {'RECORDNO': '38', 'TASKID': '111', 'PARENTKEY': None, 'PARENTID': None, 'NAME': 'HrishabhCostCode', 'PARENTTASKNAME': None, 'PROJECTKEY': '172', 'PROJECTID': '1171', 'PROJECTNAME': 'Sage Project 10', 'ITEMKEY': None, 'ITEMID': None, 'ITEMNAME': None, 'DESCRIPTION': None, 'BILLABLE': 'false', 'TASKNO': None, 'TASKSTATUS': 'In Progress', 'CLASSID': None, 'CLASSNAME': None, 'CLASSKEY': None, 'ROOTPARENTKEY': '38', 'ROOTPARENTID': '111', 'ROOTPARENTNAME': 'HrishabhCostType_v3'},
+        {'RECORDNO': '39', 'TASKID': '111', 'PARENTKEY': None, 'PARENTID': None, 'NAME': 'HrishabhCostCode', 'PARENTTASKNAME': None, 'PROJECTKEY': '173', 'PROJECTID': '1172', 'PROJECTNAME': 'Sage Project 11', 'ITEMKEY': None, 'ITEMID': None, 'ITEMNAME': None, 'DESCRIPTION': None, 'BILLABLE': 'false', 'TASKNO': None, 'TASKSTATUS': 'In Progress', 'CLASSID': None, 'CLASSNAME': None, 'CLASSKEY': None, 'ROOTPARENTKEY': '39', 'ROOTPARENTID': '112', 'ROOTPARENTNAME': 'HrishabhCostType_v4'}
+    ]]
+
+    mocker.patch('sageintacctsdk.apis.Tasks.get_all_generator', return_value=data)
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=1)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=1)
+
+    sage_intacct_connection.sync_cost_codes()
+
+    assert CostCode.objects.filter(workspace_id=workspace_id).count() == 2
+    attribute = CostCode.objects.filter(workspace_id=workspace_id, project_id='1171').first()
+
+    assert attribute.task_name == 'HrishabhCostCode'
+    assert attribute.project_id == '1171'
+    assert attribute.project_name == 'Sage Project 10'
+    assert attribute.task_id == '111'
+
+
+def test_search_and_create_vendors(db, mocker):
+    """
+    Test search and create vendors
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    missing_vendors = ['Missing Vendor 1', 'Missing Vendor 2']
+
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.get_by_query',
+        return_value=[
+            {'NAME': 'Missing Vendor 1', 'VENDORID': '20002', 'DISPLAYCONTACT.EMAIL1': None, 'WHENMODIFIED': '11/27/2023 06:51:12'},
+            {'NAME': 'Missing Vendor 2', 'VENDORID': '20003', 'DISPLAYCONTACT.EMAIL1': None, 'WHENMODIFIED': '07/01/2022 08:30:59'},
+            {'NAME': 'Missing Vendor 2', 'VENDORID': '20004', 'DISPLAYCONTACT.EMAIL1': None, 'WHENMODIFIED': '07/01/2023 08:30:59'}
+
+        ]
+    )
+
+    sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
+    vendor_1 = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='Missing Vendor 1').first()
+
+    assert vendor_1 is not None
+    assert vendor_1.value == 'Missing Vendor 1'
+    assert vendor_1.destination_id == '20002'
+
+    vendor_2 = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR', value='Missing Vendor 2').first()
+
+    assert vendor_2 is not None
+    assert vendor_2.value == 'Missing Vendor 2'
+    assert vendor_2.destination_id == '20004'
+
+
+def test_construct_single_itemized_credit_line(create_journal_entry, db):
+    """
+    Test construct single itemized credit line
+    """
+    workspace_id = 1
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    general_mappings.default_credit_card_id = 'CC123'
+    general_mappings.default_gl_account_id = 'GL456'
+    general_mappings.save()
+
+    journal_entry, journal_entry_lineitems = create_journal_entry
+
+    # Test case 1: Multiple line items for same vendor
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[0].employee_id = 'EMP1'
+    journal_entry_lineitems[0].user_defined_dimensions = []  # Initialize empty list
+
+    # Add second line item for same vendor with a different expense_id
+    second_lineitem = journal_entry_lineitems[0].__class__.objects.create(
+        journal_entry=journal_entry,
+        vendor_id='VENDOR1',
+        amount=200,
+        employee_id='EMP1',
+        expense_id=journal_entry_lineitems[0].expense_id + 1,  # Use a different expense_id
+        user_defined_dimensions=[]  # Initialize empty list
+    )
+    journal_entry_lineitems.append(second_lineitem)
+
+    # Ensure fund source is not CCC
+    journal_entry.expense_group.fund_source = 'PERSONAL'
+    journal_entry.expense_group.save()
+
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 1
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+    assert credit_lines[0]['amount'] == 300  # Sum of 100 + 200
+    assert credit_lines[0]['tr_type'] == -1  # Positive amount
+    assert credit_lines[0]['accountno'] == general_mappings.default_gl_account_id
+
+    # Test case 2: Multiple vendors
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[1].vendor_id = 'VENDOR2'
+    journal_entry_lineitems[1].amount = 200
+
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 2
+    vendor_amounts = {line['vendorid']: line['amount'] for line in credit_lines}
+    assert vendor_amounts['VENDOR1'] == 100
+    assert vendor_amounts['VENDOR2'] == 200
+
+    # Test case 3: Refund case (negative amount)
+    journal_entry_lineitems[0].amount = -100
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 2
+    assert credit_lines[0]['amount'] == 100  # Absolute value
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+
+    # Test case 4: Zero amount line item
+    journal_entry_lineitems[0].amount = 0
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert len(credit_lines) == 1  # Only VENDOR2 should be present
+    assert credit_lines[0]['vendorid'] == 'VENDOR2'
+
+    # Test case 5: CCC fund source
+    journal_entry.expense_group.fund_source = 'CCC'
+    journal_entry.expense_group.save()
+    credit_lines = sage_intacct_connection._SageIntacctConnector__construct_single_itemized_credit_line(
+        journal_entry_lineitems=journal_entry_lineitems,
+        general_mappings=general_mappings,
+        journal_entry=journal_entry,
+        configuration=Configuration.objects.get(workspace_id=workspace_id)
+    )
+
+    assert credit_lines[0]['accountno'] == general_mappings.default_credit_card_id
+
+
+def test_construct_journal_entry_with_single_credit_line(create_journal_entry, db):
+    """
+    Test construct journal entry with single credit line enabled
+    """
+    workspace_id = 1
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    # Enable single credit line and tax codes
+    general_settings = Configuration.objects.filter(workspace_id=workspace_id).first()
+    general_settings.import_tax_codes = True
+    general_settings.je_single_credit_line = True
+    general_settings.save()
+
+    general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    general_mappings.default_tax_code_id = 4
+    general_mappings.default_credit_card_id = 'CC123'
+    general_mappings.default_gl_account_id = 'GL456'
+    general_mappings.save()
+
+    journal_entry, journal_entry_lineitems = create_journal_entry
+
+    # Test case 1: Multiple line items for same vendor
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[0].employee_id = 'EMP1'
+    journal_entry_lineitems[0].user_defined_dimensions = []  # Initialize empty list
+
+    # Add second line item for same vendor with a different expense_id
+    second_lineitem = journal_entry_lineitems[0].__class__.objects.create(
+        journal_entry=journal_entry,
+        vendor_id='VENDOR1',
+        amount=200,
+        employee_id='EMP1',
+        expense_id=journal_entry_lineitems[0].expense_id + 1,  # Use a different expense_id
+        user_defined_dimensions=[]  # Initialize empty list
+    )
+    journal_entry_lineitems.append(second_lineitem)
+
+    # Ensure fund source is not CCC
+    journal_entry.expense_group.fund_source = 'PERSONAL'
+    journal_entry.expense_group.save()
+
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify credit lines are grouped by vendor
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
+                   if entry['tr_type'] == -1 and entry.get('description') == 'Total Credit Line']
+    assert len(credit_lines) == 1
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+    assert credit_lines[0]['amount'] == 300  # Sum of 100 + 200
+    assert credit_lines[0]['accountno'] == general_mappings.default_gl_account_id
+
+    # Test case 2: Multiple vendors
+    journal_entry_lineitems[0].vendor_id = 'VENDOR1'
+    journal_entry_lineitems[0].amount = 100
+    journal_entry_lineitems[1].vendor_id = 'VENDOR2'
+    journal_entry_lineitems[1].amount = 200
+
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify credit lines for multiple vendors
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
+                   if entry['tr_type'] == -1 and entry.get('description', '').startswith('Total Credit Line')]
+    assert len(credit_lines) == 2
+    vendor_amounts = {line['vendorid']: line['amount'] for line in credit_lines}
+    assert vendor_amounts['VENDOR1'] == 100
+    assert vendor_amounts['VENDOR2'] == 200
+
+    # Test case 3: Refund case (negative amount)
+    # Set both line items to negative amounts for the same vendor
+    journal_entry_lineitems[0].amount = -100
+    journal_entry_lineitems[1].amount = -200
+    journal_entry_lineitems[1].vendor_id = 'VENDOR1'  # Ensure both are for same vendor
+
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify refund handling - should have one credit line with positive amount
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
+                   if entry['tr_type'] == 1 and entry.get('description') == 'Total Credit Line']
+    assert len(credit_lines) == 1
+    assert credit_lines[0]['amount'] == 300  # Sum of absolute values
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+
+    # Test case 4: Zero amount line item
+    journal_entry_lineitems[0].amount = 0
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify zero amount handling
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
+                   if entry['tr_type'] == 1 and entry.get('description', '').startswith('Total Credit Line')]
+    assert len(credit_lines) == 1  # Only VENDOR1 should be present with non-zero amount
+    assert credit_lines[0]['vendorid'] == 'VENDOR1'
+    assert credit_lines[0]['amount'] == 200  # Only the non-zero amount
+
+    # Test case 5: CCC fund source
+    journal_entry.expense_group.fund_source = 'CCC'
+    journal_entry.expense_group.save()
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    # Verify CCC fund source handling
+    credit_lines = [entry for entry in journal_entry_object['entries'][0]['glentry']
+                   if entry['tr_type'] == 1 and entry.get('description', '').startswith('Total Credit Line')]
+    assert credit_lines[0]['accountno'] == general_mappings.default_credit_card_id
+
+
+def test_invalidate_sage_intacct_credentials(mocker, db):
+    """
+    Test invalidate sage intacct credentials
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=workspace_id, is_expired=False).first()
+
+    mocked_patch = mocker.MagicMock()
+    mocker.patch('fyle_intacct_api.utils.patch_integration_settings', side_effect=mocked_patch)
+
+    # Should not fail if sage_intacct_credentials was not found
+    sage_intacct_credentials.delete()
+    invalidate_sage_intacct_credentials(workspace_id)
+    assert not mocked_patch.called
+
+    # Should not call patch_integration_settings if sage_intacct_credentials.is_expired is True
+    sage_intacct_credentials.is_expired = True
+    sage_intacct_credentials.save()
+    invalidate_sage_intacct_credentials(workspace_id)
+    assert not mocked_patch.called
+
+    # Should call patch_integration_settings with the correct arguments if sage_intacct_credentials.is_expired is False
+    sage_intacct_credentials.is_expired = False
+    sage_intacct_credentials.save()
+
+    invalidate_sage_intacct_credentials(workspace_id)
+
+    args, kwargs = mocked_patch.call_args
+    assert args[0] == workspace_id
+    assert kwargs['is_token_expired'] == True
+
+    # Verify the credentials were marked as expired
+    sage_intacct_credentials.refresh_from_db()
+    assert sage_intacct_credentials.is_expired == True

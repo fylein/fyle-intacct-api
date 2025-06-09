@@ -48,7 +48,7 @@ def default_session_fixture(request):
     patched_3.__enter__()
 
     patched_4 = mock.patch(
-        'fyle.platform.apis.v1beta.spender.MyProfile.get',
+        'fyle.platform.apis.v1.spender.MyProfile.get',
         return_value=fyle_data['get_my_profile']
     )
     patched_4.__enter__()
@@ -78,7 +78,7 @@ def test_connection(db):
 
     access_token = get_access_token(refresh_token)
     fyle_connection.access_token = access_token
-    user_profile = fyle_connection.v1beta.spender.my_profile.get()['data']
+    user_profile = fyle_connection.v1.spender.my_profile.get()['data']
     user = User(
         password='', last_login=datetime.now(tz=timezone.utc), id=1, email=user_profile['user']['email'],
         user_id=user_profile['user_id'], full_name='', active='t', staff='f', admin='t'
@@ -94,3 +94,16 @@ def test_connection(db):
     auth_token.save()
 
     return fyle_connection
+
+
+@pytest.fixture(autouse=True)
+def mock_rabbitmq():
+    """
+    Mock RabbitMQ
+    """
+    with mock.patch('apps.fyle.queue.RabbitMQConnection.get_instance') as mock_rabbitmq:
+        mock_instance = mock.Mock()
+        mock_instance.publish.return_value = None
+        mock_instance.connect.return_value = None
+        mock_rabbitmq.return_value = mock_instance
+        yield mock_rabbitmq

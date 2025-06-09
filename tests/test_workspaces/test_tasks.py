@@ -5,9 +5,10 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import (
     Workspace,
-    WorkspaceSchedule,
     Configuration,
-    FyleCredential
+    FyleCredential,
+    WorkspaceSchedule,
+    SageIntacctCredential
 )
 from apps.workspaces.tasks import (
     run_sync_schedule,
@@ -36,7 +37,8 @@ def test_schedule_sync(db):
         emails_selected=[
             'ashwin.t@fyle.in'
         ],
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        is_real_time_export_enabled=False
     )
 
     ws_schedule = WorkspaceSchedule.objects.filter(
@@ -52,7 +54,8 @@ def test_schedule_sync(db):
         emails_selected=[
             'ashwin.t@fyle.in'
         ],
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        is_real_time_export_enabled=False
     )
 
     ws_schedule = WorkspaceSchedule.objects.filter(
@@ -139,7 +142,8 @@ def test_email_notification(mocker,db):
         emails_selected=[
             'user5@fyleforgotham.in'
         ],
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        is_real_time_export_enabled=False
     )
 
     ws_schedule = WorkspaceSchedule.objects.filter(
@@ -171,6 +175,10 @@ def test_email_notification(mocker,db):
 
     assert updated_ws_schedule.error_count == 3
 
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    run_email_notification(workspace_id=workspace_id)
+
 
 def test_async_update_fyle_credentials(db):
     """
@@ -191,7 +199,7 @@ def test_async_create_admin_subcriptions(db, mocker):
     Test async create admin subscriptions
     """
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Subscriptions.post',
+        'fyle.platform.apis.v1.admin.Subscriptions.post',
         return_value={}
     )
     async_create_admin_subcriptions(1)

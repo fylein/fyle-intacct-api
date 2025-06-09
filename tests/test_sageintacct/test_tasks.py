@@ -6,9 +6,12 @@ from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 
 from django.conf import settings
+from django.core.cache import cache
+from apps.exceptions import ValueErrorWithResponse
 from django_q.models import Schedule
 
-from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute
+from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
 
 from fyle_intacct_api.exceptions import BulkError
@@ -37,11 +40,13 @@ from apps.sage_intacct.queue import (
     schedule_journal_entries_creation,
     schedule_charge_card_transaction_creation,
     schedule_sage_intacct_objects_status_sync,
-    schedule_sage_intacct_reimbursement_creation
+    schedule_sage_intacct_reimbursement_creation,
+    handle_skipped_exports
 )
 from apps.sage_intacct.tasks import (
     __validate_employee_mapping,
     __validate_expense_group,
+    check_cache_and_search_vendors,
     check_sage_intacct_object_status,
     create_ap_payment,
     create_bill,
@@ -50,13 +55,16 @@ from apps.sage_intacct.tasks import (
     create_journal_entry,
     create_or_update_employee_mapping,
     create_sage_intacct_reimbursement,
+    get_employee_as_vendors_name,
     get_or_create_credit_card_vendor,
     handle_sage_intacct_errors,
     load_attachments,
+    mark_paid_on_fyle,
     process_fyle_reimbursements,
-    update_last_export_details,
+    search_and_upsert_vendors,
     validate_for_skipping_payment
 )
+from apps.sage_intacct.actions import update_last_export_details
 from .fixtures import data
 
 logger = logging.getLogger(__name__)
@@ -177,6 +185,130 @@ def test_handle_intacct_errors(db):
     assert 'error' not in task_log.sage_intacct_errors
 
 
+def test_get_or_create_error_with_expense_group_create_new(db):
+    """
+    Test creating a new error record
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        display_name='Employee',
+        value='john.doe@fyle.in',
+        source_id='test123'
+    )
+
+    error, created = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    assert created == True
+    assert error.workspace_id == workspace_id
+    assert error.type == 'EMPLOYEE_MAPPING'
+    assert error.error_title == 'john.doe@fyle.in'
+    assert error.error_detail == 'Employee mapping is missing'
+    assert error.is_resolved == False
+    assert error.mapping_error_expense_group_ids == [expense_group.id]
+
+
+def test_get_or_create_error_with_expense_group_update_existing(db):
+    """
+    Test updating an existing error record with new expense group ID
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        display_name='Employee',
+        value='john.doe@fyle.in',
+        source_id='test123'
+    )
+
+    # Create initial error
+    error1, created1 = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    # Get another expense group
+    expense_group2 = ExpenseGroup.objects.get(id=2)
+
+    # Try to create error with same attribute but different expense group
+    error2, created2 = Error.get_or_create_error_with_expense_group(
+        expense_group2,
+        expense_attribute
+    )
+
+    assert created2 == False
+    assert error2.id == error1.id
+    assert set(error2.mapping_error_expense_group_ids) == {expense_group.id, expense_group2.id}
+
+
+def test_get_or_create_error_with_expense_group_category_mapping(db):
+    """
+    Test creating category mapping error
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    category_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='CATEGORY',
+        display_name='Category',
+        value='Travel Test',
+        source_id='test456'
+    )
+
+    error, created = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        category_attribute
+    )
+
+    assert created == True
+    assert error.type == 'CATEGORY_MAPPING'
+    assert error.error_title == 'Travel Test'
+    assert error.error_detail == 'Category mapping is missing'
+    assert error.mapping_error_expense_group_ids == [expense_group.id]
+
+
+def test_get_or_create_error_with_expense_group_duplicate_expense_group(db):
+    """
+    Test that adding same expense group ID twice doesn't create duplicate
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    expense_attribute = ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='EMPLOYEE',
+        display_name='Employee',
+        value='john.doe@fyle.in',
+        source_id='test123'
+    )
+
+    # Create initial error
+    error1, _ = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    # Try to add same expense group again
+    error2, created2 = Error.get_or_create_error_with_expense_group(
+        expense_group,
+        expense_attribute
+    )
+
+    assert created2 == False
+    assert error2.id == error1.id
+    assert len(error2.mapping_error_expense_group_ids) == 1
+    assert error2.mapping_error_expense_group_ids == [expense_group.id]
+
+
 def test_get_or_create_credit_card_vendor(mocker, db):
     """
     Test get_or_create_credit_card_vendor
@@ -191,7 +323,6 @@ def test_get_or_create_credit_card_vendor(mocker, db):
         attribute_type='VENDOR',
         display_name='Vendor',
         workspace_id=workspace_id,
-        destination_id='vendor123',
         active=True,
         detail={
             'email': 'vendor123@fyle.in'
@@ -399,7 +530,8 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-            })
+            }
+        )
         create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -411,7 +543,8 @@ def test_create_bill_exceptions(mocker, db, create_task_logs):
             }, response={
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': '', 'correction': ''}],
                 'type': 'Invalid_params'
-            })
+            }
+        )
         create_bill(expense_group, task_log.id, True, False)
 
         task_log = TaskLog.objects.get(id=task_log.id)
@@ -537,6 +670,17 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
+        mock_call.side_effect = SageIntacctCredential.DoesNotExist()
+        create_sage_intacct_reimbursement(workspace_id)
+
+        task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
+        assert task_log.status == 'FAILED'
+
+        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
+        create_sage_intacct_reimbursement(workspace_id)
+
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.post_sage_intacct_reimbursement') as mock_call:
         mock_call.side_effect = InvalidTokenError(
             msg={
                 'Message': 'Invalid parametrs'
@@ -551,16 +695,6 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
 
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
-
-        TaskLog.objects.filter(task_id='PAYMENT_{}'.format(expense_report.expense_group.id)).update(updated_at=updated_at)
-        mock_call.side_effect = SageIntacctCredential.DoesNotExist()
-        create_sage_intacct_reimbursement(workspace_id)
-
-        task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
-        assert task_log.status == 'FAILED'
-
-        mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
-        create_sage_intacct_reimbursement(workspace_id)
 
     with mock.patch('apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement') as mock_call:
         expense_report.expense_group.expenses.all().update(paid_on_fyle=True)
@@ -647,6 +781,10 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
         'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
         return_value=DestinationAttribute.objects.get(id=633)
     )
+    mocker.patch(
+        'apps.workspaces.models.SageIntacctCredential.get_active_sage_intacct_credentials',
+        return_value=SageIntacctCredential.objects.get(id=1)
+    )
 
     workspace_id = 1
 
@@ -720,6 +858,17 @@ def test_post_credit_card_exceptions(mocker, create_task_logs, db):
         mock_call.side_effect = NoPrivilegeError(msg='insufficient permission', response='insufficient permission')
         create_charge_card_transaction(expense_group, task_log.id, True, False)
 
+        mock_call.side_effect = ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
+        create_charge_card_transaction(expense_group, task_log.id, True, False)
+
+        task_log = TaskLog.objects.get(id=task_log.id)
+        assert task_log.status == 'FAILED'
+
+        error = Error.objects.filter(expense_group=expense_group).first()
+        brand_name = 'Fyle' if settings.BRAND_ID == 'fyle' else 'Expense Management'
+        assert error.error_detail == '''Merchant from expense not found as a vendor in Sage Intacct. {0} couldn't auto-create the default vendor "Credit Card Misc". Please manually create this vendor in Sage Intacct, then retry.'''.format(brand_name)
+        assert error.error_title == 'Vendor creation failed in Sage Intacct'
+
 
 def test_post_journal_entry_success(mocker, create_task_logs, db):
     """
@@ -788,10 +937,14 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
         create_journal_entry(expense_group, task_log.id, True, False)
 
 
-def test_post_create_journal_entry_exceptions(create_task_logs, db):
+def test_post_create_journal_entry_exceptions(mocker, create_task_logs, db):
     """
     Test post_create_journal_entry exceptions
     """
+    mocker.patch(
+        'apps.workspaces.models.SageIntacctCredential.get_active_sage_intacct_credentials',
+        return_value=SageIntacctCredential.objects.get(id=1)
+    )
     workspace_id = 1
 
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
@@ -864,6 +1017,17 @@ def test_post_create_journal_entry_exceptions(create_task_logs, db):
 
         mock_call.side_effect = NoPrivilegeError(msg='Insufficient Permission', response="Insufficient Permission")
         create_journal_entry(expense_group, task_log.id, True, False)
+
+        mock_call.side_effect = ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
+        create_journal_entry(expense_group, task_log.id, True, False)
+
+        task_log = TaskLog.objects.get(id=task_log.id)
+        assert task_log.status == 'FAILED'
+
+        error = Error.objects.filter(expense_group=expense_group).first()
+        brand_name = 'Fyle' if settings.BRAND_ID == 'fyle' else 'Expense Management'
+        assert error.error_detail == '''Merchant from expense not found as a vendor in Sage Intacct. {0} couldn't auto-create the default vendor "Credit Card Misc". Please manually create this vendor in Sage Intacct, then retry.'''.format(brand_name)
+        assert error.error_title == 'Vendor creation failed in Sage Intacct'
 
 
 def test_post_expense_report_success(mocker, create_task_logs, db):
@@ -1276,12 +1440,12 @@ def test_check_sage_intacct_object_status(mocker, db):
     Test check_sage_intacct_object_status
     """
     mocker.patch(
-        'sageintacctsdk.apis.Bills.get',
-        return_value=data['get_bill']
+        'sageintacctsdk.apis.Bills.get_by_query',
+        return_value=data['get_by_query']
     )
     mocker.patch(
-        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_report',
-        return_value=data['expense_report_response']['data']
+        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_reports',
+        return_value=data['expense_report_get_bulk']
     )
     workspace_id = 1
     expense_group = ExpenseGroup.objects.get(id=1)
@@ -1321,7 +1485,7 @@ def test_check_sage_intacct_object_status(mocker, db):
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
 
-    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_report') as mock_call:
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_reports') as mock_call:
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         check_sage_intacct_object_status(workspace_id)
 
@@ -1399,7 +1563,7 @@ def test_schedule_journal_entries_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_journal_entries_creation(workspace_id, [1], False, 1)
+    schedule_journal_entries_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_JOURNAL_ENTRIES').count() != 0
 
@@ -1410,7 +1574,7 @@ def test_schedule_expense_reports_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_expense_reports_creation(workspace_id, [1], False, 1)
+    schedule_expense_reports_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_EXPENSE_REPORTS').count() != 0
 
@@ -1421,7 +1585,7 @@ def test_schedule_bills_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_bills_creation(workspace_id, [1], False, 1)
+    schedule_bills_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_BILLS').count() != 0
 
@@ -1432,7 +1596,7 @@ def test_schedule_charge_card_transaction_creation(mocker, db):
     """
     workspace_id = 1
 
-    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1)
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
 
     TaskLog.objects.filter(type='CREATING_CHARGE_CARD_TRANSACTIONS').count() != 0
 
@@ -1797,3 +1961,208 @@ def test_skipping_create_ap_payment(mocker, db):
     create_ap_payment(workspace_id)
     task_log.refresh_from_db()
     assert task_log.updated_at == updated_at
+
+
+def test_mark_paid_on_fyle(db, mocker):
+    """
+    Test mark paid on fyle
+    """
+    workspace_id = 1
+    reports_to_be_marked = {'rp123', 'rp456'}
+
+    report_id = 'rp123'
+
+    payloads = [{'id': report_id}]
+
+    Expense.objects.filter(workspace_id=workspace_id).update(paid_on_fyle=False, report_id=report_id)
+
+    # Mock platform connector
+    mock_platform = mock.Mock()
+    mock_platform.reports.bulk_mark_as_paid = mock.Mock()
+
+    # Test successful case
+    mark_paid_on_fyle(mock_platform, payloads, reports_to_be_marked, workspace_id)
+    mock_platform.reports.bulk_mark_as_paid.assert_called_once_with(payloads)
+    assert not Expense.objects.filter(report_id__in=reports_to_be_marked, workspace_id=workspace_id, paid_on_fyle=False).exists()
+
+    # Reset test data
+    Expense.objects.filter(report_id__in=reports_to_be_marked).update(paid_on_fyle=False)
+
+    # Test error case with permission denied
+    error_response = {
+        'data': [
+            {'key': 'rp123', 'message': 'Permission denied to perform this action.'}
+        ]
+    }
+    mock_platform.reports.bulk_mark_as_paid.side_effect = Exception()
+    mock_platform.reports.bulk_mark_as_paid.side_effect.response = error_response
+
+    mark_paid_on_fyle(mock_platform, payloads, reports_to_be_marked, workspace_id, retry_num=1)
+
+    # Verify expenses are marked as paid despite the error
+    assert not Expense.objects.filter(report_id__in=reports_to_be_marked, workspace_id=workspace_id, paid_on_fyle=False).exists()
+
+
+def test_check_cache_and_search_vendors(db, mocker):
+    """
+    Test check_cache_and_search_vendors
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
+    fund_source = expense_group.fund_source
+
+    cache.delete(f"{fund_source}_vendor_cache_{workspace_id}")
+
+    mock_search_and_upsert_vendors = mocker.patch(
+        'apps.sage_intacct.tasks.search_and_upsert_vendors'
+    )
+
+    check_cache_and_search_vendors(workspace_id, fund_source)
+
+    assert mock_search_and_upsert_vendors.call_count == 1
+
+    cache.set(f"{fund_source}_vendor_cache_{workspace_id}", datetime.now(tz=timezone.utc))
+
+    check_cache_and_search_vendors(workspace_id, fund_source)
+
+    assert mock_search_and_upsert_vendors.call_count == 1
+
+
+def test_get_filtered_expense_group_ids(db):
+    """
+    Test get_filtered_expense_group_ids
+    """
+    expense_group_filters = {
+        'fund_source': 'PERSONAL',
+        'workspace_id': 1
+    }
+
+    expense_group = ExpenseGroup.objects.filter(**expense_group_filters).first()
+
+    assert expense_group.workspace.id == 1
+    assert expense_group.fund_source == 'PERSONAL'
+
+
+def test_get_employee_as_vendors_name(db):
+    """
+    Test get_employee_as_vendors_name
+    """
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).last()
+    expense_group_ids = [expense_group.id]
+    expense_group.expenses.update(workspace_id=workspace_id, employee_email='hrishabh.test@test.com')
+    expense_group.save()
+
+    employee = ExpenseAttribute.objects.filter(value='ashwin.t@fyle.in').first()
+
+    employee.id = 10
+    employee.value = 'hrishabh.test@test.com'
+    employee.workspace_id = workspace_id
+    employee.detail = {'full_name': 'Ashwin T'}
+    employee.save()
+
+    employee_as_vendors = get_employee_as_vendors_name(workspace_id, expense_group_ids)
+
+    assert list(employee_as_vendors) == ['Ashwin T']
+
+
+def test_search_and_upsert_vendors_ccc(db, mocker):
+    """
+    Test search_and_upsert_vendors ccc
+    """
+    workspace_id = 1
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
+
+    configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    configuration.save()
+
+    expense_group.fund_source = 'CCC'
+    expense_group.expenses.update(vendor='Test Vendor', workspace_id=workspace_id)
+    expense_group.save()
+
+    mock_search_and_create_vendors = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.search_and_create_vendors')
+    mocker.patch('apps.sage_intacct.tasks.get_filtered_expense_group_ids', return_value=[expense_group.id])
+    mocker.patch('apps.sage_intacct.tasks.get_employee_as_vendors_name', return_value=['Ashwin T'])
+
+    search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='CCC')
+
+    assert mock_search_and_create_vendors.call_count == 1
+
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.use_merchant_in_journal_line = False
+    configuration.employee_field_mapping = 'VENDOR'
+    configuration.save()
+
+    search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='CCC')
+
+    assert mock_search_and_create_vendors.call_count == 2
+
+
+def test_search_and_upsert_vendors_personal(db, mocker):
+    """
+    Test search_and_upsert_vendors personal
+    """
+    workspace_id = 1
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
+
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.employee_field_mapping = 'VENDOR'
+    configuration.save()
+
+    mock_search_and_create_vendors = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.search_and_create_vendors')
+    mocker.patch('apps.sage_intacct.tasks.get_filtered_expense_group_ids', return_value=[expense_group.id])
+    mocker.patch('apps.sage_intacct.tasks.get_employee_as_vendors_name', return_value=['Ashwin T'])
+
+    search_and_upsert_vendors(workspace_id=workspace_id, configuration=configuration, expense_group_filters={}, fund_source='PERSONAL')
+
+    assert mock_search_and_create_vendors.call_count == 1
+
+
+def test_handle_skipped_exports(db, mocker):
+    """
+    Test handle skipped exports
+    """
+    mock_post_summary = mocker.patch('apps.sage_intacct.queue.post_accounting_export_summary_for_skipped_exports', return_value=None)
+    mock_update_last_export = mocker.patch('apps.sage_intacct.queue.update_last_export_details')
+    mock_logger = mocker.patch('apps.sage_intacct.queue.logger')
+    mocker.patch('apps.sage_intacct.actions.patch_integration_settings', return_value=None)
+    mocker.patch('apps.fyle.actions.post_accounting_export_summary', return_value=None)
+
+    # Create or get two expense groups
+    eg1 = ExpenseGroup.objects.create(workspace_id=1, fund_source='PERSONAL')
+    eg2 = ExpenseGroup.objects.create(workspace_id=1, fund_source='PERSONAL')
+    expense_groups = ExpenseGroup.objects.filter(id__in=[eg1.id, eg2.id])
+
+    # Case 1: triggered_by is DIRECT_EXPORT, not last export
+    skip_export_count = 0
+    result = handle_skipped_exports(
+        expense_groups=expense_groups,
+        index=0,
+        skip_export_count=skip_export_count,
+        expense_group=eg1,
+        triggered_by=ExpenseImportSourceEnum.DIRECT_EXPORT
+    )
+    assert result == 1
+    mock_post_summary.assert_called_once_with(expense_group=eg1, workspace_id=eg1.workspace_id)
+    mock_update_last_export.assert_not_called()
+    mock_logger.info.assert_called()
+
+    mock_post_summary.reset_mock()
+    mock_update_last_export.reset_mock()
+    mock_logger.reset_mock()
+
+    # Case 2: last export, skip_export_count == total_count-1, should call update_last_export_details
+    skip_export_count = 1
+    result = handle_skipped_exports(
+        expense_groups=expense_groups,
+        index=1,
+        skip_export_count=skip_export_count,
+        expense_group=eg2,
+        triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC
+    )
+    assert result == 2
+    mock_post_summary.assert_not_called()
+    mock_update_last_export.assert_called_once_with(eg2.workspace_id)
+    mock_logger.info.assert_called()

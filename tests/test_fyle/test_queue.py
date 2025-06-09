@@ -74,18 +74,7 @@ def test_validate_failing_export(db):
 
     skip_export = validate_failing_export(is_auto_export=True, interval_hours=1, expense_group=expense_group)
 
-    assert skip_export is True
-    task_log.refresh_from_db()
-    assert task_log.is_retired is False
-
-    # Task Log created 29 days and tried 6 days ago
-    update_time = datetime.now(tz=timezone.utc) - timedelta(days=6)
-    create_time = datetime.now(tz=timezone.utc) - timedelta(days=29)
-    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=create_time)
-
-    skip_export = validate_failing_export(is_auto_export=True, interval_hours=2, expense_group=expense_group)
-
-    assert skip_export is True
+    assert skip_export is False
     task_log.refresh_from_db()
     assert task_log.is_retired is False
 
@@ -129,3 +118,34 @@ def test_validate_failing_export(db):
     skip_export = validate_failing_export(is_auto_export=False, interval_hours=2, expense_group=expense_group)
 
     assert skip_export is False
+
+    # is_auto_export is True, created_at and updated_at are same, interval hours is 24h
+    created_time = datetime.now(tz=timezone.utc)
+    update_time = created_time + timedelta(seconds=2)
+
+    TaskLog.objects.filter(workspace_id=1).update(updated_at=update_time, created_at=created_time)
+
+    skip_export = validate_failing_export(is_auto_export=True, interval_hours=24, expense_group=expense_group)
+
+    assert skip_export is False
+
+
+# This test is just for cov :D (2)
+def test_async_import_and_export_expenses_2(db):
+    """
+    Test async_import_and_export_expenses_2
+    """
+    body = {
+        'action': 'STATE_CHANGE_PAYMENT_PROCESSING',
+        'data': {
+            'id': 'rp1s1L3QtMpF',
+            'org_id': 'or79Cob97KSh',
+            'state': 'APPROVED'
+        }
+    }
+
+    worksapce, _ = Workspace.objects.update_or_create(
+        fyle_org_id = 'or79Cob97KSh'
+    )
+
+    async_import_and_export_expenses(body, worksapce.id)

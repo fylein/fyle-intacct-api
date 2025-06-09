@@ -7,6 +7,7 @@ from django.db.models import JSONField, Value, CharField
 from django.db.models.functions import Concat
 from django.utils.module_loading import import_string
 
+from apps.exceptions import ValueErrorWithResponse
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import (
@@ -83,18 +84,29 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) ->
     return allocation_id, allocation_detail
 
 
+def _get_custom_field_value(lineitem: Expense, field_name: str, workspace_id: int) -> Optional[str]:
+    """
+    Returns the custom property value for the given field_name, or None.
+    """
+    display_name = (
+        ExpenseAttribute.objects
+        .filter(attribute_type=field_name, workspace_id=workspace_id)
+        .values_list('display_name', flat=True)
+        .first()
+    )
+    return (lineitem.custom_properties or {}).get(display_name) if display_name else None
+
+
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
-    Get project id or none
+    Get project id or none with priority:
+
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
     :return: project id or none
     """
-    project_id = None
-    if general_mappings and general_mappings.default_project_id:
-        project_id = general_mappings.default_project_id
-
+    # 1. Check mapping settings first
     project_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='PROJECT'
@@ -106,8 +118,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, project_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=project_setting.source_field,
@@ -117,23 +128,24 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         ).first()
 
         if mapping:
-            project_id = mapping.destination.destination_id
-    return project_id
+            return mapping.destination.destination_id
+
+    # 2. Check Default Project from mappings
+    if general_mappings and general_mappings.default_project_id:
+        return general_mappings.default_project_id
+
+    return None
 
 
 def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
-    Get department id or none
+    Get department id or none with priority:
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
     :return: department id or none
     """
-    department_id = None
-    source_value = None
-    if general_mappings and general_mappings.default_department_id:
-        department_id = general_mappings.default_department_id
-
+    # 1. Check mapping settings first
     department_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='DEPARTMENT'
@@ -145,9 +157,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            if attribute:
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, department_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=department_setting.source_field,
@@ -157,22 +167,30 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         ).first()
 
         if mapping:
-            department_id = mapping.destination.destination_id
-    return department_id
+            return mapping.destination.destination_id
+
+    # 2. Check Employee's Department in NetSuite
+    if general_mappings and general_mappings.use_intacct_employee_departments:
+        employee_department = get_intacct_employee_object('department_id', expense_group)
+        if employee_department:
+            return employee_department
+
+    # 3. Check Default Department from mappings
+    if general_mappings and general_mappings.default_department_id:
+        return general_mappings.default_department_id
+
+    return None
 
 
 def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
-    Get location id or none
+    Get location id or none with priority:
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
     :return: location id or none
     """
-    location_id = None
-    if general_mappings and general_mappings.default_location_id:
-        location_id = general_mappings.default_location_id
-
+    # 1. Check mapping settings first
     location_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='LOCATION'
@@ -184,8 +202,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, location_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=location_setting.source_field,
@@ -195,8 +212,19 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         ).first()
 
         if mapping:
-            location_id = mapping.destination.destination_id
-    return location_id
+            return mapping.destination.destination_id
+
+    # 2. Check Employee's Location in NetSuite
+    if general_mappings and general_mappings.use_intacct_employee_locations:
+        employee_location = get_intacct_employee_object('location_id', expense_group)
+        if employee_location:
+            return employee_location
+
+    # 3. Check Default Location from mappings
+    if general_mappings and general_mappings.default_location_id:
+        return general_mappings.default_location_id
+
+    return None
 
 
 def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, project_id: str) -> Optional[str]:
@@ -231,8 +259,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             elif customer_setting.source_field == 'COST_CENTER':
                 source_value = lineitem.cost_center
             else:
-                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field, workspace_id=expense_group.workspace_id).first()
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+                source_value = _get_custom_field_value(lineitem, customer_setting.source_field, expense_group.workspace_id)
 
             mapping: Mapping = Mapping.objects.filter(
                 source_type=customer_setting.source_field,
@@ -255,8 +282,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
     :param general_mappings: general mappings
     :return: item id or none
     """
-    item_id = None
-
+    # 1. Check mapping settings first
     item_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='ITEM'
@@ -268,8 +294,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         elif item_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, item_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=item_setting.source_field,
@@ -277,11 +302,15 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
             source__value=source_value,
             workspace_id=expense_group.workspace_id
         ).first()
+
         if mapping:
-            item_id = mapping.destination.destination_id
-    if item_id is None:
-        item_id = general_mappings.default_item_id if general_mappings.default_item_id else None
-    return item_id
+            return mapping.destination.destination_id
+
+    # 2. Check Default Item from mappings
+    if general_mappings and general_mappings.default_item_id:
+        return general_mappings.default_item_id
+
+    return None
 
 
 def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependent_field_setting: DependentFieldSetting, project_id: str, task_id: str, prepend_code_to_name: bool = False) -> Optional[str]:
@@ -295,6 +324,9 @@ def get_cost_type_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dep
     :param prepend_code_to_name: prepend code to name
     :return: cost type id or none
     """
+    if not dependent_field_setting.is_cost_type_import_enabled:
+        return None
+
     cost_type_id = None
 
     selected_cost_type = lineitem.custom_properties.get(dependent_field_setting.cost_type_field_name, None)
@@ -337,30 +369,52 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
     :return: task id or none
     """
     task_id = None
+    cost_type = None
+    task = None
 
     selected_cost_code = lineitem.custom_properties.get(dependent_field_setting.cost_code_field_name, None)
 
-    if prepend_code_to_name:
-        cost_type = CostType.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            project_id=project_id,
-            task_id__isnull=False,
-            task_name__isnull=False
-        ).annotate(
-            combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
-        ).filter(
-            combined_code_name=selected_cost_code
-        ).first()
+    if dependent_field_setting.is_cost_type_import_enabled:
+        if prepend_code_to_name:
+            cost_type = CostType.objects.filter(
+                workspace_id=expense_group.workspace_id,
+                project_id=project_id,
+                task_id__isnull=False,
+                task_name__isnull=False
+            ).annotate(
+                combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
+            ).filter(
+                combined_code_name=selected_cost_code
+            ).first()
 
+        else:
+            cost_type = CostType.objects.filter(
+                workspace_id=expense_group.workspace_id,
+                task_name=selected_cost_code,
+                project_id=project_id
+            ).first()
+
+        if cost_type:
+            task_id = cost_type.task_id
     else:
-        cost_type = CostType.objects.filter(
-            workspace_id=expense_group.workspace_id,
-            task_name=selected_cost_code,
-            project_id=project_id
-        ).first()
+        if prepend_code_to_name:
+            task = CostCode.objects.filter(
+                workspace_id=expense_group.workspace_id,
+                project_id=str(project_id)
+            ).annotate(
+                combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
+            ).filter(
+                combined_code_name=selected_cost_code
+            ).first()
+        else:
+            task = CostCode.objects.filter(
+                workspace_id=expense_group.workspace_id,
+                project_id=str(project_id),
+                task_name=selected_cost_code
+            ).first()
 
-    if cost_type:
-        task_id = cost_type.task_id
+        if task:
+            task_id = task.task_id
 
     return task_id
 
@@ -373,10 +427,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
     :param general_mappings: general mappings
     :return: class id or none
     """
-    class_id = None
-    if general_mappings and general_mappings.default_class_id:
-        class_id = general_mappings.default_class_id
-
+    # 1. Check mapping settings first
     class_setting: MappingSetting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='CLASS'
@@ -388,8 +439,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         elif class_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, class_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=class_setting.source_field,
@@ -399,9 +449,13 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         ).first()
 
         if mapping:
-            class_id = mapping.destination.destination_id
+            return mapping.destination.destination_id
 
-    return class_id
+    # 2. Check Default Class from mappings
+    if general_mappings and general_mappings.default_class_id:
+        return general_mappings.default_class_id
+
+    return None
 
 
 def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None) -> Optional[str]:
@@ -436,10 +490,10 @@ def get_transaction_date(expense_group: ExpenseGroup) -> str:
         return expense_group.description['approved_at']
     elif 'verified_at' in expense_group.description and expense_group.description['verified_at']:
         return expense_group.description['verified_at']
-    elif 'last_spent_at' in expense_group.description and expense_group.description['last_spent_at']:
-        return expense_group.description['last_spent_at']
     elif 'spent_at' in expense_group.description and expense_group.description['spent_at']:
         return expense_group.description['spent_at']
+    elif 'last_spent_at' in expense_group.description and expense_group.description['last_spent_at']:
+        return expense_group.description['last_spent_at']
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 
@@ -737,7 +791,18 @@ class Bill(models.Model):
             ).destination_vendor.destination_id
 
         elif expense_group.fund_source == 'CCC':
-            vendor_id = general_mappings.default_ccc_vendor_id
+            ccc_mapping = None
+            if expense.corporate_card_id:
+                ccc_mapping = Mapping.objects.filter(
+                    source_type="CORPORATE_CARD",
+                    destination_type="VENDOR",
+                    workspace_id=expense_group.workspace_id,
+                    source__source_id=expense.corporate_card_id,
+                ).first()
+            if ccc_mapping:
+                vendor_id = ccc_mapping.destination.destination_id
+            else:
+                vendor_id = general_mappings.default_ccc_vendor_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
@@ -797,9 +862,6 @@ class BillLineitem(models.Model):
         task_id = None
         cost_type_id = None
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -816,17 +878,9 @@ class BillLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
-
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -841,8 +895,8 @@ class BillLineitem(models.Model):
 
             dimensions_values = {
                 'project_id': project_id,
-                'location_id': default_employee_location_id or location_id,
-                'department_id': default_employee_department_id or department_id,
+                'location_id':location_id,
+                'department_id':department_id,
                 'class_id': class_id,
                 'customer_id': customer_id,
                 'item_id': item_id,
@@ -985,9 +1039,6 @@ class ExpenseReportLineitem(models.Model):
         cost_type_id = None
         dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=expense_group.workspace_id).first()
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -1004,17 +1055,9 @@ class ExpenseReportLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
-
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -1041,10 +1084,9 @@ class ExpenseReportLineitem(models.Model):
                     'expense_type_id': account.destination_expense_head.destination_id
                     if account and account.destination_expense_head else None,
                     'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
+                    'department_id': department_id,
                     'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
+                    'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'task_id': task_id,
@@ -1153,9 +1195,6 @@ class JournalEntryLineitem(models.Model):
         cost_type_id = None
         dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=expense_group.workspace_id).first()
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -1172,21 +1211,13 @@ class JournalEntryLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
-
             description = expense_group.description
 
             employee_mapping_setting = configuration.employee_field_mapping
 
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if \
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
 
             employee_id = None
 
@@ -1216,10 +1247,11 @@ class JournalEntryLineitem(models.Model):
                     ).order_by('-updated_at').first()
 
                 if not vendor:
-                    vendor = DestinationAttribute.objects.filter(
-                        value='Credit Card Misc',
-                        workspace_id=expense_group.workspace_id
-                    ).first()
+                    credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+                    if credit_card_misc_vendor:
+                        vendor_id = credit_card_misc_vendor.destination_id
+                    else:
+                        raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
                 vendor_id = vendor.destination_id
 
@@ -1244,10 +1276,9 @@ class JournalEntryLineitem(models.Model):
                     'gl_account_number': account.destination_account.destination_id
                     if account and account.destination_account else None,
                     'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
+                    'department_id': department_id,
                     'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
+                    'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'employee_id': employee_id,
@@ -1308,7 +1339,11 @@ class ChargeCardTransaction(models.Model):
 
         merchant = expense.vendor if expense.vendor else None
         if not vendor_id:
-            vendor_id = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
+            credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+            if credit_card_misc_vendor:
+                vendor_id = credit_card_misc_vendor.destination_id
+            else:
+                raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
@@ -1376,9 +1411,6 @@ class ChargeCardTransactionLineitem(models.Model):
         cost_type_id = None
         dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=expense_group.workspace_id).first()
 
-        default_employee_location_id = None
-        default_employee_department_id = None
-
         try:
             general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         except GeneralMapping.DoesNotExist:
@@ -1395,17 +1427,9 @@ class ChargeCardTransactionLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            if general_mappings.use_intacct_employee_locations:
-                default_employee_location_id = get_intacct_employee_object('location_id', expense_group)
-
-            if general_mappings.use_intacct_employee_departments:
-                default_employee_department_id = get_intacct_employee_object('department_id', expense_group)
-
             project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_department_id is None else None
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings) if\
-                default_employee_location_id is None else None
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
             item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
@@ -1425,10 +1449,9 @@ class ChargeCardTransactionLineitem(models.Model):
                     'gl_account_number': account.destination_account.destination_id
                     if account and account.destination_account else None,
                     'project_id': project_id,
-                    'department_id': default_employee_department_id if default_employee_department_id
-                    else department_id,
+                    'department_id': department_id,
                     'class_id': class_id,
-                    'location_id': default_employee_location_id if default_employee_location_id else location_id,
+                    'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
                     'task_id': task_id,
@@ -1722,3 +1745,69 @@ class CostType(models.Model):
 
         if cost_types_to_be_created:
             CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+
+
+class CostCode(models.Model):
+    """
+    Cost Code Model to store Tasks
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    task_id = models.CharField(max_length=255, help_text='Task Id', null=True)
+    task_name = models.CharField(max_length=255, help_text='Task Name', null=True)
+    project_id = models.CharField(max_length=255, help_text='Project Id', null=True)
+    project_name = models.CharField(max_length=255, help_text='Project Name', null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cost_codes'
+        unique_together = ('workspace', 'task_id', 'project_id')
+        indexes = [
+            models.Index(fields=['workspace', 'task_id']),
+            models.Index(fields=['workspace', 'project_id']),
+        ]
+
+    @staticmethod
+    def bulk_create_or_update(cost_codes: list[dict], workspace_id: int) -> None:
+        """
+        Bulk create or update cost codes
+        :param cost_codes: List of cost codes
+        :param workspace_id: Workspace ID
+        """
+        if not cost_codes:
+            return
+
+        # Get all task_ids and project_ids from the incoming cost codes
+        task_ids = [cost_code['TASKID'] for cost_code in cost_codes]
+        project_ids = [cost_code['PROJECTID'] for cost_code in cost_codes]
+
+        # Get existing cost codes
+        existing_cost_codes = CostCode.objects.filter(
+            workspace_id=workspace_id,
+            task_id__in=task_ids,
+            project_id__in=project_ids
+        )
+
+        # Create a set of existing (task_id, project_id) combinations
+        existing_cost_code_keys = {
+            (cost_code.task_id, cost_code.project_id)
+            for cost_code in existing_cost_codes
+        }
+
+        # Create new cost codes only for combinations that don't exist
+        cost_codes_to_be_created = []
+        for cost_code in cost_codes:
+            key = (cost_code['TASKID'], cost_code['PROJECTID'])
+            if key not in existing_cost_code_keys:
+                cost_codes_to_be_created.append(
+                    CostCode(
+                        task_id=cost_code['TASKID'],
+                        task_name=cost_code['NAME'],
+                        project_id=cost_code['PROJECTID'],
+                        project_name=cost_code['PROJECTNAME'],
+                        workspace_id=workspace_id
+                    )
+                )
+
+        if cost_codes_to_be_created:
+            CostCode.objects.bulk_create(cost_codes_to_be_created, batch_size=50)

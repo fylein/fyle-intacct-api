@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.10 (Debian 15.10-1.pgdg120+1)
--- Dumped by pg_dump version 15.12 (Debian 15.12-1.pgdg120+1)
+-- Dumped from database version 15.12 (Debian 15.12-1.pgdg120+1)
+-- Dumped by pg_dump version 15.13 (Debian 15.13-0+deb12u1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -157,6 +157,12 @@ BEGIN
     WHERE dfs.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
     RAISE NOTICE 'Deleted % dependent_field_settings', rcount;
+
+    DELETE
+    FROM dimension_details dd
+    WHERE dd.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % dimension_details', rcount;
 
     DELETE
     FROM cost_types ct
@@ -1099,7 +1105,8 @@ CREATE TABLE public.expenses (
     paid_on_fyle boolean NOT NULL,
     bank_transaction_id character varying(255),
     is_posted_at_null boolean NOT NULL,
-    masked_corporate_card_number character varying(255)
+    masked_corporate_card_number character varying(255),
+    imported_from character varying(255)
 );
 
 
@@ -1150,7 +1157,8 @@ CREATE TABLE public.task_logs (
     sage_intacct_reimbursement_id integer,
     journal_entry_id integer,
     supdoc_id character varying(255),
-    is_retired boolean NOT NULL
+    is_retired boolean NOT NULL,
+    triggered_by character varying(255)
 );
 
 
@@ -1182,7 +1190,7 @@ CREATE VIEW public._direct_export_errored_expenses_view AS
                    FROM public.expense_groups_expenses
                   WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
                            FROM public.task_logs
-                          WHERE (((task_logs.status)::text = ANY ((ARRAY['FAILED'::character varying, 'FATAL'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                          WHERE (((task_logs.status)::text = ANY (ARRAY[('FAILED'::character varying)::text, ('FATAL'::character varying)::text])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
                                    FROM prod_workspace_ids))))))))
         ), errored_expenses_in_inprogress_state AS (
          SELECT count(*) AS in_progress_expenses_error_count
@@ -1235,7 +1243,7 @@ CREATE VIEW public._django_queue_in_progress_tasks_view AS
     COALESCE(count(*), (0)::bigint) AS count
    FROM public.task_logs
   WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
-           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])));
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('ENQUEUED'::character varying)::text])));
 
 
 ALTER TABLE public._django_queue_in_progress_tasks_view OWNER TO postgres;
@@ -1269,7 +1277,7 @@ CREATE VIEW public._import_logs_fatal_failed_in_progress_tasks_view AS
     import_logs.status,
     current_database() AS database
    FROM public.import_logs
-  WHERE (((import_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'FATAL'::character varying, 'FAILED'::character varying])::text[])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+  WHERE (((import_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('FATAL'::character varying)::text, ('FAILED'::character varying)::text])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
            FROM public.prod_workspaces_view)) AND ((import_logs.error_log)::text !~~* '%Token%'::text) AND ((import_logs.error_log)::text !~~* '%tenant%'::text) AND (import_logs.updated_at < (now() - '00:45:00'::interval)))
   GROUP BY import_logs.status;
 
@@ -1654,17 +1662,50 @@ CREATE TABLE public.configurations (
     change_accounting_period boolean NOT NULL,
     import_vendors_as_merchants boolean NOT NULL,
     employee_field_mapping character varying(50),
-    is_simplify_report_closure_enabled boolean NOT NULL,
     use_merchant_in_journal_line boolean NOT NULL,
     is_journal_credit_billable boolean NOT NULL,
     auto_create_merchants_as_vendors boolean NOT NULL,
     import_code_fields character varying(100)[] NOT NULL,
     created_by character varying(255),
-    updated_by character varying(255)
+    updated_by character varying(255),
+    skip_accounting_export_summary_post boolean NOT NULL,
+    je_single_credit_line boolean NOT NULL
 );
 
 
 ALTER TABLE public.configurations OWNER TO postgres;
+
+--
+-- Name: cost_codes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.cost_codes (
+    id integer NOT NULL,
+    task_id character varying(255),
+    task_name character varying(255),
+    project_id character varying(255),
+    project_name character varying(255),
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.cost_codes OWNER TO postgres;
+
+--
+-- Name: cost_codes_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.cost_codes ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.cost_codes_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
 
 --
 -- Name: cost_types; Type: TABLE; Schema: public; Owner: postgres
@@ -1725,15 +1766,16 @@ CREATE TABLE public.dependent_field_settings (
     project_field_id integer NOT NULL,
     cost_code_field_name character varying(255) NOT NULL,
     cost_code_field_id integer NOT NULL,
-    cost_type_field_name character varying(255) NOT NULL,
-    cost_type_field_id integer NOT NULL,
+    cost_type_field_name character varying(255),
+    cost_type_field_id integer,
     last_successful_import_at timestamp with time zone,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     cost_code_placeholder text,
     cost_type_placeholder text,
-    last_synced_at timestamp with time zone
+    last_synced_at timestamp with time zone,
+    is_cost_type_import_enabled boolean NOT NULL
 );
 
 
@@ -1784,6 +1826,37 @@ CREATE TABLE public.destination_attributes (
 ALTER TABLE public.destination_attributes OWNER TO postgres;
 
 --
+-- Name: dimension_details; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.dimension_details (
+    id integer NOT NULL,
+    attribute_type character varying(255) NOT NULL,
+    display_name character varying(255) NOT NULL,
+    source_type character varying(100) NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    workspace_id integer NOT NULL
+);
+
+
+ALTER TABLE public.dimension_details OWNER TO postgres;
+
+--
+-- Name: dimension_details_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.dimension_details ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.dimension_details_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: direct_export_errored_expenses_view; Type: VIEW; Schema: public; Owner: postgres
 --
 
@@ -1809,7 +1882,7 @@ CREATE VIEW public.direct_export_errored_expenses_view AS
                    FROM public.expense_groups_expenses
                   WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
                            FROM public.task_logs
-                          WHERE (((task_logs.status)::text = ANY ((ARRAY['FAILED'::character varying, 'FATAL'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                          WHERE (((task_logs.status)::text = ANY (ARRAY[('FAILED'::character varying)::text, ('FATAL'::character varying)::text])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
                                    FROM prod_workspace_ids)) AND (task_logs.updated_at > (now() - '1 day'::interval)) AND (task_logs.updated_at < (now() - '00:45:00'::interval))))))))
         ), errored_expenses_in_inprogress_state AS (
          SELECT count(*) AS in_progress_expenses_error_count
@@ -1819,7 +1892,7 @@ CREATE VIEW public.direct_export_errored_expenses_view AS
                    FROM public.expense_groups_expenses
                   WHERE (expense_groups_expenses.expensegroup_id IN ( SELECT task_logs.expense_group_id
                            FROM public.task_logs
-                          WHERE (((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
+                          WHERE (((task_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('ENQUEUED'::character varying)::text])) AND (task_logs.workspace_id IN ( SELECT prod_workspace_ids.id
                                    FROM prod_workspace_ids)) AND (task_logs.updated_at > (now() - '1 day'::interval)) AND (task_logs.updated_at < (now() - '00:45:00'::interval))))))))
         ), not_synced_to_platform AS (
          SELECT count(*) AS not_synced_expenses_count
@@ -2080,7 +2153,7 @@ CREATE VIEW public.django_queue_in_progress_tasks_view AS
     COALESCE(count(*), (0)::bigint) AS count
    FROM public.task_logs
   WHERE ((task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
-           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'ENQUEUED'::character varying])::text[])) AND ((task_logs.updated_at >= (now() - '24:00:00'::interval)) AND (task_logs.updated_at <= (now() - '00:30:00'::interval))));
+           FROM public.prod_workspaces_view)) AND ((task_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('ENQUEUED'::character varying)::text])) AND ((task_logs.updated_at >= (now() - '24:00:00'::interval)) AND (task_logs.updated_at <= (now() - '00:30:00'::interval))));
 
 
 ALTER TABLE public.django_queue_in_progress_tasks_view OWNER TO postgres;
@@ -2156,7 +2229,8 @@ CREATE TABLE public.errors (
     article_link text,
     attribute_type character varying(255),
     is_parsed boolean NOT NULL,
-    repetition_count integer NOT NULL
+    repetition_count integer NOT NULL,
+    mapping_error_expense_group_ids integer[] NOT NULL
 );
 
 
@@ -2214,7 +2288,10 @@ CREATE TABLE public.expense_attributes_deletion_cache (
     id integer NOT NULL,
     category_ids character varying(255)[] NOT NULL,
     project_ids character varying(255)[] NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    cost_center_ids character varying(255)[] NOT NULL,
+    custom_field_list jsonb NOT NULL,
+    merchant_list character varying(255)[] NOT NULL
 );
 
 
@@ -2719,7 +2796,8 @@ CREATE TABLE public.workspace_schedules (
     emails_selected character varying(255)[],
     error_count integer,
     created_at timestamp with time zone,
-    updated_at timestamp with time zone
+    updated_at timestamp with time zone,
+    is_real_time_export_enabled boolean NOT NULL
 );
 
 
@@ -2768,6 +2846,38 @@ CREATE VIEW public.extended_settings_view AS
 
 
 ALTER TABLE public.extended_settings_view OWNER TO postgres;
+
+--
+-- Name: failed_events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.failed_events (
+    id integer NOT NULL,
+    routing_key character varying(255) NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    error_traceback text,
+    workspace_id integer,
+    is_resolved boolean NOT NULL
+);
+
+
+ALTER TABLE public.failed_events OWNER TO postgres;
+
+--
+-- Name: failed_events_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.failed_events ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.failed_events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
 
 --
 -- Name: fyle_accounting_mappings_destinationattribute_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -2984,6 +3094,36 @@ ALTER SEQUENCE public.fyle_rest_auth_authtokens_id_seq OWNED BY public.auth_toke
 
 
 --
+-- Name: huge_export_failing_orgs_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.huge_export_failing_orgs_view AS
+ SELECT last_export_details.workspace_id,
+    last_export_details.failed_expense_groups_count AS count
+   FROM public.last_export_details
+  WHERE ((last_export_details.failed_expense_groups_count > 50) AND (last_export_details.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)));
+
+
+ALTER TABLE public.huge_export_failing_orgs_view OWNER TO postgres;
+
+--
+-- Name: huge_export_volume_view; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.huge_export_volume_view AS
+ SELECT task_logs.workspace_id,
+    count(*) AS count
+   FROM public.task_logs
+  WHERE (((task_logs.status)::text = ANY (ARRAY[('ENQUEUED'::character varying)::text, ('IN_PROGRESS'::character varying)::text])) AND ((task_logs.type)::text !~~* '%fetching%'::text) AND (task_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+           FROM public.prod_workspaces_view)) AND (task_logs.updated_at >= (now() - '1 day'::interval)))
+  GROUP BY task_logs.workspace_id
+ HAVING (count(*) > 200);
+
+
+ALTER TABLE public.huge_export_volume_view OWNER TO postgres;
+
+--
 -- Name: import_logs_fatal_failed_in_progress_tasks_view; Type: VIEW; Schema: public; Owner: postgres
 --
 
@@ -2992,7 +3132,7 @@ CREATE VIEW public.import_logs_fatal_failed_in_progress_tasks_view AS
     import_logs.status,
     current_database() AS database
    FROM public.import_logs
-  WHERE (((import_logs.status)::text = ANY ((ARRAY['IN_PROGRESS'::character varying, 'FATAL'::character varying, 'FAILED'::character varying])::text[])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
+  WHERE (((import_logs.status)::text = ANY (ARRAY[('IN_PROGRESS'::character varying)::text, ('FATAL'::character varying)::text, ('FAILED'::character varying)::text])) AND (import_logs.workspace_id IN ( SELECT prod_workspaces_view.id
            FROM public.prod_workspaces_view)) AND (import_logs.updated_at > (now() - '1 day'::interval)) AND (import_logs.updated_at < (now() - '00:45:00'::interval)) AND ((import_logs.error_log)::text !~~* '%Token%'::text) AND ((import_logs.error_log)::text !~~* '%tenant%'::text))
   GROUP BY import_logs.status;
 
@@ -3289,55 +3429,6 @@ CREATE VIEW public.product_advanced_settings_view AS
 ALTER TABLE public.product_advanced_settings_view OWNER TO postgres;
 
 --
--- Name: product_export_settings_view; Type: VIEW; Schema: public; Owner: postgres
---
-
-CREATE VIEW public.product_export_settings_view AS
- SELECT w.id AS workspace_id,
-    w.name AS workspace_name,
-    w.fyle_org_id AS workspace_org_id,
-    c.reimbursable_expenses_object,
-    c.corporate_credit_card_expenses_object,
-    c.is_simplify_report_closure_enabled,
-    c.employee_field_mapping,
-    c.auto_map_employees,
-    c.use_merchant_in_journal_line,
-    egs.reimbursable_expense_group_fields,
-        CASE
-            WHEN ((egs.reimbursable_expense_group_fields @> ARRAY['expense_id'::character varying]) OR (egs.reimbursable_expense_group_fields @> ARRAY['expense_number'::character varying])) THEN 'Expense'::text
-            ELSE 'Report'::text
-        END AS readable_reimbursable_expense_group_fields,
-    egs.corporate_credit_card_expense_group_fields,
-        CASE
-            WHEN ((egs.corporate_credit_card_expense_group_fields @> ARRAY['expense_id'::character varying]) OR (egs.corporate_credit_card_expense_group_fields @> ARRAY['expense_number'::character varying])) THEN 'Expense'::text
-            ELSE 'Report'::text
-        END AS readable_corporate_credit_card_expense_group_fields,
-    egs.reimbursable_export_date_type,
-    egs.expense_state,
-    egs.ccc_export_date_type,
-    egs.ccc_expense_state,
-    egs.split_expense_grouping,
-    gm.default_gl_account_name,
-    gm.default_gl_account_id,
-    gm.default_credit_card_name,
-    gm.default_credit_card_id,
-    gm.default_charge_card_name,
-    gm.default_charge_card_id,
-    gm.default_reimbursable_expense_payment_type_name,
-    gm.default_reimbursable_expense_payment_type_id,
-    gm.default_ccc_expense_payment_type_name,
-    gm.default_ccc_expense_payment_type_id,
-    gm.default_ccc_vendor_name,
-    gm.default_ccc_vendor_id
-   FROM (((public.workspaces w
-     JOIN public.configurations c ON ((w.id = c.workspace_id)))
-     JOIN public.expense_group_settings egs ON ((w.id = egs.workspace_id)))
-     JOIN public.general_mappings gm ON ((w.id = gm.workspace_id)));
-
-
-ALTER TABLE public.product_export_settings_view OWNER TO postgres;
-
---
 -- Name: product_import_settings_view; Type: VIEW; Schema: public; Owner: postgres
 --
 
@@ -3517,7 +3608,8 @@ CREATE TABLE public.sage_intacct_credentials (
     si_user_password text NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
-    workspace_id integer NOT NULL
+    workspace_id integer NOT NULL,
+    is_expired boolean NOT NULL
 );
 
 
@@ -4495,6 +4587,18 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 198	Can change expense attributes deletion cache	50	change_expenseattributesdeletioncache
 199	Can delete expense attributes deletion cache	50	delete_expenseattributesdeletioncache
 200	Can view expense attributes deletion cache	50	view_expenseattributesdeletioncache
+201	Can add dimension detail	51	add_dimensiondetail
+202	Can change dimension detail	51	change_dimensiondetail
+203	Can delete dimension detail	51	delete_dimensiondetail
+204	Can view dimension detail	51	view_dimensiondetail
+205	Can add failed event	52	add_failedevent
+206	Can change failed event	52	change_failedevent
+207	Can delete failed event	52	delete_failedevent
+208	Can view failed event	52	view_failedevent
+209	Can add cost code	53	add_costcode
+210	Can change cost code	53	change_costcode
+211	Can delete cost code	53	delete_costcode
+212	Can view cost code	53	view_costcode
 \.
 
 
@@ -4561,8 +4665,16 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 -- Data for Name: configurations; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, is_simplify_report_closure_enabled, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by) FROM stdin;
-1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	f	t	f	{}	\N	\N
+COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by, skip_accounting_export_summary_post, je_single_credit_line) FROM stdin;
+1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	t	f	{}	\N	\N	f	f
+\.
+
+
+--
+-- Data for Name: cost_codes; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.cost_codes (id, task_id, task_name, project_id, project_name, created_at, updated_at, workspace_id) FROM stdin;
 \.
 
 
@@ -4578,7 +4690,7 @@ COPY public.cost_types (id, record_number, project_key, project_id, project_name
 -- Data for Name: dependent_field_settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder, last_synced_at) FROM stdin;
+COPY public.dependent_field_settings (id, is_import_enabled, project_field_id, cost_code_field_name, cost_code_field_id, cost_type_field_name, cost_type_field_id, last_successful_import_at, created_at, updated_at, workspace_id, cost_code_placeholder, cost_type_placeholder, last_synced_at, is_cost_type_import_enabled) FROM stdin;
 \.
 
 
@@ -5534,6 +5646,14 @@ COPY public.destination_attributes (id, attribute_type, display_name, value, des
 
 
 --
+-- Data for Name: dimension_details; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.dimension_details (id, attribute_type, display_name, source_type, created_at, updated_at, workspace_id) FROM stdin;
+\.
+
+
+--
 -- Data for Name: django_admin_log; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -5594,8 +5714,11 @@ COPY public.django_content_type (id, app_label, model) FROM stdin;
 46	sage_intacct	costtype
 47	tasks	error
 48	workspaces	lastexportdetail
-49	mappings	importlog
+49	fyle_integrations_imports	importlog
 50	fyle_accounting_mappings	expenseattributesdeletioncache
+51	common_resources	dimensiondetail
+52	rabbitmq	failedevent
+53	sage_intacct	costcode
 \.
 
 
@@ -5818,6 +5941,32 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 211	internal	0005_auto_generated_sql	2025-03-05 13:24:42.965784+00
 212	internal	0006_auto_generated_sql	2025-03-05 13:24:42.967098+00
 213	tasks	0011_tasklog_is_retired	2025-03-05 13:24:42.980154+00
+214	fyle	0037_alter_dependentfieldsetting_cost_type_field_id_and_more	2025-03-10 14:19:51.122197+00
+215	fyle	0038_dependentfieldsetting_is_cost_type_import_enabled	2025-03-10 14:19:51.131601+00
+216	common_resources	0001_initial	2025-04-02 18:54:57.550584+00
+217	workspaces	0042_remove_configuration_is_simplify_report_closure_enabled	2025-04-02 18:54:57.560272+00
+218	fyle	0039_expense_imported_from	2025-04-07 15:36:06.377744+00
+219	rabbitmq	0001_initial	2025-04-07 15:36:06.382304+00
+220	rabbitmq	0002_alter_failedevent_error_traceback	2025-04-07 15:36:06.386096+00
+221	rabbitmq	0003_alter_failedevent_created_at_and_more	2025-04-07 15:36:06.392208+00
+222	tasks	0012_tasklog_triggered_by	2025-04-07 15:36:06.403887+00
+223	fyle	0040_expense_expenses_account_ff34f0_idx_and_more	2025-04-10 16:29:32.548516+00
+224	fyle	0041_alter_expense_imported_from	2025-04-10 16:29:32.566886+00
+225	internal	0007_auto_generated_sql	2025-04-10 16:29:32.570096+00
+226	internal	0008_auto_generated_sql	2025-04-10 16:29:32.573865+00
+227	tasks	0013_alter_tasklog_triggered_by	2025-04-10 16:29:32.590805+00
+228	internal	0009_auto_generate_sql	2025-04-10 19:15:23.717883+00
+229	tasks	0013_error_mapping_error_expense_group_ids	2025-04-10 19:15:23.729634+00
+230	tasks	0014_merge_20250410_1914	2025-04-10 19:15:23.73096+00
+231	fyle_accounting_mappings	0029_expenseattributesdeletioncache_cost_center_ids_and_more	2025-04-24 16:15:00.272838+00
+232	workspaces	0043_configuration_skip_accounting_export_summary_post	2025-04-24 16:15:00.283053+00
+233	workspaces	0044_configuration_je_single_credit_line	2025-05-07 18:31:07.544615+00
+234	sage_intacct	0031_costcode	2025-05-12 09:47:16.361962+00
+235	rabbitmq	0004_failedevent_is_resolved	2025-05-21 17:02:59.151171+00
+236	workspaces	0045_workspaceschedule_is_real_time_export_enabled	2025-05-21 17:05:12.778782+00
+237	workspaces	0045_sageintacctcredential_is_expired	2025-06-03 13:10:42.732351+00
+238	workspaces	0046_merge_20250603_1307	2025-06-03 13:10:42.733986+00
+239	fyle_integrations_imports	0001_initial	2025-06-03 09:13:14.987582+00
 \.
 
 
@@ -5840,6 +5989,7 @@ COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repe
 4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-5	2022-09-30 08:46:25.0608+00	3bdcf280bd6c42a197ad24f932ce39c7	\N	1440	\N	\N	\N
 6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-4	2022-09-30 08:47:19.647275+00	334370e333c54c669f6bc9e876d3ec60	\N	1440	\N	\N	\N
 93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-03-05 13:25:42.96495+00	\N	\N	60	\N	import	\N
+94	apps.internal.tasks.pause_and_resume_export_schedules	\N	\N	\N	I	-1	2025-04-10 16:39:32.568532+00	\N	\N	1440	\N	import	\N
 \.
 
 
@@ -5913,7 +6063,7 @@ COPY public.employee_mappings (id, created_at, updated_at, destination_card_acco
 -- Data for Name: errors; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed, repetition_count) FROM stdin;
+COPY public.errors (id, type, is_resolved, error_title, error_detail, created_at, updated_at, expense_attribute_id, expense_group_id, workspace_id, article_link, attribute_type, is_parsed, repetition_count, mapping_error_expense_group_ids) FROM stdin;
 \.
 
 
@@ -9184,7 +9334,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 -- Data for Name: expense_attributes_deletion_cache; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id) FROM stdin;
+COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id, cost_center_ids, custom_field_list, merchant_list) FROM stdin;
 \.
 
 
@@ -9255,10 +9405,18 @@ COPY public.expense_reports (id, employee_id, description, supdoc_id, created_at
 -- Data for Name: expenses; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped, report_title, posted_at, employee_name, accounting_export_summary, previous_export_state, workspace_id, paid_on_fyle, bank_transaction_id, is_posted_at_null, masked_corporate_card_number) FROM stdin;
-1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f	\N
-2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f	\N
-3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f	\N
+COPY public.expenses (id, employee_email, category, sub_category, project, expense_id, expense_number, claim_number, amount, currency, foreign_amount, foreign_currency, settlement_id, reimbursable, state, vendor, cost_center, purpose, report_id, spent_at, approved_at, expense_created_at, expense_updated_at, created_at, updated_at, fund_source, custom_properties, verified_at, billable, paid_on_sage_intacct, org_id, tax_amount, tax_group_id, file_ids, payment_number, corporate_card_id, is_skipped, report_title, posted_at, employee_name, accounting_export_summary, previous_export_state, workspace_id, paid_on_fyle, bank_transaction_id, is_posted_at_null, masked_corporate_card_number, imported_from) FROM stdin;
+1	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txR9dyrqr1Jn	E/2022/09/T/21	C/2022/09/R/21	21	USD	\N	\N	setqwcKcC9q1k	t	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpEZGqVCyWxQ	2022-09-20 17:00:00+00	2022-09-19 19:54:36.96+00	2022-09-19 19:54:15.870239+00	2022-09-19 19:55:58.641995+00	2022-09-20 08:48:21.737374+00	2022-09-20 08:48:21.737392+00	PERSONAL	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	\N	\N	{}	P/2022/09/R/18	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f	\N	\N
+2	ashwin.t@fyle.in	Food	\N	Aaron Abbott	txCqLqsEnAjf	E/2022/09/T/22	C/2022/09/R/22	11	USD	\N	\N	setzhjuqQ6Pl5	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpSTYO8AfUVA	2022-09-20 17:00:00+00	2022-09-20 08:50:48.428+00	2022-09-20 08:50:27.570399+00	2022-09-20 08:51:13.891379+00	2022-09-20 08:51:27.566571+00	2022-09-20 08:51:27.566598+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	t	f	or79Cob97KSh	2.41	tggu76WXIdjY	{}	P/2022/09/R/19	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f	\N	\N
+3	ashwin.t@fyle.in	Taxi	\N	Aaron Abbott	txTHfEPWOEOp	E/2022/09/T/23	C/2022/09/R/23	22	USD	\N	\N	set0SnAq66Zbq	f	PAYMENT_PROCESSING	Ashwin	Marketing	\N	rpBf5ibqUT6B	2022-09-20 17:00:00+00	2022-09-20 08:56:09.337+00	2022-09-20 08:55:53.246893+00	2022-09-20 08:56:40.795304+00	2022-09-20 08:56:50.117313+00	2022-09-20 08:56:50.117349+00	CCC	{"Team": "", "Class": "", "Klass": "", "Location": "", "Team Copy": "", "Tax Groups": "", "Departments": "", "Team 2 Postman": "", "User Dimension": "", "Location Entity": "", "Operating System": "", "System Operating": "", "User Dimension Copy": "", "Custom Expense Field": null}	\N	\N	f	or79Cob97KSh	4.81	tggu76WXIdjY	{}	P/2022/09/R/20	\N	f	\N	\N	\N	{}	\N	\N	f	\N	f	\N	\N
+\.
+
+
+--
+-- Data for Name: failed_events; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.failed_events (id, routing_key, payload, created_at, updated_at, error_traceback, workspace_id, is_resolved) FROM stdin;
 \.
 
 
@@ -9685,8 +9843,8 @@ COPY public.reimbursements (id, settlement_id, reimbursement_id, state, created_
 -- Data for Name: sage_intacct_credentials; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id) FROM stdin;
-1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1
+COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired) FROM stdin;
+1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f
 \.
 
 
@@ -9710,10 +9868,10 @@ COPY public.sage_intacct_reimbursements (id, account_id, employee_id, memo, paym
 -- Data for Name: task_logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id, is_retired) FROM stdin;
-2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N	f
-4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N	f
-3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N	f
+COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id, is_retired, triggered_by) FROM stdin;
+2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N	f	\N
+4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N	f	\N
+3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N	f	\N
 \.
 
 
@@ -9738,7 +9896,7 @@ COPY public.users (password, last_login, id, email, user_id, full_name, active, 
 -- Data for Name: workspace_schedules; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, schedule_id, workspace_id, additional_email_options, emails_selected, error_count, created_at, updated_at) FROM stdin;
+COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, schedule_id, workspace_id, additional_email_options, emails_selected, error_count, created_at, updated_at, is_real_time_export_enabled) FROM stdin;
 \.
 
 
@@ -9792,7 +9950,7 @@ SELECT pg_catalog.setval('public.auth_group_permissions_id_seq', 1, false);
 -- Name: auth_permission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.auth_permission_id_seq', 200, true);
+SELECT pg_catalog.setval('public.auth_permission_id_seq', 212, true);
 
 
 --
@@ -9800,6 +9958,13 @@ SELECT pg_catalog.setval('public.auth_permission_id_seq', 200, true);
 --
 
 SELECT pg_catalog.setval('public.category_mappings_id_seq', 140, true);
+
+
+--
+-- Name: cost_codes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.cost_codes_id_seq', 1, false);
 
 
 --
@@ -9817,6 +9982,13 @@ SELECT pg_catalog.setval('public.dependent_fields_id_seq', 1, false);
 
 
 --
+-- Name: dimension_details_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.dimension_details_id_seq', 1, false);
+
+
+--
 -- Name: django_admin_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -9827,14 +9999,14 @@ SELECT pg_catalog.setval('public.django_admin_log_id_seq', 1, false);
 -- Name: django_content_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_content_type_id_seq', 50, true);
+SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 
 
 --
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 213, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 239, true);
 
 
 --
@@ -9848,7 +10020,7 @@ SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 89, true);
 -- Name: django_q_schedule_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 93, true);
+SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 94, true);
 
 
 --
@@ -9891,6 +10063,13 @@ SELECT pg_catalog.setval('public.expense_filters_id_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('public.expense_group_settings_id_seq', 5, true);
+
+
+--
+-- Name: failed_events_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.failed_events_id_seq', 1, false);
 
 
 --
@@ -10206,6 +10385,22 @@ ALTER TABLE ONLY public.category_mappings
 
 
 --
+-- Name: cost_codes cost_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cost_codes
+    ADD CONSTRAINT cost_codes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cost_codes cost_codes_workspace_id_task_id_project_id_a6a0e72d_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cost_codes
+    ADD CONSTRAINT cost_codes_workspace_id_task_id_project_id_a6a0e72d_uniq UNIQUE (workspace_id, task_id, project_id);
+
+
+--
 -- Name: cost_types cost_types_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10243,6 +10438,22 @@ ALTER TABLE ONLY public.dependent_field_settings
 
 ALTER TABLE ONLY public.destination_attributes
     ADD CONSTRAINT destination_attributes_destination_id_attribute_d22ab1fe_uniq UNIQUE (destination_id, attribute_type, workspace_id, display_name);
+
+
+--
+-- Name: dimension_details dimension_details_attribute_type_display_n_3070e1bc_uniq; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.dimension_details
+    ADD CONSTRAINT dimension_details_attribute_type_display_n_3070e1bc_uniq UNIQUE (attribute_type, display_name, workspace_id, source_type);
+
+
+--
+-- Name: dimension_details dimension_details_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.dimension_details
+    ADD CONSTRAINT dimension_details_pkey PRIMARY KEY (id);
 
 
 --
@@ -10411,6 +10622,14 @@ ALTER TABLE ONLY public.expense_group_settings
 
 ALTER TABLE ONLY public.expense_groups_expenses
     ADD CONSTRAINT expense_groups_expenses_expensegroup_id_expense__6a42b67c_uniq UNIQUE (expensegroup_id, expense_id);
+
+
+--
+-- Name: failed_events failed_events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.failed_events
+    ADD CONSTRAINT failed_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -10970,6 +11189,27 @@ CREATE INDEX charge_card_transaction_li_charge_card_transaction_id_508bf6be ON p
 
 
 --
+-- Name: cost_codes_workspa_1590e9_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX cost_codes_workspa_1590e9_idx ON public.cost_codes USING btree (workspace_id, task_id);
+
+
+--
+-- Name: cost_codes_workspa_5ac5ff_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX cost_codes_workspa_5ac5ff_idx ON public.cost_codes USING btree (workspace_id, project_id);
+
+
+--
+-- Name: cost_codes_workspace_id_1efc24ee; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX cost_codes_workspace_id_1efc24ee ON public.cost_codes USING btree (workspace_id);
+
+
+--
 -- Name: cost_types_project_04e2f5_idx; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10995,6 +11235,13 @@ CREATE INDEX cost_types_task_na_17ecec_idx ON public.cost_types USING btree (tas
 --
 
 CREATE INDEX cost_types_workspace_id_c71fcac0 ON public.cost_types USING btree (workspace_id);
+
+
+--
+-- Name: dimension_details_workspace_id_c09745f3; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX dimension_details_workspace_id_c09745f3 ON public.dimension_details USING btree (workspace_id);
 
 
 --
@@ -11117,10 +11364,24 @@ CREATE INDEX expense_report_lineitems_expense_report_id_4c7e2508 ON public.expen
 
 
 --
+-- Name: expenses_account_ff34f0_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_account_ff34f0_idx ON public.expenses USING btree (accounting_export_summary, workspace_id);
+
+
+--
 -- Name: expenses_expense_id_0e3511ea_like; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX expenses_expense_id_0e3511ea_like ON public.expenses USING btree (expense_id varchar_pattern_ops);
+
+
+--
+-- Name: expenses_fund_so_386913_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_fund_so_386913_idx ON public.expenses USING btree (fund_source, workspace_id);
 
 
 --
@@ -11485,6 +11746,14 @@ ALTER TABLE ONLY public.charge_card_transaction_lineitems
 
 
 --
+-- Name: cost_codes cost_codes_workspace_id_1efc24ee_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.cost_codes
+    ADD CONSTRAINT cost_codes_workspace_id_1efc24ee_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
 -- Name: cost_types cost_types_workspace_id_c71fcac0_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11498,6 +11767,14 @@ ALTER TABLE ONLY public.cost_types
 
 ALTER TABLE ONLY public.dependent_field_settings
     ADD CONSTRAINT dependent_field_settings_workspace_id_dd0a1e77_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: dimension_details dimension_details_workspace_id_c09745f3_fk_workspaces_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.dimension_details
+    ADD CONSTRAINT dimension_details_workspace_id_c09745f3_fk_workspaces_id FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

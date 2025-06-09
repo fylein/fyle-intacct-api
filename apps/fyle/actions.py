@@ -1,4 +1,6 @@
+from datetime import datetime, timezone
 import logging
+from typing import List
 
 from django.conf import settings
 from django.db.models import Q
@@ -7,8 +9,9 @@ from fyle.platform.internals.decorators import retry
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InternalServerError, RetryException
 
-from apps.fyle.models import Expense
-from apps.workspaces.models import Workspace
+from apps.fyle.models import Expense, ExpenseGroup
+from apps.workspaces.models import Workspace, FyleCredential, Configuration
+from fyle_intacct_api.logging_middleware import get_logger, get_caller_info
 
 from apps.fyle.helpers import get_updated_accounting_export_summary, get_batched_expenses
 
@@ -23,7 +26,10 @@ def __bulk_update_expenses(expense_to_be_updated: list[Expense]) -> None:
     :return: None
     """
     if expense_to_be_updated:
-        Expense.objects.bulk_update(expense_to_be_updated, ['is_skipped', 'accounting_export_summary'], batch_size=50)
+        current_time = datetime.now(timezone.utc)
+        for expense in expense_to_be_updated:
+            expense.updated_at = current_time
+        Expense.objects.bulk_update(expense_to_be_updated, ['is_skipped', 'accounting_export_summary', 'updated_at'], batch_size=50)
 
 
 def update_expenses_in_progress(in_progress_expenses: list[Expense]) -> None:
@@ -66,7 +72,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspac
         org_id=workspace.fyle_org_id,
         is_skipped=False
     )
-
+    skipped_expenses_list = list(expenses_to_be_skipped)
     expense_to_be_updated = []
     for expense in expenses_to_be_skipped:
         expense_to_be_updated.append(
@@ -87,7 +93,7 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspac
         __bulk_update_expenses(expense_to_be_updated)
 
     # Return the updated expense objects
-    return expenses_to_be_skipped
+    return skipped_expenses_list
 
 
 def mark_accounting_export_summary_as_synced(expenses: list[Expense]) -> None:
@@ -98,6 +104,7 @@ def mark_accounting_export_summary_as_synced(expenses: list[Expense]) -> None:
     """
     # Mark all expenses as synced
     expense_to_be_updated = []
+    current_time = datetime.now(timezone.utc)
     for expense in expenses:
         expense.accounting_export_summary['synced'] = True
         updated_accounting_export_summary = expense.accounting_export_summary
@@ -105,11 +112,12 @@ def mark_accounting_export_summary_as_synced(expenses: list[Expense]) -> None:
             Expense(
                 id=expense.id,
                 accounting_export_summary=updated_accounting_export_summary,
-                previous_export_state=updated_accounting_export_summary['state']
+                previous_export_state=updated_accounting_export_summary['state'],
+                updated_at=current_time
             )
         )
 
-    Expense.objects.bulk_update(expense_to_be_updated, ['accounting_export_summary', 'previous_export_state'], batch_size=50)
+    Expense.objects.bulk_update(expense_to_be_updated, ['accounting_export_summary', 'previous_export_state', 'updated_at'], batch_size=50)
 
 
 def update_failed_expenses(failed_expenses: list[Expense], is_mapping_error: bool) -> None:
@@ -181,6 +189,7 @@ def __handle_post_accounting_export_summary_exception(exception: Exception, work
         and 'response' in error_response and 'data' in error_response['response'] and error_response['response']['data']
     ):
         logger.info('Error while syncing workspace %s %s',workspace_id, error_response)
+        current_time = datetime.now(timezone.utc)
         for expense in error_response['response']['data']:
             if expense['message'] == 'Permission denied to perform this action.':
                 expense_instance = Expense.objects.get(expense_id=expense['key'], workspace_id=workspace_id)
@@ -193,11 +202,12 @@ def __handle_post_accounting_export_summary_exception(exception: Exception, work
                             None,
                             '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
                             True
-                        )
+                        ),
+                        updated_at=current_time
                     )
                 )
         if expense_to_be_updated:
-            Expense.objects.bulk_update(expense_to_be_updated, ['accounting_export_summary'], batch_size=50)
+            Expense.objects.bulk_update(expense_to_be_updated, ['accounting_export_summary', 'updated_at'], batch_size=50)
     else:
         logger.error('Error while syncing accounting export summary, workspace_id: %s %s', workspace_id, str(error_response))
 
@@ -235,3 +245,77 @@ def create_generator_and_post_in_batches(accounting_export_summary_batches: list
             )
         except Exception as exception:
             __handle_post_accounting_export_summary_exception(exception, workspace_id)
+
+
+def post_accounting_export_summary(workspace_id: int, expense_ids: List = None, fund_source: str = None, is_failed: bool = False) -> None:
+    """
+    Post accounting export summary to Fyle
+    :param workspace_id: workspace id
+    :param expense_ids: list of expense ids
+    :param fund_source: fund source
+    :param is_failed: whether the export failed
+    :return: None
+    """
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    if configuration.skip_accounting_export_summary_post:
+        return
+
+    worker_logger = get_logger()
+    caller_info = get_caller_info()
+
+    # Iterate through all expenses which are not synced and post accounting export summary to Fyle in batches
+    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    platform = PlatformConnector(fyle_credentials)
+    filters = {
+        'workspace_id': workspace_id,
+        'accounting_export_summary__synced': False
+    }
+
+    if expense_ids:
+        filters['id__in'] = expense_ids
+
+    if fund_source:
+        filters['fund_source'] = fund_source
+
+    if is_failed:
+        filters['accounting_export_summary__state'] = 'ERROR'
+
+    expenses_count = Expense.objects.filter(**filters).count()
+
+    accounting_export_summary_batches = []
+    page_size = 20
+    for offset in range(0, expenses_count, page_size):
+        limit = offset + page_size
+        paginated_expenses = Expense.objects.filter(**filters).order_by('id')[offset:limit]
+
+        payload = []
+
+        for expense in paginated_expenses:
+            accounting_export_summary = expense.accounting_export_summary
+            accounting_export_summary.pop('synced')
+            payload.append(expense.accounting_export_summary)
+
+        accounting_export_summary_batches.append(payload)
+
+    worker_logger.info(
+        'Called from %s, Posting accounting export summary to Fyle workspace_id: %s, payload: %s',
+        caller_info,
+        workspace_id,
+        accounting_export_summary_batches
+    )
+    create_generator_and_post_in_batches(accounting_export_summary_batches, platform, workspace_id)
+
+
+def post_accounting_export_summary_for_skipped_exports(expense_group: ExpenseGroup, workspace_id: int, is_mapping_error: bool = True) -> None:
+    """
+    Post accounting export summary for skipped exports to Fyle
+    :param expense_group: Expense group object
+    :param workspace_id: Workspace id
+    :param is_mapping_error: Whether the error is a mapping error
+    :return: None
+    """
+    first_expense = expense_group.expenses.first()
+    update_expenses_in_progress([first_expense])
+    post_accounting_export_summary(workspace_id=workspace_id, expense_ids=[first_expense.id])
+    update_failed_expenses(expense_group.expenses.all(), is_mapping_error)
+    post_accounting_export_summary(workspace_id=workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], is_failed=True)

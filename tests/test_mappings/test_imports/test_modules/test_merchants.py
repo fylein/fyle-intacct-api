@@ -9,8 +9,11 @@ from fyle_accounting_mappings.models import (
 
 from tests.helper import dict_compare_keys
 from apps.workspaces.models import FyleCredential
-from apps.mappings.imports.modules.merchants import Merchant
+from fyle_integrations_imports.modules.merchants import Merchant, disable_merchants
 from .fixtures import merchants_data
+from apps.mappings.constants import SYNC_METHODS
+
+from apps.workspaces.models import Configuration
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -26,18 +29,18 @@ def test_sync_expense_atrributes(mocker, db):
     assert merchants_count == 0
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.expense_fields.list_all',
+        'fyle.platform.apis.v1.admin.expense_fields.list_all',
         return_value=[]
     )
 
-    merchant = Merchant(workspace_id, 'VENDOR', None)
+    merchant = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
     merchant.sync_expense_attributes(platform)
 
     merchants_count = ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='MERCHANT').count()
     assert merchants_count == 0
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.expense_fields.list_all',
+        'fyle.platform.apis.v1.admin.expense_fields.list_all',
         return_value=merchants_data['create_new_auto_create_merchants_expense_attributes_0']
     )
 
@@ -61,11 +64,11 @@ def test_sync_destination_atrributes(mocker, db):
     vendors_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
     assert vendors_count == 68
 
-    tax_group = Merchant(workspace_id, 'VENDOR', None)
-    tax_group.sync_destination_attributes('VENDOR')
+    tax_group = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
+    tax_group.sync_destination_attributes()
 
     vendors_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='VENDOR').count()
-    assert vendors_count == 75
+    assert vendors_count == 68
 
 
 def test_auto_create_destination_attributes(mocker, db):
@@ -73,7 +76,7 @@ def test_auto_create_destination_attributes(mocker, db):
     Test auto create destination attributes
     """
     workspace_id = 1
-    merchant = Merchant(workspace_id, 'VENDOR', None)
+    merchant = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
     merchant.sync_after = None
 
     # delete all destination attributes, expense attributes and mappings
@@ -82,7 +85,7 @@ def test_auto_create_destination_attributes(mocker, db):
     ExpenseAttribute.objects.filter(workspace_id=1, attribute_type='MERCHANT').delete()
 
     # create new case for tax-groups import
-    with mock.patch('fyle.platform.apis.v1beta.admin.expense_fields.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.expense_fields.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.Merchants.post',
             return_value=[]
@@ -117,7 +120,7 @@ def test_auto_create_destination_attributes(mocker, db):
         assert mappings_count == 0
 
     # create new tax-groups sub-sequent run (we will be adding 2 new tax-details)
-    with mock.patch('fyle.platform.apis.v1beta.admin.expense_fields.list_all') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.expense_fields.list_all') as mock_call:
         mocker.patch(
             'fyle_integrations_platform_connector.apis.Merchants.post',
             return_value=[]
@@ -157,18 +160,96 @@ def test_construct_fyle_payload(db):
     Test construct fyle payload
     """
     workspace_id = 1
-    merchant = Merchant(workspace_id, 'VENDOR', None)
+    merchant = Merchant(workspace_id, 'VENDOR', None, mock.Mock(), [SYNC_METHODS['VENDOR']], False, True)
     merchant.sync_after = None
 
     # create new case
     paginated_destination_attributes = DestinationAttribute.objects.filter(workspace_id=1, attribute_type='VENDOR')
     existing_fyle_attributes_map = {}
-    is_auto_sync_status_allowed = merchant.get_auto_sync_permission()
 
     fyle_payload = merchant.construct_fyle_payload(
         paginated_destination_attributes,
-        existing_fyle_attributes_map,
-        is_auto_sync_status_allowed
+        existing_fyle_attributes_map
     )
 
     assert dict_compare_keys(fyle_payload, merchants_data['create_fyle_merchants_payload_create_new_case']) == [], 'Keys mismatch for merchant payload'
+
+
+def test_disable_merchants(db, mocker):
+    """
+    Test disable merchants
+    """
+    workspace_id = 1
+
+    # Setup: create a merchant to disable
+    ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='MERCHANT',
+        display_name='Merchant',
+        value='old_merchant',
+        source_id='source_id',
+        active=True
+    )
+
+    merchants_to_disable = {
+        'destination_id': {
+            'value': 'old_merchant',
+            'updated_value': 'new_merchant',
+            'code': 'old_merchant_code',
+            'updated_code': 'old_merchant_code'
+        }
+    }
+
+    # Patch PlatformConnector and the post method
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.merchants.PlatformConnector')
+    post_call = mocker.patch.object(mock_platform.return_value.merchants, 'post')
+
+    # Patch prepend_code_to_name to just return the value for simplicity
+    mocker.patch('apps.mappings.helpers.prepend_code_to_name', side_effect=lambda prepend_code_in_name, value, code: value if not prepend_code_in_name else f"{code}: {value}")
+
+    # Patch import_string for configuration model path and Configuration
+    def import_string_side_effect(path):
+        if path == 'apps.workspaces.helpers.get_import_configuration_model_path':
+            return lambda: 'apps.workspaces.models.Configuration'
+        elif path == 'apps.workspaces.models.Configuration':
+            return Configuration
+        elif path == 'apps.mappings.helpers.prepend_code_to_name':
+            return lambda prepend_code_in_name, value, code: value if not prepend_code_in_name else f"{code}: {value}"
+        return None
+
+    mocker.patch('fyle_integrations_imports.modules.merchants.import_string', side_effect=import_string_side_effect)
+
+    # Actually call the function
+    bulk_payload = disable_merchants(workspace_id, merchants_to_disable, is_import_to_fyle_enabled=True)
+
+    # Should call the post method
+    assert post_call.call_count == 1
+    # Should return a queryset of values (flat=True)
+    assert list(bulk_payload) == ['old_merchant']
+
+    # Test with code in naming
+    import_settings = Configuration.objects.get(workspace_id=workspace_id)
+    import_settings.import_code_fields = ['VENDOR']
+    import_settings.save()
+
+    ExpenseAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='MERCHANT',
+        display_name='Merchant',
+        value='old_merchant_code: old_merchant',
+        source_id='source_id_123',
+        active=True
+    )
+
+    merchants_to_disable = {
+        'destination_id': {
+            'value': 'old_merchant',
+            'updated_value': 'new_merchant',
+            'code': 'old_merchant_code',
+            'updated_code': 'old_merchant_code'
+        }
+    }
+
+    bulk_payload = disable_merchants(workspace_id, merchants_to_disable, is_import_to_fyle_enabled=True)
+    # Should return the value with code in naming
+    assert 'old_merchant_code: old_merchant' in list(bulk_payload)

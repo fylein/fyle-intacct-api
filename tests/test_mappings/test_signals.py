@@ -18,7 +18,8 @@ from fyle_accounting_mappings.models import (
 
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, Workspace
-from apps.mappings.models import LocationEntityMapping, ImportLog
+from apps.mappings.models import LocationEntityMapping
+from fyle_integrations_imports.models import ImportLog
 
 from tests.test_fyle.fixtures import data as fyle_data
 
@@ -133,13 +134,18 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     """
     Test run post mapping settings triggers
     """
+    # Patch SYNC_METHODS to include 'SAMPLEs' and 'HEHEHE' for this test
+    import apps.mappings.constants as mapping_constants
+    mapping_constants.SYNC_METHODS['SAMPLEs'] = 'sample_sync_method'
+    mapping_constants.SYNC_METHODS['HEHEHE'] = 'hehehe_sync_method'
+
     mocker.patch(
         'fyle_integrations_platform_connector.apis.ExpenseCustomFields.post',
         return_value=[]
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.list_all',
+        'fyle.platform.apis.v1.admin.ExpenseFields.list_all',
         return_value=fyle_data['get_all_expense_fields']
     )
 
@@ -160,11 +166,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     mapping_setting = MappingSetting(
@@ -177,11 +183,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     mapping_setting = MappingSetting(
@@ -194,11 +200,11 @@ def test_run_post_mapping_settings_triggers(db, mocker, test_connection):
     mapping_setting.save()
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(workspace_id),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     mapping_setting = MappingSetting.objects.filter(
@@ -237,7 +243,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.ExpenseFields.list_all',
+        'fyle.platform.apis.v1.admin.ExpenseFields.list_all',
         return_value=fyle_data['get_all_expense_fields']
     )
 
@@ -268,7 +274,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
         attribute_type='CUSTOM_INTENTS'
     ).first()
 
-    assert import_log.status == 'COMPLETE'
+    assert import_log.status == 'IN_PROGRESS'
 
     time_difference = datetime.now() - timedelta(hours=2)
     offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)

@@ -8,10 +8,12 @@ services:
         CI: ENABLED
     entrypoint: bash run.sh
     restart: unless-stopped
+    user: root
     volumes:
     - ./:/fyle-intacct-api
     depends_on:
     - db
+    - rabbitmq
     environment: 
       SECRET_KEY: thisisthedjangosecretkey
       ALLOWED_HOSTS: "*"
@@ -31,7 +33,17 @@ services:
       FYLE_TOKEN_URI: 'https://sample.fyle.tech'
       FYLE_SERVER_URL: 'https://sample.fyle.tech'
       FYLE_JOBS_URL: 'https://sample.fyle.tech'
-      HELP_ARTICLE_DOMAIN: 'https://help.fylehq.com'
+      HELP_ARTICLE_DOMAIN: 'https://www.fylehq.com/help'
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5673/?heartbeat=0
+  rabbitmq:
+     image: rabbitmq:3.8.9-management-alpine
+     environment:
+       - RABBITMQ_DEFAULT_USER=admin
+       - RABBITMQ_DEFAULT_PASS=password
+     ports:
+       - '5673:5673'
+     volumes:
+       - rabbitmq-data:/data/
   db:
     image: "postgres:15"
     environment: 
@@ -41,6 +53,6 @@ services:
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./tests/sql_fixtures/reset_db_fixtures/reset_db.sql:/docker-entrypoint-initdb.d/reset_db.sql
-
 volumes:
   api:
+  rabbitmq-data:

@@ -8,6 +8,7 @@ from django.template.loader import render_to_string
 
 from fyle_rest_auth.helpers import get_fyle_admin
 from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_integrations_platform_connector import PlatformConnector
 
 from apps.tasks.models import TaskLog
@@ -27,14 +28,14 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def schedule_email_notification(workspace_id: int, schedule_enabled: bool) -> None:
+def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours: int) -> None:
     """
     Schedule email notification
     :param workspace_id: workspace id
     :param schedule_enabled: schedule enabled
     :return: None
     """
-    if schedule_enabled:
+    if schedule_enabled and hours:
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.workspaces.tasks.run_email_notification',
             cluster='import',
@@ -55,7 +56,7 @@ def schedule_email_notification(workspace_id: int, schedule_enabled: bool) -> No
             schedule.delete()
 
 
-def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_added: list, emails_selected: list) -> WorkspaceSchedule:
+def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_added: list, emails_selected: list, is_real_time_export_enabled: bool) -> WorkspaceSchedule:
     """
     Schedule sync
     :param workspace_id: workspace id
@@ -68,11 +69,12 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
     ws_schedule, _ = WorkspaceSchedule.objects.get_or_create(
         workspace_id=workspace_id
     )
+    ws_schedule.is_real_time_export_enabled = is_real_time_export_enabled
+    ws_schedule.enabled = schedule_enabled
 
-    schedule_email_notification(workspace_id=workspace_id, schedule_enabled=schedule_enabled)
+    schedule_email_notification(workspace_id=workspace_id, schedule_enabled=schedule_enabled, hours=hours)
 
     if schedule_enabled:
-        ws_schedule.enabled = schedule_enabled
         ws_schedule.start_datetime = datetime.now()
         ws_schedule.interval_hours = hours
         ws_schedule.emails_selected = emails_selected
@@ -80,29 +82,34 @@ def schedule_sync(workspace_id: int, schedule_enabled: bool, hours: int, email_a
         if email_added:
             ws_schedule.additional_email_options.append(email_added)
 
-        # create next run by adding hours to current time
-        next_run = datetime.now() + timedelta(hours=hours)
-
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.workspaces.tasks.run_sync_schedule',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': hours * 60,
-                'next_run': next_run
-            }
-        )
-
-        ws_schedule.schedule = schedule
+        if is_real_time_export_enabled:
+            # Delete existing schedule since user changed the setting to real time export
+            schedule = ws_schedule.schedule
+            if schedule:
+                ws_schedule.schedule = None
+                ws_schedule.save()
+                schedule.delete()
+        else:
+            schedule, _ = Schedule.objects.update_or_create(
+                func='apps.workspaces.tasks.run_sync_schedule',
+                args='{}'.format(workspace_id),
+                defaults={
+                    'schedule_type': Schedule.MINUTES,
+                    'minutes': hours * 60,
+                    'next_run': datetime.now() + timedelta(hours=hours),
+                }
+            )
+            ws_schedule.schedule = schedule
 
         ws_schedule.save()
 
     elif not schedule_enabled and ws_schedule.schedule:
         schedule = ws_schedule.schedule
-        ws_schedule.enabled = schedule_enabled
         ws_schedule.schedule = None
         ws_schedule.save()
         schedule.delete()
+    else:
+        ws_schedule.save()
 
     return ws_schedule
 
@@ -130,11 +137,11 @@ def run_sync_schedule(workspace_id: int) -> None:
         fund_source.append('PERSONAL')
 
     create_expense_groups(
-        workspace_id=workspace_id, fund_source=fund_source, task_log=task_log
+        workspace_id=workspace_id, fund_source=fund_source, task_log=task_log, imported_from=ExpenseImportSourceEnum.BACKGROUND_SCHEDULE
     )
 
     if task_log.status == 'COMPLETE':
-        export_to_intacct(workspace_id, 'AUTO')
+        export_to_intacct(workspace_id=workspace_id, triggered_by=ExpenseImportSourceEnum.BACKGROUND_SCHEDULE)
 
 
 def run_email_notification(workspace_id: int) -> None:
@@ -156,7 +163,7 @@ def run_email_notification(workspace_id: int) -> None:
     workspace = Workspace.objects.get(id=workspace_id)
     admin_data = WorkspaceSchedule.objects.get(workspace_id=workspace_id)
     try:
-        intacct = SageIntacctCredential.objects.get(workspace=workspace)
+        intacct = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
     except SageIntacctCredential.DoesNotExist:
         logger.info('SageIntacct Credentials does not exist - %s', workspace_id)
         return
@@ -188,7 +195,7 @@ def run_email_notification(workspace_id: int) -> None:
                         'workspace_id': workspace_id,
                         'export_time': export_time.date() if export_time else datetime.now(),
                         'year': date.today().year,
-                        'app_url': "{0}/app/settings/#/integrations/native_apps?integrationIframeTarget=integrations/intacct".format(settings.FYLE_APP_URL),
+                        'app_url': "{0}/app/admin/#/integrations?integrationIframeTarget=integrations/intacct".format(settings.FYLE_APP_URL),
                         'fyle_url': settings.FYLE_EXPENSE_URL,
                         'integrations_app_url': settings.INTEGRATIONS_APP_URL,
                         'sage_intacct_company_id': intacct.si_company_id

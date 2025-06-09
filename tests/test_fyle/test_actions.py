@@ -20,7 +20,8 @@ from apps.fyle.actions import (
     update_expenses_in_progress,
     bulk_post_accounting_export_summary,
     create_generator_and_post_in_batches,
-    mark_accounting_export_summary_as_synced
+    mark_accounting_export_summary_as_synced,
+    post_accounting_export_summary
 )
 
 
@@ -104,7 +105,7 @@ def test_create_generator_and_post_in_batches(db):
     fyle_credentails = FyleCredential.objects.get(workspace_id=1)
     platform = PlatformConnector(fyle_credentails)
 
-    with mock.patch('fyle.platform.apis.v1beta.admin.Expenses.post_bulk_accounting_export_summary') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Expenses.post_bulk_accounting_export_summary') as mock_call:
         mock_call.side_effect = RetryException('Timeout')
         try:
             create_generator_and_post_in_batches([{
@@ -130,7 +131,7 @@ def test_handle_post_accounting_export_summary_exception(db):
 
     expense_id = expense.expense_id
 
-    with mock.patch('fyle.platform.apis.v1beta.admin.Expenses.post_bulk_accounting_export_summary') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Expenses.post_bulk_accounting_export_summary') as mock_call:
         mock_call.side_effect = WrongParamsError('Some of the parameters are wrong', {
             'data': [
                 {
@@ -186,9 +187,36 @@ def test_bulk_post_accounting_export_summary(db):
     fyle_credentails = FyleCredential.objects.get(workspace_id=1)
     platform = PlatformConnector(fyle_credentails)
 
-    with mock.patch('fyle.platform.apis.v1beta.admin.Expenses.post_bulk_accounting_export_summary') as mock_call:
+    with mock.patch('fyle.platform.apis.v1.admin.Expenses.post_bulk_accounting_export_summary') as mock_call:
         mock_call.side_effect = InternalServerError('Timeout')
         try:
             bulk_post_accounting_export_summary(platform, {})
         except RetryException:
             assert mock_call.call_count == 3
+
+
+def test_post_accounting_export_summary(db, mocker):
+    """
+    Test post accounting export summary
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    expense_id = expense_group.expenses.first().id
+    expense_group.expenses.remove(expense_id)
+
+    workspace = Workspace.objects.get(id=1)
+
+    expense = Expense.objects.filter(id=expense_id).first()
+    expense.workspace_id = 1
+    expense.save()
+
+    mark_expenses_as_skipped(Q(), [expense_id], workspace)
+
+    assert Expense.objects.filter(id=expense_id).first().accounting_export_summary['synced'] == False
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.post_bulk_accounting_export_summary',
+        return_value=[]
+    )
+    post_accounting_export_summary(1)
+
+    assert Expense.objects.filter(id=expense_id).first().accounting_export_summary['synced'] == True

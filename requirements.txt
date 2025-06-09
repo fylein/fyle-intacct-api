@@ -1,6 +1,6 @@
 cryptography==44.0.1
 dj-database-url==2.3.0
-Django==4.2.20
+Django==4.2.21
 django-db-geventpool==4.0.1
 django-cors-headers==4.6.0
 django-picklefield==3.2
@@ -9,10 +9,10 @@ django-request-logging==0.7.5
 djangorestframework==3.15.2
 django-sendgrid-v5==1.2.0
 future==1.0.0
-fyle==0.37.2
-fyle-accounting-mappings==1.41.0
-fyle-integrations-platform-connector==1.40.0
-fyle-rest-auth==1.7.2
+fyle==1.0.0
+fyle-accounting-mappings==2.2.5
+fyle-integrations-platform-connector==2.2.4
+fyle-rest-auth==1.8.3
 gevent==24.11.1
 gunicorn==23.0.0
 psycopg2-binary==2.9.10
@@ -21,7 +21,7 @@ pytest-cov==6.0.0
 pytest-django==4.9.0
 pytest-mock==3.14.0
 requests==2.32.3
-sageintacctsdk==1.26.0
+sageintacctsdk==1.26.2
 sentry-sdk==2.19.2
 six==1.17.0
 Unidecode==1.1.2
@@ -34,3 +34,5 @@ pytz==2024.2
 flake8==7.1.1
 flake8-docstrings==1.7.0
 flake8-annotations==3.1.1
+
+git+https://github.com/fylein/pgevents.git@main#egg=pgevents

@@ -7,6 +7,7 @@ data = {
             "auto_create_destination_entity": False,
             "memo_structure": ["merchant", "purpose"],
             "auto_create_merchants_as_vendors": False,
+            "je_single_credit_line": False,
         },
         "general_mappings": {
             "payment_account": {"id": "100", "name": "First Community Bank"},
@@ -23,6 +24,7 @@ data = {
             "interval_hours": 24,
             "emails_selected": ["fyle@fyle.in"],
             "additional_email_options": {},
+            "is_real_time_export_enabled": False
         },
     },
     "response": {
@@ -33,6 +35,7 @@ data = {
             "auto_create_destination_entity": False,
             "memo_structure": ["merchant", "purpose"],
             "auto_create_merchants_as_vendors": False,
+            "je_single_credit_line": False,
         },
         "general_mappings": {
             "payment_account": {"id": "100", "name": "First Community Bank"},
@@ -50,6 +53,7 @@ data = {
             "interval_hours": 24,
             "emails_selected": [],
             "additional_email_options": [],
+            "is_real_time_export_enabled": False
         },
         "workspace_id": 9,
     },

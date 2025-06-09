@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import (
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group_ids: list = []) -> None:
+def export_to_intacct(workspace_id: int, expense_group_ids: list = [], triggered_by: ExpenseImportSourceEnum = None) -> None:
     """
     Export expenses to Intacct
     :param workspace_id: Workspace ID
@@ -32,7 +33,7 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
 
     last_exported_at = datetime.now()
     is_expenses_exported = False
-    export_mode = export_mode or 'MANUAL'
+    export_mode = 'MANUAL' if triggered_by in (ExpenseImportSourceEnum.DASHBOARD_SYNC, ExpenseImportSourceEnum.DIRECT_EXPORT, ExpenseImportSourceEnum.CONFIGURATION_UPDATE) else 'AUTO'
     expense_group_filters = {
         'exported_at__isnull': True,
         'workspace_id': workspace_id
@@ -52,7 +53,8 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
+                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0,
+                triggered_by=triggered_by
             )
 
         elif configuration.reimbursable_expenses_object == 'BILL':
@@ -60,7 +62,8 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
+                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0,
+                triggered_by=triggered_by
             )
 
         elif configuration.reimbursable_expenses_object == 'JOURNAL_ENTRY':
@@ -68,7 +71,8 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
+                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0,
+                triggered_by=triggered_by
             )
 
     if configuration.corporate_credit_card_expenses_object:
@@ -83,7 +87,8 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
+                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0,
+                triggered_by=triggered_by
             )
 
         elif configuration.corporate_credit_card_expenses_object == 'BILL':
@@ -91,7 +96,8 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
+                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0,
+                triggered_by=triggered_by
             )
 
         elif configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
@@ -99,7 +105,8 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
+                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0,
+                triggered_by=triggered_by
             )
 
         elif configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY':
@@ -107,7 +114,8 @@ def export_to_intacct(workspace_id: int, export_mode: bool = None, expense_group
                 workspace_id=workspace_id,
                 expense_group_ids=expense_group_ids,
                 is_auto_export=export_mode == 'AUTO',
-                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0
+                interval_hours=workspace_schedule.interval_hours if workspace_schedule else 0,
+                triggered_by=triggered_by
             )
 
     if is_expenses_exported:

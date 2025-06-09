@@ -1,5 +1,5 @@
 from dateutil import parser
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.db import models
 from django.db.models import Count, JSONField
@@ -9,6 +9,8 @@ from django.db.models.fields.json import KeyTextTransform
 
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
+from fyle_accounting_library.fyle_platform.constants import IMPORTED_FROM_CHOICES
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from apps.users.models import User
 from apps.workspaces.models import Workspace, Configuration
@@ -134,6 +136,7 @@ class Expense(models.Model):
     cost_center = models.CharField(max_length=255, null=True, blank=True, help_text='Fyle Expense Cost Center')
     purpose = models.TextField(null=True, blank=True, help_text='Purpose')
     report_id = models.CharField(max_length=255, help_text='Report ID')
+    imported_from = models.CharField(choices=IMPORTED_FROM_CHOICES, max_length=255, help_text='Imported from source', null=True)
     bank_transaction_id = models.CharField(max_length=255, null=True, blank=True, help_text='Bank Transaction ID')
     spent_at = models.DateTimeField(null=True, help_text='Expense spent at')
     approved_at = models.DateTimeField(null=True, help_text='Expense approved at')
@@ -162,9 +165,13 @@ class Expense(models.Model):
 
     class Meta:
         db_table = 'expenses'
+        indexes = [
+            models.Index(fields=['accounting_export_summary', 'workspace_id']),
+            models.Index(fields=['fund_source', 'workspace_id'])
+        ]
 
     @staticmethod
-    def create_expense_objects(expenses: list[dict], workspace_id: int, skip_update: bool = False) -> list["Expense"]:
+    def create_expense_objects(expenses: list[dict], workspace_id: int, skip_update: bool = False, imported_from: ExpenseImportSourceEnum = None) -> list["Expense"]:
         """
         Bulk create expense objects
         """
@@ -223,12 +230,19 @@ class Expense(models.Model):
             if expense_data_to_append:
                 defaults.update(expense_data_to_append)
 
-            expense_object, _ = Expense.objects.update_or_create(
+            expense_object, created = Expense.objects.update_or_create(
                 expense_id=expense['id'],
                 defaults=defaults
             )
 
-            if not ExpenseGroup.objects.filter(expenses__id=expense_object.id).first():
+            # Only set imported_from for newly created expenses
+            if created and imported_from:
+                expense_object.imported_from = imported_from
+                expense_object.save(
+                    update_fields=['imported_from']
+                )
+
+            if (not expense_object.is_skipped and not ExpenseGroup.objects.filter(expenses__id=expense_object.id).first()):
                 expense_objects.append(expense_object)
 
         return expense_objects
@@ -415,6 +429,7 @@ def filter_expense_groups(expense_groups: dict, expenses: Expense, expenses_obje
     :return: Filtered Expense Groups
     """
     filtered_expense_groups = []
+    skipped_expenses_ids = []
 
     for expense_group in expense_groups:
         expense_group_expenses_ids = expense_group['expense_ids']
@@ -426,10 +441,12 @@ def filter_expense_groups(expense_groups: dict, expenses: Expense, expenses_obje
             total_amount = sum(expense.amount for expense in filtered_expenses)
 
             if total_amount < 0:
+                skipped_expenses_ids.extend([expense.id for expense in filtered_expenses if expense.amount < 0])
                 filtered_expenses = filter_negative_expenses(filtered_expenses)
 
         # Export type => Journal Entry, Expense Report and Group By => Expense
         elif (expenses_object == 'EXPENSE_REPORT' and 'expense_id' in expense_group_fields):
+            skipped_expenses_ids.extend([expense.id for expense in filtered_expenses if expense.amount < 0])
             filtered_expenses = filter_negative_expenses(filtered_expenses)
 
         filtered_expense_ids = [item.id for item in filtered_expenses]
@@ -438,7 +455,7 @@ def filter_expense_groups(expense_groups: dict, expenses: Expense, expenses_obje
             expense_group['expense_ids'] = filtered_expense_ids
             filtered_expense_groups.append(expense_group)
 
-    return filtered_expense_groups
+    return filtered_expense_groups, skipped_expenses_ids
 
 
 class ExpenseGroup(models.Model):
@@ -473,6 +490,7 @@ class ExpenseGroup(models.Model):
         """
         expense_groups = []
         filtered_corporate_credit_card_expense_groups = []
+        skipped_expense_ids = []
         expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
 
         reimbursable_expense_group_fields = expense_group_settings.reimbursable_expense_group_fields
@@ -480,9 +498,10 @@ class ExpenseGroup(models.Model):
 
         reimbursable_expense_groups = _group_expenses(reimbursable_expenses, reimbursable_expense_group_fields, workspace_id)
 
-        filtered_reimbursable_expense_groups = filter_expense_groups(
+        filtered_reimbursable_expense_groups, reimbursable_skipped_expense_ids = filter_expense_groups(
             reimbursable_expense_groups, reimbursable_expenses, configuration.reimbursable_expenses_object, reimbursable_expense_group_fields
         )
+        skipped_expense_ids.extend(reimbursable_skipped_expense_ids)
 
         expense_groups.extend(filtered_reimbursable_expense_groups)
 
@@ -529,22 +548,23 @@ class ExpenseGroup(models.Model):
                     workspace_id,
                 )
 
-        filtered_corporate_credit_card_expense_groups = filter_expense_groups(
+        filtered_corporate_credit_card_expense_groups, corporate_credit_card_skipped_expense_ids = filter_expense_groups(
             filtered_corporate_credit_card_expense_groups,
             corporate_credit_card_expenses,
             configuration.corporate_credit_card_expenses_object,
             corporate_credit_card_expense_group_field
         )
+        skipped_expense_ids.extend(corporate_credit_card_skipped_expense_ids)
 
         expense_groups.extend(filtered_corporate_credit_card_expense_groups)
 
         for expense_group in expense_groups:
-            if expense_group_settings.reimbursable_export_date_type == 'last_spent_at':
+            if expense_group_settings.reimbursable_export_date_type == 'last_spent_at' and expense_group['fund_source'] == 'PERSONAL':
                 expense_group['last_spent_at'] = Expense.objects.filter(
                     id__in=expense_group['expense_ids']
                 ).order_by('-spent_at').first().spent_at
 
-            if expense_group_settings.ccc_export_date_type == 'last_spent_at':
+            if expense_group_settings.ccc_export_date_type == 'last_spent_at' and expense_group['fund_source'] == 'CCC':
                 expense_group['last_spent_at'] = Expense.objects.filter(
                     id__in=expense_group['expense_ids']
                 ).order_by('-spent_at').first().spent_at
@@ -572,6 +592,7 @@ class ExpenseGroup(models.Model):
             )
 
             expense_group_object.expenses.add(*expense_ids)
+        return skipped_expense_ids
 
 
 class Reimbursement(models.Model):
@@ -607,6 +628,7 @@ class Reimbursement(models.Model):
 
         existing_reimbursement_ids = []
         primary_key_map = {}
+        current_time = datetime.now(timezone.utc)
 
         for existing_reimbursement in existing_reimbursements:
             existing_reimbursement_ids.append(existing_reimbursement.reimbursement_id)
@@ -635,7 +657,8 @@ class Reimbursement(models.Model):
                     attributes_to_be_updated.append(
                         Reimbursement(
                             id=primary_key_map[reimbursement['id']]['id'],
-                            state=reimbursement['state']
+                            state=reimbursement['state'],
+                            updated_at=current_time
                         )
                     )
 
@@ -643,7 +666,7 @@ class Reimbursement(models.Model):
             Reimbursement.objects.bulk_create(attributes_to_be_created, batch_size=50)
 
         if attributes_to_be_updated:
-            Reimbursement.objects.bulk_update(attributes_to_be_updated, fields=['state'], batch_size=50)
+            Reimbursement.objects.bulk_update(attributes_to_be_updated, fields=['state', 'updated_at'], batch_size=50)
 
     @staticmethod
     def get_last_synced_at(workspace_id: int) -> datetime:
@@ -700,8 +723,8 @@ class DependentFieldSetting(models.Model):
     cost_code_field_name = models.CharField(max_length=255, help_text='Fyle Cost Code Field Name')
     cost_code_field_id = models.IntegerField(help_text='Fyle Cost Code Field ID')
     cost_code_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost code')
-    cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name')
-    cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID')
+    cost_type_field_name = models.CharField(max_length=255, help_text='Fyle Cost Type Field Name', null=True)
+    cost_type_field_id = models.IntegerField(help_text='Fyle Cost Type Field ID', null=True)
     cost_type_placeholder = models.TextField(blank=True, null=True, help_text='Placeholder for Cost Type')
     workspace = models.OneToOneField(
         Workspace,
@@ -711,6 +734,7 @@ class DependentFieldSetting(models.Model):
     )
     last_synced_at = models.DateTimeField(null=True, help_text='Last Synced At (Intacct)')
     last_successful_import_at = models.DateTimeField(null=True, help_text='Last Successful Import At')
+    is_cost_type_import_enabled = models.BooleanField(help_text='Is Cost Type Import Enabled', default=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 

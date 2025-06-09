@@ -12,7 +12,7 @@ from fyle_accounting_mappings.models import (
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
 from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
-from apps.workspaces.models import Configuration, Workspace
+from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 from apps.sage_intacct.models import (
     Bill,
     APPayment,
@@ -1241,3 +1241,80 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
         assert bill_lineitem.customer_id == '10061'
         assert bill_lineitem.item_id == '1012'
         assert bill_lineitem.allocation_id == 'RENT'
+
+
+def test_post_bill_with_vendor_mapping(mocker, db):
+    """
+    Test create_bill success with vendor mapping
+    """
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.fund_source = 'CCC'
+    expense_group.save()
+    expenses = expense_group.expenses.all()
+
+    expenses.update(
+        fund_source='CCC',
+        corporate_card_id='baccjpfvrtsPg9'
+    )
+
+    vendor = DestinationAttribute.objects.create(
+        value='abcd',
+        destination_id='ABCD',
+        attribute_type='VENDOR',
+        display_name='Vendor',
+        workspace_id=1,
+        active=True,
+        detail={
+            'email': 'vendor123@fyle.in'
+        }
+    )
+
+    corporate_card = ExpenseAttribute.objects.create(
+        attribute_type='CORPORATE_CARD',
+        value='American Express - 61662',
+        display_name='Corporate Card',
+        source_id='baccjpfvrtsPg9',
+        workspace_id=1,
+        active=True
+    )
+
+    _ = Mapping.objects.create(
+        workspace_id=1,
+        source_id=corporate_card.id,
+        destination_id=vendor.id,
+        source_type='CORPORATE_CARD',
+        destination_type='VENDOR',
+    )
+
+    bill = Bill.create_bill(expense_group)
+    assert bill.vendor_id == 'ABCD'
+
+
+def test_post_bill_with_no_vendor_mapping(mocker, db):
+    """
+    Test create_bill success with no corporate card vendor mapping
+    """
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.fund_source = 'CCC'
+    expense_group.save()
+    expenses = expense_group.expenses.all()
+
+    expenses.update(
+        fund_source='CCC',
+        corporate_card_id='baccjpfvrtsPg9'
+    )
+
+    bill = Bill.create_bill(expense_group)
+    general_mappings = GeneralMapping.objects.get(workspace_id=1)
+    assert bill.vendor_id == general_mappings.default_ccc_vendor_id
+
+
+def test_get_active_sage_intacct_credentials(mocker):
+    """
+    Test get active sage intacct credentials
+    """
+    mock_cred = mocker.Mock()
+    mock_get = mocker.patch('apps.workspaces.models.SageIntacctCredential.objects.get', return_value=mock_cred)
+    result = SageIntacctCredential.get_active_sage_intacct_credentials(123)
+    mock_get.assert_called_once_with(workspace_id=123, is_expired=False)
+    assert result == mock_cred

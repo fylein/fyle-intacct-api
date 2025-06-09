@@ -35,12 +35,9 @@ class ConfigurationSerializer(serializers.ModelSerializer):
             'reimbursable_expenses_object',
             'corporate_credit_card_expenses_object',
             'auto_map_employees',
-            'is_simplify_report_closure_enabled',
             'employee_field_mapping',
             'use_merchant_in_journal_line'
         ]
-
-        read_only_fields = ['is_simplify_report_closure_enabled']
 
 
 class GeneralMappingsSerializer(serializers.ModelSerializer):
@@ -182,6 +179,8 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         general_mappings = validated.pop('general_mappings')
         workspace_id = instance.id
 
+        pre_save_configurations = Configuration.objects.filter(workspace_id=workspace_id).first()
+
         configuration_instance, _ = Configuration.objects.update_or_create(
             workspace_id=workspace_id,
             defaults={
@@ -199,7 +198,15 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
             configuration=configuration_instance
         )
 
-        export_trigger.post_save_configurations()
+        is_category_mapping_changed = False
+        if pre_save_configurations:
+            reimbursable_changed = (pre_save_configurations.reimbursable_expenses_object == 'EXPENSE_REPORT') != (configuration_instance.reimbursable_expenses_object == 'EXPENSE_REPORT')
+
+            ccc_changed = (pre_save_configurations.corporate_credit_card_expenses_object == 'EXPENSE_REPORT') != (configuration_instance.corporate_credit_card_expenses_object == 'EXPENSE_REPORT')
+
+            is_category_mapping_changed = reimbursable_changed or ccc_changed
+
+        export_trigger.post_save_configurations(is_category_mapping_changed)
 
         if not expense_group_settings['reimbursable_expense_group_fields']:
             expense_group_settings['reimbursable_expense_group_fields'] = ['employee_email', 'report_id', 'fund_source', 'claim_number']

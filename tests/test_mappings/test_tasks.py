@@ -105,7 +105,7 @@ def test_async_auto_map_employees(mocker, db):
     )
 
     mocker.patch(
-        'fyle.platform.apis.v1beta.admin.Employees.list_all',
+        'fyle.platform.apis.v1.admin.Employees.list_all',
         return_value=fyle_data['get_all_employees']
     )
 
@@ -196,7 +196,7 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=0
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
     mocker.patch.object(mock_platform.return_value.projects, 'sync')
 
