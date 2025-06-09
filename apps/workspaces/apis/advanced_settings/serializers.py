@@ -29,6 +29,8 @@ class ConfigurationSerializer(serializers.ModelSerializer):
     """
     Serializer for the Configuration Form/API
     """
+
+    top_level_memo_structure = serializers.ListField(allow_null=True)
     class Meta:
         model = Configuration
         fields = [

@@ -617,7 +617,7 @@ def test_get_expense_purpose(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings)
+        expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
 
         assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
@@ -629,7 +629,7 @@ def test_get_expense_purpose(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings)
+        expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
         assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
 
@@ -653,7 +653,7 @@ def test_get_memo_or_purpose_top_level(db):
             lineitem.category, lineitem.sub_category)
 
         # Test with is_top_level=True
-        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True)
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
 
         # Expected format: employee_email - employee_name - group_by
         # Since expense_group_settings.description has claim_number, group_by should be claim_number
@@ -668,7 +668,7 @@ def test_get_memo_or_purpose_top_level(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True)
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
 
         # Expected format: employee_name - group_by
         expected_memo = ' - C/2022/09/R/22'
@@ -682,7 +682,7 @@ def test_get_memo_or_purpose_top_level(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=False)
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=False, export_table=ExpenseReport)
 
         # Should fall back to regular memo structure
         expected_memo = 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
@@ -702,7 +702,7 @@ def test_get_memo_or_purpose_top_level(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True)
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
 
         # Should use expense_number as group_by
         expected_memo = 'ashwin.t@fyle.in - E/2022/09/T/22'
@@ -830,7 +830,7 @@ def test_get_memo(db):
     expense_group_settings.reimbursable_export_date_type = 'spent_at'
     expense_group_settings.save()
 
-    get_memo(expense_group, Bill, workspace_id)
+    get_memo(expense_group, ExportTable=Bill, workspace_id=workspace_id)
 
     expense_group = ExpenseGroup.objects.get(id=2)
     workspace_id = expense_group.workspace.id
@@ -842,12 +842,12 @@ def test_get_memo(db):
     expense_group.description['employee_email'] = 'abc@def.co'
     expense_group.save()
 
-    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=workspace_id)
     assert memo == 'Corporate Card Expense by abc@def.co'
 
     ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
-    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=workspace_id)
     assert memo == 'Corporate Card Expense by abc@def.co - 1'
 
     for i in range(3):
@@ -857,7 +857,7 @@ def test_get_memo(db):
 
         ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
-    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=workspace_id)
     assert memo == 'Corporate Card Expense by abc@def.co - 3'
 
 
