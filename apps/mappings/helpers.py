@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import Configuration
-from apps.mappings.imports.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
+from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
 from apps.mappings.tasks import (
     schedule_auto_map_employees,
     schedule_auto_map_charge_card_employees

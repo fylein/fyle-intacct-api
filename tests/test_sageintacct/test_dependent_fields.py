@@ -7,7 +7,7 @@ from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.models import ExpenseAttribute
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
 
-from apps.mappings.models import ImportLog
+from fyle_integrations_imports.models import ImportLog
 from apps.sage_intacct.models import CostCode, CostType
 from apps.workspaces.models import FyleCredential
 from apps.fyle.models import DependentFieldSetting
@@ -55,7 +55,7 @@ def test_post_dependent_cost_type(mocker, db, create_cost_type, create_dependent
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
-    import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_TYPE', workspace_id=workspace_id)
     cost_types = CostType.objects.filter(workspace_id=workspace_id, is_imported=False)
     assert cost_types.count() == 1
 
@@ -97,7 +97,7 @@ def test_post_dependent_cost_code(mocker, db, create_cost_type, create_dependent
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
-    import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_CODE', workspace_id=workspace_id)
 
     ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', value='pro').update(active=True)
     posted_cost_types, is_errored = post_dependent_cost_code(import_log, create_dependent_field_setting, platform, {'workspace_id': 1})
@@ -138,7 +138,7 @@ def test_post_dependent_cost_code_2(mocker, db, add_project_mappings, create_dep
     fyle_credentials: FyleCredential = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
 
-    import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_CODE', workspace_id=workspace_id)
 
     CostCode.objects.create(
         workspace_id=workspace_id,
@@ -204,8 +204,8 @@ def test_post_dependent_expense_field_values(db, mocker, create_cost_type, creat
         return_value=None
     )
 
-    cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
-    cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_CODE', workspace_id=workspace_id)
+    cost_type_import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_TYPE', workspace_id=workspace_id)
     ExpenseAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT', value='pro').update(active=True)
 
     current_datetime = datetime.now()
@@ -365,7 +365,7 @@ def test_post_dependent_cost_code_standalone(db, mocker, add_project_mappings, c
     DependentFieldSetting.objects.filter(workspace_id=workspace_id).update(is_cost_type_import_enabled=False, last_successful_import_at=None)
     dependent_field_setting = DependentFieldSetting.objects.filter(workspace_id=workspace_id).first()
 
-    cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_CODE', workspace_id=workspace_id)
 
     post_dependent_cost_code_standalone(workspace_id, dependent_field_setting, platform, cost_code_import_log)
 
