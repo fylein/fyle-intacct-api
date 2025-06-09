@@ -33,6 +33,7 @@ def invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials=N
 
     if sage_intacct_credentials:
         if not sage_intacct_credentials.is_expired:
+            # TODO: Uncomment this when we have a FE Changes ready
             # patch_integration_settings(workspace_id, is_token_expired=True)
             pass
         sage_intacct_credentials.is_expired = True
