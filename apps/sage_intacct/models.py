@@ -642,10 +642,21 @@ def get_memo_or_purpose(
             if claim_number_in_reimbursable and claim_number_in_ccc:
                 group_by_key = 'claim_number'
             else:
-                claim_number_index = memo_structure.index('claim_number')
-                memo_structure.pop(claim_number_index)
-                memo_structure.insert(claim_number_index, 'expense_number')
-                group_by_key = 'claim_number' if expense_group.description.get('claim_number') else 'expense_number'
+                fund_source = expense_group.fund_source
+                if fund_source == 'CCC':
+                    grouping = expense_group_settings.corporate_credit_card_expense_group_fields
+                else:
+                    grouping = expense_group_settings.reimbursable_expense_group_fields
+
+                if 'claim_number' in grouping:
+                    group_by_key = 'claim_number'
+                else:
+                    group_by_key = 'expense_number'
+                if group_by_key == 'expense_number':
+                    claim_number_index = memo_structure.index('claim_number')
+                    memo_structure.pop(claim_number_index)
+                    memo_structure.insert(claim_number_index, 'expense_number')
+
         else:
             potential_keys = ['claim_number', 'expense_number']
             group_by_key = None
