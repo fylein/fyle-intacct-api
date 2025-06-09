@@ -636,7 +636,7 @@ def get_memo_or_purpose(
 
         if 'claim_number' in memo_structure:
             expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
-            
+
             claim_number_in_reimbursable = 'claim_number' in expense_group_settings.reimbursable_expense_group_fields
             claim_number_in_ccc = 'claim_number' in expense_group_settings.corporate_credit_card_expense_group_fields
             if claim_number_in_reimbursable and claim_number_in_ccc:
@@ -653,7 +653,7 @@ def get_memo_or_purpose(
                 if key in memo_structure:
                     group_by_key = key
                     break
-            
+
             if not group_by_key:
                 group_by_key = 'claim_number' if expense_group.description.get('claim_number') else 'expense_number'
 
@@ -662,7 +662,7 @@ def get_memo_or_purpose(
             'employee_name': lineitem.employee_name or "",
             group_by_key: getattr(lineitem, group_by_key) or "",
         }
-        
+
     else:
         details = {
             "employee_email": lineitem.employee_email or "",

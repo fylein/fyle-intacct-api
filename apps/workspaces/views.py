@@ -1,5 +1,6 @@
 from cryptography.fernet import Fernet
 
+from django.db.models import Q, QuerySet
 from django.conf import settings
 from django.core.cache import cache
 from django_q.tasks import async_task
@@ -25,14 +26,13 @@ from fyle_intacct_api.utils import assert_valid
 
 from apps.fyle.models import ExpenseGroupSettings
 from apps.fyle.helpers import get_cluster_domain
+from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
-from apps.workspaces.tasks import schedule_sync
 from apps.workspaces.models import (
     Workspace,
     Configuration,
     FyleCredential,
     LastExportDetail,
-    WorkspaceSchedule,
     SageIntacctCredential
 )
 from apps.workspaces.serializers import (
@@ -40,7 +40,6 @@ from apps.workspaces.serializers import (
     ConfigurationSerializer,
     FyleCredentialSerializer,
     LastExportDetailSerializer,
-    WorkspaceScheduleSerializer,
     SageIntacctCredentialSerializer,
 )
 
@@ -373,7 +372,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
         """
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace=workspace)
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
 
             return Response(
                 data=SageIntacctCredentialSerializer(sage_intacct_credentials).data,
@@ -451,54 +450,6 @@ class ConfigurationsView(generics.ListCreateAPIView):
             )
 
 
-class ScheduleView(viewsets.ViewSet):
-    """
-    Schedule View
-    """
-    def post(self, request: Request, **kwargs) -> Response:
-        """
-        Post Settings
-        """
-        schedule_enabled = request.data.get('schedule_enabled')
-        assert_valid(schedule_enabled is not None, 'Schedule enabled cannot be null')
-
-        hours = request.data.get('hours')
-        assert_valid(hours is not None, 'Hours cannot be left empty')
-
-        email_added = request.data.get('added_email')
-        emails_selected = request.data.get('selected_email')
-
-        workspace_schedule_settings = schedule_sync(
-            workspace_id=kwargs['workspace_id'],
-            schedule_enabled=schedule_enabled,
-            hours=hours,
-            email_added=email_added,
-            emails_selected=emails_selected
-        )
-
-        return Response(
-            data=WorkspaceScheduleSerializer(workspace_schedule_settings).data,
-            status=status.HTTP_200_OK
-        )
-
-    def get(self, *args, **kwargs) -> Response:
-        try:
-            schedule = WorkspaceSchedule.objects.get(workspace_id=kwargs['workspace_id'])
-
-            return Response(
-                data=WorkspaceScheduleSerializer(schedule).data,
-                status=status.HTTP_200_OK
-            )
-
-        except WorkspaceSchedule.DoesNotExist:
-            return Response(
-                data={
-                    'message': 'Schedule settings does not exist in workspace'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-
 class WorkspaceAdminsView(viewsets.ViewSet):
     """
     Workspace Admins View
@@ -532,6 +483,42 @@ class LastExportDetailView(generics.RetrieveAPIView):
 
     queryset = LastExportDetail.objects.filter(last_exported_at__isnull=False, total_expense_groups_count__gt=0)
     serializer_class = LastExportDetailSerializer
+
+    def get_queryset(self) -> QuerySet[LastExportDetail]:
+        return super().get_queryset()
+
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        response_data = serializer.data
+
+        start_date = request.query_params.get('start_date')
+
+        if start_date and response_data:
+            misc_task_log_types = ['CREATING_REIMBURSEMENT', 'CREATING_AP_PAYMENT', 'FETCHING_EXPENSES']
+
+            task_logs = TaskLog.objects.filter(
+                ~Q(type__in=misc_task_log_types),
+                workspace_id=kwargs['workspace_id'],
+                updated_at__gte=start_date,
+                status='COMPLETE',
+            ).order_by('-updated_at')
+
+            successful_count = task_logs.count()
+
+            failed_count = TaskLog.objects.filter(
+                ~Q(type__in=misc_task_log_types),
+                status__in=['FAILED', 'FATAL'],
+                workspace_id=kwargs['workspace_id'],
+            ).count()
+
+            response_data.update({
+                'repurposed_successful_count': successful_count,
+                'repurposed_failed_count': failed_count,
+                'repurposed_last_exported_at': task_logs.last().updated_at if task_logs.last() else None
+            })
+
+        return Response(response_data)
 
 
 class ExportToIntacctView(viewsets.ViewSet):

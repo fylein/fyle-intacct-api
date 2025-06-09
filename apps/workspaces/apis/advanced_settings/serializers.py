@@ -31,6 +31,7 @@ class ConfigurationSerializer(serializers.ModelSerializer):
     """
 
     top_level_memo_structure = serializers.ListField(allow_null=True)
+
     class Meta:
         model = Configuration
         fields = [
@@ -149,7 +150,8 @@ class WorkspaceSchedulesSerializer(serializers.ModelSerializer):
             'enabled',
             'interval_hours',
             'additional_email_options',
-            'emails_selected'
+            'emails_selected',
+            'is_real_time_export_enabled'
         ]
 
 

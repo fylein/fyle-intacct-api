@@ -196,7 +196,7 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=0
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
     mocker.patch.object(mock_platform.return_value.projects, 'sync')
 

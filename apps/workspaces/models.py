@@ -175,12 +175,22 @@ class SageIntacctCredential(models.Model):
     si_company_id = models.TextField(help_text='Stores Sage Intacct company id')
     si_company_name = models.TextField(help_text='Stores Sage Intacct company name', null=True)
     si_user_password = models.TextField(help_text='Stores Sage Intacct user password')
+    is_expired = models.BooleanField(default=False, help_text='Sage Intacct Password expiry flag')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
     class Meta:
         db_table = 'sage_intacct_credentials'
+
+    @staticmethod
+    def get_active_sage_intacct_credentials(workspace_id: int) -> 'SageIntacctCredential':
+        """
+        Get active Sage Intacct credentials
+        :param workspace_id: Workspace ID
+        :return: Sage Intacct credentials
+        """
+        return SageIntacctCredential.objects.get(workspace_id=workspace_id, is_expired=False)
 
 
 class FyleCredential(models.Model):
@@ -210,6 +220,7 @@ class WorkspaceSchedule(models.Model):
     error_count = models.IntegerField(null=True, help_text='Number of errors in export')
     additional_email_options = JSONField(default=list, help_text='Email and Name of person to send email', null=True)
     emails_selected = ArrayField(base_field=models.CharField(max_length=255), null=True, help_text='Emails that has to be send mail')
+    is_real_time_export_enabled = models.BooleanField(default=False)
     schedule = models.OneToOneField(Schedule, on_delete=models.PROTECT, null=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, null=True, help_text='Updated at datetime')
