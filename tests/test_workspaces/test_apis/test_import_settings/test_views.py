@@ -84,11 +84,11 @@ def test_import_settings(mocker, api_client, test_connection):
     assert mapping.import_to_fyle == True
 
     schedule = Schedule.objects.filter(
-        func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+        func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
         args='{}'.format(1),
     ).first()
 
-    assert schedule.func == 'apps.mappings.imports.queues.chain_import_fields_to_fyle'
+    assert schedule.func == 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle'
     assert schedule.args == '1'
 
     invalid_configurations = data['import_settings']
