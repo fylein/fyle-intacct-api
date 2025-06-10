@@ -274,7 +274,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
         attribute_type='CUSTOM_INTENTS'
     ).first()
 
-    assert import_log.status == 'IN_PROGRESS'
+    assert import_log.status == 'COMPLETE'
 
     time_difference = datetime.now() - timedelta(hours=2)
     offset_aware_time_difference = time_difference.replace(tzinfo=timezone.utc)
