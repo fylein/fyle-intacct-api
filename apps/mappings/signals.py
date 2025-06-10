@@ -159,7 +159,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
                 sync_after=last_successful_run_at,
                 prepend_code_to_name=prepend_code_to_name,
                 sdk_connection=sage_intacct_connection,
-                destination_sync_methods=[SYNC_METHODS[instance.destination_field]]
+                destination_sync_methods=[SYNC_METHODS.get(instance.destination_field, 'user_defined_dimensions')]
             )
 
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
