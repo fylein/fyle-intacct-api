@@ -141,6 +141,9 @@ class Configuration(AutoAddCreateUpdateInfoMixin, models.Model):
         base_field=models.CharField(max_length=100), default=get_default_memo_fields,
         help_text='list of system fields for creating custom memo'
     )
+    top_level_memo_structure = ArrayField(
+        base_field=models.CharField(max_length=100), default=list, help_text='list of system fields for creating custom description for top level'
+    )
     auto_create_destination_entity = models.BooleanField(default=False, help_text='Auto create vendor / employee')
     is_journal_credit_billable = models.BooleanField(default=False, help_text='Billable on journal entry credit line')
     change_accounting_period = models.BooleanField(default=True, help_text='Change the accounting period')

@@ -1669,7 +1669,8 @@ CREATE TABLE public.configurations (
     created_by character varying(255),
     updated_by character varying(255),
     skip_accounting_export_summary_post boolean NOT NULL,
-    je_single_credit_line boolean NOT NULL
+    je_single_credit_line boolean NOT NULL,
+    top_level_memo_structure character varying(100)[] NOT NULL
 );
 
 
@@ -4665,8 +4666,8 @@ COPY public.charge_card_transactions (id, charge_card_id, description, supdoc_id
 -- Data for Name: configurations; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by, skip_accounting_export_summary_post, je_single_credit_line) FROM stdin;
-1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	t	f	{}	\N	\N	f	f
+COPY public.configurations (id, reimbursable_expenses_object, created_at, updated_at, workspace_id, corporate_credit_card_expenses_object, import_projects, sync_fyle_to_sage_intacct_payments, sync_sage_intacct_to_fyle_payments, auto_map_employees, import_categories, auto_create_destination_entity, memo_structure, import_tax_codes, change_accounting_period, import_vendors_as_merchants, employee_field_mapping, use_merchant_in_journal_line, is_journal_credit_billable, auto_create_merchants_as_vendors, import_code_fields, created_by, updated_by, skip_accounting_export_summary_post, je_single_credit_line, top_level_memo_structure) FROM stdin;
+1	BILL	2022-09-20 08:39:32.015647+00	2022-09-20 08:46:24.926422+00	1	BILL	t	t	f	EMAIL	f	t	{employee_email,category,spent_on,report_number,purpose,expense_link}	t	t	t	VENDOR	f	t	f	{}	\N	\N	f	f	{}
 \.
 
 
@@ -5967,6 +5968,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 237	workspaces	0045_sageintacctcredential_is_expired	2025-06-03 13:10:42.732351+00
 238	workspaces	0046_merge_20250603_1307	2025-06-03 13:10:42.733986+00
 239	fyle_integrations_imports	0001_initial	2025-06-03 09:13:14.987582+00
+240	workspaces	0047_configuration_top_level_memo_structure	2025-06-03 13:10:42.735621+00
 \.
 
 
@@ -10006,7 +10008,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 239, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 240, true);
 
 
 --

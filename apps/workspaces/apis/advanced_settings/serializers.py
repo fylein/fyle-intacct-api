@@ -29,6 +29,9 @@ class ConfigurationSerializer(serializers.ModelSerializer):
     """
     Serializer for the Configuration Form/API
     """
+
+    top_level_memo_structure = serializers.ListField(allow_null=True)
+
     class Meta:
         model = Configuration
         fields = [
@@ -37,6 +40,7 @@ class ConfigurationSerializer(serializers.ModelSerializer):
             'sync_sage_intacct_to_fyle_payments',
             'auto_create_destination_entity',
             'memo_structure',
+            'top_level_memo_structure',
             'auto_create_merchants_as_vendors',
             'je_single_credit_line'
         ]
@@ -200,6 +204,7 @@ class AdvancedConfigurationsSerializer(serializers.ModelSerializer):
                 'auto_create_destination_entity': configurations.get('auto_create_destination_entity'),
                 'change_accounting_period': configurations.get('change_accounting_period'),
                 'memo_structure': configurations.get('memo_structure'),
+                'top_level_memo_structure': configurations.get('top_level_memo_structure'),
                 'auto_create_merchants_as_vendors': configurations.get('auto_create_merchants_as_vendors'),
                 'je_single_credit_line': configurations.get('je_single_credit_line')
             },

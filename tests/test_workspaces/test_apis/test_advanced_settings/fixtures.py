@@ -6,6 +6,7 @@ data = {
             "sync_sage_intacct_to_fyle_payments": False,
             "auto_create_destination_entity": False,
             "memo_structure": ["merchant", "purpose"],
+            "top_level_memo_structure": ["employee_email", "employee_name", "claim_number"],
             "auto_create_merchants_as_vendors": False,
             "je_single_credit_line": False,
         },
@@ -36,6 +37,7 @@ data = {
             "memo_structure": ["merchant", "purpose"],
             "auto_create_merchants_as_vendors": False,
             "je_single_credit_line": False,
+            "top_level_memo_structure": ["employee_email", "employee_name", "claim_number"],
         },
         "general_mappings": {
             "payment_account": {"id": "100", "name": "First Community Bank"},
