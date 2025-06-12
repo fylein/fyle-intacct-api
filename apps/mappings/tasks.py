@@ -266,6 +266,9 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     elif sageintacct_attribute_type == 'CUSTOMER':
         sage_intacct_connection.sync_customers()
 
+    elif sageintacct_attribute_type == 'ALLOCATION':
+        sage_intacct_connection.sync_allocations()
+
     else:
         sage_intacct_connection.sync_user_defined_dimensions()
 

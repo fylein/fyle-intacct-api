@@ -56,5 +56,6 @@ SYNC_METHODS = {
     'CUSTOMER': 'customers',
     'COST_TYPE': 'cost_types',
     'EXPENSE_TYPE': 'expense_types',
-    'ACCOUNT': 'accounts'
+    'ACCOUNT': 'accounts',
+    'ALLOCATION': 'allocations'
 }
