@@ -12,7 +12,7 @@ from fyle_accounting_mappings.models import (
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
 from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
-from apps.workspaces.models import Configuration, Workspace
+from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
 from apps.sage_intacct.models import (
     Bill,
     APPayment,
@@ -30,7 +30,7 @@ from apps.sage_intacct.models import (
     get_memo,
     get_ccc_account_id,
     get_item_id_or_none,
-    get_expense_purpose,
+    get_memo_or_purpose,
     get_task_id_or_none,
     get_transaction_date,
     get_class_id_or_none,
@@ -617,7 +617,7 @@ def test_get_expense_purpose(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        expense_purpose = get_expense_purpose(workspace_id, lineitem, category, workspace_general_settings)
+        expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
 
         assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
 
@@ -629,8 +629,84 @@ def test_get_expense_purpose(db):
         category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
             lineitem.category, lineitem.sub_category)
 
-        expense_purpose = get_expense_purpose(workspace_id, lineitem, category, workspace_general_settings)
+        expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
         assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+
+
+def test_get_memo_or_purpose_top_level(db):
+    """
+    Test get memo or purpose with is_top_level=True
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Set up top_level_memo_structure
+    workspace_general_settings.top_level_memo_structure = ['employee_email', 'employee_name', 'claim_number']
+    workspace_general_settings.save()
+
+    expenses = expense_group.expenses.all()
+
+    for lineitem in expenses:
+        category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            lineitem.category, lineitem.sub_category)
+
+        # Test with is_top_level=True
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
+
+        # Expected format: employee_email - employee_name - group_by
+        # Since expense_group_settings.description has claim_number, group_by should be claim_number
+        expected_memo = 'ashwin.t@fyle.in -  - C/2022/09/R/22'
+        assert top_level_memo == expected_memo
+
+    # Test with different top_level_memo_structure
+    workspace_general_settings.top_level_memo_structure = ['employee_name', 'claim_number']
+    workspace_general_settings.save()
+
+    for lineitem in expenses:
+        category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            lineitem.category, lineitem.sub_category)
+
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
+
+        # Expected format: employee_name - group_by
+        expected_memo = ' - C/2022/09/R/22'
+        assert top_level_memo == expected_memo
+
+    # Test with empty top_level_memo_structure (should fall back to regular memo_structure)
+    workspace_general_settings.top_level_memo_structure = []
+    workspace_general_settings.save()
+
+    for lineitem in expenses:
+        category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            lineitem.category, lineitem.sub_category)
+
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=False, export_table=ExpenseReport)
+
+        # Should fall back to regular memo structure
+        expected_memo = 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/enterprise/view_expense/txCqLqsEnAjf?org_id=or79Cob97KSh'
+        assert top_level_memo == expected_memo
+
+    # Test when expense_group_settings has expense_number instead of claim_number
+    expense_group = ExpenseGroup.objects.get(workspace_id=workspace_id, expenses__in=expenses)
+
+    # Modify description to not have claim_number
+    expense_group.description = {'expense_number': 'E/2022/09/T/22'}
+    expense_group.save()
+
+    workspace_general_settings.top_level_memo_structure = ['employee_email', 'expense_number']
+    workspace_general_settings.save()
+
+    for lineitem in expenses:
+        category = lineitem.category if lineitem.category == lineitem.sub_category else '{0} / {1}'.format(
+            lineitem.category, lineitem.sub_category)
+
+        top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
+
+        # Should use expense_number as group_by
+        expected_memo = 'ashwin.t@fyle.in - E/2022/09/T/22'
+        assert top_level_memo == expected_memo
 
 
 def test_get_transaction_date(db):
@@ -754,7 +830,7 @@ def test_get_memo(db):
     expense_group_settings.reimbursable_export_date_type = 'spent_at'
     expense_group_settings.save()
 
-    get_memo(expense_group, Bill, workspace_id)
+    get_memo(expense_group, ExportTable=Bill, workspace_id=workspace_id)
 
     expense_group = ExpenseGroup.objects.get(id=2)
     workspace_id = expense_group.workspace.id
@@ -766,12 +842,12 @@ def test_get_memo(db):
     expense_group.description['employee_email'] = 'abc@def.co'
     expense_group.save()
 
-    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=workspace_id)
     assert memo == 'Corporate Card Expense by abc@def.co'
 
     ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
-    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=workspace_id)
     assert memo == 'Corporate Card Expense by abc@def.co - 1'
 
     for i in range(3):
@@ -781,7 +857,7 @@ def test_get_memo(db):
 
         ChargeCardTransaction.create_charge_card_transaction(expense_group)
 
-    memo = get_memo(expense_group, ChargeCardTransaction, workspace_id)
+    memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=workspace_id)
     assert memo == 'Corporate Card Expense by abc@def.co - 3'
 
 
@@ -1241,3 +1317,80 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
         assert bill_lineitem.customer_id == '10061'
         assert bill_lineitem.item_id == '1012'
         assert bill_lineitem.allocation_id == 'RENT'
+
+
+def test_post_bill_with_vendor_mapping(mocker, db):
+    """
+    Test create_bill success with vendor mapping
+    """
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.fund_source = 'CCC'
+    expense_group.save()
+    expenses = expense_group.expenses.all()
+
+    expenses.update(
+        fund_source='CCC',
+        corporate_card_id='baccjpfvrtsPg9'
+    )
+
+    vendor = DestinationAttribute.objects.create(
+        value='abcd',
+        destination_id='ABCD',
+        attribute_type='VENDOR',
+        display_name='Vendor',
+        workspace_id=1,
+        active=True,
+        detail={
+            'email': 'vendor123@fyle.in'
+        }
+    )
+
+    corporate_card = ExpenseAttribute.objects.create(
+        attribute_type='CORPORATE_CARD',
+        value='American Express - 61662',
+        display_name='Corporate Card',
+        source_id='baccjpfvrtsPg9',
+        workspace_id=1,
+        active=True
+    )
+
+    _ = Mapping.objects.create(
+        workspace_id=1,
+        source_id=corporate_card.id,
+        destination_id=vendor.id,
+        source_type='CORPORATE_CARD',
+        destination_type='VENDOR',
+    )
+
+    bill = Bill.create_bill(expense_group)
+    assert bill.vendor_id == 'ABCD'
+
+
+def test_post_bill_with_no_vendor_mapping(mocker, db):
+    """
+    Test create_bill success with no corporate card vendor mapping
+    """
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.fund_source = 'CCC'
+    expense_group.save()
+    expenses = expense_group.expenses.all()
+
+    expenses.update(
+        fund_source='CCC',
+        corporate_card_id='baccjpfvrtsPg9'
+    )
+
+    bill = Bill.create_bill(expense_group)
+    general_mappings = GeneralMapping.objects.get(workspace_id=1)
+    assert bill.vendor_id == general_mappings.default_ccc_vendor_id
+
+
+def test_get_active_sage_intacct_credentials(mocker):
+    """
+    Test get active sage intacct credentials
+    """
+    mock_cred = mocker.Mock()
+    mock_get = mocker.patch('apps.workspaces.models.SageIntacctCredential.objects.get', return_value=mock_cred)
+    result = SageIntacctCredential.get_active_sage_intacct_credentials(123)
+    mock_get.assert_called_once_with(workspace_id=123, is_expired=False)
+    assert result == mock_cred

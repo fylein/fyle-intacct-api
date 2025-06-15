@@ -5,15 +5,15 @@ from typing import Optional, Union
 from datetime import datetime, timezone
 
 import requests
+from apps.mappings.tasks import construct_tasks_and_chain_import_fields_to_fyle
 import django_filters
 from django.conf import settings
 from django.db.models import Q
 from django.db import models
-from django_q.tasks import Chain
 from rest_framework.exceptions import ValidationError
 
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
+from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
@@ -254,53 +254,8 @@ def handle_refresh_dimensions(workspace_id: int) -> None:
     workspace = Workspace.objects.get(id=workspace_id)
     configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
 
-    import_code_fields = [] if not configuration else configuration.import_code_fields
-
-    mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
-    chain = Chain()
-
-    for mapping_setting in mapping_settings:
-        if mapping_setting.source_field in ['PROJECT', 'COST_CENTER'] or mapping_setting.is_custom:
-            chain.append(
-                'apps.mappings.imports.tasks.trigger_import_via_schedule',
-                int(workspace_id),
-                mapping_setting.destination_field,
-                mapping_setting.source_field,
-                mapping_setting.is_custom,
-                True if mapping_setting.destination_field in import_code_fields else False,
-                q_options={'cluster': 'import'}
-            )
-
-    if configuration and configuration.import_vendors_as_merchants:
-        chain.append(
-            'apps.mappings.imports.tasks.trigger_import_via_schedule',
-            int(workspace_id),
-            'VENDOR',
-            'MERCHANT',
-            False,
-            False,
-            q_options={'cluster': 'import'}
-        )
-
-    if configuration and configuration.import_categories:
-        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' or \
-            configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
-            destination_field = 'EXPENSE_TYPE'
-        else:
-            destination_field = 'ACCOUNT'
-
-        chain.append(
-            'apps.mappings.imports.tasks.trigger_import_via_schedule',
-            int(workspace_id),
-            destination_field,
-            'CATEGORY',
-            False,
-            True if destination_field in import_code_fields else False,
-            q_options={'cluster': 'import'}
-        )
-
-    if chain.length() > 0:
-        chain.run()
+    if configuration:
+        construct_tasks_and_chain_import_fields_to_fyle(workspace_id)
 
     sync_dimensions(workspace_id)
 
@@ -487,17 +442,21 @@ def get_fund_source(workspace_id: int) -> list[str]:
     return fund_source
 
 
-def handle_import_exception(task_log: TaskLog) -> None:
+def handle_import_exception(task_log: TaskLog | None) -> None:
     """
     Handle import exception
     :param task_log: task log
     :return: None
     """
     error = traceback.format_exc()
-    task_log.detail = {'error': error}
-    task_log.status = 'FATAL'
-    task_log.save()
-    logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+    if task_log:
+        task_log.detail = {'error': error}
+        task_log.status = 'FATAL'
+        task_log.updated_at = datetime.now()
+        task_log.save(update_fields=['detail', 'status', 'updated_at'])
+        logger.error('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
+    else:
+        logger.error('Something unexpected happened %s', error)
 
 
 def assert_valid_request(workspace_id:int, fyle_org_id:str) -> None:
@@ -633,3 +592,12 @@ class ExpenseSearchFilter(AdvanceSearchFilter):
         model = Expense
         fields = ['org_id', 'is_skipped', 'updated_at__gte', 'updated_at__lte']
         or_fields = ['expense_number', 'employee_name', 'employee_email', 'claim_number']
+
+
+def update_task_log_post_import(task_log: TaskLog, status: str, message: str = None, error: str = None) -> None:
+    """Helper function to update task log status and details"""
+    if task_log:
+        task_log.status = status
+        task_log.detail = {"message": message} if message else {"error": error}
+        task_log.updated_at = datetime.now()
+        task_log.save(update_fields=['status', 'detail', 'updated_at'])

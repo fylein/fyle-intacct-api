@@ -196,7 +196,12 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         return_value=0
     )
 
-    mock_platform = mocker.patch('apps.mappings.imports.modules.projects.PlatformConnector')
+    mocker.patch(
+        'sageintacctsdk.apis.Allocations.get_all_generator',
+        return_value=[]
+    )
+
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
     mocker.patch.object(mock_platform.return_value.projects, 'sync')
 
@@ -206,6 +211,8 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
     sync_sage_intacct_attributes('VENDOR', workspace_id=workspace_id)
 
     sync_sage_intacct_attributes('COST_TYPE', workspace_id)
+
+    sync_sage_intacct_attributes('ALLOCATION', workspace_id)
 
     projects = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').count()
     mappings = Mapping.objects.filter(workspace_id=workspace_id, destination_type='PROJECT').count()

@@ -17,7 +17,8 @@ class AdvancedConfigurationsTriggers:
             schedule_enabled=workspace_schedule.get('enabled'),
             hours=workspace_schedule.get('interval_hours'),
             email_added=workspace_schedule.get('additional_email_options'),
-            emails_selected=workspace_schedule.get('emails_selected')
+            emails_selected=workspace_schedule.get('emails_selected'),
+            is_real_time_export_enabled=workspace_schedule.get('is_real_time_export_enabled')
         )
 
     @staticmethod

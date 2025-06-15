@@ -2,7 +2,9 @@ import re
 import json
 import logging
 from datetime import datetime, timedelta
+from typing import Optional
 
+from apps.workspaces.helpers import get_app_name
 import unidecode
 from django.db.models import Q
 from django.utils import timezone
@@ -30,6 +32,7 @@ from apps.workspaces.models import (
 
 from apps.sage_intacct.models import (
     Bill,
+    CostCode,
     CostType,
     APPayment,
     DimensionDetail,
@@ -65,9 +68,11 @@ SYNC_UPPER_LIMIT = {
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
-    'PROJECT': 'apps.mappings.imports.modules.projects.disable_projects',
-    'ACCOUNT': 'apps.mappings.imports.modules.categories.disable_categories',
-    'COST_CENTER': 'apps.mappings.imports.modules.cost_centers.disable_cost_centers'
+    'PROJECT': 'fyle_integrations_imports.modules.projects.disable_projects',
+    'ACCOUNT': 'fyle_integrations_imports.modules.categories.disable_categories',
+    'EXPENSE_TYPE': 'fyle_integrations_imports.modules.categories.disable_categories',
+    'COST_CENTER': 'fyle_integrations_imports.modules.cost_centers.disable_cost_centers',
+    'VENDOR': 'fyle_integrations_imports.modules.merchants.disable_merchants'
 }
 
 
@@ -95,6 +100,63 @@ class SageIntacctConnector:
         )
 
         self.workspace_id = workspace_id
+
+    def is_duplicate_deletion_skipped(self, attribute_type: str) -> bool:
+        """
+        Check if duplicate deletion is skipped for the attribute type
+        :param attribute_type: Type of the attribute
+        :return: Whether deletion is skipped
+        """
+        if attribute_type in [
+            'ACCOUNT', 'VENDOR', 'ITEM', 'CUSTOMER',
+            'DEPARTMENT', 'CLASS', 'EXPENSE_TYPE',
+            'PROJECT', 'LOCATION'
+        ]:
+            return False
+
+        return True
+
+    def is_import_enabled(self, attribute_type: str) -> bool:
+        """
+        Check if import is enabled for the attribute type
+        :param attribute_type: Type of the attribute
+        :return: Whether import is enabled
+        """
+        is_import_to_fyle_enabled = False
+
+        configuration = Configuration.objects.filter(workspace_id=self.workspace_id).first()
+        if not configuration:
+            return is_import_to_fyle_enabled
+
+        if attribute_type in ['ACCOUNT', 'EXPENSE_TYPE'] and configuration.import_categories:
+            is_import_to_fyle_enabled = True
+
+        elif attribute_type == 'VENDOR' and configuration.import_vendors_as_merchants:
+            is_import_to_fyle_enabled = True
+
+        elif attribute_type in ['CUSTOMER', 'DEPARTMENT', 'CLASS', 'LOCATION', 'PROJECT', 'ITEM']:
+            mapping_setting = MappingSetting.objects.filter(workspace_id=self.workspace_id, destination_field=attribute_type).first()
+            if mapping_setting and mapping_setting.import_to_fyle:
+                is_import_to_fyle_enabled = True
+
+        return is_import_to_fyle_enabled
+
+    def get_attribute_disable_callback_path(self, attribute_type: str) -> Optional[str]:
+        """
+        Get the attribute disable callback path
+        :param attribute_type: Type of the attribute
+        :return: attribute disable callback path or none
+        """
+        if attribute_type in ['ACCOUNT', 'VENDOR', 'EXPENSE_TYPE']:
+            return ATTRIBUTE_DISABLE_CALLBACK_PATH.get(attribute_type)
+
+        mapping_setting = MappingSetting.objects.filter(
+            workspace_id=self.workspace_id,
+            destination_field=attribute_type
+        ).first()
+
+        if mapping_setting and not mapping_setting.is_custom:
+            return ATTRIBUTE_DISABLE_CALLBACK_PATH.get(mapping_setting.source_field)
 
     def get_tax_solution_id_or_none(self, lineitems: list[ExpenseReportLineitem | BillLineitem | JournalEntryLineitem | ChargeCardTransactionLineitem]) -> str:
         """
@@ -194,7 +256,7 @@ class SageIntacctConnector:
 
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
-        is_account_import_enabled = self.is_import_enabled('ACCOUNT', self.workspace_id)
+        is_account_import_enabled = self.is_import_enabled('ACCOUNT')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         account_generator = self.connection.accounts.get_all_generator(**params)
@@ -208,7 +270,7 @@ class SageIntacctConnector:
             for account in accounts:
                 account_attributes['account'].append({
                     'attribute_type': 'ACCOUNT',
-                    'display_name': 'account',
+                    'display_name': 'Account',
                     'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO'],
                     'active': account['STATUS'] == 'active',
@@ -225,8 +287,10 @@ class SageIntacctConnector:
                     attribute_type.upper(),
                     self.workspace_id,
                     True,
-                    attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
-                    is_import_to_fyle_enabled=is_account_import_enabled
+                    app_name=get_app_name(),
+                    attribute_disable_callback_path=self.get_attribute_disable_callback_path('ACCOUNT'),
+                    is_import_to_fyle_enabled=is_account_import_enabled,
+                    skip_deletion=self.is_duplicate_deletion_skipped('ACCOUNT')
                 )
         return []
 
@@ -239,11 +303,13 @@ class SageIntacctConnector:
             logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
-        fields = ['TITLE', 'DEPARTMENTID']
+        fields = ['TITLE', 'DEPARTMENTID', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='DEPARTMENT')
-        is_import_enabled = self.is_import_enabled('DEPARTMENT', self.workspace_id)
+        is_import_enabled = self.is_import_enabled('DEPARTMENT')
 
-        department_generator = self.connection.departments.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+
+        department_generator = self.connection.departments.get_all_generator(**params)
 
         department_attributes = []
 
@@ -254,7 +320,7 @@ class SageIntacctConnector:
                     'display_name': 'department',
                     'value': department['TITLE'],
                     'destination_id': department['DEPARTMENTID'],
-                    'active': True,
+                    'active': department['STATUS'] == 'active',
                     'code': department['DEPARTMENTID']
                 })
 
@@ -263,8 +329,10 @@ class SageIntacctConnector:
             'DEPARTMENT',
             self.workspace_id,
             True,
-            attribute_disable_callback_path=self.get_disable_attribute_callback_func('DEPARTMENT'),
-            is_import_to_fyle_enabled=is_import_enabled
+            app_name=get_app_name(),
+            attribute_disable_callback_path=self.get_attribute_disable_callback_path('DEPARTMENT'),
+            is_import_to_fyle_enabled=is_import_enabled,
+            skip_deletion=self.is_duplicate_deletion_skipped('DEPARTMENT')
         )
 
         return []
@@ -280,7 +348,7 @@ class SageIntacctConnector:
 
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_TYPE')
-        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE', self.workspace_id)
+        is_expense_type_import_enabled = self.is_import_enabled('EXPENSE_TYPE')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         expense_type_generator = self.connection.expense_types.get_all_generator(**params)
@@ -307,8 +375,10 @@ class SageIntacctConnector:
             'EXPENSE_TYPE',
             self.workspace_id,
             True,
-            attribute_disable_callback_path=ATTRIBUTE_DISABLE_CALLBACK_PATH['ACCOUNT'],
-            is_import_to_fyle_enabled=is_expense_type_import_enabled
+            app_name=get_app_name(),
+            attribute_disable_callback_path=self.get_attribute_disable_callback_path('EXPENSE_TYPE'),
+            is_import_to_fyle_enabled=is_expense_type_import_enabled,
+            skip_deletion=self.is_duplicate_deletion_skipped('EXPENSE_TYPE')
         )
         return []
 
@@ -393,7 +463,7 @@ class SageIntacctConnector:
         Sync Cost Codes
         """
         attribute_count = self.connection.tasks.count(field=None, value=None)
-        logger.info("attribute_count: %s", attribute_count)
+        logger.info("Cost Code count for workspace %s: %s", self.workspace_id, attribute_count)
 
         if not self.is_sync_allowed(attribute_type = 'cost_codes', attribute_count = attribute_count):
             logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
@@ -409,28 +479,9 @@ class SageIntacctConnector:
             args['updated_at'] = latest_synced_timestamp.strftime('%m/%d/%Y')
 
         tasks_generator = self.connection.tasks.get_all_generator(field=None, value=None, fields=fields, updated_at=args.get('updated_at', None))
-        tasks_attribute = []
 
         for tasks in tasks_generator:
-            for task in tasks:
-                detail = {
-                    'project_id': task['PROJECTID'],
-                    'project_name': task['PROJECTNAME'],
-                    'record_no': task['RECORDNO']
-                }
-
-                tasks_attribute.append({
-                    'attribute_type': 'COST_CODE',
-                    'display_name': 'Cost Code',
-                    'value': task['NAME'],
-                    'destination_id': task['TASKID'],
-                    'active': True,
-                    'detail': detail,
-                    'code': task['TASKID']
-                })
-
-            DestinationAttribute.bulk_create_or_update_destination_attributes(tasks_attribute, 'COST_CODE', self.workspace_id, True)
-            tasks_attribute = []
+            CostCode.bulk_create_or_update(tasks, self.workspace_id)
 
         dependent_field_setting.last_synced_at = datetime.now()
         dependent_field_setting.save()
@@ -447,7 +498,7 @@ class SageIntacctConnector:
         fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-        is_project_import_enabled = self.is_import_enabled('PROJECT', self.workspace_id)
+        is_project_import_enabled = self.is_import_enabled('PROJECT')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         project_generator = self.connection.projects.get_all_generator(**params)
@@ -476,8 +527,10 @@ class SageIntacctConnector:
                 'PROJECT',
                 self.workspace_id,
                 True,
-                attribute_disable_callback_path=self.get_disable_attribute_callback_func('PROJECT'),
-                is_import_to_fyle_enabled=is_project_import_enabled
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('PROJECT'),
+                is_import_to_fyle_enabled=is_project_import_enabled,
+                skip_deletion=self.is_duplicate_deletion_skipped('PROJECT')
             )
 
         return []
@@ -491,10 +544,13 @@ class SageIntacctConnector:
             logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
-        fields = ['NAME', 'ITEMID', 'ITEMTYPE']
+        fields = ['NAME', 'ITEMID', 'ITEMTYPE', 'STATUS']
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ITEM')
-        item_generator = self.connection.items.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+
+        item_generator = self.connection.items.get_all_generator(**params)
 
         item_attributes = []
 
@@ -507,14 +563,18 @@ class SageIntacctConnector:
                         'display_name': 'item',
                         'value': item['NAME'],
                         'destination_id': item['ITEMID'],
-                        'active': True
+                        'active': item['STATUS'] == 'active'
                     })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 item_attributes,
                 'ITEM',
                 self.workspace_id,
-                True
+                True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('ITEM'),
+                skip_deletion=self.is_duplicate_deletion_skipped('ITEM'),
+                is_import_to_fyle_enabled=self.is_import_enabled('ITEM')
             )
 
         return []
@@ -527,9 +587,10 @@ class SageIntacctConnector:
         if not self.is_sync_allowed(attribute_type = 'locations', attribute_count = attribute_count):
             logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
-        fields = ['NAME', 'LOCATIONID']
+        fields = ['NAME', 'LOCATIONID', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION')
-        location_generator = self.connection.locations.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        location_generator = self.connection.locations.get_all_generator(**params)
 
         location_attributes = []
 
@@ -540,11 +601,16 @@ class SageIntacctConnector:
                     'display_name': 'location',
                     'value': location['NAME'],
                     'destination_id': location['LOCATIONID'],
-                    'active': True
+                    'active': location['STATUS'] == 'active'
                 })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
-            location_attributes, 'LOCATION', self.workspace_id, True)
+            location_attributes, 'LOCATION', self.workspace_id, True,
+            app_name=get_app_name(),
+            attribute_disable_callback_path=self.get_attribute_disable_callback_path('LOCATION'),
+            skip_deletion=self.is_duplicate_deletion_skipped('LOCATION'),
+            is_import_to_fyle_enabled=self.is_import_enabled('LOCATION')
+        )
 
         return []
 
@@ -681,6 +747,9 @@ class SageIntacctConnector:
             for allocation in allocations:
                 allocation_entry_generator = self.connection.allocation_entry.get_all_generator(field='allocation.ALLOCATIONID', value=allocation['ALLOCATIONID'])
                 for allocation_entries in allocation_entry_generator:
+                    if not allocation_entries:
+                        continue
+
                     detail = {}
                     for allocation_entry in allocation_entries:
                         value = allocation_entry['ALLOCATIONID']
@@ -756,8 +825,11 @@ class SageIntacctConnector:
             logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
+        fields = ['NAME', 'CLASSID', 'STATUS']
+
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CLASS')
-        class_generator = self.connection.classes.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CLASSID'], updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        class_generator = self.connection.classes.get_all_generator(**params)
         class_attributes = []
 
         for _classes in class_generator:
@@ -767,11 +839,16 @@ class SageIntacctConnector:
                     'display_name': 'class',
                     'value': _class['NAME'],
                     'destination_id': _class['CLASSID'],
-                    'active': True
+                    'active': _class['STATUS'] == 'active'
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                class_attributes, 'CLASS', self.workspace_id, True)
+                class_attributes, 'CLASS', self.workspace_id, True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('CLASS'),
+                skip_deletion=self.is_duplicate_deletion_skipped('CLASS'),
+                is_import_to_fyle_enabled=self.is_import_enabled('CLASS')
+            )
 
         return []
 
@@ -784,8 +861,11 @@ class SageIntacctConnector:
             logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
+        fields = ['NAME', 'CUSTOMERID', 'STATUS']
+
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='CUSTOMER')
-        customer_generator = self.connection.customers.get_all_generator(field='STATUS', value='active', fields=['NAME', 'CUSTOMERID'], updated_at=latest_updated_at if latest_updated_at else None)
+        params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
+        customer_generator = self.connection.customers.get_all_generator(**params)
 
         customer_attributes = []
 
@@ -796,11 +876,16 @@ class SageIntacctConnector:
                     'display_name': 'customer',
                     'value': customer['NAME'],
                     'destination_id': customer['CUSTOMERID'],
-                    'active': True
+                    'active': customer['STATUS'] == 'active'
                 })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                customer_attributes, 'CUSTOMER', self.workspace_id, True)
+                customer_attributes, 'CUSTOMER', self.workspace_id, True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('CUSTOMER'),
+                skip_deletion=self.is_duplicate_deletion_skipped('CUSTOMER'),
+                is_import_to_fyle_enabled=self.is_import_enabled('CUSTOMER')
+            )
 
         return []
 
@@ -1045,7 +1130,11 @@ class SageIntacctConnector:
 
         if vendor_attributes:
             DestinationAttribute.bulk_create_or_update_destination_attributes(
-                vendor_attributes, 'VENDOR', self.workspace_id, True
+                vendor_attributes, 'VENDOR', self.workspace_id, True,
+                app_name=get_app_name(),
+                attribute_disable_callback_path=self.get_attribute_disable_callback_path('VENDOR'),
+                skip_deletion=self.is_duplicate_deletion_skipped('VENDOR'),
+                is_import_to_fyle_enabled=self.is_import_enabled('VENDOR')
             )
 
         return []
@@ -1328,11 +1417,162 @@ class SageIntacctConnector:
         logger.info("| Payload for the charge card transaction creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, CHARGE_CARD_TRANSACTION_PAYLOAD = {}}}".format(self.workspace_id, charge_card_transaction.expense_group.id, charge_card_transaction_payload))
         return charge_card_transaction_payload
 
-    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], recordno: str = None) -> dict:
+    def __get_dimensions_values(self, lineitem: JournalEntryLineitem, workspace_id: int) -> dict:
+        """
+        Get dimension values for a line item, handling allocation if present
+        :param lineitem: JournalEntryLineitem object
+        :param workspace_id: Workspace ID
+        :return: Dictionary of dimension values
+        """
+        dimensions_values = {
+            'project_id': lineitem.project_id,
+            'location_id': lineitem.location_id,
+            'department_id': lineitem.department_id,
+            'class_id': lineitem.class_id,
+            'customer_id': lineitem.customer_id,
+            'item_id': lineitem.item_id,
+            'task_id': lineitem.task_id,
+            'cost_type_id': lineitem.cost_type_id
+        }
+
+        if lineitem.allocation_id:
+            allocation_mapping = {
+                'LOCATIONID': 'location_id',
+                'DEPARTMENTID': 'department_id',
+                'CLASSID': 'class_id',
+                'CUSTOMERID': 'customer_id',
+                'ITEMID': 'item_id',
+                'TASKID': 'task_id',
+                'COSTTYPEID': 'cost_type_id',
+                'PROJECTID': 'project_id'
+            }
+
+            allocation_detail = DestinationAttribute.objects.filter(
+                workspace_id=workspace_id,
+                attribute_type='ALLOCATION',
+                value=lineitem.allocation_id
+            ).first().detail
+
+            for allocation_dimension, dimension_variable_name in allocation_mapping.items():
+                if allocation_dimension in allocation_detail.keys():
+                    dimensions_values[dimension_variable_name] = None
+
+            allocation_dimensions = set(allocation_detail.keys())
+            lineitem.user_defined_dimensions = [
+                user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions
+                if list(user_defined_dimension.keys())[0] not in allocation_dimensions
+            ]
+
+        return dimensions_values
+
+    def __get_location_id_for_journal_entry(self, workspace_id: int) -> Optional[str]:
+        """
+        Get location ID based on configuration.
+
+        :param workspace_id: Workspace ID
+        :return: Location ID or None if not found
+        """
+        general_mapping = (
+            GeneralMapping.objects
+            .filter(workspace_id=workspace_id, default_location_id__isnull=False)
+            .values('default_location_id')
+            .first()
+        )
+        if general_mapping:
+            return general_mapping['default_location_id']
+
+        location_mapping = (
+            LocationEntityMapping.objects
+            .filter(workspace_id=workspace_id)
+            .exclude(location_entity_name='Top Level')
+            .values('location_entity_name', 'destination_id')
+            .first()
+        )
+        if location_mapping:
+            return location_mapping['destination_id']
+
+        return None
+
+    def __construct_single_itemized_credit_line(self, journal_entry_lineitems: list[JournalEntryLineitem], general_mappings: GeneralMapping, journal_entry: JournalEntry, configuration: Configuration) -> list[dict]:
+        """
+        Create credit lines grouped by vendor with summed amounts
+        :param journal_entry_lineitems: List of JournalEntryLineItem objects
+        :param general_mappings: GeneralMapping object
+        :param journal_entry: JournalEntry object
+        :param configuration: Configuration object
+        :return: List of credit line dictionaries grouped by vendor
+        """
+        # Group lineitems by vendor
+        vendor_groups = {}
+        for lineitem in journal_entry_lineitems:
+            vendor_id = lineitem.vendor_id
+            if vendor_id not in vendor_groups:
+                vendor_groups[vendor_id] = []
+            vendor_groups[vendor_id].append(lineitem)
+
+        credit_lines = []
+        for vendor_id, lineitems in vendor_groups.items():
+            total_amount = sum(lineitem.amount for lineitem in lineitems)
+            # Skip if total amount is zero
+            if total_amount == 0:
+                continue
+
+            # Handle refund case
+            tr_type = 1 if total_amount < 0 else -1
+            amount = abs(total_amount)
+
+            credit_line = {
+                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
+                'currency': journal_entry.currency,
+                'vendorid': vendor_id,
+                'location': self.__get_location_id_for_journal_entry(self.workspace_id),
+                'employeeid': lineitems[0].employee_id,
+                'amount': round(amount, 2),
+                'tr_type': tr_type,
+                'description': 'Total Credit Line'
+            }
+            credit_lines.append(credit_line)
+
+        return credit_lines
+
+    def __construct_base_line_item(self, lineitem: JournalEntryLineitem, dimensions_values: dict, journal_entry: JournalEntry, expense_link: str) -> dict:
+        """
+        Create base line item with common fields
+        :param lineitem: JournalEntryLineitem object
+        :param dimensions_values: Dictionary of dimension values
+        :param journal_entry: JournalEntry object
+        :param expense_link: Expense link URL
+        :return: Base line item dictionary
+        """
+        return {
+            'currency': journal_entry.currency,
+            'description': lineitem.memo,
+            'department': dimensions_values['department_id'],
+            'location': dimensions_values['location_id'],
+            'projectid': dimensions_values['project_id'],
+            'customerid': dimensions_values['customer_id'],
+            'vendorid': lineitem.vendor_id,
+            'employeeid': lineitem.employee_id,
+            'classid': dimensions_values['class_id'],
+            'itemid': dimensions_values['item_id'],
+            'taskid': dimensions_values['task_id'],
+            'costtypeid': dimensions_values['cost_type_id'],
+            'allocation': lineitem.allocation_id,
+            'customfields': {
+                'customfield': [{
+                    'customfieldname': 'FYLE_EXPENSE_URL',
+                    'customfieldvalue': expense_link
+                }]
+            }
+        }
+
+    def __construct_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], supdocid: str = None, recordno: str = None) -> dict:
         """
         Create a journal_entry
         :param journal_entry: JournalEntry object extracted from database
         :param journal_entry_lineitems: JournalEntryLineItem objects extracted from database
+        :param supdocid: SupDocId
+        :param recordno: RecordNo
         :return: constructed journal_entry
         """
         configuration = Configuration.objects.get(workspace_id=self.workspace_id)
@@ -1340,139 +1580,114 @@ class SageIntacctConnector:
 
         journal_entry_payload = []
 
+        # Process debit lines for all line items (consistent behavior)
         for lineitem in journal_entry_lineitems:
-            dimensions_values = {
-                'project_id': lineitem.project_id,
-                'location_id': lineitem.location_id,
-                'department_id': lineitem.department_id,
-                'class_id': lineitem.class_id,
-                'customer_id': lineitem.customer_id,
-                'item_id': lineitem.item_id,
-                'task_id': lineitem.task_id,
-                'cost_type_id': lineitem.cost_type_id
-            }
-
-            if lineitem.allocation_id:
-                allocation_mapping = {
-                    'LOCATIONID': 'location_id',
-                    'DEPARTMENTID': 'department_id',
-                    'CLASSID': 'class_id',
-                    'CUSTOMERID': 'customer_id',
-                    'ITEMID': 'item_id',
-                    'TASKID': 'task_id',
-                    'COSTTYPEID': 'cost_type_id',
-                    'PROJECTID': 'project_id'
-                }
-
-                allocation_detail = DestinationAttribute.objects.filter(workspace_id=self.workspace_id, attribute_type='ALLOCATION', value=lineitem.allocation_id).first().detail
-
-                for allocation_dimension, dimension_variable_name in allocation_mapping.items():
-                    if allocation_dimension in allocation_detail.keys():
-                        dimensions_values[dimension_variable_name] = None
-
-                allocation_dimensions = set(allocation_detail.keys())
-                lineitem.user_defined_dimensions = [user_defined_dimension for user_defined_dimension in lineitem.user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
-
+            dimensions_values = self.__get_dimensions_values(lineitem, self.workspace_id)
             expense_link = self.get_expense_link(lineitem)
-            credit_line = {
-                'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
-                'currency': journal_entry.currency,
-                'amount': lineitem.amount,
-                'tr_type': -1,
-                'description': lineitem.memo,
-                'department': dimensions_values['department_id'],
-                'location': dimensions_values['location_id'],
-                'projectid': dimensions_values['project_id'],
-                'customerid': dimensions_values['customer_id'],
-                'vendorid': lineitem.vendor_id,
-                'employeeid': lineitem.employee_id,
-                'classid': dimensions_values['class_id'],
-                'itemid': dimensions_values['item_id'],
-                'taskid': dimensions_values['task_id'],
-                'costtypeid': dimensions_values['cost_type_id'],
-                'billable': lineitem.billable if configuration.is_journal_credit_billable else None,
-                'allocation':lineitem.allocation_id,
-                'customfields': {
-                    'customfield': [{
-                        'customfieldname': 'FYLE_EXPENSE_URL',
-                        'customfieldvalue': expense_link
-                    }]
-                }
-            }
             tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
 
-            debit_line = {
+            # Create base line item
+            base_line_item = self.__construct_base_line_item(lineitem, dimensions_values, journal_entry, expense_link)
+
+            # Create debit line
+            debit_line = base_line_item.copy()
+            debit_line.update({
                 'accountno': lineitem.gl_account_number,
-                'currency': journal_entry.currency,
                 'amount': round((lineitem.amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount,
                 'tr_type': 1,
-                'description': lineitem.memo,
-                'department': dimensions_values['department_id'],
-                'location': dimensions_values['location_id'],
-                'projectid': dimensions_values['project_id'],
-                'customerid': dimensions_values['customer_id'],
-                'vendorid': lineitem.vendor_id,
-                'employeeid': lineitem.employee_id,
-                'itemid': dimensions_values['item_id'],
-                'taskid': dimensions_values['task_id'],
-                'costtypeid': dimensions_values['cost_type_id'],
-                'classid': dimensions_values['class_id'],
                 'billable': lineitem.billable,
-                'allocation': lineitem.allocation_id,
                 'taxentries': {
                     'taxentry': {
                         'trx_tax': lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_amount,
                         'detailid': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id,
                     }
-                },
-                'customfields': {
-                    'customfield': [{
-                        'customfieldname': 'FYLE_EXPENSE_URL',
-                        'customfieldvalue': expense_link
-                    }]
                 }
-            }
+            })
 
-            # case of a refund
+            # Handle refund case
             if lineitem.amount < 0:
                 amount = abs(lineitem.amount)
                 debit_line['amount'] = amount
-                credit_line['amount'] = round(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount, 2)
-                debit_line['tr_type'], credit_line['tr_type'] = credit_line['tr_type'], debit_line['tr_type']
-                credit_line['taxentries'] = debit_line['taxentries'].copy()
-                debit_line.pop('taxentries')
+                debit_line['tr_type'] = -1
 
+            # Add user defined dimensions
             for dimension in lineitem.user_defined_dimensions:
                 for name, value in dimension.items():
-                    credit_line[name] = value
                     debit_line[name] = value
 
-            journal_entry_payload.append(credit_line)
             journal_entry_payload.append(debit_line)
 
+        # Handle credit lines based on configuration
+        if configuration.je_single_credit_line:
+            # Create credit lines grouped by vendor
+            credit_lines = self.__construct_single_itemized_credit_line(journal_entry_lineitems, general_mappings, journal_entry, configuration)
+            # Insert all credit lines at the beginning to maintain order
+            for credit_line in reversed(credit_lines):
+                journal_entry_payload.insert(0, credit_line)
+        else:
+            # Process credit lines for each line item
+            for i, lineitem in enumerate(journal_entry_lineitems):
+                dimensions_values = self.__get_dimensions_values(lineitem, self.workspace_id)
+                expense_link = self.get_expense_link(lineitem)
+                tax_inclusive_amount, tax_amount = self.get_tax_exclusive_amount(abs(lineitem.amount), general_mappings.default_tax_code_id)
+
+                # Create base line item
+                base_line_item = self.__construct_base_line_item(lineitem, dimensions_values, journal_entry, expense_link)
+
+                # Create credit line
+                credit_line = base_line_item.copy()
+                credit_line.update({
+                    'accountno': general_mappings.default_credit_card_id if journal_entry.expense_group.fund_source == 'CCC' else general_mappings.default_gl_account_id,
+                    'amount': round(lineitem.amount, 2),
+                    'tr_type': -1,
+                    'billable': lineitem.billable if configuration.is_journal_credit_billable else None
+                })
+
+                # Handle refund case
+                if lineitem.amount < 0:
+                    amount = abs(lineitem.amount)
+                    credit_line['amount'] = round(amount - abs(lineitem.tax_amount) if (lineitem.tax_code and lineitem.tax_amount) else tax_inclusive_amount, 2)
+                    credit_line['tr_type'] = 1
+                    # Copy tax entries to credit line in refund case
+                    debit_line_index = i * 2  # Calculate actual index of debit line after credit line insertion
+                    credit_line['taxentries'] = journal_entry_payload[debit_line_index]['taxentries'].copy()
+                    journal_entry_payload[debit_line_index].pop('taxentries')
+
+                # Add user defined dimensions
+                for dimension in lineitem.user_defined_dimensions:
+                    for name, value in dimension.items():
+                        credit_line[name] = value
+
+                journal_entry_payload.insert(i * 2, credit_line)  # Insert before corresponding debit line
+
+        # Format transaction date
         transaction_date = datetime.strptime(journal_entry.transaction_date, '%Y-%m-%dT%H:%M:%S')
         transaction_date = '{0}/{1}/{2}'.format(transaction_date.month, transaction_date.day, transaction_date.year)
 
+        supdocid = journal_entry.supdoc_id or supdocid
+
+        # Construct final payload
         journal_entry_payload = {
             'recordno': recordno if recordno else None,
             'journal': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
             'batch_date': transaction_date,
             'batch_title': journal_entry.memo,
-            'supdocid': journal_entry.supdoc_id if journal_entry.supdoc_id else None,
-            'entries':[
-                {
-                    'glentry': journal_entry_payload
-                }
-            ]
+            'supdocid': supdocid,
+            'entries': [{
+                'glentry': journal_entry_payload
+            }]
         }
 
+        # Add tax implications if configured
         if configuration.import_tax_codes:
             journal_entry_payload.update({
                 'taximplications': 'Inbound',
                 'taxsolutionid': self.get_tax_solution_id_or_none(journal_entry_lineitems),
             })
 
-        logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(self.workspace_id, journal_entry.expense_group.id, journal_entry_payload))
+        logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(
+            self.workspace_id, journal_entry.expense_group.id, journal_entry_payload
+        ))
         return journal_entry_payload
 
     def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: list[ExpenseReportLineitem]) -> dict:
@@ -1884,41 +2099,6 @@ class SageIntacctConnector:
             return sanitized_name
 
         return None
-
-    def get_disable_attribute_callback_func(self, destination_field: str) -> callable:
-        """
-        Get the callback function to disable the attribute
-        :param destination_field: Destination Field
-        :return: Callback Function
-        """
-        mapping_settings = MappingSetting.objects.filter(
-            workspace_id=self.workspace_id,
-            destination_field=destination_field
-        ).first()
-        if mapping_settings and mapping_settings.source_field in ATTRIBUTE_DISABLE_CALLBACK_PATH.keys():
-            return ATTRIBUTE_DISABLE_CALLBACK_PATH[mapping_settings.source_field]
-        return None
-
-    def is_import_enabled(self, attribute_type: str, workspace_id: int) -> bool:
-        """
-        Check if the import is enabled for the attribute type
-        :param attribute_type: Attribute Type
-        :param workspace_id: Workspace ID
-        :return: True if enabled, False otherwise
-        """
-        is_enabled = False
-
-        if attribute_type in ['PROJECT', 'DEPARTMENT']:
-            mapping = MappingSetting.objects.filter(workspace_id=workspace_id, destination_field=attribute_type).first()
-            if mapping and mapping.import_to_fyle:
-                is_enabled = True
-
-        elif attribute_type == 'ACCOUNT' or attribute_type == 'EXPENSE_TYPE':
-            configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
-            if configuration and configuration.import_categories:
-                is_enabled = True
-
-        return is_enabled
 
     def get_exported_entry(self, resource_type: str, export_id: str) -> dict:
         """

@@ -2,7 +2,6 @@ from django.urls import path, include
 
 from apps.workspaces.views import (
     ReadyView,
-    ScheduleView,
     WorkspaceView,
     ConnectFyleView,
     ConfigurationsView,
@@ -19,7 +18,6 @@ workspace_app_paths = [
     path('<int:workspace_id>/configuration/', ConfigurationsView.as_view()),
     path('ready/', ReadyView.as_view({'get': 'get'})),
     path('<int:workspace_id>/exports/trigger/', ExportToIntacctView.as_view({'post': 'post'}), name='export-to-intacct'),
-    path('<int:workspace_id>/schedule/', ScheduleView.as_view({'post': 'post', 'get': 'get'})),
     path('<int:workspace_id>/admins/', WorkspaceAdminsView.as_view({'get': 'get'}), name='admin'),
     path('<int:workspace_id>/export_detail/', LastExportDetailView.as_view(), name='export-detail')
 ]

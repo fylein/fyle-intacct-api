@@ -329,3 +329,13 @@ def add_project_mappings(db):
             detail={},
             active=True
         )
+        DestinationAttribute.objects.create(
+            workspace_id=workspace_id,
+            attribute_type='PROJECT',
+            display_name='Project',
+            value='Direct Mail Campaign',
+            destination_id='10064',
+            detail={},
+            active=True,
+            code='10064'
+        )

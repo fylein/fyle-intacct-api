@@ -24,7 +24,7 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, mapping_s
         or configuration.import_tax_codes or configuration.import_vendors_as_merchants
     ):
         Schedule.objects.update_or_create(
-            func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+            func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
             cluster='import',
             args='{}'.format(configuration.workspace_id),
             defaults={
@@ -53,6 +53,6 @@ def schedule_or_delete_fyle_import_tasks(configuration: Configuration, mapping_s
         and not configuration.import_vendors_as_merchants and not configuration.import_tax_codes
     ):
         Schedule.objects.filter(
-            func='apps.mappings.imports.queues.chain_import_fields_to_fyle',
+            func='apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle',
             args='{}'.format(configuration.workspace_id)
         ).delete()

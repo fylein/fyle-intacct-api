@@ -13,3 +13,19 @@ def test_run_post_configration_triggers(db):
 
     general_settings = Configuration.objects.get(workspace_id=workspace_id)
     assert general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+
+
+def test_run_post_configration_triggers_auto_map_employees_update(db):
+    """
+    Test the signal branch that updates auto_map_employees to 'NAME'
+    """
+    workspace_id = 2
+    config = Configuration.objects.create(
+        workspace_id=workspace_id,
+        reimbursable_expenses_object=None,
+        auto_create_destination_entity=True,
+        auto_map_employees=False
+    )
+    config.save()
+    config.refresh_from_db()
+    assert config.auto_map_employees == 'NAME'

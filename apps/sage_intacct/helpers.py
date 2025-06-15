@@ -1,13 +1,10 @@
 import logging
 from datetime import datetime, timezone
 
-from django.conf import settings
 from django.utils.module_loading import import_string
 
-from apps.fyle.helpers import patch_request
 from apps.fyle.models import DependentFieldSetting
 from apps.workspaces.models import (
-    FyleCredential,
     Workspace,
     Configuration,
     SageIntacctCredential
@@ -58,15 +55,18 @@ def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> bool:
     :return: Boolean
     """
     workspace = Workspace.objects.get(pk=workspace_id)
-    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace.id)
+    try:
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
 
-    if workspace.destination_synced_at:
-        time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
+        if workspace.destination_synced_at:
+            time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
-    if workspace.destination_synced_at is None or time_interval.days > 0:
-        sync_dimensions(sage_intacct_credentials, workspace.id)
-        workspace.destination_synced_at = datetime.now()
-        workspace.save(update_fields=['destination_synced_at'])
+        if workspace.destination_synced_at is None or time_interval.days > 0:
+            sync_dimensions(sage_intacct_credentials, workspace.id)
+            workspace.destination_synced_at = datetime.now()
+            workspace.save(update_fields=['destination_synced_at'])
+    except SageIntacctCredential.DoesNotExist:
+        logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
 
 
 def is_dependent_field_import_enabled(workspace_id: int) -> bool:

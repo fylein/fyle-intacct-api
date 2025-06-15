@@ -7,6 +7,7 @@ from django.db.models import JSONField, Value, CharField
 from django.db.models.functions import Concat
 from django.utils.module_loading import import_string
 
+from apps.exceptions import ValueErrorWithResponse
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import (
@@ -83,6 +84,19 @@ def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) ->
     return allocation_id, allocation_detail
 
 
+def _get_custom_field_value(lineitem: Expense, field_name: str, workspace_id: int) -> Optional[str]:
+    """
+    Returns the custom property value for the given field_name, or None.
+    """
+    display_name = (
+        ExpenseAttribute.objects
+        .filter(attribute_type=field_name, workspace_id=workspace_id)
+        .values_list('display_name', flat=True)
+        .first()
+    )
+    return (lineitem.custom_properties or {}).get(display_name) if display_name else None
+
+
 def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
     """
     Get project id or none with priority:
@@ -104,8 +118,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
         elif project_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=project_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, project_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=project_setting.source_field,
@@ -144,9 +157,7 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
         elif department_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=department_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            if attribute:
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, department_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=department_setting.source_field,
@@ -191,8 +202,7 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
         elif location_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=location_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, location_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=location_setting.source_field,
@@ -249,8 +259,7 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             elif customer_setting.source_field == 'COST_CENTER':
                 source_value = lineitem.cost_center
             else:
-                attribute = ExpenseAttribute.objects.filter(attribute_type=customer_setting.source_field, workspace_id=expense_group.workspace_id).first()
-                source_value = lineitem.custom_properties.get(attribute.display_name, None)
+                source_value = _get_custom_field_value(lineitem, customer_setting.source_field, expense_group.workspace_id)
 
             mapping: Mapping = Mapping.objects.filter(
                 source_type=customer_setting.source_field,
@@ -285,8 +294,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
         elif item_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=item_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, item_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=item_setting.source_field,
@@ -390,25 +398,23 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
             task_id = cost_type.task_id
     else:
         if prepend_code_to_name:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id)
+                project_id=str(project_id)
             ).annotate(
-                combined_code_name=Concat('code', Value(': '), 'value', output_field=CharField())
+                combined_code_name=Concat('task_id', Value(': '), 'task_name', output_field=CharField())
             ).filter(
                 combined_code_name=selected_cost_code
             ).first()
         else:
-            task = DestinationAttribute.objects.filter(
-                attribute_type='COST_CODE',
+            task = CostCode.objects.filter(
                 workspace_id=expense_group.workspace_id,
-                detail__project_id=str(project_id),
-                value=selected_cost_code
+                project_id=str(project_id),
+                task_name=selected_cost_code
             ).first()
 
         if task:
-            task_id = task.destination_id
+            task_id = task.task_id
 
     return task_id
 
@@ -433,8 +439,7 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
         elif class_setting.source_field == 'COST_CENTER':
             source_value = lineitem.cost_center
         else:
-            attribute = ExpenseAttribute.objects.filter(attribute_type=class_setting.source_field, workspace_id=expense_group.workspace_id).first()
-            source_value = lineitem.custom_properties.get(attribute.display_name, None)
+            source_value = _get_custom_field_value(lineitem, class_setting.source_field, expense_group.workspace_id)
 
         mapping: Mapping = Mapping.objects.filter(
             source_type=class_setting.source_field,
@@ -576,13 +581,22 @@ def get_memo(
         return memo
 
 
-def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str, configuration: Configuration) -> str:
+def get_memo_or_purpose(
+    workspace_id: int,
+    lineitem: Expense,
+    category: str,
+    configuration: Configuration,
+    is_top_level: bool = False,
+    export_table: Union['Bill', 'ExpenseReport', 'JournalEntry', 'ChargeCardTransaction', 'APPayment', 'SageIntacctReimbursement'] = None,
+) -> str:
     """
-    Get the expense purpose
+    Get the expense purpose or memo if its a top level item
     :param workspace_id: Workspace ID
     :param lineitem: Expense
     :param category: Category
     :param configuration: Configuration
+    :param is_top_level: Whether the item is a top level item
+    :param export_table: Export table class for duplicate checking
     :return: The expense purpose
     """
     workspace = Workspace.objects.get(id=workspace_id)
@@ -596,33 +610,99 @@ def get_expense_purpose(workspace_id: int, lineitem: Expense, category: str, con
         workspace.cluster_domain = cluster_domain
         workspace.save()
 
-    fyle_url = cluster_domain if settings.BRAND_ID == 'fyle' else settings.FYLE_EXPENSE_URL
+    fyle_url = (
+        cluster_domain if settings.BRAND_ID == "fyle" else settings.FYLE_EXPENSE_URL
+    )
 
-    expense_link = '{0}/app/admin/#/enterprise/view_expense/{1}?org_id={2}'.format(
+    expense_link = "{0}/app/admin/#/enterprise/view_expense/{1}?org_id={2}".format(
         fyle_url, lineitem.expense_id, org_id
     )
 
-    memo_structure = configuration.memo_structure
+    memo_structure = (
+        configuration.top_level_memo_structure
+        if is_top_level
+        else configuration.memo_structure
+    )
 
-    details = {
-        'employee_email': lineitem.employee_email,
-        'employee_name': lineitem.employee_name,
-        'card_number': '{0}'.format(lineitem.masked_corporate_card_number) if lineitem.masked_corporate_card_number else '',
-        'merchant': '{0}'.format(lineitem.vendor) if lineitem.vendor else '',
-        'category': '{0}'.format(category) if lineitem.category else '',
-        'purpose': '{0}'.format(lineitem.purpose) if lineitem.purpose else '',
-        'report_number': '{0}'.format(lineitem.claim_number),
-        'spent_on': '{0}'.format(lineitem.spent_at.date()) if lineitem.spent_at else '',
-        'expense_link': expense_link
-    }
+    if is_top_level:
+        if 'report_number' in memo_structure:
+            claim_number_index = memo_structure.index('report_number')
+            memo_structure.pop(claim_number_index)
+            memo_structure.insert(claim_number_index, 'claim_number')
 
-    purpose = ''
+        expense_group = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id, expenses__in=[lineitem]
+        ).first()
 
-    for id, field in enumerate(memo_structure):
+        if 'claim_number' in memo_structure:
+            expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+
+            claim_number_in_reimbursable = 'claim_number' in expense_group_settings.reimbursable_expense_group_fields
+            claim_number_in_ccc = 'claim_number' in expense_group_settings.corporate_credit_card_expense_group_fields
+            if claim_number_in_reimbursable and claim_number_in_ccc:
+                group_by_key = 'claim_number'
+            else:
+                fund_source = expense_group.fund_source
+                if fund_source == 'CCC':
+                    grouping = expense_group_settings.corporate_credit_card_expense_group_fields
+                else:
+                    grouping = expense_group_settings.reimbursable_expense_group_fields
+
+                if 'claim_number' in grouping:
+                    group_by_key = 'claim_number'
+                else:
+                    group_by_key = 'expense_number'
+                if group_by_key == 'expense_number':
+                    claim_number_index = memo_structure.index('claim_number')
+                    memo_structure.pop(claim_number_index)
+                    memo_structure.insert(claim_number_index, 'expense_number')
+
+        else:
+            potential_keys = ['claim_number', 'expense_number']
+            group_by_key = None
+            for key in potential_keys:
+                if key in memo_structure:
+                    group_by_key = key
+                    break
+
+            if not group_by_key:
+                group_by_key = 'claim_number' if expense_group.description.get('claim_number') else 'expense_number'
+
+        details = {
+            'employee_email': lineitem.employee_email or "",
+            'employee_name': lineitem.employee_name or "",
+            group_by_key: getattr(lineitem, group_by_key) or "",
+        }
+
+    else:
+        details = {
+            "employee_email": lineitem.employee_email or "",
+            "employee_name": lineitem.employee_name or "",
+            "card_number": lineitem.masked_corporate_card_number or "",
+            "merchant": lineitem.vendor or "",
+            "category": category or "",
+            "purpose": lineitem.purpose or "",
+            "report_number": lineitem.claim_number or "",
+            "spent_on": (
+                lineitem.spent_at.date().isoformat() if lineitem.spent_at else ""
+            ),
+            "expense_link": expense_link,
+        }
+
+    purpose = ""
+
+    for index, field in enumerate(memo_structure):
         if field in details:
             purpose += details[field]
-            if id + 1 != len(memo_structure):
-                purpose = '{0} - '.format(purpose)
+            if index + 1 != len(memo_structure):
+                purpose = "{0} - ".format(purpose)
+
+    if export_table:
+        count = export_table.objects.filter(
+            memo__contains=purpose, expense_group__workspace_id=workspace_id
+        ).count()
+        if count > 0:
+            purpose = "{} - {}".format(purpose, count)
 
     return purpose
 
@@ -777,7 +857,12 @@ class Bill(models.Model):
         description = expense_group.description
         expense = expense_group.expenses.first()
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
-        memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True, export_table=Bill)
+        else:
+            memo = get_memo(expense_group, ExportTable=Bill, workspace_id=expense_group.workspace_id)
 
         if expense_group.fund_source == 'PERSONAL':
             vendor_id = EmployeeMapping.objects.get(
@@ -786,7 +871,18 @@ class Bill(models.Model):
             ).destination_vendor.destination_id
 
         elif expense_group.fund_source == 'CCC':
-            vendor_id = general_mappings.default_ccc_vendor_id
+            ccc_mapping = None
+            if expense.corporate_card_id:
+                ccc_mapping = Mapping.objects.filter(
+                    source_type="CORPORATE_CARD",
+                    destination_type="VENDOR",
+                    workspace_id=expense_group.workspace_id,
+                    source__source_id=expense.corporate_card_id,
+                ).first()
+            if ccc_mapping:
+                vendor_id = ccc_mapping.destination.destination_id
+            else:
+                vendor_id = general_mappings.default_ccc_vendor_id
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
@@ -918,7 +1014,7 @@ class BillLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
                     'allocation_id': allocation_id
                 }
             )
@@ -958,7 +1054,11 @@ class ExpenseReport(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=ExpenseReport, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True, export_table=ExpenseReport)
+        else:
+            memo = get_memo(expense_group, ExportTable=ExpenseReport, workspace_id=expense_group.workspace_id)
 
         expense_report_object, _ = ExpenseReport.objects.update_or_create(
             expense_group=expense_group,
@@ -1082,7 +1182,7 @@ class ExpenseReportLineitem(models.Model):
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration)
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration)
                 }
             )
 
@@ -1118,7 +1218,11 @@ class JournalEntry(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=JournalEntry, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True, export_table=JournalEntry)
+        else:
+            memo = get_memo(expense_group, ExportTable=JournalEntry, workspace_id=expense_group.workspace_id)
 
         journal_entry_object, _ = JournalEntry.objects.update_or_create(
             expense_group=expense_group,
@@ -1231,10 +1335,11 @@ class JournalEntryLineitem(models.Model):
                     ).order_by('-updated_at').first()
 
                 if not vendor:
-                    vendor = DestinationAttribute.objects.filter(
-                        value='Credit Card Misc',
-                        workspace_id=expense_group.workspace_id
-                    ).first()
+                    credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+                    if credit_card_misc_vendor:
+                        vendor_id = credit_card_misc_vendor.destination_id
+                    else:
+                        raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
                 vendor_id = vendor.destination_id
 
@@ -1273,7 +1378,7 @@ class JournalEntryLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
                     'allocation_id': allocation_id
                 }
             )
@@ -1312,7 +1417,11 @@ class ChargeCardTransaction(models.Model):
         """
         description = expense_group.description
         expense = expense_group.expenses.first()
-        memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
+        configuration = Configuration.objects.get(workspace_id=expense_group.workspace_id)
+        if configuration.top_level_memo_structure:
+            memo = get_memo_or_purpose(workspace_id=expense_group.workspace_id, lineitem=expense, category=expense.category, configuration=configuration, is_top_level=True, export_table=ChargeCardTransaction)
+        else:
+            memo = get_memo(expense_group, ExportTable=ChargeCardTransaction, workspace_id=expense_group.workspace_id)
         expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=expense_group.workspace_id)
         general_mappings = GeneralMapping.objects.get(workspace_id=expense_group.workspace_id)
         charge_card_id = get_ccc_account_id(general_mappings, expense, description)
@@ -1322,7 +1431,11 @@ class ChargeCardTransaction(models.Model):
 
         merchant = expense.vendor if expense.vendor else None
         if not vendor_id:
-            vendor_id = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first().destination_id
+            credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
+            if credit_card_misc_vendor:
+                vendor_id = credit_card_misc_vendor.destination_id
+            else:
+                raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
         charge_card_transaction_object, _ = ChargeCardTransaction.objects.update_or_create(
             expense_group=expense_group,
@@ -1439,7 +1552,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
-                    'memo': get_expense_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
                     'user_defined_dimensions': user_defined_dimensions
                 }
             )
@@ -1724,3 +1837,69 @@ class CostType(models.Model):
 
         if cost_types_to_be_created:
             CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+
+
+class CostCode(models.Model):
+    """
+    Cost Code Model to store Tasks
+    """
+    workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace')
+    task_id = models.CharField(max_length=255, help_text='Task Id', null=True)
+    task_name = models.CharField(max_length=255, help_text='Task Name', null=True)
+    project_id = models.CharField(max_length=255, help_text='Project Id', null=True)
+    project_name = models.CharField(max_length=255, help_text='Project Name', null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'cost_codes'
+        unique_together = ('workspace', 'task_id', 'project_id')
+        indexes = [
+            models.Index(fields=['workspace', 'task_id']),
+            models.Index(fields=['workspace', 'project_id']),
+        ]
+
+    @staticmethod
+    def bulk_create_or_update(cost_codes: list[dict], workspace_id: int) -> None:
+        """
+        Bulk create or update cost codes
+        :param cost_codes: List of cost codes
+        :param workspace_id: Workspace ID
+        """
+        if not cost_codes:
+            return
+
+        # Get all task_ids and project_ids from the incoming cost codes
+        task_ids = [cost_code['TASKID'] for cost_code in cost_codes]
+        project_ids = [cost_code['PROJECTID'] for cost_code in cost_codes]
+
+        # Get existing cost codes
+        existing_cost_codes = CostCode.objects.filter(
+            workspace_id=workspace_id,
+            task_id__in=task_ids,
+            project_id__in=project_ids
+        )
+
+        # Create a set of existing (task_id, project_id) combinations
+        existing_cost_code_keys = {
+            (cost_code.task_id, cost_code.project_id)
+            for cost_code in existing_cost_codes
+        }
+
+        # Create new cost codes only for combinations that don't exist
+        cost_codes_to_be_created = []
+        for cost_code in cost_codes:
+            key = (cost_code['TASKID'], cost_code['PROJECTID'])
+            if key not in existing_cost_code_keys:
+                cost_codes_to_be_created.append(
+                    CostCode(
+                        task_id=cost_code['TASKID'],
+                        task_name=cost_code['NAME'],
+                        project_id=cost_code['PROJECTID'],
+                        project_name=cost_code['PROJECTNAME'],
+                        workspace_id=workspace_id
+                    )
+                )
+
+        if cost_codes_to_be_created:
+            CostCode.objects.bulk_create(cost_codes_to_be_created, batch_size=50)

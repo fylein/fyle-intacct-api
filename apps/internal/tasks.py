@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from django.db.models import Q
 from django_q.models import OrmQ, Schedule
 
-from apps.fyle.actions import update_failed_expenses
+from apps.fyle.actions import update_failed_expenses, post_accounting_export_summary
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
@@ -27,6 +27,7 @@ def re_export_stuck_exports() -> None:
     task_logs = TaskLog.objects.filter(
         status__in=['ENQUEUED', 'IN_PROGRESS'],
         updated_at__lt=datetime.now() - timedelta(minutes=60),
+        updated_at__gt=datetime.now() - timedelta(days=7),
         expense_group_id__isnull=False,
         workspace_id__in=prod_workspace_ids
     )
@@ -51,7 +52,10 @@ def re_export_stuck_exports() -> None:
             expenses.extend(expense_group.expenses.all())
         workspace_ids_list = list(workspace_ids)
         task_logs.update(status='FAILED', updated_at=datetime.now())
-        update_failed_expenses(expenses, True)
+        for workspace_id in workspace_ids_list:
+            errored_expenses = [expense for expense in expenses if expense.workspace_id == workspace_id]
+            update_failed_expenses(errored_expenses, True)
+            post_accounting_export_summary(workspace_id=workspace_id,  expense_ids=[expense.id for expense in errored_expenses], is_failed=True)
         schedules = Schedule.objects.filter(
             args__in=[str(workspace_id) for workspace_id in workspace_ids_list],
             func='apps.workspaces.tasks.run_sync_schedule'
@@ -64,7 +68,7 @@ def re_export_stuck_exports() -> None:
                 export_expense_group_ids = list(expense_groups.filter(workspace_id=workspace_id).values_list('id', flat=True))
                 if export_expense_group_ids and len(export_expense_group_ids) < 200:
                     logger.info('Re-triggering export for expense group %s since no 1 hour schedule for workspace  %s', export_expense_group_ids, workspace_id)
-                    export_to_intacct(workspace_id, 'AUTO', export_expense_group_ids, triggered_by=ExpenseImportSourceEnum.INTERNAL)
+                    export_to_intacct(workspace_id=workspace_id, expense_group_ids=export_expense_group_ids, triggered_by=ExpenseImportSourceEnum.INTERNAL)
                 else:
                     logger.info('Skipping export for workspace %s since it has more than 200 expense groups', workspace_id)
 

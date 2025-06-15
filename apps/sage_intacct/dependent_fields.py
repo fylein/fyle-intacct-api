@@ -2,13 +2,14 @@ import logging
 from time import sleep
 from datetime import datetime, timezone
 
-from django.db.models import F, Func, Value, CharField, JSONField
+from django.db.models import F, Func, Value, JSONField
 from django.db.models.functions import JSONObject
 from django.contrib.postgres.aggregates import JSONBAgg
 
-from fyle_accounting_mappings.models import ExpenseAttribute, DestinationAttribute
+from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 from sageintacctsdk.exceptions import (
     InvalidTokenError,
@@ -16,13 +17,13 @@ from sageintacctsdk.exceptions import (
     SageIntacctSDKError
 )
 
-from apps.mappings.models import ImportLog
-from apps.sage_intacct.models import CostType
+from fyle_integrations_imports.models import ImportLog
+from apps.sage_intacct.models import CostCode, CostType
 from apps.fyle.models import DependentFieldSetting
 from apps.fyle.helpers import connect_to_platform
 from apps.mappings.helpers import prepend_code_to_name
 from apps.mappings.tasks import sync_sage_intacct_attributes
-from apps.mappings.exceptions import handle_import_exceptions
+from apps.mappings.exceptions import handle_import_exceptions_v2
 from apps.workspaces.models import Configuration, SageIntacctCredential
 
 logger = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: 
     return new_placeholder
 
 
-@handle_import_exceptions
+@handle_import_exceptions_v2
 def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: dict, is_enabled: bool = True) -> tuple:
     """
     Post dependent cost code to Fyle
@@ -108,8 +109,8 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
 
         SQL Query:
         SELECT
-            detail ->> 'project_name' AS project_name,
-            detail ->> 'project_id' AS project_id,
+            project_name AS project_name,
+            project_id AS project_id,
             JSON_AGG(
                 JSON_BUILD_OBJECT(
                     'cost_code_name', value,
@@ -117,27 +118,22 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                 )
             ) AS cost_codes
         FROM
-            destination_attributes
+            cost_codes
         WHERE
             workspace_id = 1
-            AND attribute_type = 'COST_CODE'
         GROUP BY
             project_name,
             project_id;
     """
-    if 'attribute_type' in filters:
+    if not dependent_field_setting.is_cost_type_import_enabled:
         projects_batch = (
-            DestinationAttribute.objects.filter(**filters)
-            .annotate(
-                project_name=Func(F('detail'), Value('project_name'), function='jsonb_extract_path_text', output_field=CharField()),
-                project_id=Func(F('detail'), Value('project_id'), function='jsonb_extract_path_text', output_field=CharField())
-            )
+            CostCode.objects.filter(**filters)
             .values('project_name', 'project_id')
             .annotate(
                 cost_codes=JSONBAgg(
                     JSONObject(
-                        cost_code_name=F('value'),  # value -> task_name
-                        cost_code_code=F('destination_id')  # destination_id -> task_id
+                        cost_code_name=F('task_name'),  # value -> task_name
+                        cost_code_code=F('task_id')  # destination_id -> task_id
                     ),
                     output_field=JSONField(),
                     distinct=True
@@ -217,7 +213,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
     return posted_cost_codes, is_errored
 
 
-@handle_import_exceptions
+@handle_import_exceptions_v2
 def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: DependentFieldSetting, platform: PlatformConnector, filters: dict) -> bool:
     """
     Post dependent cost type to Fyle
@@ -304,8 +300,7 @@ def post_dependent_cost_code_standalone(workspace_id: int, dependent_field_setti
     :return: None
     """
     filters = {
-        'workspace_id': workspace_id,
-        'attribute_type': 'COST_CODE'
+        'workspace_id': workspace_id
     }
 
     if dependent_field_setting.last_successful_import_at:
@@ -366,11 +361,11 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
     """
     dependent_field = DependentFieldSetting.objects.get(workspace_id=workspace_id)
 
-    cost_code_import_log = ImportLog.update_or_create(attribute_type='COST_CODE', workspace_id=workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_CODE', workspace_id=workspace_id)
     cost_type_import_log = None
 
     if dependent_field.is_cost_type_import_enabled:
-        cost_type_import_log = ImportLog.update_or_create(attribute_type='COST_TYPE', workspace_id=workspace_id)
+        cost_type_import_log = ImportLog.update_or_create_in_progress_import_log(attribute_type='COST_TYPE', workspace_id=workspace_id)
 
     exception = None
     try:
@@ -387,9 +382,13 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
                 post_dependent_cost_code_standalone(workspace_id=workspace_id, dependent_field_setting=dependent_field, platform=platform, cost_code_import_log=cost_code_import_log)
             else:
                 logger.error('Importing dependent fields to Fyle failed | CONTENT: {{WORKSPACE_ID: {}}}'.format(workspace_id))
-    except (SageIntacctCredential.DoesNotExist, InvalidTokenError):
-        exception = "Invalid Token or Sage Intacct credentials does not exist"
-        logger.info('Invalid Token or Sage Intacct credentials does not exist - %s', workspace_id)
+    except SageIntacctCredential.DoesNotExist:
+        exception = "Sage Intacct credentials does not exist workspace_id - {0}".format(workspace_id)
+        logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
+    except InvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id)
+        exception = "Invalid Sage Intacct Token Error for workspace_id - {0}".format(workspace_id)
+        logger.info('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
     except NoPrivilegeError:
         exception = "Insufficient permission to access the requested module"
         logger.info('Insufficient permission to access the requested module - %s', workspace_id)
@@ -465,7 +464,7 @@ def update_and_disable_cost_code(workspace_id: int, cost_codes_to_disable: dict,
         if dependent_field_setting.is_cost_type_import_enabled:
             disable_and_post_cost_code_from_cost_type_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
         else:
-            disable_and_post_cost_code_from_destination_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
+            disable_and_post_cost_code_from_cost_code_table(workspace_id, cost_codes_to_disable, platform, dependent_field_setting)
 
 
 def disable_and_post_cost_code_from_cost_type_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
@@ -482,7 +481,7 @@ def disable_and_post_cost_code_from_cost_type_table(workspace_id: int, cost_code
         'workspace_id': workspace_id
     }
 
-    cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log('COST_CODE', workspace_id)
     # This call will disable the cost codes in Fyle that has old project name
     posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
 
@@ -515,9 +514,9 @@ def disable_and_post_cost_code_from_cost_type_table(workspace_id: int, cost_code
             CostType.objects.bulk_update(bulk_update_payload, ['project_name', 'project_id', 'updated_at'], batch_size=50)
 
 
-def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
+def disable_and_post_cost_code_from_cost_code_table(workspace_id: int, cost_codes_to_disable: dict, platform: PlatformConnector, dependent_field_setting: DependentFieldSetting) -> None:
     """
-    Disable and post cost codes from destination table
+    Disable and post cost codes from cost code table
     :param workspace_id: Workspace ID
     :param cost_codes_to_disable: Cost codes to disable
     :param platform: Platform connector object
@@ -525,11 +524,10 @@ def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_co
     :return: None
     """
     filters = {
-        'detail__project_id__in': list(cost_codes_to_disable.keys()),
-        'workspace_id': workspace_id,
-        'attribute_type': 'COST_CODE'
+        'project_id__in': list(cost_codes_to_disable.keys()),
+        'workspace_id': workspace_id
     }
-    cost_code_import_log = ImportLog.update_or_create('COST_CODE', workspace_id)
+    cost_code_import_log = ImportLog.update_or_create_in_progress_import_log('COST_CODE', workspace_id)
     # This call will disable the cost codes in Fyle that has old project name
     posted_cost_codes, _ = post_dependent_cost_code(cost_code_import_log, dependent_field_setting, platform, filters, is_enabled=False)
 
@@ -538,31 +536,30 @@ def disable_and_post_cost_code_from_destination_table(workspace_id: int, cost_co
     BATCH_SIZE = 500
 
     for _, value in cost_codes_to_disable.items():
-        cost_codes_queryset = DestinationAttribute.objects.filter(
+        cost_codes_queryset = CostCode.objects.filter(
             workspace_id=workspace_id,
-            detail__project_id=value['code']
-        ).exclude(detail__project_name=value['updated_value'], detail__project_id=value['updated_code'])
+            project_id=value['code']
+        ).exclude(project_name=value['updated_value'], project_id=value['updated_code'])
 
         bulk_update_payload = []
 
         for cost_code in cost_codes_queryset.iterator(chunk_size=BATCH_SIZE):
-            detail = cost_code.detail
-            detail['project_id'] = value['updated_code']
-            detail['project_name'] = value['updated_value']
-            cost_code.detail = detail
+            cost_code.project_id = value['updated_code']
+            cost_code.project_name = value['updated_value']
+
             # updating the updated_at, we'll post the COST_CODE to Fyle & not COST_TYPE # noqa
             cost_code.updated_at = datetime.now(timezone.utc)
             bulk_update_payload.append(cost_code)
 
             if len(bulk_update_payload) >= BATCH_SIZE:
                 logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-                DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+                CostCode.objects.bulk_update(bulk_update_payload, ['project_id', 'project_name', 'updated_at'], batch_size=50)
                 bulk_update_payload = []
 
         # Final update for any remaining objects in the last batch
         if bulk_update_payload:
             logger.info(f"Updating Cost Codes | WORKSPACE_ID: {workspace_id} | COUNT: {len(bulk_update_payload)}")
-            DestinationAttribute.objects.bulk_update(bulk_update_payload, ['detail', 'updated_at'], batch_size=50)
+            CostCode.objects.bulk_update(bulk_update_payload, ['project_id', 'project_name', 'updated_at'], batch_size=50)
 
 
 def reset_flag_and_disable_cost_type_field(workspace_id: int, reset_flag: bool) -> None:

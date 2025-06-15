@@ -13,6 +13,7 @@ from fyle.platform.exceptions import (
     InternalServerError,
     InvalidTokenError
 )
+from fyle_accounting_library.fyle_platform.branding import feature_configuration
 from fyle_accounting_library.fyle_platform.helpers import get_expense_import_states, filter_expenses_based_on_state
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
@@ -22,7 +23,8 @@ from apps.workspaces.models import (
     LastExportDetail,
     Workspace,
     FyleCredential,
-    Configuration
+    Configuration,
+    WorkspaceSchedule
 )
 from apps.fyle.models import (
     Expense,
@@ -34,7 +36,8 @@ from apps.fyle.helpers import (
     get_fund_source,
     get_source_account_type,
     handle_import_exception,
-    construct_expense_filter_query
+    construct_expense_filter_query,
+    update_task_log_post_import
 )
 from apps.fyle.actions import (
     mark_expenses_as_skipped,
@@ -86,7 +89,7 @@ def schedule_expense_group_creation(workspace_id: int) -> None:
     async_task('apps.fyle.tasks.create_expense_groups', workspace_id, fund_source, task_log)
 
 
-def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: TaskLog,  imported_from: ExpenseImportSourceEnum) -> None:
+def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: TaskLog | None, imported_from: ExpenseImportSourceEnum) -> None:
     """
     Create expense groups
     :param task_log: Task log object
@@ -97,8 +100,8 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
         with transaction.atomic():
             workspace = Workspace.objects.get(pk=workspace_id)
 
-            last_synced_at = workspace.last_synced_at
-            ccc_last_synced_at = workspace.ccc_last_synced_at
+            last_synced_at = workspace.last_synced_at if imported_from != ExpenseImportSourceEnum.CONFIGURATION_UPDATE else None
+            ccc_last_synced_at = workspace.ccc_last_synced_at if imported_from != ExpenseImportSourceEnum.CONFIGURATION_UPDATE else None
             fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
 
             expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
@@ -140,61 +143,38 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
             if workspace.ccc_last_synced_at or len(expenses) != reimbursable_expense_count:
                 workspace.ccc_last_synced_at = datetime.now()
 
-            workspace.save()
+            if imported_from != ExpenseImportSourceEnum.CONFIGURATION_UPDATE:
+                workspace.save()
 
             group_expenses_and_save(expenses, task_log, workspace, imported_from=imported_from)
 
     except NoPrivilegeError:
         logger.info('Invalid Fyle Credentials / Admin is disabled')
-        task_log.detail = {
-            'message': 'Invalid Fyle Credentials / Admin is disabled'
-        }
-        task_log.status = 'FAILED'
-        task_log.save()
+        update_task_log_post_import(task_log, 'FAILED', message='Invalid Fyle Credentials / Admin is disabled')
 
     except FyleCredential.DoesNotExist:
         logger.info('Fyle credentials not found %s', workspace_id)
-        task_log.detail = {
-            'message': 'Fyle credentials do not exist in workspace'
-        }
-        task_log.status = 'FAILED'
-        task_log.save()
+        update_task_log_post_import(task_log, 'FAILED', message='Fyle credentials do not exist in workspace')
 
     except RetryException:
         logger.info('Fyle Retry Exception occured in workspace_id: %s', workspace_id)
-        task_log.detail = {
-            'message': 'Fyle Retry Exception occured'
-        }
-        task_log.status = 'FATAL'
-        task_log.save()
+        update_task_log_post_import(task_log, 'FATAL', message='Fyle Retry Exception occured')
 
     except InvalidTokenError:
         logger.info('Invalid Token for Fyle')
-        task_log.detail = {
-            'message': 'Invalid Token for Fyle'
-        }
-        task_log.status = 'FAILED'
-        task_log.save()
+        update_task_log_post_import(task_log, 'FAILED', message='Invalid Token for Fyle')
 
     except InternalServerError:
         logger.info('Fyle Internal Server Error occured in workspace_id: %s', workspace_id)
-        task_log.detail = {
-            'message': 'Fyle Internal Server Error occured'
-        }
-        task_log.status = 'FAILED'
-        task_log.save()
+        update_task_log_post_import(task_log, 'FAILED', message='Fyle Internal Server Error occured')
 
     except Exception:
         error = traceback.format_exc()
-        task_log.detail = {
-            'error': error
-        }
-        task_log.status = 'FATAL'
-        task_log.save()
+        update_task_log_post_import(task_log, 'FATAL', error=error)
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def group_expenses_and_save(expenses: list[dict], task_log: TaskLog, workspace: Workspace, imported_from: ExpenseImportSourceEnum = None) -> None:
+def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, workspace: Workspace, imported_from: ExpenseImportSourceEnum = None) -> None:
     """
     Group expenses and save
     :param expenses: Expenses
@@ -225,12 +205,22 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog, workspace: 
             org_id=workspace.fyle_org_id
         )
     filtered_expenses = [expense for expense in filtered_expenses if not expense.is_skipped]
-    ExpenseGroup.create_expense_groups_by_report_id_fund_source(
+    skipped_expense_ids = ExpenseGroup.create_expense_groups_by_report_id_fund_source(
         filtered_expenses, configuration, workspace.id
     )
 
-    task_log.status = 'COMPLETE'
-    task_log.save()
+    if skipped_expense_ids:
+        skipped_expenses = mark_expenses_as_skipped(final_query=Q(), expenses_object_ids=skipped_expense_ids, workspace=workspace)
+        if skipped_expenses:
+            try:
+                post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
+            except Exception:
+                logger.error('Error posting accounting export summary for workspace_id: %s', workspace.id)
+
+    if task_log:
+        task_log.status = 'COMPLETE'
+        task_log.updated_at = datetime.now()
+        task_log.save(update_fields=['status', 'updated_at'])
 
 
 def import_and_export_expenses(report_id: str, org_id: str, is_state_change_event: bool, report_state: str = None, imported_from: ExpenseImportSourceEnum = None) -> None:
@@ -271,11 +261,20 @@ def import_and_export_expenses(report_id: str, org_id: str, is_state_change_even
 
         # Export only selected expense groups
         expense_ids = Expense.objects.filter(report_id=report_id, org_id=org_id).values_list('id', flat=True)
-        expense_groups = ExpenseGroup.objects.filter(expenses__id__in=[expense_ids], workspace_id=workspace.id).distinct('id').values('id')
+        expense_groups = ExpenseGroup.objects.filter(expenses__id__in=[expense_ids], workspace_id=workspace.id, exported_at__isnull=True).distinct('id').values('id')
         expense_group_ids = [expense_group['id'] for expense_group in expense_groups]
 
-        if len(expense_group_ids) and not is_state_change_event:
-            export_to_intacct(workspace.id, None, expense_group_ids, triggered_by=imported_from)
+        if len(expense_group_ids):
+            if is_state_change_event:
+                # Trigger export immediately for customers who have enabled real time export
+                is_real_time_export_enabled = WorkspaceSchedule.objects.filter(workspace_id=workspace.id, is_real_time_export_enabled=True).exists()
+
+                # Don't allow real time export if it's not supported for the branded app / setting not enabled
+                if not is_real_time_export_enabled or not feature_configuration.feature.real_time_export_1hr_orgs:
+                    return
+
+            logger.info(f'Exporting expenses for workspace {workspace.id} with expense group ids {expense_group_ids}, triggered by {imported_from}')
+            export_to_intacct(workspace_id=workspace.id, expense_group_ids=expense_group_ids, triggered_by=imported_from)
 
     except Configuration.DoesNotExist:
         logger.info('Configuration does not exist for workspace_id: %s', workspace.id)
@@ -366,14 +365,22 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
                     expense_group.delete()
                     deleted_total_expense_groups_count += 1
 
-            last_export_detail = LastExportDetail.objects.filter(workspace_id=workspace.id).first()
+            last_export_detail = LastExportDetail.objects.filter(
+                workspace_id=workspace.id
+            ).first()
             if last_export_detail:
                 last_export_detail.failed_expense_groups_count = max(
                     0,
-                    last_export_detail.failed_expense_groups_count - deleted_failed_expense_groups_count
+                    (last_export_detail.failed_expense_groups_count or 0)
+                    - deleted_failed_expense_groups_count,
                 )
                 last_export_detail.total_expense_groups_count = max(
                     0,
-                    last_export_detail.total_expense_groups_count - deleted_total_expense_groups_count
+                    (last_export_detail.total_expense_groups_count or 0)
+                    - deleted_total_expense_groups_count,
                 )
                 last_export_detail.save()
+            try:
+                post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
+            except Exception:
+                logger.exception('Error posting accounting export summary for workspace_id: %s', workspace.id)
