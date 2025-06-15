@@ -10008,7 +10008,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 240, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 232, true);
 
 
 --
