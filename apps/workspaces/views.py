@@ -25,7 +25,7 @@ from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from fyle_intacct_api.utils import assert_valid, invalidate_intacct_credentials
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.sage_intacct.helpers import patch_integration_settings
+from apps.sage_intacct.actions import patch_integration_settings
 
 from apps.fyle.models import ExpenseGroupSettings
 from apps.fyle.helpers import get_cluster_domain

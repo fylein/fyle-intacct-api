@@ -2,9 +2,9 @@ from apps.workspaces.models import Configuration, Workspace, FyleCredential
 from apps.sage_intacct.helpers import (
     schedule_payment_sync,
     check_interval_and_sync_dimension,
-    is_dependent_field_import_enabled,
-    patch_integration_settings
+    is_dependent_field_import_enabled
 )
+from apps.sage_intacct.actions import patch_integration_settings
 
 
 def test_schedule_payment_sync(db):
@@ -51,7 +51,7 @@ def test_patch_integration_settings(db, mocker):
     fyle_credential.refresh_token = refresh_token
     fyle_credential.save()
 
-    patch_request_mock = mocker.patch('apps.sage_intacct.helpers.patch_request')
+    patch_request_mock = mocker.patch('apps.fyle.helpers.patch_request')
 
     patch_integration_settings(workspace_id, errors=5)
     patch_request_mock.assert_called_with(
@@ -94,7 +94,7 @@ def test_patch_integration_settings(db, mocker):
     patch_request_mock.reset_mock()
     patch_request_mock.side_effect = Exception('Test exception')
 
-    logger_mock = mocker.patch('apps.sage_intacct.helpers.logger.error')
+    logger_mock = mocker.patch('apps.sage_intacct.actions.logger.error')
 
     patch_integration_settings(workspace_id, errors=15)
 
