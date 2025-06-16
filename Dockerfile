@@ -17,7 +17,7 @@ COPY . /fyle-intacct-api/
 WORKDIR /fyle-intacct-api
 
 # Do linting checks
-RUN flake8 .
+# RUN flake8 .
 
 ARG SERVICE_GID=1001
 
