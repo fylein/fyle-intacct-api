@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 15.12 (Debian 15.12-1.pgdg120+1)
+-- Dumped from database version 15.13 (Debian 15.13-1.pgdg120+1)
 -- Dumped by pg_dump version 15.13 (Debian 15.13-0+deb12u1)
 
 SET statement_timeout = 0;
@@ -910,7 +910,7 @@ DECLARE
 BEGIN
     UPDATE django_q_schedule 
     SET next_run = now() + INTERVAL '35 sec' 
-    WHERE args = _workspace_id and func = 'apps.mappings.imports.queues.chain_import_fields_to_fyle';
+    WHERE args = _workspace_id and func = 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle';
     
     GET DIAGNOSTICS rcount = ROW_COUNT;
 
@@ -2292,7 +2292,8 @@ CREATE TABLE public.expense_attributes_deletion_cache (
     workspace_id integer NOT NULL,
     cost_center_ids character varying(255)[] NOT NULL,
     custom_field_list jsonb NOT NULL,
-    merchant_list character varying(255)[] NOT NULL
+    merchant_list character varying(255)[] NOT NULL,
+    updated_at timestamp with time zone NOT NULL
 );
 
 
@@ -5969,6 +5970,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 238	workspaces	0046_merge_20250603_1307	2025-06-03 13:10:42.733986+00
 239	fyle_integrations_imports	0001_initial	2025-06-03 09:13:14.987582+00
 240	workspaces	0047_configuration_top_level_memo_structure	2025-06-03 13:10:42.735621+00
+241	fyle_accounting_mappings	0030_expenseattributesdeletioncache_updated_at	2025-06-17 11:21:51.697718+00
+242	internal	0010_auto_generated_sql	2025-06-17 11:21:51.706446+00
 \.
 
 
@@ -9336,7 +9339,7 @@ COPY public.expense_attributes (id, attribute_type, display_name, value, source_
 -- Data for Name: expense_attributes_deletion_cache; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id, cost_center_ids, custom_field_list, merchant_list) FROM stdin;
+COPY public.expense_attributes_deletion_cache (id, category_ids, project_ids, workspace_id, cost_center_ids, custom_field_list, merchant_list, updated_at) FROM stdin;
 \.
 
 
@@ -10008,7 +10011,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 240, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 242, true);
 
 
 --
