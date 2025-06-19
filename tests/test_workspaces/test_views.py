@@ -87,7 +87,7 @@ def test_token_health_view(api_client, test_connection, mocker):
     mock_instance.connection.locations.count.side_effect = Exception("Invalid")
 
     # Mock invalidate function
-    mocker.patch('apps.workspaces.views.invalidate_intacct_credentials', return_value=None)
+    mocker.patch('apps.workspaces.views.invalidate_sage_intacct_credentials', return_value=None)
 
     response = api_client.get(url)
 

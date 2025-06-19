@@ -23,7 +23,7 @@ from fyle_rest_auth.helpers import get_fyle_admin
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from fyle_intacct_api.utils import assert_valid, invalidate_intacct_credentials
+from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.sage_intacct.actions import patch_integration_settings
 
@@ -78,7 +78,7 @@ class TokenHealthView(viewsets.ViewSet):
                     sage_intacct_connection.connection.locations.count()
                     cache.set(cache_key, True, timeout=timedelta(hours=24).total_seconds())
             except Exception:
-                invalidate_intacct_credentials(workspace_id, sage_intacct_credentials)
+                invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
                 status_code = status.HTTP_400_BAD_REQUEST
                 message = "Intacct connection expired"
 

@@ -16,17 +16,6 @@ def assert_valid(condition: bool, message: str) -> Response or None:
         })
 
 
-def invalidate_intacct_credentials(workspace_id, sage_intacct_credentials=None):
-    if not sage_intacct_credentials:
-        sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=workspace_id, is_expired=False).first()
-
-    if sage_intacct_credentials:
-        if not sage_intacct_credentials.is_expired:
-            patch_integration_settings(workspace_id, is_token_expired=True)
-        sage_intacct_credentials.is_expired = True
-        sage_intacct_credentials.save()
-
-
 class LookupFieldMixin:
     lookup_field = 'workspace_id'
 
