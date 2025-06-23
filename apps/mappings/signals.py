@@ -6,7 +6,8 @@ from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save, post_delete
 
 from rest_framework.exceptions import ValidationError
-
+from sageintacctsdk.exceptions import InvalidTokenError
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from fyle.platform.exceptions import WrongParamsError
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import (
@@ -194,6 +195,15 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
             )
             raise ValidationError({
                 'message': 'Sage Intacct credentials not found in workspace',
+                'field_name': instance.source_field
+            })
+
+        except InvalidTokenError:
+            invalidate_sage_intacct_credentials(workspace_id)
+            logger.error('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
+
+            raise ValidationError({
+                'message': 'Invalid Sage Intacct Token Error for workspace_id - %s',
                 'field_name': instance.source_field
             })
 
