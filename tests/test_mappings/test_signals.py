@@ -17,7 +17,7 @@ from fyle_accounting_mappings.models import (
 )
 
 from apps.tasks.models import Error
-from apps.workspaces.models import Configuration, Workspace
+from apps.workspaces.models import Configuration, SageIntacctCredential, Workspace
 from apps.mappings.models import LocationEntityMapping
 from fyle_integrations_imports.models import ImportLog
 
@@ -334,3 +334,19 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
             mapping_setting.save()
         except Exception:
             logger.info('The values ("or79Cob97KSh", "text_column15", "1") already exists')
+
+    with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
+        mock_call.side_effect = SageIntacctCredential.DoesNotExist()
+
+        mapping_setting = MappingSetting(
+            source_field='CUSTOM_INTENTS',
+            destination_field='CUSTOM_INTENTS',
+            workspace_id=workspace_id,
+            import_to_fyle=True,
+            is_custom=True
+        )
+
+        try:
+            mapping_setting.save()
+        except Exception:
+            logger.info('Active Sage Intacct credentials not found in workspace')
