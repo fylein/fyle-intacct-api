@@ -336,7 +336,7 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
             logger.info('The values ("or79Cob97KSh", "text_column15", "1") already exists')
 
     with mock.patch('fyle_integrations_platform_connector.apis.ExpenseCustomFields.post') as mock_call:
-        mock_call.side_effect = SageIntacctCredential.DoesNotExist(msg='Active Sage Intacct credentials not found in workspace', response={})
+        mock_call.side_effect = SageIntacctCredential.DoesNotExist()
 
         mapping_setting = MappingSetting(
             source_field='CUSTOM_INTENTS',
