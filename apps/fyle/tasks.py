@@ -174,7 +174,7 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
-def skip_expenses_and_post_accounting_export_summary(expense_ids: list[int], workspace: Workspace):
+def skip_expenses_and_post_accounting_export_summary(expense_ids: list[int], workspace: Workspace) -> None:
     """
     Skip expenses and post accounting export summary
     :param expense_ids: List of expense ids
