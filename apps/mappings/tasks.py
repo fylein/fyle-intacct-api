@@ -288,10 +288,6 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
     except SageIntacctCredential.DoesNotExist:
         logger.error('Active Sage Intacct credentials not found for workspace_id - %s', workspace_id)
         return
-    except InvalidTokenError:
-        invalidate_sage_intacct_credentials(workspace_id)
-        logger.error('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
-        return
 
     project_import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').first()
     # We'll only sync PROJECT and Dependent Fields together in one run
