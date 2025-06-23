@@ -282,7 +282,12 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
     mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     dependent_fields = DependentFieldSetting.objects.filter(workspace_id=workspace_id, is_import_enabled=True).first()
-    credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+
+    try:
+        credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id=workspace_id)
+    except SageIntacctCredential.DoesNotExist:
+        logger.error('Active Sage Intacct credentials not found for workspace_id - %s', workspace_id)
+        return
 
     project_import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').first()
     # We'll only sync PROJECT and Dependent Fields together in one run
