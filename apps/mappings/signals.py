@@ -149,7 +149,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
                     import_log.save()
 
             # Creating the expense_custom_field object with the correct last_successful_run_at value
-            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id=workspace_id)
             sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
 
             expense_custom_field = ExpenseCustomField(
@@ -186,6 +186,16 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
                     'message': error.response['message'],
                     'field_name': instance.source_field
                 })
+
+        except SageIntacctCredential.DoesNotExist:
+            logger.error(
+                'Active Sage Intacct credentials not found for workspace_id - %s',
+                workspace_id
+            )
+            raise ValidationError({
+                'message': 'Sage Intacct credentials not found in workspace',
+                'field_name': instance.source_field
+            })
 
         # setting the import_log.last_successful_run_at to -30mins for the post_save_trigger
         import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type=instance.source_field).first()
