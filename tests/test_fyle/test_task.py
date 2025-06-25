@@ -297,6 +297,9 @@ def test_import_and_export_expenses_direct_export_case_2(mocker, db, test_connec
 
 @pytest.mark.django_db()
 def test_skip_expenses_and_post_accounting_export_summary(mocker, db):
+    """
+    Test skip expenses and post accounting export summary
+    """
     workspace = Workspace.objects.get(id=1)
 
     expense = Expense.objects.filter(org_id='or79Cob97KSh').first()
