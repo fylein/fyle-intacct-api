@@ -129,6 +129,33 @@ def patch_request(url: str, body: dict, refresh_token: Optional[str] = None) -> 
         raise Exception(response.text)
 
 
+def delete_request(url: str, body: dict, refresh_token: Optional[str] = None) -> Optional[dict]:
+    """
+    Create a HTTP delete request.
+    """
+    access_token = None
+    api_headers = {
+        'Content-Type': 'application/json',
+    }
+    if refresh_token:
+        access_token = get_access_token(refresh_token)
+
+        api_headers['Authorization'] = 'Bearer {0}'.format(access_token)
+
+    response = requests.delete(
+        url,
+        headers=api_headers,
+        data=json.dumps(body)
+    )
+
+    if response.status_code in [200, 201, 204]:
+        if response.text:
+            return json.loads(response.text)
+        return None
+    else:
+        raise Exception(response.text)
+
+
 def get_access_token(refresh_token: str) -> str:
     """
     Get access token from fyle
