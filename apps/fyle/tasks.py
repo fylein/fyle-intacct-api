@@ -421,15 +421,3 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
                 post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
             except Exception:
                 logger.exception('Error posting accounting export summary for workspace_id: %s', workspace.id)
-
-
-def test_random_func() -> None:
-    """
-    Test random function
-    :return: None
-    """
-    workspace_id = Workspace.objects.get(id=1)
-    if workspace_id:
-        print(workspace_id)
-    else:
-        print('No workspace found')
