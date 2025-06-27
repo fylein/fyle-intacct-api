@@ -4,40 +4,12 @@ from apps.workspaces.models import Workspace
 
 class E2ESetupSerializer(serializers.Serializer):
     """Serializer for E2E Setup API payload validation"""
-    admin_email = serializers.EmailField(required=True, help_text="Admin email address")
-    user_id = serializers.IntegerField(required=True, help_text="User ID")
-    refresh_token = serializers.CharField(required=True, help_text="Refresh token")
-    org_id = serializers.CharField(required=True, help_text="Organization ID")
-    cluster_domain = serializers.CharField(required=True, help_text="Cluster domain")
+    workspace_id = serializers.IntegerField(required=True, help_text="Workspace ID")
 
-    def validate_admin_email(self, value):
-        """Validate admin email format"""
-        if not value:
-            raise serializers.ValidationError("Admin email is required")
-        return value
-
-    def validate_user_id(self, value):
-        """Validate user ID"""
+    def validate_workspace_id(self, value):
+        """Validate workspace ID"""
         if not value or value <= 0:
-            raise serializers.ValidationError("Valid user ID is required")
-        return value
-
-    def validate_refresh_token(self, value):
-        """Validate refresh token"""
-        if not value or not value.strip():
-            raise serializers.ValidationError("Refresh token is required")
-        return value
-
-    def validate_org_id(self, value):
-        """Validate organization ID"""
-        if not value or not value.strip():
-            raise serializers.ValidationError("Organization ID is required")
-        return value
-
-    def validate_cluster_domain(self, value):
-        """Validate cluster domain"""
-        if not value or not value.strip():
-            raise serializers.ValidationError("Cluster domain is required")
+            raise serializers.ValidationError("Valid workspace ID is required")
         return value
 
 
