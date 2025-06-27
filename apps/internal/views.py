@@ -134,11 +134,7 @@ class E2ESetupView(generics.GenericAPIView):
 
             # Initialize setup service
             setup_service = E2ESetupService(
-                admin_email=validated_data['admin_email'],
-                user_id=validated_data['user_id'],
-                refresh_token=validated_data['refresh_token'],
-                org_id=validated_data['org_id'],
-                cluster_domain=validated_data['cluster_domain']
+                workspace_id=validated_data['workspace_id']
             )
 
             # Execute setup in transaction
@@ -154,7 +150,7 @@ class E2ESetupView(generics.GenericAPIView):
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            logger.error(f"E2E setup failed: {str(e)}")
+            logger.error(f"E2E setup failed: {str(e)}", exc_info=True)
             return Response(
                 {"error": f"Setup failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -229,7 +225,7 @@ class E2EDestroyView(generics.GenericAPIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.error(f"E2E cleanup failed: {str(e)}")
+            logger.error(f"E2E cleanup failed: {str(e)}", exc_info=True)
             return Response(
                 {"error": f"Cleanup failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
