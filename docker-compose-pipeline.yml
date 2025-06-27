@@ -35,6 +35,7 @@ services:
       FYLE_JOBS_URL: 'https://sample.fyle.tech'
       HELP_ARTICLE_DOMAIN: 'https://www.fylehq.com/help'
       RABBITMQ_URL: amqp://admin:password@rabbitmq:5673/?heartbeat=0
+      STRICT_MODE: "false"
   rabbitmq:
      image: rabbitmq:3.8.9-management-alpine
      environment:
