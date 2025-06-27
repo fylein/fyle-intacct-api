@@ -423,7 +423,7 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
                 logger.exception('Error posting accounting export summary for workspace_id: %s', workspace.id)
 
 
-def test_random_func():
+def test_random_func() -> None:
     """
     Test random function
     :return: None
