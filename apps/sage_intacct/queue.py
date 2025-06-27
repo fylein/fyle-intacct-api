@@ -7,8 +7,11 @@ from django.db.models import Q
 from django_q.models import Schedule
 from django_q.tasks import Chain
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_library.rabbitmq.data_class import Task
+from fyle_accounting_library.rabbitmq.helpers import TaskChainRunner
 
 from apps.tasks.models import TaskLog, Error
+from apps.fyle.helpers import check_interval_and_sync_dimension
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
@@ -18,24 +21,29 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], is_auto_export: bool) -> None:
+def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], run_in_rabbitmq_worker: bool) -> None:
     """
     Create chain and run
     :param workspace_id: Workspace ID
     :param chain_tasks: List of chain tasks
     :param is_auto_export: Is auto export
+    :param run_in_rabbitmq_worker: Run in rabbitmq worker
     :return: None
     """
-    chain = Chain()
-    chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
+    if run_in_rabbitmq_worker:
+        # This function checks intervals and triggers sync if needed, syncing dimension for all exports is overkill
+        check_interval_and_sync_dimension(workspace_id)
 
-    for task in chain_tasks:
-        if task['target'] == 'apps.sage_intacct.tasks.check_cache_and_search_vendors':
-            chain.append(task['target'], workspace_id=workspace_id, fund_source=task['fund_source'])
-            continue
-        chain.append(task['target'], task['expense_group'], task['task_log_id'], task['last_export'], is_auto_export)
+        task_executor = TaskChainRunner()
+        task_executor.run(chain_tasks, workspace_id)
+    else:
+        chain = Chain()
+        chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
 
-    chain.run()
+        for task in chain_tasks:
+            chain.append(task.target, *task.args)
+
+        chain.run()
 
 
 def handle_skipped_exports(expense_groups: List[ExpenseGroup], index: int, skip_export_count: int, expense_group: ExpenseGroup, triggered_by: ExpenseImportSourceEnum) -> int:
@@ -60,7 +68,8 @@ def schedule_journal_entries_creation(
     expense_group_ids: list[str],
     is_auto_export: bool,
     interval_hours: int,
-    triggered_by: ExpenseImportSourceEnum
+    triggered_by: ExpenseImportSourceEnum,
+    run_in_rabbitmq_worker: bool
 ) -> None:
     """
     Schedule journal entries creation
@@ -83,10 +92,10 @@ def schedule_journal_entries_creation(
 
         fund_source = expense_groups.first().fund_source
 
-        chain_tasks.append({
-            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
-            'fund_source': fund_source,
-        })
+        chain_tasks.append(Task(
+            target='apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            args=[workspace_id, fund_source]
+        ))
 
         skip_export_count = 0
         for index, expense_group in enumerate(expense_groups):
@@ -112,15 +121,13 @@ def schedule_journal_entries_creation(
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            chain_tasks.append({
-                'target': 'apps.sage_intacct.tasks.create_journal_entry',
-                'expense_group': expense_group,
-                'task_log_id': task_log.id,
-                'last_export': (expense_groups.count() == index + 1)
-            })
+            chain_tasks.append(Task(
+                target='apps.sage_intacct.tasks.create_journal_entry',
+                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+            ))
 
         if len(chain_tasks) > 0:
-            __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
+            __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
 
 
 def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_group: ExpenseGroup) -> bool:
@@ -166,7 +173,7 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
     return False
 
 
-def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
+def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum, run_in_rabbitmq_worker: bool) -> None:
     """
     Schedule expense reports creation
     :param expense_group_ids: List of expense group ids
@@ -210,18 +217,16 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            chain_tasks.append({
-                'target': 'apps.sage_intacct.tasks.create_expense_report',
-                'expense_group': expense_group,
-                'task_log_id': task_log.id,
-                'last_export': (expense_groups.count() == index + 1)
-            })
+            chain_tasks.append(Task(
+                target='apps.sage_intacct.tasks.create_expense_report',
+                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+            ))
 
         if len(chain_tasks) > 0:
-            __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
+            __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
 
 
-def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
+def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum, run_in_rabbitmq_worker: bool) -> None:
     """
     Schedule bill creation
     :param expense_group_ids: List of expense group ids
@@ -242,10 +247,10 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
 
         fund_source = expense_groups.first().fund_source
 
-        chain_tasks.append({
-            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
-            'fund_source': fund_source,
-        })
+        chain_tasks.append(Task(
+            target='apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            args=[workspace_id, fund_source]
+        ))
 
         skip_export_count = 0
         for index, expense_group in enumerate(expense_groups):
@@ -271,18 +276,16 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            chain_tasks.append({
-                'target': 'apps.sage_intacct.tasks.create_bill',
-                'expense_group': expense_group,
-                'task_log_id': task_log.id,
-                'last_export': (expense_groups.count() == index + 1)
-            })
+            chain_tasks.append(Task(
+                target='apps.sage_intacct.tasks.create_bill',
+                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+            ))
 
         if len(chain_tasks) > 0:
-            __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
+            __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
 
 
-def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum) -> None:
+def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_ids: list[str], is_auto_export: bool, interval_hours: int, triggered_by: ExpenseImportSourceEnum, run_in_rabbitmq_worker: bool) -> None:
     """
     Schedule charge card transaction creation
     :param expense_group_ids: List of expense group ids
@@ -304,10 +307,10 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
 
         fund_source = expense_groups.first().fund_source
 
-        chain_tasks.append({
-            'target': 'apps.sage_intacct.tasks.check_cache_and_search_vendors',
-            'fund_source': fund_source,
-        })
+        chain_tasks.append(Task(
+            target='apps.sage_intacct.tasks.check_cache_and_search_vendors',
+            args=[workspace_id, fund_source]
+        ))
 
         skip_export_count = 0
         for index, expense_group in enumerate(expense_groups):
@@ -333,15 +336,13 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
                     task_log.triggered_by = triggered_by
                 task_log.save()
 
-            chain_tasks.append({
-                'target': 'apps.sage_intacct.tasks.create_charge_card_transaction',
-                'expense_group': expense_group,
-                'task_log_id': task_log.id,
-                'last_export': (expense_groups.count() == index + 1)
-            })
+            chain_tasks.append(Task(
+                target='apps.sage_intacct.tasks.create_charge_card_transaction',
+                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+            ))
 
         if len(chain_tasks) > 0:
-            __create_chain_and_run(workspace_id, chain_tasks, is_auto_export)
+            __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
 
 
 def schedule_ap_payment_creation(configuration: Configuration, workspace_id: int) -> None:

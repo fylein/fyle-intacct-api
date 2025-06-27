@@ -549,10 +549,10 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create journal entry
-    :param expense_group: Expense Group
+    :param expense_group_id: Expense Group ID
     :param task_log_id: Task Log Id
     :param last_export: Last Export
     :param is_auto_export: Is auto export
@@ -560,6 +560,7 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
     """
     worker_logger = get_logger()
     task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
+    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
     worker_logger.info('Creating Journal Entry for Expense Group %s, current state is %s', expense_group.id, task_log.status)
 
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
@@ -719,17 +720,18 @@ def create_journal_entry(expense_group: ExpenseGroup, task_log_id: int, last_exp
         update_last_export_details(expense_group.workspace_id)
 
 
-def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_expense_report(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create expense report
-    :param expense_group: Expense Group
+    :param expense_group_id: Expense Group ID
     :param task_log_id: Task Log Id
     :param last_export: Last Export
     :param is_auto_export: Is auto export
     :return: None
     """
     worker_logger = get_logger()
-    task_log = TaskLog.objects.get(id=task_log_id)
+    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
+    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
     worker_logger.info('Creating Expense Report for Expense Group %s, current state is %s', expense_group.id, task_log.status)
 
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
@@ -891,17 +893,18 @@ def create_expense_report(expense_group: ExpenseGroup, task_log_id: int, last_ex
             create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
 
-def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_bill(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create bill
-    :param expense_group: Expense Group
+    :param expense_group_id: Expense Group ID
     :param task_log_id: Task Log Id
     :param last_export: Last Export
     :param is_auto_export: Is auto export
     :return: None
     """
     worker_logger = get_logger()
-    task_log = TaskLog.objects.get(id=task_log_id)
+    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
+    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
     worker_logger.info('Creating Bill for Expense Group %s, current state is %s', expense_group.id, task_log.status)
 
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
@@ -1050,17 +1053,18 @@ def create_bill(expense_group: ExpenseGroup, task_log_id: int, last_export: bool
             create_ap_payment(workspace_id=expense_group.workspace.id)
 
 
-def create_charge_card_transaction(expense_group: ExpenseGroup, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_charge_card_transaction(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
     """
     Create charge card transaction
-    :param expense_group: Expense Group
+    :param expense_group_id: Expense Group ID
     :param task_log_id: Task Log Id
     :param last_export: Last Export
     :param is_auto_export: Is auto export
     :return: None
     """
     worker_logger = get_logger()
-    task_log = TaskLog.objects.get(id=task_log_id)
+    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
+    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
     worker_logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s', expense_group.id, task_log.status)
 
     if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
