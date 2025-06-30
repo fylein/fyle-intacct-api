@@ -20,6 +20,7 @@ class E2EDestroySerializer(serializers.Serializer):
 
     # Safety constants for allowed workspace names
     ALLOWED_WORKSPACE_NAMES = [
+        'Integrations E2E Tests',
         'E2E Integration Tests',
         'E2E Integration Test',  # Alternative naming
         'Integration Tests'      # Shorter version

@@ -1,17 +1,16 @@
-from django.utils import timezone
-from datetime import timedelta
-import uuid
 import random
-from django.db.models.signals import pre_save
+import uuid
+from datetime import timedelta
 
-from apps.fyle.models import Expense, ExpenseGroup, DependentFieldSetting
-from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
-from apps.tasks.models import TaskLog, Error
-from apps.workspaces.models import Workspace
+from django.utils import timezone
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_mappings.e2e_fixtures import BaseFixtureFactory
 from fyle_accounting_mappings.models import ExpenseAttribute
-from apps.fyle.signals import run_pre_save_dependent_field_settings_triggers
+
+from apps.fyle.models import DependentFieldSetting, Expense, ExpenseGroup
+from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.models import Workspace
 
 
 class FixtureFactory(BaseFixtureFactory):
@@ -19,28 +18,22 @@ class FixtureFactory(BaseFixtureFactory):
 
     def create_dependent_field_settings(self, workspace: Workspace) -> list[DependentFieldSetting]:
         """Create sample dependent field settings"""
-        settings = []
+        # Create DependentFieldSetting instance without saving
+        setting = DependentFieldSetting(
+            workspace=workspace,
+            is_import_enabled=True,
+            project_field_id=1,
+            cost_code_field_name='PROJECT',
+            cost_code_field_id=1,
+            cost_code_placeholder='Select Project',
+            cost_type_field_name='COST_CENTER',
+            cost_type_placeholder='Select Cost Center',
+            created_at=timezone.now(),
+            updated_at=timezone.now()
+        )
 
-        # Disconnect the pre_save signal to avoid triggering dependent field creation
-        pre_save.disconnect(run_pre_save_dependent_field_settings_triggers, sender=DependentFieldSetting)
-
-        try:
-            setting = DependentFieldSetting.objects.create(
-                workspace=workspace,
-                is_import_enabled=True,
-                project_field_id=1,
-                cost_code_field_name='PROJECT',
-                cost_code_field_id=1,
-                cost_code_placeholder='Select Project',
-                cost_type_field_name='COST_CENTER',
-                cost_type_placeholder='Select Cost Center',
-                created_at=timezone.now(),
-                updated_at=timezone.now()
-            )
-            settings.append(setting)
-        finally:
-            # Reconnect the signal
-            pre_save.connect(run_pre_save_dependent_field_settings_triggers, sender=DependentFieldSetting)
+        # Use bulk_create to avoid triggering pre_save signals
+        settings = DependentFieldSetting.objects.bulk_create([setting])
 
         return settings
 
@@ -51,8 +44,8 @@ class FixtureFactory(BaseFixtureFactory):
         for i in range(count):
             detail = DimensionDetail.objects.create(
                 workspace=workspace,
-                attribute_type=f'E2E_DIMENSION_{i+1}',
-                display_name=f'E2E Dimension {i+1}',
+                attribute_type=f'E2E_DIMENSION_{i + 1}',
+                display_name=f'E2E Dimension {i + 1}',
                 source_type='ACCOUNTING',
                 created_at=timezone.now(),
                 updated_at=timezone.now()
@@ -69,7 +62,7 @@ class FixtureFactory(BaseFixtureFactory):
             expense = Expense.objects.create(
                 workspace=workspace,
                 expense_id=f'tx{uuid.uuid4().hex[:8]}',
-                expense_number=f'E/2024/{i+1:04d}',
+                expense_number=f'E/2024/{i + 1:04d}',
                 amount=round(random.uniform(10.0, 1000.0), 2),
                 currency='USD',
                 foreign_amount=None,
@@ -95,9 +88,9 @@ class FixtureFactory(BaseFixtureFactory):
                 approved_at=timezone.now() - timedelta(days=random.randint(0, 3)),
                 posted_at=timezone.now(),
                 employee_email=f'employee{i}@e2etest.com',
-                employee_name=f'E2E Employee {i+1}',
+                employee_name=f'E2E Employee {i + 1}',
                 is_skipped=False,
-                report_title=f'E2E Test Report {i+1}'
+                report_title=f'E2E Test Report {i + 1}'
             )
             expenses.append(expense)
 
@@ -133,7 +126,7 @@ class FixtureFactory(BaseFixtureFactory):
                 task_id=f'task_{uuid.uuid4().hex[:8]}',
                 expense_group=group,
                 status='COMPLETE' if i % 3 != 0 else 'FAILED',  # Changed from SUCCESS to COMPLETE
-                detail={'message': f'E2E test task log {i+1}'},
+                detail={'message': f'E2E test task log {i + 1}'},
                 created_at=timezone.now(),
                 updated_at=timezone.now()
             )

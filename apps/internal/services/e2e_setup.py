@@ -9,7 +9,6 @@ from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.models import DestinationAttribute
 from apps.workspaces.models import Configuration, LastExportDetail, SageIntacctCredential, Workspace, WorkspaceSchedule
 
-
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
@@ -42,8 +41,6 @@ class E2ESetupService:
 
         # 1. Get workspace and rename it, marking it ready to delete
         workspace = Workspace.objects.get(id=self.workspace_id)
-        workspace.name = 'E2E Integration Tests'
-        workspace.save()
 
         # 2. Create expense_group_settings
         ExpenseGroupSettings.objects.update_or_create(
