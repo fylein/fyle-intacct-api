@@ -1008,7 +1008,7 @@ class SageIntacctConnector:
                             vendor_id = vendor_id + '-1'
                             vendor = self.post_vendor(vendor_id, vendor_name, email)
                         except Exception as e:
-                            logger.info("Error while creating vendor %s in Workspace %s: %s", vendor_name, self.workspace_id, e.response)
+                            logger.error("Error while creating vendor %s in Workspace %s: %s", vendor_name, self.workspace_id, e.response)
                             return None
 
                     if vendor:

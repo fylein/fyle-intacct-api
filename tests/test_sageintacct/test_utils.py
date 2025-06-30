@@ -1541,3 +1541,65 @@ def test_invalidate_sage_intacct_credentials(mocker, db):
     # # Verify the credentials were marked as expired
     # sage_intacct_credentials.refresh_from_db()
     # assert sage_intacct_credentials.is_expired == True
+
+
+def test_get_or_create_vendor_fallback_creation_error(mocker, db):
+    """
+    Test get or create vendor when fallback vendor creation fails
+    """
+    workspace_id = 1
+
+    # Mock the initial vendor get call to return empty (vendor doesn't exist)
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.get',
+        return_value={}
+    )
+
+    # Mock the post_vendor method to fail twice - first with duplicate error, then with general error
+    mocker.patch.object(
+        SageIntacctConnector,
+        'post_vendor'
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    vendor_name = 'Test Vendor'
+    email = 'test@example.com'
+
+    # First call should raise WrongParamsError with duplicate message
+    # Second call (fallback with '-1') should raise a general Exception
+    with mock.patch.object(sage_intacct_connection, 'post_vendor') as mock_post_vendor:
+        mock_post_vendor.side_effect = [
+            WrongParamsError(
+                msg={
+                    'Message': 'Invalid parameters'
+                },
+                response={
+                    'error': [{'description2': 'Another record with the value already exists'}],
+                    'type': 'Invalid_params'
+                }
+            ),
+            Exception('General vendor creation error')
+        ]
+
+        # Mock the vendor search after duplicate error
+        mocker.patch.object(sage_intacct_connection.connection.vendors, 'get', return_value={})
+
+        try:
+            vendor = sage_intacct_connection.get_or_create_vendor(vendor_name, email, create=True)
+
+            # Should return None when fallback creation fails
+            assert vendor is None
+
+            # Verify post_vendor was called twice (original attempt + fallback with '-1')
+            assert mock_post_vendor.call_count == 2
+
+            # Verify the calls were made with correct parameters
+            calls = mock_post_vendor.call_args_list
+            assert calls[0][0][0] == 'TestVendor'  # sanitized vendor name
+            assert calls[1][0][0] == 'TestVendor-1'  # fallback with '-1'
+
+        except Exception:
+            # This should not be reached as the exception should be handled
+            assert False, "Exception should have been handled and None returned"
