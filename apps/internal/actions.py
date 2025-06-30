@@ -2,10 +2,9 @@ import logging
 
 from django.conf import settings
 
-from apps.fyle.helpers import delete_request
+from apps.internal.helpers import delete_request
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.workspaces.models import FyleCredential, Workspace, SageIntacctCredential
-
+from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO

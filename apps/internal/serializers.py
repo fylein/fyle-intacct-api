@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from apps.workspaces.models import Workspace
 
 
@@ -15,7 +16,7 @@ class E2ESetupSerializer(serializers.Serializer):
 
 class E2EDestroySerializer(serializers.Serializer):
     """Serializer for E2E Destroy API payload validation"""
-    org_id = serializers.CharField(required=True, help_text="Organization ID to destroy")
+    org_id = serializers.CharField(required=True, help_text="Org ID to destroy")
 
     # Safety constants for allowed workspace names
     ALLOWED_WORKSPACE_NAMES = [
@@ -25,10 +26,7 @@ class E2EDestroySerializer(serializers.Serializer):
     ]
 
     def validate_org_id(self, value: str) -> str:
-        """Validate organization ID and perform safety checks"""
-        if not value or not value.strip():
-            raise serializers.ValidationError("Organization ID is required")
-
+        """Validate org ID and perform safety checks"""
         # Find and validate workspace
         try:
             workspace = Workspace.objects.get(fyle_org_id=value)
