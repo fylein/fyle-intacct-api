@@ -1,25 +1,17 @@
-import pytest
 import logging
-from unittest import mock
 from datetime import datetime
+from unittest import mock
+
+import pytest
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute, Mapping
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import (
-    Mapping,
-    CategoryMapping,
-    ExpenseAttribute,
-    DestinationAttribute,
-)
-from tests.helper import dict_compare_keys
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from apps.sage_intacct.models import CostCode, CostType
+
 from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.utils import (
-    Workspace,
-    Configuration,
-    SageIntacctConnector,
-    SageIntacctCredential
-)
-from .fixtures import data
+from apps.sage_intacct.models import CostCode, CostType
+from apps.sage_intacct.utils import Configuration, SageIntacctConnector, SageIntacctCredential, Workspace
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from tests.helper import dict_compare_keys
+from tests.test_sageintacct.fixtures import data
 
 logger = logging.getLogger(__name__)
 
@@ -1566,13 +1558,13 @@ def test_get_or_create_vendor_fallback_creation_error(mocker, db):
             self.response = "Custom error response"
 
     mocker.patch('apps.sage_intacct.utils.logger')
-    
+
     with mock.patch.object(sage_intacct_connection, 'post_vendor') as mock_post_vendor:
         mock_post_vendor.side_effect = [
             WrongParamsError(
                 msg={
                     'Message': 'Invalid parameters'
-                }, 
+                },
                 response={
                     'error': [{'description2': 'Another record with the value already exists'}],
                     'type': 'Invalid_params'
@@ -1582,7 +1574,7 @@ def test_get_or_create_vendor_fallback_creation_error(mocker, db):
         ]
 
         mocker.patch.object(sage_intacct_connection.connection.vendors, 'get', return_value={})
-        
+
         try:
             vendor = sage_intacct_connection.get_or_create_vendor(vendor_name, email, create=True)
 
