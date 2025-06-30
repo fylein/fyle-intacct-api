@@ -1,11 +1,21 @@
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 
+from apps.internal.helpers import is_safe_environment
 from apps.workspaces.models import Workspace
 
 
 class E2ESetupSerializer(serializers.Serializer):
     """Serializer for E2E Setup API payload validation"""
     workspace_id = serializers.IntegerField(required=True, help_text="Workspace ID")
+
+    def validate(self, attrs):
+        """Validate environment safety"""
+        if not is_safe_environment():
+            raise PermissionDenied(
+                "E2E setup endpoint is only available in development/staging environments"
+            )
+        return attrs
 
     def validate_workspace_id(self, value: int) -> int:
         """Validate workspace ID"""
@@ -25,6 +35,14 @@ class E2EDestroySerializer(serializers.Serializer):
         'E2E Integration Test',  # Alternative naming
         'Integration Tests'      # Shorter version
     ]
+
+    def validate(self, attrs):
+        """Validate environment safety"""
+        if not is_safe_environment():
+            raise PermissionDenied(
+                "E2E destroy endpoint is only available in development/staging environments"
+            )
+        return attrs
 
     def validate_org_id(self, value: str) -> str:
         """Validate org ID and perform safety checks"""
