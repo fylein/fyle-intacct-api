@@ -29,7 +29,7 @@ def safe_run_sql(sql_files: list) -> list:
     return operations
 
 
-def is_safe_environment():
+def is_safe_environment() -> bool:
     """Check if we're in a safe environment for E2E operations"""
     from django.conf import settings
     return getattr(settings, 'ALLOW_E2E_SETUP', False)

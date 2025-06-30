@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from rest_framework import generics, viewsets, status
+from rest_framework import generics, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from django.db import connection, transaction
@@ -11,13 +11,6 @@ from fyle_intacct_api.utils import assert_valid
 
 from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
 from apps.workspaces.models import Workspace
-from apps.fyle.models import Expense, DependentFieldSetting
-from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
-from apps.tasks.models import TaskLog
-from fyle_accounting_mappings.models import (
-    MappingSetting, EmployeeMapping, CategoryMapping, Mapping
-)
-from fyle_accounting_library.common_resources.models import DimensionDetail
 
 from .services.e2e_setup import E2ESetupService
 from .actions import delete_integration_record, get_accounting_fields, get_exported_entry
@@ -101,7 +94,7 @@ class E2ESetupView(generics.GenericAPIView):
     authentication_classes = []
     permission_classes = [IsAuthenticatedForInternalAPI]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """
         Set up test organization data for E2E testing
 
@@ -164,7 +157,7 @@ class E2EDestroyView(generics.GenericAPIView):
     authentication_classes = []
     permission_classes = [IsAuthenticatedForInternalAPI]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """
         Destroy test organization data after E2E testing
 

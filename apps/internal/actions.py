@@ -59,7 +59,6 @@ def delete_integration_record(workspace_id: int) -> str:
     Delete integration record
     :param workspace_id: Workspace ID
     """
-
     logger.info(f"Cleaning up integration settings for workspace_id: {workspace_id}")
 
     refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token

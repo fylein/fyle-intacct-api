@@ -6,7 +6,7 @@ class E2ESetupSerializer(serializers.Serializer):
     """Serializer for E2E Setup API payload validation"""
     workspace_id = serializers.IntegerField(required=True, help_text="Workspace ID")
 
-    def validate_workspace_id(self, value):
+    def validate_workspace_id(self, value: int) -> int:
         """Validate workspace ID"""
         if not value or value <= 0:
             raise serializers.ValidationError("Valid workspace ID is required")
@@ -24,7 +24,7 @@ class E2EDestroySerializer(serializers.Serializer):
         'Integration Tests'      # Shorter version
     ]
 
-    def validate_org_id(self, value):
+    def validate_org_id(self, value: str) -> str:
         """Validate organization ID and perform safety checks"""
         if not value or not value.strip():
             raise serializers.ValidationError("Organization ID is required")
