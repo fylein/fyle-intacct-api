@@ -286,7 +286,7 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
     try:
         credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id=workspace_id)
     except SageIntacctCredential.DoesNotExist:
-        logger.error('Active Sage Intacct credentials not found for workspace_id - %s', workspace_id)
+        logger.info('Active Sage Intacct credentials not found for workspace_id - %s', workspace_id)
         return
 
     project_import_log = ImportLog.objects.filter(workspace_id=workspace_id, attribute_type='PROJECT').first()

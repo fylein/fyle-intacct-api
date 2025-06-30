@@ -174,6 +174,21 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
 
+def skip_expenses_and_post_accounting_export_summary(expense_ids: list[int], workspace: Workspace) -> None:
+    """
+    Skip expenses and post accounting export summary
+    :param expense_ids: List of expense ids
+    :param workspace_id: Workspace id
+    :return: None
+    """
+    skipped_expenses = mark_expenses_as_skipped(Q(), expense_ids, workspace)
+    if skipped_expenses:
+        try:
+            post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
+        except Exception:
+            logger.exception('Error posting accounting export summary for workspace_id: %s', workspace.id)
+
+
 def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, workspace: Workspace, imported_from: ExpenseImportSourceEnum = None) -> None:
     """
     Group expenses and save
@@ -185,6 +200,23 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, work
     expense_objects = Expense.create_expense_objects(expenses, workspace.id, imported_from=imported_from)
     expense_filters = ExpenseFilter.objects.filter(workspace_id=workspace.id).order_by('rank')
     configuration = Configuration.objects.get(workspace_id=workspace.id)
+
+    # Skip reimbursable expenses if reimbursable expense settings is not configured
+    if not configuration.reimbursable_expenses_object:
+        reimbursable_expense_ids = [e.id for e in expense_objects if e.fund_source == 'PERSONAL']
+
+        if reimbursable_expense_ids:
+            expense_objects = [e for e in expense_objects if e.id not in reimbursable_expense_ids]
+            skip_expenses_and_post_accounting_export_summary(reimbursable_expense_ids, workspace)
+
+    # Skip corporate credit card expenses if corporate credit card expense settings is not configured
+    if not configuration.corporate_credit_card_expenses_object:
+        ccc_expense_ids = [e.id for e in expense_objects if e.fund_source == 'CCC']
+
+        if ccc_expense_ids:
+            expense_objects = [e for e in expense_objects if e.id not in ccc_expense_ids]
+            skip_expenses_and_post_accounting_export_summary(ccc_expense_ids, workspace)
+
     filtered_expenses = expense_objects
 
     if expense_filters:
@@ -239,11 +271,16 @@ def import_and_export_expenses(report_id: str, org_id: str, is_state_change_even
         return
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace.id)
+    task_log = None
 
     try:
         with transaction.atomic():
             fund_source = get_fund_source(workspace.id)
-            source_account_type = get_source_account_type(fund_source)
+
+            if imported_from == ExpenseImportSourceEnum.DIRECT_EXPORT:
+                source_account_type = ['PERSONAL_CASH_ACCOUNT', 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT']
+            else:
+                source_account_type = get_source_account_type(fund_source)
 
             task_log, _ = TaskLog.objects.update_or_create(workspace_id=workspace.id, type='FETCHING_EXPENSES', defaults={'status': 'IN_PROGRESS'})
 

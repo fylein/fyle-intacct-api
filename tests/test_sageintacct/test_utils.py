@@ -1,25 +1,17 @@
-import pytest
 import logging
-from unittest import mock
 from datetime import datetime
+from unittest import mock
+
+import pytest
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute, Mapping
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import (
-    Mapping,
-    CategoryMapping,
-    ExpenseAttribute,
-    DestinationAttribute,
-)
-from tests.helper import dict_compare_keys
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from apps.sage_intacct.models import CostCode, CostType
+
 from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.utils import (
-    Workspace,
-    Configuration,
-    SageIntacctConnector,
-    SageIntacctCredential
-)
-from .fixtures import data
+from apps.sage_intacct.models import CostCode, CostType
+from apps.sage_intacct.utils import Configuration, SageIntacctConnector, SageIntacctCredential, Workspace
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from tests.helper import dict_compare_keys
+from tests.test_sageintacct.fixtures import data
 
 logger = logging.getLogger(__name__)
 
@@ -1541,3 +1533,56 @@ def test_invalidate_sage_intacct_credentials(mocker, db):
     # # Verify the credentials were marked as expired
     # sage_intacct_credentials.refresh_from_db()
     # assert sage_intacct_credentials.is_expired == True
+
+
+def test_get_or_create_vendor_fallback_creation_error(mocker, db):
+    """
+    Test get or create vendor when fallback vendor creation fails
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.get',
+        return_value={}
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    vendor_name = 'Test Vendor'
+    email = 'test@example.com'
+
+    class CustomException(Exception):
+        def __init__(self, message):
+            super().__init__(message)
+            self.response = "Custom error response"
+
+    mocker.patch('apps.sage_intacct.utils.logger')
+
+    with mock.patch.object(sage_intacct_connection, 'post_vendor') as mock_post_vendor:
+        mock_post_vendor.side_effect = [
+            WrongParamsError(
+                msg={
+                    'Message': 'Invalid parameters'
+                },
+                response={
+                    'error': [{'description2': 'Another record with the value already exists'}],
+                    'type': 'Invalid_params'
+                }
+            ),
+            CustomException('General vendor creation error')
+        ]
+
+        mocker.patch.object(sage_intacct_connection.connection.vendors, 'get', return_value={})
+
+        try:
+            vendor = sage_intacct_connection.get_or_create_vendor(vendor_name, email, create=True)
+
+            assert vendor is None
+            assert mock_post_vendor.call_count == 2
+
+            calls = mock_post_vendor.call_args_list
+            assert calls[0][0][0] == 'Test Vendor'
+            assert calls[1][0][0] == 'Test Vendor-1'
+        except Exception:
+            assert False, "Exception should have been handled and None returned"

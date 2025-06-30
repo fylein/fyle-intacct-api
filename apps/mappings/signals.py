@@ -189,7 +189,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
                 })
 
         except SageIntacctCredential.DoesNotExist:
-            logger.error(
+            logger.info(
                 'Active Sage Intacct credentials not found for workspace_id - %s',
                 workspace_id
             )
@@ -200,7 +200,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
 
         except InvalidTokenError:
             invalidate_sage_intacct_credentials(workspace_id)
-            logger.error('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
+            logger.info('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
 
             raise ValidationError({
                 'message': 'Invalid Sage Intacct Token Error for workspace_id - %s',
