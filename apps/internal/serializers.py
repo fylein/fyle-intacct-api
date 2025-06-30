@@ -9,7 +9,7 @@ class E2ESetupSerializer(serializers.Serializer):
     """Serializer for E2E Setup API payload validation"""
     workspace_id = serializers.IntegerField(required=True, help_text="Workspace ID")
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
         """Validate environment safety"""
         if not is_safe_environment():
             raise PermissionDenied(
@@ -36,7 +36,7 @@ class E2EDestroySerializer(serializers.Serializer):
         'Integration Tests'      # Shorter version
     ]
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
         """Validate environment safety"""
         if not is_safe_environment():
             raise PermissionDenied(

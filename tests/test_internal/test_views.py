@@ -171,7 +171,6 @@ def test_e2e_destroy_view_failures(db, api_client, mocker):
     """
     Test E2EDestroyView failure scenarios
     """
-
     mock_workspace = mocker.Mock()
     mock_workspace.id = 2
     mock_workspace.name = 'E2E Integration Tests'
