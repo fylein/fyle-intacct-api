@@ -1,16 +1,16 @@
+import logging
 import os
 import signal
-import logging
 
-from .actions import handle_exports
+from common.event import BaseEvent
+from common.qconnector import RabbitMQConnector
+from consumer.event_consumer import EventConsumer
 
 from fyle_accounting_library.fyle_platform.enums import RoutingKeyEnum
-from fyle_accounting_library.rabbitmq.models import FailedEvent
 from fyle_accounting_library.rabbitmq.data_class import RabbitMQData
-from consumer.event_consumer import EventConsumer
-from common.qconnector import RabbitMQConnector
-from common.event import BaseEvent
-
+from fyle_accounting_library.rabbitmq.helpers import create_cache_table
+from fyle_accounting_library.rabbitmq.models import FailedEvent
+from workers.export.actions import handle_exports
 
 logger = logging.getLogger('workers')
 
@@ -78,6 +78,8 @@ def consume() -> None:
     """
     Consume
     """
+    create_cache_table()
+
     rabbitmq_url = os.environ.get('RABBITMQ_URL')
 
     export_worker = ExportWorker(
