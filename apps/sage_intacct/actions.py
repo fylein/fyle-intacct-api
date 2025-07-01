@@ -1,11 +1,11 @@
 import logging
-from django.db.models import Q
+
 from django.conf import settings
+from django.db.models import Q
 from django.utils.module_loading import import_string
 
-from apps.workspaces.models import FyleCredential
-from apps.workspaces.models import LastExportDetail
 from apps.tasks.models import TaskLog
+from apps.workspaces.models import FyleCredential, LastExportDetail
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -45,12 +45,15 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
         ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']), workspace_id=workspace_id, status__in=['FAILED', 'FATAL']
     ).count()
 
-    successful_exports = TaskLog.objects.filter(
-        ~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']),
-        workspace_id=workspace_id,
-        status='COMPLETE',
-        updated_at__gt=last_export_detail.last_exported_at
-    ).count()
+    filters = {
+        'workspace_id': workspace_id,
+        'status': 'COMPLETE'
+    }
+
+    if last_export_detail.last_exported_at:
+        filters['updated_at__gt'] = last_export_detail.last_exported_at
+
+    successful_exports = TaskLog.objects.filter(~Q(type__in=['CREATING_REIMBURSEMENT', 'FETCHING_EXPENSES', 'CREATING_AP_PAYMENT']), **filters).count()
 
     last_export_detail.failed_expense_groups_count = failed_exports
     last_export_detail.successful_expense_groups_count = successful_exports
