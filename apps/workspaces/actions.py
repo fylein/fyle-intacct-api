@@ -1,19 +1,16 @@
 import logging
 from datetime import datetime, timedelta
+
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from apps.fyle.models import ExpenseGroup
-from apps.workspaces.models import (
-    LastExportDetail,
-    WorkspaceSchedule,
-    Configuration
-)
 from apps.sage_intacct.queue import (
-    schedule_expense_reports_creation,
     schedule_bills_creation,
     schedule_charge_card_transaction_creation,
-    schedule_journal_entries_creation
+    schedule_expense_reports_creation,
+    schedule_journal_entries_creation,
 )
+from apps.workspaces.models import Configuration, LastExportDetail, WorkspaceSchedule
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -132,4 +129,4 @@ def export_to_intacct(workspace_id: int, expense_group_ids: list = [], triggered
         if workspace_schedule:
             last_export_detail.next_export_at = last_exported_at + timedelta(hours=workspace_schedule.interval_hours)
 
-        last_export_detail.save()
+        last_export_detail.save(update_fields=['last_exported_at', 'export_mode', 'next_export_at'])
