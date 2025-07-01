@@ -1,4 +1,5 @@
 from cryptography.fernet import Fernet
+from datetime import timedelta
 
 from django.db.models import Q, QuerySet
 from django.conf import settings
@@ -22,7 +23,9 @@ from fyle_rest_auth.helpers import get_fyle_admin
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from fyle_intacct_api.utils import assert_valid
+from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.sage_intacct.actions import patch_integration_settings
 
 from apps.fyle.models import ExpenseGroupSettings
 from apps.fyle.helpers import get_cluster_domain
@@ -45,6 +48,41 @@ from apps.workspaces.serializers import (
 
 User = get_user_model()
 auth_utils = AuthUtils()
+
+
+class TokenHealthView(viewsets.ViewSet):
+    """
+    Sage Intacct Connect View
+    """
+
+    def get(self, request: Request, **kwargs) -> Response:
+        status_code = status.HTTP_200_OK
+        message = "Intacct connection is active"
+
+        workspace_id = kwargs['workspace_id']
+        sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace_id).first()
+
+        if not sage_intacct_credentials:
+            status_code = status.HTTP_400_BAD_REQUEST
+            message = "Intacct credentials not found"
+        elif sage_intacct_credentials.is_expired:
+            status_code = status.HTTP_400_BAD_REQUEST
+            message = "Intacct connection expired"
+        else:
+            try:
+                cache_key = f'HEALTH_CHECK_CACHE_{workspace_id}'
+                is_healthy = cache.get(cache_key)
+
+                if is_healthy is None:
+                    sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+                    sage_intacct_connection.connection.locations.count()
+                    cache.set(cache_key, True, timeout=timedelta(hours=24).total_seconds())
+            except Exception:
+                invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
+                status_code = status.HTTP_400_BAD_REQUEST
+                message = "Intacct connection expired"
+
+        return Response({"message": message}, status=status_code)
 
 
 class WorkspaceView(viewsets.ViewSet):
@@ -318,7 +356,8 @@ class ConnectSageIntacctView(viewsets.ViewSet):
                 sage_intacct_credentials.si_company_id = si_company_id
                 sage_intacct_credentials.si_company_name = si_company_name
                 sage_intacct_credentials.si_user_password = encrypted_password
-
+                sage_intacct_credentials.is_expired = False
+                patch_integration_settings(workspace, is_token_expired=False)
                 sage_intacct_credentials.save()
 
             return Response(
@@ -372,7 +411,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
         """
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
+            sage_intacct_credentials = SageIntacctCredential.objects.get(workspace=workspace)
 
             return Response(
                 data=SageIntacctCredentialSerializer(sage_intacct_credentials).data,
