@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timedelta
 
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+
 from apps.fyle.models import ExpenseGroup
 from apps.sage_intacct.queue import (
     schedule_bills_creation,
@@ -9,7 +11,6 @@ from apps.sage_intacct.queue import (
     schedule_journal_entries_creation,
 )
 from apps.workspaces.models import Configuration, LastExportDetail, WorkspaceSchedule
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
