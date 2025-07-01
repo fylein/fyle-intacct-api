@@ -1,52 +1,40 @@
-import re
 import json
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 
-from apps.workspaces.helpers import get_app_name
 import unidecode
+from cryptography.fernet import Fernet
+from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
-from django.conf import settings
-
-from cryptography.fernet import Fernet
-
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_mappings.models import (
-    MappingSetting,
-    ExpenseAttribute,
-    DestinationAttribute
-)
 
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    FyleCredential,
-    SageIntacctCredential
-)
-
 from apps.sage_intacct.models import (
+    APPayment,
+    APPaymentLineitem,
     Bill,
+    BillLineitem,
+    ChargeCardTransaction,
+    ChargeCardTransactionLineitem,
     CostCode,
     CostType,
-    APPayment,
     DimensionDetail,
-    JournalEntry,
-    BillLineitem,
     ExpenseReport,
-    APPaymentLineitem,
-    JournalEntryLineitem,
     ExpenseReportLineitem,
-    ChargeCardTransaction,
+    JournalEntry,
+    JournalEntryLineitem,
     SageIntacctReimbursement,
-    ChargeCardTransactionLineitem,
-    SageIntacctReimbursementLineitem
+    SageIntacctReimbursementLineitem,
 )
+from apps.workspaces.helpers import get_app_name
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -1016,7 +1004,12 @@ class SageIntacctConnector:
 
                         vendor = vendor if vendor['STATUS'] == 'active' else None
                     else:
-                        vendor = None
+                        try:
+                            vendor_id = vendor_id + '-1'
+                            vendor = self.post_vendor(vendor_id, vendor_name, email)
+                        except Exception as e:
+                            logger.error("Error while creating vendor %s in Workspace %s: %s", vendor_name, self.workspace_id, e.response)
+                            return None
 
                     if vendor:
                         return self.create_destination_attribute(
