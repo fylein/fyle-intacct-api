@@ -1,15 +1,13 @@
+import logging
+import os
+
+from django.utils import timezone
+
 from apps.fyle.models import ExpenseAttribute, ExpenseGroupSettings
 from apps.internal.services.fixture_factory import FixtureFactory
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.models import DestinationAttribute
-from apps.users.models import User
-from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, SageIntacctCredential, Workspace, WorkspaceSchedule
-from fyle_rest_auth.models import AuthToken
-from django.utils import timezone
-
-import logging
-import os
-import uuid
+from apps.workspaces.models import Configuration, LastExportDetail, SageIntacctCredential, Workspace, WorkspaceSchedule
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -18,11 +16,11 @@ logger.level = logging.INFO
 class E2ESetupService:
     """Service for setting up E2E test fixture data"""
 
-    def __init__(self, workspace_id):
+    def __init__(self, workspace_id: int) -> None:
         self.workspace_id = workspace_id
         self.fixture_factory = FixtureFactory()
 
-    def setup_organization(self):
+    def setup_organization(self) -> dict:
         """Main method to set up the test organization"""
         logger.info("Starting E2E setup")
 
@@ -37,23 +35,21 @@ class E2ESetupService:
             "org_name": workspace.name
         }
 
-    def _setup_phase1_core_data(self):
+    def _setup_phase1_core_data(self) -> Workspace:
         """Set up Phase 1: Core data required for clone setting (parent org)"""
         logger.info("Setting up Phase 1: Core data (Parent Org - Clone Setting)")
 
         # 1. Get workspace and rename it, marking it ready to delete
         workspace = Workspace.objects.get(id=self.workspace_id)
-        workspace.name = 'E2E Integration Tests'
-        workspace.save()
 
         # 2. Create expense_group_settings
         ExpenseGroupSettings.objects.update_or_create(
             workspace=workspace,
             defaults={
-            'reimbursable_expense_group_fields': ['employee_email', 'report_id', 'claim_number', 'fund_source'],
-            'corporate_credit_card_expense_group_fields': ['employee_email', 'report_id', 'claim_number', 'fund_source'],
-            'expense_state': 'PAYMENT_PROCESSING',
-            'ccc_expense_state': 'PAID'
+                'reimbursable_expense_group_fields': ['employee_email', 'report_id', 'claim_number', 'fund_source'],
+                'corporate_credit_card_expense_group_fields': ['employee_email', 'report_id', 'claim_number', 'fund_source'],
+                'expense_state': 'PAYMENT_PROCESSING',
+                'ccc_expense_state': 'PAID'
             }
         )
 
@@ -152,7 +148,7 @@ class E2ESetupService:
         logger.info("Phase 1 core data setup completed")
         return workspace
 
-    def _setup_phase2_advanced_data(self, workspace):
+    def _setup_phase2_advanced_data(self, workspace: Workspace) -> None:
         """Set up Phase 2: Advanced test data"""
         logger.info("Setting up Phase 2: Advanced test data")
 

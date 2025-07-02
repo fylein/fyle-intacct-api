@@ -1,57 +1,51 @@
-from django.utils import timezone
-from datetime import datetime, timedelta
-import uuid
 import random
-from django.db.models.signals import pre_save
+import uuid
+from datetime import timedelta
 
-from apps.fyle.models import Expense, ExpenseGroup, DependentFieldSetting
-from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
-from apps.mappings.models import GeneralMapping
-from apps.tasks.models import TaskLog, Error
+from django.utils import timezone
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_mappings.e2e_fixtures import BaseFixtureFactory
-from apps.fyle.signals import run_pre_save_dependent_field_settings_triggers
 from fyle_accounting_mappings.models import ExpenseAttribute
+
+from apps.fyle.models import DependentFieldSetting, Expense, ExpenseGroup
+from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.models import Workspace
+
 
 class FixtureFactory(BaseFixtureFactory):
     """Factory for creating Intacct test fixture data"""
 
-    def create_dependent_field_settings(self, workspace):
+    def create_dependent_field_settings(self, workspace: Workspace) -> list[DependentFieldSetting]:
         """Create sample dependent field settings"""
-        settings = []
+        # Create DependentFieldSetting instance without saving
+        setting = DependentFieldSetting(
+            workspace=workspace,
+            is_import_enabled=True,
+            project_field_id=1,
+            cost_code_field_name='PROJECT',
+            cost_code_field_id=1,
+            cost_code_placeholder='Select Project',
+            cost_type_field_name='COST_CENTER',
+            cost_type_placeholder='Select Cost Center',
+            created_at=timezone.now(),
+            updated_at=timezone.now()
+        )
 
-        # Disconnect the pre_save signal to avoid triggering dependent field creation
-        pre_save.disconnect(run_pre_save_dependent_field_settings_triggers, sender=DependentFieldSetting)
-
-        try:
-            setting = DependentFieldSetting.objects.create(
-                workspace=workspace,
-                is_import_enabled=True,
-                project_field_id=1,
-                cost_code_field_name='PROJECT',
-                cost_code_field_id=1,
-                cost_code_placeholder='Select Project',
-                cost_type_field_name='COST_CENTER',
-                cost_type_placeholder='Select Cost Center',
-                created_at=timezone.now(),
-                updated_at=timezone.now()
-            )
-            settings.append(setting)
-        finally:
-            # Reconnect the signal
-            pre_save.connect(run_pre_save_dependent_field_settings_triggers, sender=DependentFieldSetting)
+        # Use bulk_create to avoid triggering pre_save signals
+        settings = DependentFieldSetting.objects.bulk_create([setting])
 
         return settings
 
-    def create_dimension_details(self, workspace, count=3):
+    def create_dimension_details(self, workspace: Workspace, count: int = 3) -> list[DimensionDetail]:
         """Create sample dimension details"""
         details = []
 
         for i in range(count):
             detail = DimensionDetail.objects.create(
                 workspace=workspace,
-                attribute_type=f'E2E_DIMENSION_{i+1}',
-                display_name=f'E2E Dimension {i+1}',
+                attribute_type=f'E2E_DIMENSION_{i + 1}',
+                display_name=f'E2E Dimension {i + 1}',
                 source_type='ACCOUNTING',
                 created_at=timezone.now(),
                 updated_at=timezone.now()
@@ -60,7 +54,7 @@ class FixtureFactory(BaseFixtureFactory):
 
         return details
 
-    def create_expenses(self, workspace, count=10):
+    def create_expenses(self, workspace: Workspace, count: int = 10) -> list[Expense]:
         """Create sample expenses"""
         expenses = []
 
@@ -68,7 +62,7 @@ class FixtureFactory(BaseFixtureFactory):
             expense = Expense.objects.create(
                 workspace=workspace,
                 expense_id=f'tx{uuid.uuid4().hex[:8]}',
-                expense_number=f'E/2024/{i+1:04d}',
+                expense_number=f'E/2024/{i + 1:04d}',
                 amount=round(random.uniform(10.0, 1000.0), 2),
                 currency='USD',
                 foreign_amount=None,
@@ -94,20 +88,20 @@ class FixtureFactory(BaseFixtureFactory):
                 approved_at=timezone.now() - timedelta(days=random.randint(0, 3)),
                 posted_at=timezone.now(),
                 employee_email=f'employee{i}@e2etest.com',
-                employee_name=f'E2E Employee {i+1}',
+                employee_name=f'E2E Employee {i + 1}',
                 is_skipped=False,
-                report_title=f'E2E Test Report {i+1}'
+                report_title=f'E2E Test Report {i + 1}'
             )
             expenses.append(expense)
 
         return expenses
 
-    def create_expense_groups(self, workspace, expenses, group_size=5):
+    def create_expense_groups(self, workspace: Workspace, expenses: list[Expense], group_size: int = 5) -> list[ExpenseGroup]:
         """Create expense groups from expenses"""
         groups = []
 
         for i in range(0, len(expenses), group_size):
-            group_expenses = expenses[i:i+group_size]
+            group_expenses = expenses[i: i + group_size]
 
             group = ExpenseGroup.objects.create(
                 workspace=workspace,
@@ -123,26 +117,21 @@ class FixtureFactory(BaseFixtureFactory):
 
         return groups
 
-    def create_task_logs(self, workspace, expense_groups):
+    def create_task_logs(self, workspace: Workspace, expense_groups: list[ExpenseGroup]) -> None:
         """Create task logs for expense groups"""
-        task_logs = []
-
         for i, group in enumerate(expense_groups):
-            task_log = TaskLog.objects.create(
+            TaskLog.objects.create(
                 workspace=workspace,
                 type='CREATING_BILL',
                 task_id=f'task_{uuid.uuid4().hex[:8]}',
                 expense_group=group,
                 status='COMPLETE' if i % 3 != 0 else 'FAILED',  # Changed from SUCCESS to COMPLETE
-                detail={'message': f'E2E test task log {i+1}'},
+                detail={'message': f'E2E test task log {i + 1}'},
                 created_at=timezone.now(),
                 updated_at=timezone.now()
             )
-            task_logs.append(task_log)
 
-        return task_logs
-
-    def create_bills_and_lineitems(self, expense_groups):
+    def create_bills_and_lineitems(self, expense_groups: list[ExpenseGroup]) -> None:
         """Create bills and bill line items for expense groups"""
         for expense_group in expense_groups:
             # First create a bill for this expense group
@@ -157,8 +146,8 @@ class FixtureFactory(BaseFixtureFactory):
 
             # Get expenses from the expense group and create lineitems for each
             expenses = expense_group.expenses.all()
-            for i, expense in enumerate(expenses):
-                li = BillLineitem.objects.create(
+            for expense in expenses:
+                BillLineitem.objects.create(
                     bill=bill,
                     expense=expense,
                     gl_account_number=f'GL-{expense.id:04d}',
@@ -171,9 +160,7 @@ class FixtureFactory(BaseFixtureFactory):
                     updated_at=timezone.now()
                 )
 
-
-
-    def create_charge_card_transactions_and_lineitems(self, expense_groups):
+    def create_charge_card_transactions_and_lineitems(self, expense_groups: list[ExpenseGroup]) -> None:
         """Create charge card transactions and line items for expense groups"""
         for expense_group in expense_groups:
             # First create a charge card transaction for this expense group
@@ -204,9 +191,8 @@ class FixtureFactory(BaseFixtureFactory):
                     updated_at=timezone.now()
                 )
 
-    def create_error_records(self, workspace, expense_groups):
+    def create_error_records(self, workspace: Workspace, expense_groups: list[ExpenseGroup]) -> None:
         """Create error records for testing error scenarios"""
-
         employees = ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE')
         for i, expense_group in enumerate(expense_groups):
             Error.objects.create(

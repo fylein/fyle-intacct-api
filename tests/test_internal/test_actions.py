@@ -1,5 +1,5 @@
+from apps.internal.actions import delete_integration_record, get_accounting_fields, get_exported_entry
 from tests.test_sageintacct.fixtures import data
-from apps.internal.actions import get_accounting_fields, get_exported_entry
 
 
 def test_get_accounting_fields(db, mocker):
@@ -35,3 +35,27 @@ def test_get_exported_entry(db, mocker):
 
     entry = get_exported_entry(query_params)
     assert entry is not None
+
+
+def test_delete_integration_record(db, mocker):
+    """
+    Test delete_integration_record function
+    """
+    workspace_id = 1
+
+    # Mock FyleCredential.objects.get to return a mock object with refresh_token
+    mock_credential = mocker.Mock()
+    mock_credential.refresh_token = 'test_refresh_token'
+    mocker.patch('apps.internal.actions.FyleCredential.objects.get', return_value=mock_credential)
+
+    # Mock delete_request to not raise any exception
+    mocker.patch('apps.internal.actions.delete_request')
+
+    result = delete_integration_record(workspace_id)
+    assert result == "SUCCESS"
+
+    # Mock delete_request to raise an exception
+    mocker.patch('apps.internal.actions.delete_request', side_effect=Exception('Test error'))
+
+    result = delete_integration_record(workspace_id)
+    assert result == "FAILED"

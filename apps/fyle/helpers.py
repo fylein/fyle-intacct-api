@@ -1,35 +1,24 @@
 import json
 import logging
 import traceback
-from typing import Optional, Union
 from datetime import datetime, timezone
+from typing import Optional, Union
 
-import requests
-from apps.mappings.tasks import construct_tasks_and_chain_import_fields_to_fyle
 import django_filters
+import requests
 from django.conf import settings
-from django.db.models import Q
 from django.db import models
+from django.db.models import Q
+from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_integrations_platform_connector import PlatformConnector
 from rest_framework.exceptions import ValidationError
 
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import ExpenseAttribute
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-
+from apps.fyle.models import DependentFieldSetting, Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+from apps.mappings.tasks import construct_tasks_and_chain_import_fields_to_fyle
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import (
-    Workspace,
-    FyleCredential,
-    Configuration
-)
-from apps.fyle.models import (
-    Expense,
-    ExpenseFilter,
-    ExpenseGroup,
-    ExpenseGroupSettings,
-    DependentFieldSetting
-)
+from apps.workspaces.models import Configuration, FyleCredential, Workspace
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -125,33 +114,6 @@ def patch_request(url: str, body: dict, refresh_token: Optional[str] = None) -> 
 
     if response.status_code in [200, 201]:
         return json.loads(response.text)
-    else:
-        raise Exception(response.text)
-
-
-def delete_request(url: str, body: dict, refresh_token: Optional[str] = None) -> Optional[dict]:
-    """
-    Create a HTTP delete request.
-    """
-    access_token = None
-    api_headers = {
-        'Content-Type': 'application/json',
-    }
-    if refresh_token:
-        access_token = get_access_token(refresh_token)
-
-        api_headers['Authorization'] = 'Bearer {0}'.format(access_token)
-
-    response = requests.delete(
-        url,
-        headers=api_headers,
-        data=json.dumps(body)
-    )
-
-    if response.status_code in [200, 201, 204]:
-        if response.text:
-            return json.loads(response.text)
-        return None
     else:
         raise Exception(response.text)
 
