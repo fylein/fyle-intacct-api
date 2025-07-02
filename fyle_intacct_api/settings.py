@@ -299,6 +299,9 @@ SENDGRID_API_KEY = os.environ.get('SENDGRID_KEY')
 EMAIL = os.environ.get('SENDGRID_EMAIL')
 EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 
+# E2E Settings
+ALLOW_E2E_SETUP = os.environ.get('ALLOW_E2E_SETUP')
+
 CACHE_EXPIRY = 3600
 
 CORS_ORIGIN_ALLOW_ALL = True
