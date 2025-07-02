@@ -68,7 +68,7 @@ def test_e2e_setup_view_success(db, api_client, mocker):
     url = reverse('e2e-setup-org')
 
     # Mock environment safety check
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=True)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
 
     # Mock E2ESetupService
     mock_service = mocker.patch('apps.internal.views.E2ESetupService')
@@ -96,26 +96,25 @@ def test_e2e_setup_view_failures(db, api_client, mocker):
     url = reverse('e2e-setup-org')
 
     # Test 1: Unsafe environment
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=False)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=False)
 
     payload = internal_data['e2e_setup_payload']
 
     response = api_client.post(url, payload, format='json')
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert 'only available in development/staging environments' in response.data['error']
+    assert 'only available in development/staging environments' in str(response.data)
 
     # Test 2: Invalid workspace ID
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=True)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
 
     response = api_client.post(url, internal_data['e2e_setup_invalid_workspace_id_payload'], format='json')
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data['error'] == 'Validation failed'
-    assert 'Valid workspace ID is required' in str(response.data['details'])
+    assert 'workspace_id' in response.data
 
     # Test 3: Service exception
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=True)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
 
     mock_service = mocker.patch('apps.internal.views.E2ESetupService')
     mock_service.return_value.setup_organization.side_effect = Exception('Setup failed')
@@ -135,7 +134,7 @@ def test_e2e_destroy_view_success(db, api_client, mocker):
     url = reverse('e2e-destroy')
 
     # Mock environment safety check
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=True)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
 
     # Mock workspace lookup
     mock_workspace = mocker.Mock()
@@ -172,26 +171,30 @@ def test_e2e_destroy_view_failures(db, api_client, mocker):
     """
     Test E2EDestroyView failure scenarios
     """
+    mock_workspace = mocker.Mock()
+    mock_workspace.id = 2
+    mock_workspace.name = 'E2E Integration Tests'
+
     url = reverse('e2e-destroy')
 
     # Test 1: Unsafe environment
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=False)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=False)
+    mocker.patch('apps.internal.views.Workspace.objects.get', return_value=mock_workspace)
 
     payload = internal_data['e2e_destroy_payload']
 
     response = api_client.post(url, payload, format='json')
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert 'only available in development/staging environments' in response.data['error']
+    assert 'only available in development/staging environments' in str(response.data)
 
     # Test 2a: Empty org_id (Org ID is required)
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=True)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
 
     response = api_client.post(url, internal_data['e2e_destroy_empty_org_id_payload'], format='json')
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data['error'] == 'Validation failed'
-    assert 'org_id' in response.data['details']
+    assert 'org_id' in response.data
 
     # Test 2b: Safety check failed (workspace name not in allowed list)
     mock_unsafe_workspace = mocker.Mock()
@@ -201,24 +204,24 @@ def test_e2e_destroy_view_failures(db, api_client, mocker):
     response = api_client.post(url, internal_data['e2e_destroy_payload'], format='json')
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.data['error'] == 'Validation failed'
-    assert 'Safety check failed' in str(response.data['details'])
+    org_id_errors = response.data.get('org_id')
+    assert org_id_errors and len(org_id_errors) > 0 and 'Safety check failed' in org_id_errors[0]
 
     # Test 3: Workspace not found
-    mocker.patch('apps.internal.views.is_safe_environment', return_value=True)
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
 
-    mocker.patch('apps.internal.views.Workspace.objects.get',
+    mocker.patch('apps.internal.serializers.Workspace.objects.get',
                  side_effect=Workspace.DoesNotExist('Workspace not found'))
 
     response = api_client.post(url, internal_data['e2e_destroy_nonexistent_payload'], format='json')
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert 'Validation failed' in response.data['error']
+    org_id_errors = response.data.get('org_id')
+    assert org_id_errors and len(org_id_errors) > 0 and 'No workspace found' in org_id_errors[0]
 
     # Test 4: Integration deletion exception
-    mock_workspace = mocker.Mock()
-    mock_workspace.id = 2
-    mock_workspace.name = 'E2E Integration Tests'
+    mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
+
     mocker.patch('apps.internal.views.Workspace.objects.get', return_value=mock_workspace)
 
     mocker.patch('apps.internal.views.delete_integration_record',

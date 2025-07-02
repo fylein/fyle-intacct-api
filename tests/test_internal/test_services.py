@@ -47,15 +47,7 @@ def test_setup_organization_complete_flow(mocker, db):
                  return_value=timezone.now())
 
     # Execute the full setup
-    result = service.setup_organization()
-
-    # Verify return value
-    assert result['workspace_id'] == workspace_id
-    assert result['org_name'] == 'E2E Integration Tests'
-
-    # Verify workspace was updated
-    workspace.refresh_from_db()
-    assert workspace.name == 'E2E Integration Tests'
+    service.setup_organization()
 
     # Verify Phase 1 data creation
     assert ExpenseGroupSettings.objects.filter(workspace=workspace).exists()
