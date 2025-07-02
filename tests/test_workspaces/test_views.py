@@ -1,8 +1,10 @@
 import json
 from unittest import mock
+from datetime import timedelta
 
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 
 from fyle_rest_auth.utils import AuthUtils
 from fyle.platform import exceptions as fyle_exc
@@ -35,6 +37,87 @@ def test_ready_view(api_client, test_connection):
 
     response = json.loads(response.content)
     response['message'] == 'Ready'
+
+
+def test_token_health_view(api_client, test_connection, mocker):
+    """
+    Test Token Health View for Sage Intacct connectivity
+    """
+    workspace_id = 1
+
+    url = f"/api/workspaces/{workspace_id}/token_health/"
+    api_client.credentials(HTTP_AUTHORIZATION="Bearer {}".format(test_connection.access_token))
+
+    # Clean cache before test
+    cache_key = f'HEALTH_CHECK_CACHE_{workspace_id}'
+    cache.delete(cache_key)
+
+    SageIntacctCredential.objects.filter(workspace=workspace_id).delete()
+    response = api_client.get(url)
+
+    assert response.status_code == 400
+    assert response.data["message"] == "Intacct credentials not found"
+
+    workspace = Workspace.objects.get(id=workspace_id)
+    SageIntacctCredential.objects.all().delete()
+    SageIntacctCredential.objects.create(
+        workspace=workspace,
+        si_user_id="test_user",
+        si_company_id="test_company",
+        si_user_password="test_password",
+        is_expired=True
+    )
+    response = api_client.get(url)
+
+    assert response.status_code == 400
+    assert response.data["message"] == "Intacct connection expired"
+
+    SageIntacctCredential.objects.all().delete()
+    SageIntacctCredential.objects.create(
+        workspace=workspace,
+        si_user_id="test_user",
+        si_company_id="test_company",
+        si_user_password="test_password",
+        is_expired=False
+    )
+
+    mock_connector = mocker.patch('apps.workspaces.views.SageIntacctConnector')
+    mock_instance = mocker.MagicMock()
+    mock_connector.return_value = mock_instance
+    mock_instance.connection.locations.count.side_effect = Exception("Invalid")
+
+    # Mock invalidate function
+    mocker.patch('apps.workspaces.views.invalidate_sage_intacct_credentials', return_value=None)
+
+    response = api_client.get(url)
+
+    assert response.status_code == 400
+    assert response.data["message"] == "Intacct connection expired"
+
+    # Testing successful connection
+    mocker.resetall()
+    mock_connector = mocker.patch('apps.workspaces.views.SageIntacctConnector')
+    mock_instance = mocker.MagicMock()
+    mock_connector.return_value = mock_instance
+    mock_instance.connection.locations.count.return_value = 1
+
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Intacct connection is active"
+
+    # Testing with cache
+    cache.set(cache_key, True, timeout=timedelta(hours=24).total_seconds())
+
+    assert cache.get(cache_key) == True
+
+    # Reset mock to verify it's not called when cache is present
+    mock_connector.reset_mock()
+    response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data["message"] == "Intacct connection is active"
+    mock_connector.assert_not_called()
 
 
 def test_get_workspace(api_client, test_connection):

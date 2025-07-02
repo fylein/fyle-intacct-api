@@ -3,7 +3,6 @@ from rest_framework.serializers import ValidationError
 from apps.workspaces.models import SageIntacctCredential
 from apps.sage_intacct.actions import patch_integration_settings
 
-
 def assert_valid(condition: bool, message: str) -> Response or None:
     """
     Assert conditions
@@ -15,6 +14,7 @@ def assert_valid(condition: bool, message: str) -> Response or None:
         raise ValidationError(detail={
             'message': message
         })
+
 
 class LookupFieldMixin:
     lookup_field = 'workspace_id'

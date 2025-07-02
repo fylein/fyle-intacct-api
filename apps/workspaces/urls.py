@@ -8,7 +8,8 @@ from apps.workspaces.views import (
     ExportToIntacctView,
     WorkspaceAdminsView,
     LastExportDetailView,
-    ConnectSageIntacctView
+    ConnectSageIntacctView,
+    TokenHealthView
 )
 
 workspace_app_paths = [
@@ -31,6 +32,7 @@ sage_intacct_connection_api_paths = [
     path('<int:workspace_id>/credentials/sage_intacct/delete/', ConnectSageIntacctView.as_view({'post': 'delete'})),
     path('<int:workspace_id>/credentials/sage_intacct/', ConnectSageIntacctView.as_view(
         {'post': 'post', 'get': 'get'})),
+    path('<int:workspace_id>/token_health/', TokenHealthView.as_view({'get': 'get'})),
 ]
 
 other_app_paths = [
