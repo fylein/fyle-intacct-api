@@ -1,28 +1,18 @@
 import logging
 import traceback
 
-from rest_framework import generics, viewsets, status
-from rest_framework.request import Request
-from rest_framework.response import Response
 from django.db import connection, transaction
 from django.utils import timezone
+from rest_framework import generics, status
+from rest_framework.request import Request
+from rest_framework.response import Response
 
-from fyle_intacct_api.utils import assert_valid
-
-from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
+from apps.internal.actions import delete_integration_record, get_accounting_fields, get_exported_entry
+from apps.internal.serializers import E2EDestroySerializer, E2ESetupSerializer
+from apps.internal.services.e2e_setup import E2ESetupService
 from apps.workspaces.models import Workspace
-from apps.fyle.models import Expense, DependentFieldSetting
-from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
-from apps.tasks.models import TaskLog
-from fyle_accounting_mappings.models import (
-    MappingSetting, EmployeeMapping, CategoryMapping, Mapping
-)
-from fyle_accounting_library.common_resources.models import DimensionDetail
-
-from .services.e2e_setup import E2ESetupService
-from .actions import delete_integration_record, get_accounting_fields, get_exported_entry
-from .helpers import is_safe_environment
-from .serializers import E2ESetupSerializer, E2EDestroySerializer
+from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
+from fyle_intacct_api.utils import assert_valid
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -101,44 +91,24 @@ class E2ESetupView(generics.GenericAPIView):
     authentication_classes = []
     permission_classes = [IsAuthenticatedForInternalAPI]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """
         Set up test organization data for E2E testing
 
         Expected payload:
         {
-            "admin_email": "admin@example.com",
-            "user_id": 12345,
-            "refresh_token": "sample_token",
-            "org_id": "orga1b2c3d4e5f6",
-            "cluster_domain": "staging"
+            "workspace_id": 123
         }
         """
+        # Validate request data using serializer, and return 400 / 403 if it fails
+        serializer = E2ESetupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+
         try:
-            # Validate environment
-            if not is_safe_environment():
-                return Response(
-                    {"error": "E2E setup endpoint is only available in development/staging environments"},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # Validate request data using serializer
-            serializer = E2ESetupSerializer(data=request.data)
-            if not serializer.is_valid():
-                return Response(
-                    {"error": "Validation failed", "details": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            validated_data = serializer.validated_data
-
             # Initialize setup service
             setup_service = E2ESetupService(
-                admin_email=validated_data['admin_email'],
-                user_id=validated_data['user_id'],
-                refresh_token=validated_data['refresh_token'],
-                org_id=validated_data['org_id'],
-                cluster_domain=validated_data['cluster_domain']
+                workspace_id=validated_data['workspace_id']
             )
 
             # Execute setup in transaction
@@ -154,7 +124,7 @@ class E2ESetupView(generics.GenericAPIView):
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:
-            logger.error(f"E2E setup failed: {str(e)}")
+            logger.error(f"E2E setup failed: {str(e)}", exc_info=True)
             return Response(
                 {"error": f"Setup failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -168,7 +138,7 @@ class E2EDestroyView(generics.GenericAPIView):
     authentication_classes = []
     permission_classes = [IsAuthenticatedForInternalAPI]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         """
         Destroy test organization data after E2E testing
 
@@ -177,24 +147,12 @@ class E2EDestroyView(generics.GenericAPIView):
             "org_id": "orga1b2c3d4e5f6"
         }
         """
+        # Validate request data using serializer, and return 400 / 403 if it fails
+        serializer = E2EDestroySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        org_id = serializer.validated_data['org_id']
+
         try:
-            # Validate environment
-            if not is_safe_environment():
-                return Response(
-                    {"error": "E2E destroy endpoint is only available in development/staging environments"},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # Validate request data using serializer
-            serializer = E2EDestroySerializer(data=request.data)
-            if not serializer.is_valid():
-                return Response(
-                    {"error": "Validation failed", "details": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # Get validated data and workspace
-            org_id = serializer.validated_data['org_id']
             workspace = Workspace.objects.get(fyle_org_id=org_id)
 
             logger.info(f"Safety check passed for workspace: {workspace.name} (ID: {workspace.id})")
@@ -207,11 +165,12 @@ class E2EDestroyView(generics.GenericAPIView):
             workspace_name = workspace.name
             deleted_at = timezone.now()
 
-            with connection.cursor() as cursor:
-                logger.info(f"Calling delete_workspace({workspace_id}) database function")
-                cursor.execute("SELECT delete_workspace(%s)", [workspace_id])
-                result = cursor.fetchone()
-                logger.info(f"Database cleanup function completed. Result: {result}")
+            with transaction.atomic():
+                with connection.cursor() as cursor:
+                    logger.info(f"Calling delete_workspace({workspace_id}) database function")
+                    cursor.execute("SELECT delete_workspace(%s)", [workspace_id])
+                    result = cursor.fetchone()
+                    logger.info(f"Database cleanup function completed. Result: {result}")
 
             logger.info(f"E2E cleanup completed successfully for org_id: {org_id}")
 
@@ -229,7 +188,7 @@ class E2EDestroyView(generics.GenericAPIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            logger.error(f"E2E cleanup failed: {str(e)}")
+            logger.error(f"E2E cleanup failed: {str(e)}", exc_info=True)
             return Response(
                 {"error": f"Cleanup failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
