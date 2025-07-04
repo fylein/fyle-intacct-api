@@ -1013,10 +1013,10 @@ class SageIntacctConnector:
 
                     if vendor:
                         return self.create_destination_attribute(
-                            'vendor',
-                            vendor['NAME'],
-                            vendor['VENDORID'],
-                            vendor['DISPLAYCONTACT.EMAIL1']
+                            attribute='vendor',
+                            name=vendor_name,
+                            destination_id=vendor['VENDORID'],
+                            email=email
                         )
 
     def get_expense_link(self, lineitem: ChargeCardTransactionLineitem | ExpenseReportLineitem | JournalEntryLineitem | BillLineitem) -> str:
