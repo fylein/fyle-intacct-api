@@ -39,8 +39,10 @@ class E2ESetupService:
         """Set up Phase 1: Core data required for clone setting (parent org)"""
         logger.info("Setting up Phase 1: Core data (Parent Org - Clone Setting)")
 
-        # 1. Get workspace and rename it, marking it ready to delete
+        # 1. Get workspace and update onboarding state
         workspace = Workspace.objects.get(id=self.workspace_id)
+        workspace.onboarding_state = 'COMPLETE'
+        workspace.save()
 
         # 2. Create expense_group_settings
         ExpenseGroupSettings.objects.update_or_create(
