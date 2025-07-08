@@ -39,12 +39,8 @@ class E2ESetupService:
         """Set up Phase 1: Core data required for clone setting (parent org)"""
         logger.info("Setting up Phase 1: Core data (Parent Org - Clone Setting)")
 
-        # 1. Get workspace and update onboarding state
+        # 1. Create expense_group_settings
         workspace = Workspace.objects.get(id=self.workspace_id)
-        workspace.onboarding_state = 'COMPLETE'
-        workspace.save()
-
-        # 2. Create expense_group_settings
         ExpenseGroupSettings.objects.update_or_create(
             workspace=workspace,
             defaults={
@@ -55,7 +51,7 @@ class E2ESetupService:
             }
         )
 
-        # 3. Create last_export_details
+        # 2. Create last_export_details
         LastExportDetail.objects.update_or_create(
             workspace_id=workspace.id,
             defaults={
@@ -67,7 +63,7 @@ class E2ESetupService:
             }
         )
 
-        # 4. Create Sage Intacct credentials (from env)
+        # 3. Create Sage Intacct credentials (from env)
         SageIntacctCredential.objects.create(
             workspace=workspace,
             si_user_id=os.getenv('SI_USER_ID', 'e2e_test_user'),
@@ -77,7 +73,7 @@ class E2ESetupService:
             updated_at=timezone.now()
         )
 
-        # 5. Create location_entity_mappings
+        # 4. Create location_entity_mappings
         LocationEntityMapping.objects.create(
             workspace=workspace,
             location_entity_name='E2E Test Location',
@@ -86,7 +82,7 @@ class E2ESetupService:
             updated_at=timezone.now()
         )
 
-        # 6. Create configurations
+        # 5. Create configurations
         Configuration.objects.create(
             workspace=workspace,
             reimbursable_expenses_object='BILL',
@@ -101,7 +97,7 @@ class E2ESetupService:
             updated_at=timezone.now()
         )
 
-        # 7. Create general_mappings (OneToOne with workspace)
+        # 6. Create general_mappings (OneToOne with workspace)
         GeneralMapping.objects.create(
             workspace=workspace,
             location_entity_name='E2E Test Location Entity',
@@ -122,19 +118,19 @@ class E2ESetupService:
             updated_at=timezone.now()
         )
 
-        # 8. Create mapping_settings
+        # 7. Create mapping_settings
         self.fixture_factory.create_mapping_settings(workspace)
 
-        # 9. Create dependent_field_settings
+        # 8. Create dependent_field_settings
         self.fixture_factory.create_dependent_field_settings(workspace)
 
-        # 10. Create destination_attributes
+        # 9. Create destination_attributes
         self.fixture_factory.create_destination_attributes(workspace)
 
-        # 11. Create dimension_details
+        # 10. Create dimension_details
         self.fixture_factory.create_dimension_details(workspace)
 
-        # 12. Create workspace_schedules
+        # 11. Create workspace_schedules
         WorkspaceSchedule.objects.create(
             workspace=workspace,
             enabled=False,
@@ -144,7 +140,7 @@ class E2ESetupService:
             updated_at=timezone.now()
         )
 
-        # 13. Create expense_attributes
+        # 12. Create expense_attributes
         self.fixture_factory.create_expense_attributes(workspace)
 
         logger.info("Phase 1 core data setup completed")
@@ -158,31 +154,35 @@ class E2ESetupService:
         expense_attrs = ExpenseAttribute.objects.filter(workspace=workspace)
         dest_attrs = DestinationAttribute.objects.filter(workspace=workspace)
 
-        # 14. Create mappings (1 mapping minimum) - using source_id FK to ExpenseAttribute
+        # 13. Create mappings (1 mapping minimum) - using source_id FK to ExpenseAttribute
         self.fixture_factory.create_mappings(workspace, expense_attrs, dest_attrs, count=1)
 
-        # 15. Create employee_mappings - using source_employee FK to ExpenseAttribute
+        # 14. Create employee_mappings - using source_employee FK to ExpenseAttribute
         self.fixture_factory.create_employee_mappings(workspace, expense_attrs, dest_attrs)
 
-        # 16. Create category_mappings - using source_category FK to ExpenseAttribute
+        # 15. Create category_mappings - using source_category FK to ExpenseAttribute
         self.fixture_factory.create_category_mappings(workspace, expense_attrs, dest_attrs)
 
-        # 17. Create expenses
+        # 16. Create expenses
         expenses = self.fixture_factory.create_expenses(workspace, count=10)
 
-        # 18. Create expense_groups
+        # 17. Create expense_groups
         expense_groups = self.fixture_factory.create_expense_groups(workspace, expenses, group_size=2)
 
-        # 19. Create task_logs
+        # 18. Create task_logs
         self.fixture_factory.create_task_logs(workspace, expense_groups)
 
-        # 20. Create bills and bill_lineitems (related to expense_groups)
+        # 19. Create bills and bill_lineitems (related to expense_groups)
         self.fixture_factory.create_bills_and_lineitems(expense_groups)
 
-        # 21. Create charge_card_transactions and charge_card_transaction_lineitems (related to expense_groups)
+        # 20. Create charge_card_transactions and charge_card_transaction_lineitems (related to expense_groups)
         self.fixture_factory.create_charge_card_transactions_and_lineitems(expense_groups)
 
-        # 22. Create errors
+        # 21. Create errors
         self.fixture_factory.create_error_records(workspace, expense_groups[:-2])
 
+        # 22. Update the onboarding state
+        workspace = Workspace.objects.get(id=self.workspace_id)
+        workspace.onboarding_state = 'COMPLETE'
+        workspace.save()
         logger.info("Phase 2 advanced data setup completed")
