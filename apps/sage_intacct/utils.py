@@ -4,7 +4,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Optional
 
-import unidecode
+import text_unidecode
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db.models import Q
@@ -259,7 +259,7 @@ class SageIntacctConnector:
                 account_attributes['account'].append({
                     'attribute_type': 'ACCOUNT',
                     'display_name': 'Account',
-                    'value': unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
+                    'value': text_unidecode.unidecode(u'{0}'.format(account['TITLE'].replace('/', '-'))),
                     'destination_id': account['ACCOUNTNO'],
                     'active': account['STATUS'] == 'active',
                     'detail': {
@@ -348,7 +348,7 @@ class SageIntacctConnector:
                 expense_types_attributes.append({
                     'attribute_type': 'EXPENSE_TYPE',
                     'display_name': 'Expense Types',
-                    'value': unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
+                    'value': text_unidecode.unidecode(u'{0}'.format(expense_type['DESCRIPTION'].replace('/', '-'))),
                     'destination_id': expense_type['ACCOUNTLABEL'],
                     'active': expense_type['STATUS'] == 'active',
                     'detail': {
