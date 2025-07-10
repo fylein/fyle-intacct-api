@@ -62,7 +62,7 @@ class FixtureFactory(BaseFixtureFactory):
             expense = Expense.objects.create(
                 workspace=workspace,
                 expense_id=f'tx{uuid.uuid4().hex[:8]}',
-                expense_number=f'E/2024/{i + 1:04d}',
+                expense_number=f'E/2025/01/T/{i + 1}',
                 amount=round(random.uniform(10.0, 1000.0), 2),
                 currency='USD',
                 foreign_amount=None,
@@ -105,12 +105,18 @@ class FixtureFactory(BaseFixtureFactory):
 
             group = ExpenseGroup.objects.create(
                 workspace=workspace,
-                fund_source='PERSONAL',
-                description={'employee_email': group_expenses[0].employee_email},
+                fund_source=group_expenses[0].fund_source,
+                description={
+                    "expense_id": group_expenses[0].expense_id,
+                    "fund_source": group_expenses[0].fund_source,
+                    "employee_email": group_expenses[0].employee_email,
+                    "expense_number": group_expenses[0].expense_number
+                },
+                export_type="JOURNAL_ENTRY",
                 response_logs=None,
                 created_at=timezone.now(),
                 updated_at=timezone.now(),
-                exported_at=None
+                exported_at=timezone.now()
             )
             group.expenses.set(group_expenses)
             groups.append(group)
@@ -125,7 +131,7 @@ class FixtureFactory(BaseFixtureFactory):
                 type='CREATING_BILL',
                 task_id=f'task_{uuid.uuid4().hex[:8]}',
                 expense_group=group,
-                status='COMPLETE' if i % 3 != 0 else 'FAILED',  # Changed from SUCCESS to COMPLETE
+                status='COMPLETE',
                 detail={'message': f'E2E test task log {i + 1}'},
                 created_at=timezone.now(),
                 updated_at=timezone.now()

@@ -164,7 +164,7 @@ class E2ESetupService:
         self.fixture_factory.create_category_mappings(workspace, expense_attrs, dest_attrs)
 
         # 16. Create expenses
-        expenses = self.fixture_factory.create_expenses(workspace, count=10)
+        expenses = self.fixture_factory.create_expenses(workspace, count=22)
 
         # 17. Create expense_groups
         expense_groups = self.fixture_factory.create_expense_groups(workspace, expenses, group_size=2)

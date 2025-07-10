@@ -59,7 +59,7 @@ def test_setup_organization_complete_flow(mocker, db):
     assert WorkspaceSchedule.objects.filter(workspace=workspace).exists()
 
     # Verify Phase 2 data creation
-    assert Expense.objects.filter(workspace=workspace).count() == 10
+    assert Expense.objects.filter(workspace=workspace).count() == 22
     assert ExpenseGroup.objects.filter(workspace=workspace).exists()
     assert TaskLog.objects.filter(workspace=workspace).exists()
     assert Bill.objects.filter(expense_group__workspace=workspace).exists()
