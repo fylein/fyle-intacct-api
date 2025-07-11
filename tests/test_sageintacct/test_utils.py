@@ -329,6 +329,10 @@ def test_sync_user_defined_dimensions(mocker, db):
         'sageintacctsdk.apis.DimensionValues.get_all',
         return_value=data['get_dimension_value']
     )
+    mocker.patch(
+        'sageintacctsdk.apis.DimensionValues.count',
+        return_value=1
+    )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
 
@@ -339,6 +343,33 @@ def test_sync_user_defined_dimensions(mocker, db):
 
     new_user_defined_dimension_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='PLACE').count()
     assert new_user_defined_dimension_count == 2
+
+
+def test_sync_user_defined_dimensions_case_2(mocker, db):
+    """
+    Test sync user defined dimensions
+    Upper Sync limit exceeded
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.Dimensions.get_all',
+        return_value=data['get_user_defined_dimensions_case_2']
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.DimensionValues.count',
+        return_value=5000
+    )
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    user_defined_dimension_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='UDD').count()
+    assert user_defined_dimension_count == 0
+
+    sage_intacct_connection.sync_user_defined_dimensions()
+
+    new_user_defined_dimension_count = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='UDD').count()
+    assert new_user_defined_dimension_count == 0
 
 
 def test_construct_bill(create_bill, db):
