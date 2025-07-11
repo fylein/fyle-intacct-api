@@ -52,7 +52,8 @@ SYNC_UPPER_LIMIT = {
     'vendors': 20000,
     'tax_details': 200,
     'cost_types': 500000,
-    'cost_codes': 10000
+    'cost_codes': 10000,
+    'user_defined_dimensions': 1000
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
@@ -781,6 +782,12 @@ class SageIntacctConnector:
             if dimension['userDefinedDimension'] == 'true':
                 dimension_attributes = []
                 dimension_name = dimension['objectName'].upper().replace(" ", "_")
+                dimension_count = self.connection.dimension_values.count(dimension_name=dimension['objectName'])
+
+                if dimension_count > SYNC_UPPER_LIMIT['user_defined_dimensions']:
+                    logger.info('Skipping sync of UDD %s for workspace %s as it has %s counts which is over the limit', dimension_name, self.workspace_id, dimension_count)
+                    continue
+
                 dimension_values = self.connection.dimension_values.get_all(dimension['objectName'])
 
                 for value in dimension_values:
