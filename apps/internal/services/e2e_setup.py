@@ -85,6 +85,7 @@ class E2ESetupService:
         # 5. Create configurations
         Configuration.objects.create(
             workspace=workspace,
+            employee_field_mapping='VENDOR',
             reimbursable_expenses_object='BILL',
             corporate_credit_card_expenses_object='CHARGE_CARD_TRANSACTION',
             import_categories=True,
