@@ -864,5 +864,10 @@ data = {
             'type': 'CREATING_JOURNAL_ENTRIES',
             'status': 'FATAL'
         },
+    ],
+    "cost_type_payload_duplicate": [
+        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
+        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
+        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Contingency Costs', 'is_enabled': True},
     ]
 }
