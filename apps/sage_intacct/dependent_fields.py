@@ -1,33 +1,39 @@
 import logging
-from time import sleep
 from datetime import datetime, timezone
+from time import sleep
 
-from django.db.models import F, Func, Value, JSONField
-from django.db.models.functions import JSONObject
 from django.contrib.postgres.aggregates import JSONBAgg
-
+from django.db.models import F, Func, JSONField, Value
+from django.db.models.functions import JSONObject
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
 
-from sageintacctsdk.exceptions import (
-    InvalidTokenError,
-    NoPrivilegeError,
-    SageIntacctSDKError
-)
-
-from fyle_integrations_imports.models import ImportLog
-from apps.sage_intacct.models import CostCode, CostType
-from apps.fyle.models import DependentFieldSetting
 from apps.fyle.helpers import connect_to_platform
+from apps.fyle.models import DependentFieldSetting
+from apps.mappings.exceptions import handle_import_exceptions_v2
 from apps.mappings.helpers import prepend_code_to_name
 from apps.mappings.tasks import sync_sage_intacct_attributes
-from apps.mappings.exceptions import handle_import_exceptions_v2
+from apps.sage_intacct.models import CostCode, CostType
 from apps.workspaces.models import Configuration, SageIntacctCredential
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from fyle_integrations_imports.models import ImportLog
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+
+def remove_duplicate_payload_entries(payload: list) -> list:
+    """
+    Remove duplicate entries from payload based on parent_expense_field_value and expense_field_value
+    :param payload: List of payload dictionaries
+    :return: List of unique payload dictionaries
+    """
+    unique_items = {frozenset(item.items()) for item in payload}
+    deduped_dicts = [dict(item) for item in unique_items]
+
+    return list(deduped_dicts)
 
 
 def construct_custom_field_placeholder(source_placeholder: str, fyle_attribute: str, existing_attribute: dict) -> str:
@@ -192,7 +198,8 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                 sleep(0.2)
                 try:
                     total_batches += 1
-                    platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
+                    payload_set = remove_duplicate_payload_entries(payload)
+                    platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
                     posted_cost_codes.update(cost_code_names)
                     processed_batches += 1
                 except Exception as exception:
@@ -269,7 +276,8 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
             sleep(0.2)
             try:
                 total_batches += 1
-                platform.dependent_fields.bulk_post_dependent_expense_field_values(payload)
+                payload_set = remove_duplicate_payload_entries(payload)
+                platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
                 CostType.objects.filter(task_name=cost_types['task_name'], task_id=cost_types['task_id'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True, updated_at=datetime.now(timezone.utc))
                 processed_batches += 1
             except Exception as exception:
