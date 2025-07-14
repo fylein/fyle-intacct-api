@@ -358,7 +358,7 @@ def test_sync_user_defined_dimensions_case_2(mocker, db):
     )
     mocker.patch(
         'sageintacctsdk.apis.DimensionValues.count',
-        return_value=5000
+        return_value=5001
     )
     intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
