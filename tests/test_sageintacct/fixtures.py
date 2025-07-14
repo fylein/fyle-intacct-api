@@ -702,7 +702,7 @@ data = {
     'get_user_defined_dimensions': [{'objectName': 'DEPARTMENT', 'objectLabel': 'Department', 'termLabel': 'Department', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'LOCATION', 'objectLabel': 'Location', 'termLabel': 'Location', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'PROJECT', 'objectLabel': 'Project', 'termLabel': 'Project', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'CUSTOMER', 'objectLabel': 'Customer', 'termLabel': 'Customer', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'VENDOR', 'objectLabel': 'Vendor', 'termLabel': 'Vendor', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'EMPLOYEE', 'objectLabel': 'Employee', 'termLabel': 'Employee', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'ITEM', 'objectLabel': 'Item', 'termLabel': 'Item', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'CLASS', 'objectLabel': 'Class', 'termLabel': 'Class', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'CONTRACT', 'objectLabel': 'Contract', 'termLabel': 'Contract', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'TASK', 'objectLabel': 'Task', 'termLabel': 'Task', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'WAREHOUSE', 'objectLabel': 'Warehouse', 'termLabel': 'Warehouse', 'userDefinedDimension': 'false', 'enabledInGL': 'true'}, {'objectName': 'COSTTYPE', 'objectLabel': 'Cost type', 'termLabel': 'Cost type', 'userDefinedDimension': 'false', 'enabledInGL': 'false'}, {'objectName': 'FIXEDASSET', 'objectLabel': 'Asset', 'termLabel': 'Asset', 'userDefinedDimension': 'false', 'enabledInGL': 'false'}, {'objectName': 'PLACE', 'objectLabel': 'Place', 'termLabel': 'Place', 'userDefinedDimension': 'true', 'enabledInGL': 'true'}, {'objectName': 'TEAM', 'objectLabel': 'Team', 'termLabel': 'Team', 'userDefinedDimension': 'true', 'enabledInGL': 'true'}],
     'get_dimension_value': [{'createdBy': '10', 'name': 'CCC', 'id': '10003', 'updatedBy': '10'}, {'createdBy': '10', 'name': 'Integrations', 'id': '10002', 'updatedBy': '10'}],
     'get_items': [[{'RECORDNO': '59', 'ITEMID': '1011', 'STATUS': 'active', 'MRR': 'false', 'NAME': 'New item to be added', 'EXTENDED_DESCRIPTION': None, 'PRODUCTLINEID': None, 'GLGROUP': None, 'ITEMTYPE': 'Non-Inventory'}]],
-
+    'get_user_defined_dimensions_case_2': [{'objectName': 'UDD', 'objectLabel': 'UDD', 'termLabel': 'UDD', 'userDefinedDimension': 'true', 'enabledInGL': 'true'}],
     'allocations': [
         {
             "RECORDNO": "2",
@@ -864,5 +864,10 @@ data = {
             'type': 'CREATING_JOURNAL_ENTRIES',
             'status': 'FATAL'
         },
+    ],
+    "cost_type_payload_duplicate": [
+        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
+        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
+        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Contingency Costs', 'is_enabled': True},
     ]
 }
