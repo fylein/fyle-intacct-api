@@ -351,6 +351,7 @@ def test_sync_user_defined_dimensions_case_2(mocker, db):
     Upper Sync limit exceeded
     """
     workspace_id = 1
+    Workspace.objects.filter(id=workspace_id).update(created_at=datetime.now())
 
     mocker.patch(
         'sageintacctsdk.apis.Dimensions.get_all',
