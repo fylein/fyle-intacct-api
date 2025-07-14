@@ -1,27 +1,30 @@
 import logging
-from unittest import mock
 from datetime import datetime, timedelta, timezone
+from unittest import mock
 
-from fyle_integrations_platform_connector import PlatformConnector
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
 
-from fyle_integrations_imports.models import ImportLog
-from apps.sage_intacct.models import CostCode, CostType
-from apps.workspaces.models import FyleCredential
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.dependent_fields import (
-    post_dependent_cost_type,
-    post_dependent_cost_code,
-    import_dependent_fields_to_fyle,
     construct_custom_field_placeholder,
-    post_dependent_cost_code_standalone,
-    post_dependent_expense_field_values,
     create_dependent_custom_field_in_fyle,
+    disable_and_post_cost_code_from_cost_code_table,
+    import_dependent_fields_to_fyle,
+    post_dependent_cost_code,
+    post_dependent_cost_code_standalone,
+    post_dependent_cost_type,
+    post_dependent_expense_field_values,
+    remove_duplicate_payload_entries,
     reset_flag_and_disable_cost_type_field,
-    disable_and_post_cost_code_from_cost_code_table
 )
+from apps.sage_intacct.models import CostCode, CostType
+from apps.workspaces.models import FyleCredential
+from fyle_integrations_imports.models import ImportLog
+from tests.helper import dict_compare_keys
+from tests.test_sageintacct.fixtures import data
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -414,3 +417,14 @@ def test_disable_and_post_cost_code_from_cost_code_table(db, mocker, add_project
 
     assert cost_code_attribute.project_id == '10066'
     assert cost_code_attribute.project_name == 'CRE Platform'
+
+
+def test_remove_duplicate_payload_entries():
+    """
+    Test remove_duplicate_payload_entries
+    """
+    payload = data["cost_type_payload_duplicate"]
+
+    unique_payload = remove_duplicate_payload_entries(payload)
+    assert len(unique_payload) == 2
+    assert dict_compare_keys(unique_payload, [{'parent_expense_field_id': 379240, 'expense_field_id': 379241, 'parent_expense_field_value': 'Administrative', 'is_enabled': True, 'expense_field_value': 'Contingency Costs'}, {'parent_expense_field_id': 379240, 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'parent_expense_field_value': 'Administrative', 'is_enabled': True}]) == [], "Payload is not unique"
