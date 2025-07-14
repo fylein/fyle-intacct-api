@@ -1,21 +1,13 @@
 from unittest import mock
-from apps.sage_intacct.utils import SageIntacctConnector
-from fyle_integrations_imports.modules.categories import Category, disable_categories
-from apps.mappings.constants import SYNC_METHODS
 
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import (
-    DestinationAttribute,
-    ExpenseAttribute,
-    CategoryMapping
-)
-from apps.workspaces.models import (
-    SageIntacctCredential,
-    Workspace,
-    FyleCredential,
-    Configuration
-)
-from .fixtures import category_data
+
+from apps.mappings.constants import SYNC_METHODS
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
+from fyle_integrations_imports.modules.categories import Category, disable_categories
+from tests.test_mappings.test_imports.test_modules.fixtures import category_data
 
 
 def test_sync_destination_attributes_categories(mocker, db):
@@ -416,10 +408,19 @@ def test_disable_categories(
         active=True
     )
 
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='ACCOUNT',
+        value='old_category',
+        active=True,
+        destination_id='old_category_code',
+        code='old_category_code'
+    )
+
     mock_platform = mocker.patch('fyle_integrations_imports.modules.categories.PlatformConnector')
     bulk_post_call = mocker.patch.object(mock_platform.return_value.categories, 'post_bulk')
 
-    disable_categories(workspace_id, categories_to_disable, is_import_to_fyle_enabled=True)
+    disable_categories(workspace_id, categories_to_disable, is_import_to_fyle_enabled=True, attribute_type='ACCOUNT')
 
     assert bulk_post_call.call_count == 1
 
@@ -432,7 +433,7 @@ def test_disable_categories(
         }
     }
 
-    disable_categories(workspace_id, categories_to_disable, is_import_to_fyle_enabled=True)
+    disable_categories(workspace_id, categories_to_disable, is_import_to_fyle_enabled=True, attribute_type='ACCOUNT')
     assert bulk_post_call.call_count == 1
 
     # Test disable projects with code in naming

@@ -1,19 +1,13 @@
 from unittest import mock
 
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, Mapping
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import (
-    DestinationAttribute,
-    ExpenseAttribute,
-    Mapping
-)
 
-from tests.helper import dict_compare_keys
-from apps.workspaces.models import FyleCredential
-from fyle_integrations_imports.modules.merchants import Merchant, disable_merchants
-from .fixtures import merchants_data
 from apps.mappings.constants import SYNC_METHODS
-
-from apps.workspaces.models import Configuration
+from apps.workspaces.models import Configuration, FyleCredential
+from fyle_integrations_imports.modules.merchants import Merchant, disable_merchants
+from tests.helper import dict_compare_keys
+from tests.test_mappings.test_imports.test_modules.fixtures import merchants_data
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -191,6 +185,15 @@ def test_disable_merchants(db, mocker):
         active=True
     )
 
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='VENDOR',
+        value='old_merchant',
+        active=True,
+        destination_id='old_merchant_code',
+        code='old_merchant_code'
+    )
+
     merchants_to_disable = {
         'destination_id': {
             'value': 'old_merchant',
@@ -220,7 +223,7 @@ def test_disable_merchants(db, mocker):
     mocker.patch('fyle_integrations_imports.modules.merchants.import_string', side_effect=import_string_side_effect)
 
     # Actually call the function
-    bulk_payload = disable_merchants(workspace_id, merchants_to_disable, is_import_to_fyle_enabled=True)
+    bulk_payload = disable_merchants(workspace_id, merchants_to_disable, is_import_to_fyle_enabled=True, attribute_type='VENDOR')
 
     # Should call the post method
     assert post_call.call_count == 1
@@ -250,6 +253,6 @@ def test_disable_merchants(db, mocker):
         }
     }
 
-    bulk_payload = disable_merchants(workspace_id, merchants_to_disable, is_import_to_fyle_enabled=True)
+    bulk_payload = disable_merchants(workspace_id, merchants_to_disable, is_import_to_fyle_enabled=True, attribute_type='VENDOR')
     # Should return the value with code in naming
     assert 'old_merchant_code: old_merchant' in list(bulk_payload)

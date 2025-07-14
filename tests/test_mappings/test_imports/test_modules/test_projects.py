@@ -1,13 +1,14 @@
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 from unittest import mock
-from apps.mappings.constants import SYNC_METHODS
 
-from apps.workspaces.models import Configuration
-from apps.sage_intacct.models import CostType, DependentFieldSetting
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
+
+from apps.mappings.constants import SYNC_METHODS
 from apps.sage_intacct.dependent_fields import update_and_disable_cost_code
+from apps.sage_intacct.models import CostType, DependentFieldSetting
+from apps.workspaces.models import Configuration
 from fyle_integrations_imports.modules.projects import Project, disable_projects
 from tests.helper import dict_compare_keys
-from .fixtures import data
+from tests.test_mappings.test_imports.test_modules.fixtures import data
 
 
 def test_construct_fyle_payload(db):
@@ -79,13 +80,22 @@ def test_disable_projects(
         active=True
     )
 
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='PROJECT',
+        value='old_project',
+        active=True,
+        destination_id='old_project_code',
+        code='old_project_code'
+    )
+
     mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
     bulk_post_call = mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
     sync_call = mocker.patch.object(mock_platform.return_value.projects, 'sync')
 
     disable_cost_code_call = mocker.patch('apps.sage_intacct.dependent_fields.update_and_disable_cost_code')
 
-    disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True)
+    disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True, attribute_type='PROJECT')
 
     assert bulk_post_call.call_count == 1
     assert sync_call.call_count == 2
@@ -100,7 +110,7 @@ def test_disable_projects(
         }
     }
 
-    disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True)
+    disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True, attribute_type='PROJECT')
     assert bulk_post_call.call_count == 1
     assert sync_call.call_count == 3
     disable_cost_code_call.call_count == 1
@@ -139,7 +149,7 @@ def test_disable_projects(
         'id': 'source_id_123'
     }]
 
-    assert disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True) == payload
+    assert disable_projects(workspace_id, projects_to_disable, is_import_to_fyle_enabled=True, attribute_type='PROJECT') == payload
 
 
 def test_update_and_disable_cost_code(
