@@ -24,6 +24,7 @@ from apps.sage_intacct.models import CostCode, CostType
 from apps.workspaces.models import FyleCredential
 from fyle_integrations_imports.models import ImportLog
 from tests.helper import dict_compare_keys
+from tests.test_sageintacct.fixtures import data
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -422,11 +423,7 @@ def test_remove_duplicate_payload_entries():
     """
     Test remove_duplicate_payload_entries
     """
-    payload = [
-        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
-        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
-        {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Contingency Costs', 'is_enabled': True},
-    ]
+    payload = data["cost_type_payload_duplicate"]
 
     unique_payload = remove_duplicate_payload_entries(payload)
     assert len(unique_payload) == 2
