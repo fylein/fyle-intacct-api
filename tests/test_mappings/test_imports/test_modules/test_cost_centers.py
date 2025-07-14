@@ -1,18 +1,14 @@
 from unittest import mock
-from apps.sage_intacct.utils import SageIntacctConnector
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import (
-    DestinationAttribute,
-    ExpenseAttribute,
-    Mapping,
-    MappingSetting
-)
 
-from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace, Configuration
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, Mapping, MappingSetting
+from fyle_integrations_platform_connector import PlatformConnector
+
+from apps.mappings.constants import SYNC_METHODS
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
 from fyle_integrations_imports.modules.cost_centers import CostCenter, disable_cost_centers
 from tests.helper import dict_compare_keys
-from .fixtures import cost_center_data
-from apps.mappings.constants import SYNC_METHODS
+from tests.test_mappings.test_imports.test_modules.fixtures import cost_center_data
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -267,10 +263,19 @@ def test_disable_cost_centers(
         active=True
     )
 
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='CLASS',
+        value='old_cost_center',
+        active=True,
+        destination_id='old_cost_center_code',
+        code='old_cost_center_code'
+    )
+
     mock_platform = mocker.patch('fyle_integrations_imports.modules.cost_centers.PlatformConnector')
     bulk_post_call = mocker.patch.object(mock_platform.return_value.cost_centers, 'post_bulk')
 
-    disable_cost_centers(workspace_id, cost_centers_to_disable, is_import_to_fyle_enabled=True)
+    disable_cost_centers(workspace_id, cost_centers_to_disable, is_import_to_fyle_enabled=True, attribute_type='CLASS')
 
     assert bulk_post_call.call_count == 1
 
@@ -319,5 +324,5 @@ def test_disable_cost_centers(
         }
     ]
 
-    bulk_payload = disable_cost_centers(workspace_id, cost_centers_to_disable, is_import_to_fyle_enabled=True)
+    bulk_payload = disable_cost_centers(workspace_id, cost_centers_to_disable, is_import_to_fyle_enabled=True, attribute_type='CLASS')
     assert bulk_payload == payload

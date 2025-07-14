@@ -1,20 +1,14 @@
 from unittest import mock
 
-from apps.sage_intacct.utils import SageIntacctConnector
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, Mapping, MappingSetting
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import (
-    Mapping,
-    ExpenseAttribute,
-    DestinationAttribute,
-    MappingSetting
-)
 
-from apps.workspaces.models import SageIntacctCredential, Workspace, FyleCredential
-from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField, disable_expense_custom_fields
 from apps.mappings.constants import SYNC_METHODS
-
-from .fixtures import expense_custom_field_data
-from .helpers import get_platform_connection
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
+from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField, disable_expense_custom_fields
+from tests.test_mappings.test_imports.test_modules.fixtures import expense_custom_field_data
+from tests.test_mappings.test_imports.test_modules.helpers import get_platform_connection
 
 
 def test_sync_expense_atrributes(mocker, db):
@@ -182,6 +176,15 @@ def test_disable_expense_custom_fields(db, mocker):
         value='old_custom_field',
         source_id='source_id',
         active=True
+    )
+
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='CLASS',
+        value='old_custom_field',
+        active=True,
+        destination_id='old_custom_field_code',
+        code='old_custom_field_code'
     )
 
     # Create the MappingSetting so the filter in disable_expense_custom_fields works
