@@ -1,19 +1,21 @@
 import logging
-from random import randint
 from datetime import datetime, timedelta, timezone
+from random import randint
 
 from django.db.models import Q
 from django_q.models import OrmQ, Schedule
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from apps.fyle.actions import update_failed_expenses, post_accounting_export_summary
+from apps.fyle.actions import post_accounting_export_summary, update_failed_expenses
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.models import LastExportDetail, Workspace
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+target_func = ['apps.sage_intacct.tasks.create_bill', 'apps.sage_intacct.tasks.create_expense_report', 'apps.sage_intacct.tasks.create_charge_card_transaction', 'apps.sage_intacct.tasks.create_journal_entry']
 
 
 def re_export_stuck_exports() -> None:
@@ -40,10 +42,10 @@ def re_export_stuck_exports() -> None:
         for orm in ormqs:
             if 'chain' in orm.task and orm.task['chain']:
                 for chain in orm.task['chain']:
-                    if len(chain) > 1 and isinstance(chain[1], list) and isinstance(chain[1][0], ExpenseGroup):
-                        if chain[1][0].id in expense_group_ids:
-                            logger.info('Skipping Re Export For Expense group %s', chain[1][0].id)
-                            expense_group_ids.remove(chain[1][0].id)
+                    if len(chain) > 1 and chain[0] in target_func and isinstance(chain[1][0], int):
+                        if chain[1][0] in expense_group_ids:
+                            logger.info('Skipping Re Export For Expense group %s', chain[1][0])
+                            expense_group_ids.remove(chain[1][0])
 
         logger.info('Re-exporting Expense Group IDs: %s', expense_group_ids)
         expense_groups = ExpenseGroup.objects.filter(id__in=expense_group_ids)
