@@ -4,13 +4,13 @@ from datetime import timedelta
 
 from django.utils import timezone
 from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_mappings.e2e_fixtures import BaseFixtureFactory
-from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.fyle.models import DependentFieldSetting, Expense, ExpenseGroup
 from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.models import Workspace
+from fyle_accounting_mappings.e2e_fixtures import BaseFixtureFactory
+from fyle_accounting_mappings.models import ExpenseAttribute
 
 
 class FixtureFactory(BaseFixtureFactory):
@@ -37,22 +37,16 @@ class FixtureFactory(BaseFixtureFactory):
 
         return settings
 
-    def create_dimension_details(self, workspace: Workspace, count: int = 3) -> list[DimensionDetail]:
-        """Create sample dimension details"""
-        details = []
+    def create_dimension_details(self, workspace: Workspace) -> None:
+        """Create a sample dimension detail"""
 
-        for i in range(count):
-            detail = DimensionDetail.objects.create(
+        for source_type in ['FYLE', 'PROJECT']:
+            DimensionDetail.objects.update_or_create(
                 workspace=workspace,
-                attribute_type=f'E2E_DIMENSION_{i + 1}',
-                display_name=f'E2E Dimension {i + 1}',
-                source_type='ACCOUNTING',
-                created_at=timezone.now(),
-                updated_at=timezone.now()
+                attribute_type='PROJECT',
+                display_name='Custom Project',
+                source_type=source_type
             )
-            details.append(detail)
-
-        return details
 
     def create_expenses(self, workspace: Workspace, count: int = 10) -> list[Expense]:
         """Create sample expenses"""
