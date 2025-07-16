@@ -30,7 +30,7 @@ from apps.tasks.models import TaskLog, Error
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, Expense
 from fyle_intacct_api.exceptions import BulkError
-from fyle_intacct_api.logging_middleware import get_logger
+from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.fyle.actions import (
     update_expenses_in_progress,
@@ -559,15 +559,18 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: b
     :return: None
     """
     worker_logger = get_logger()
-    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
-    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-    worker_logger.info('Creating Journal Entry for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+    called_from = get_caller_info()
+    with transaction.atomic():
+        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+        worker_logger.info('Creating Journal Entry for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-        task_log.status = 'IN_PROGRESS'
-        task_log.save()
-    else:
-        return
+        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            task_log.status = 'IN_PROGRESS'
+            task_log.save()
+        else:
+            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+            return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
@@ -730,15 +733,18 @@ def create_expense_report(expense_group_id: int, task_log_id: int, last_export: 
     :return: None
     """
     worker_logger = get_logger()
-    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
-    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-    worker_logger.info('Creating Expense Report for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+    called_from = get_caller_info()
+    with transaction.atomic():
+        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+        worker_logger.info('Creating Expense Report for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-        task_log.status = 'IN_PROGRESS'
-        task_log.save()
-    else:
-        return
+        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            task_log.status = 'IN_PROGRESS'
+            task_log.save()
+        else:
+            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+            return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
@@ -903,15 +909,18 @@ def create_bill(expense_group_id: int, task_log_id: int, last_export: bool, is_a
     :return: None
     """
     worker_logger = get_logger()
-    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
-    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-    worker_logger.info('Creating Bill for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+    called_from = get_caller_info()
+    with transaction.atomic():
+        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+        worker_logger.info('Creating Bill for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-        task_log.status = 'IN_PROGRESS'
-        task_log.save()
-    else:
-        return
+        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            task_log.status = 'IN_PROGRESS'
+            task_log.save()
+        else:
+            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+            return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
@@ -1063,15 +1072,18 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, last
     :return: None
     """
     worker_logger = get_logger()
-    task_log: TaskLog = TaskLog.objects.get(id=task_log_id)
-    expense_group: ExpenseGroup = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-    worker_logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s', expense_group.id, task_log.status)
+    called_from = get_caller_info()
+    with transaction.atomic():
+        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+        worker_logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-    if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-        task_log.status = 'IN_PROGRESS'
-        task_log.save()
-    else:
-        return
+        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            task_log.status = 'IN_PROGRESS'
+            task_log.save()
+        else:
+            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+            return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
