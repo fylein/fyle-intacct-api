@@ -39,7 +39,6 @@ class FixtureFactory(BaseFixtureFactory):
 
     def create_dimension_details(self, workspace: Workspace) -> None:
         """Create a sample dimension detail"""
-
         for source_type in ['FYLE', 'PROJECT']:
             DimensionDetail.objects.update_or_create(
                 workspace=workspace,
