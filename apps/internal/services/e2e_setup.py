@@ -152,8 +152,8 @@ class E2ESetupService:
         logger.info("Setting up Phase 2: Advanced test data")
 
         # First create some expense attributes for mappings to reference
-        expense_attrs = ExpenseAttribute.objects.filter(workspace=workspace)
-        dest_attrs = DestinationAttribute.objects.filter(workspace=workspace)
+        expense_attrs = ExpenseAttribute.objects.filter(workspace=workspace).order_by('id')
+        dest_attrs = DestinationAttribute.objects.filter(workspace=workspace).order_by('id')
 
         # 13. Create mappings (1 mapping minimum) - using source_id FK to ExpenseAttribute
         self.fixture_factory.create_mappings(workspace, expense_attrs, dest_attrs, count=1)
