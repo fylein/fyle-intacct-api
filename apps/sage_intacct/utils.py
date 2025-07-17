@@ -9,6 +9,7 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
+from django_q.tasks import async_task
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 from sageintacctsdk import SageIntacctSDK
@@ -369,6 +370,16 @@ class SageIntacctConnector:
             is_import_to_fyle_enabled=is_expense_type_import_enabled,
             skip_deletion=self.is_duplicate_deletion_skipped('EXPENSE_TYPE')
         )
+
+        if not is_expense_type_import_enabled:
+            async_task(
+                'apps.mappings.tasks.check_and_create_ccc_mappings',
+                workspace_id=self.workspace_id,
+                q_options={
+                    'cluster': 'import'
+                }
+            )
+
         return []
 
     def sync_charge_card_accounts(self) -> list:
