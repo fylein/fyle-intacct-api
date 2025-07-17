@@ -38,14 +38,19 @@ class FixtureFactory(BaseFixtureFactory):
         return settings
 
     def create_dimension_details(self, workspace: Workspace) -> None:
-        """Create a sample dimension detail"""
-        for source_type in ['FYLE', 'PROJECT']:
-            DimensionDetail.objects.update_or_create(
-                workspace=workspace,
-                attribute_type='PROJECT',
-                display_name='Custom Project',
-                source_type=source_type
-            )
+        """Create sample dimension details"""
+        DimensionDetail.objects.update_or_create(
+            workspace=workspace,
+            source_type='FYLE',
+            attribute_type='PROJECT',
+            display_name='Custom Project',
+        )
+        DimensionDetail.objects.update_or_create(
+            workspace=workspace,
+            source_type='ACCOUNTING',
+            attribute_type='ACCOUNT',
+            display_name='Custom Account',
+        )
 
     def create_expenses(self, workspace: Workspace, count: int = 10) -> list[Expense]:
         """Create sample expenses"""
