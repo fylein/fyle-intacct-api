@@ -1,27 +1,21 @@
 from django_q.models import Schedule
+from fyle.platform.exceptions import InternalServerError
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
 
-from fyle.platform.exceptions import (
-    InvalidTokenError as FyleInvalidTokenError,
-    InternalServerError
-)
-from fyle_accounting_mappings.models import (
-    Mapping,
-    EmployeeMapping,
-    ExpenseAttribute,
-    DestinationAttribute,
-)
+from apps.fyle.models import ExpenseGroup
 from apps.mappings.tasks import (
+    async_auto_map_charge_card_account,
     async_auto_map_employees,
+    check_and_create_ccc_mappings,
+    construct_tasks_and_chain_import_fields_to_fyle,
+    resolve_expense_attribute_errors,
+    schedule_auto_map_charge_card_employees,
     schedule_auto_map_employees,
     sync_sage_intacct_attributes,
-    resolve_expense_attribute_errors,
-    async_auto_map_charge_card_account,
-    schedule_auto_map_charge_card_employees
 )
 from apps.tasks.models import Error
-from apps.fyle.models import ExpenseGroup
-from apps.workspaces.models import Configuration
-
+from apps.workspaces.models import Configuration, SageIntacctCredential
 from tests.test_fyle.fixtures import data as fyle_data
 from tests.test_sageintacct.fixtures import data as intacct_data
 
@@ -277,3 +271,86 @@ def test_schedule_auto_map_charge_card_employees(db):
     ).first()
 
     assert schedule == None
+
+
+def test_check_and_create_ccc_mappings(mocker, db):
+    """
+    Test check and create CCC mappings
+    """
+    workspace_id = 1
+
+    mock_bulk_create = mocker.patch(
+        'fyle_accounting_mappings.models.CategoryMapping.bulk_create_ccc_category_mappings'
+    )
+
+    Configuration.objects.filter(workspace_id=999).delete()
+    check_and_create_ccc_mappings(workspace_id=999)
+    mock_bulk_create.assert_not_called()
+
+    mock_bulk_create.reset_mock()
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.reimbursable_expenses_object = 'BILL'
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.save()
+
+    check_and_create_ccc_mappings(workspace_id=workspace_id)
+    mock_bulk_create.assert_not_called()
+
+    mock_bulk_create.reset_mock()
+
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.corporate_credit_card_expenses_object = 'BILL'
+    configuration.save()
+
+    check_and_create_ccc_mappings(workspace_id=workspace_id)
+    mock_bulk_create.assert_called_once_with(workspace_id)
+
+    mock_bulk_create.reset_mock()
+
+    configuration.reimbursable_expenses_object = 'BILL'
+    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    check_and_create_ccc_mappings(workspace_id=workspace_id)
+    mock_bulk_create.assert_called_once_with(workspace_id)
+
+    mock_bulk_create.reset_mock()
+
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    check_and_create_ccc_mappings(workspace_id=workspace_id)
+    mock_bulk_create.assert_called_once_with(workspace_id)
+
+
+def test_construct_tasks_and_chain_import_fields_to_fyle_with_account_destination(mocker, db):
+    """
+    Test construct_tasks_and_chain_import_fields_to_fyle with ACCOUNT destination field (line 328 coverage)
+    """
+    workspace_id = 1
+
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(is_expired=False)
+
+    mock_chain_import = mocker.patch('apps.mappings.tasks.chain_import_fields_to_fyle', return_value=None)
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.import_categories = True
+    configuration.reimbursable_expenses_object = 'BILL'
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.save()
+
+    construct_tasks_and_chain_import_fields_to_fyle(workspace_id)
+
+    mock_chain_import.assert_called_once()
+
+    call_args = mock_chain_import.call_args
+    task_settings = call_args[0][1]
+
+    assert 'import_categories' in task_settings
+    import_categories = task_settings['import_categories']
+    assert import_categories['destination_field'] == 'ACCOUNT'
+    assert 'accounts' in import_categories['destination_sync_methods']
+    assert import_categories['is_auto_sync_enabled'] == True
+    assert import_categories['is_3d_mapping'] == True
