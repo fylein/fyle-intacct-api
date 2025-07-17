@@ -304,16 +304,7 @@ def test_check_and_create_ccc_mappings(mocker, db):
     configuration.save()
 
     check_and_create_ccc_mappings(workspace_id=workspace_id)
-    mock_bulk_create.assert_called_once_with(workspace_id)
-
-    mock_bulk_create.reset_mock()
-
-    configuration.reimbursable_expenses_object = 'BILL'
-    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
-    configuration.save()
-
-    check_and_create_ccc_mappings(workspace_id=workspace_id)
-    mock_bulk_create.assert_called_once_with(workspace_id)
+    mock_bulk_create.assert_not_called()
 
     mock_bulk_create.reset_mock()
 

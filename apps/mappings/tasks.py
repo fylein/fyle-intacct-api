@@ -379,7 +379,9 @@ def check_and_create_ccc_mappings(workspace_id: int) -> None:
     :return: None
     """
     configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
-    if configuration and (configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' or \
-        configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'):
+    if configuration and (
+        configuration.reimbursable_expenses_object == 'EXPENSE_REPORT'
+        and (configuration.corporate_credit_card_expenses_object and configuration.corporate_credit_card_expenses_object not in ['JOURNAL_ENTRY', 'BILL', 'CHARGE_CARD_TRANSACTION'])
+    ):
         logger.info('Creating CCC Mappings for workspace_id - %s', workspace_id)
         CategoryMapping.bulk_create_ccc_category_mappings(workspace_id)
