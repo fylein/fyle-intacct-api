@@ -144,16 +144,16 @@ class E2EDestroyView(generics.GenericAPIView):
 
         Expected payload:
         {
-            "org_id": "orga1b2c3d4e5f6"
+            "workspace_id": 123
         }
         """
         # Validate request data using serializer, and return 400 / 403 if it fails
         serializer = E2EDestroySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        org_id = serializer.validated_data['org_id']
+        workspace_id = serializer.validated_data['workspace_id']
 
         try:
-            workspace = Workspace.objects.get(fyle_org_id=org_id)
+            workspace = Workspace.objects.get(id=workspace_id)
 
             logger.info(f"Safety check passed for workspace: {workspace.name} (ID: {workspace.id})")
 
@@ -161,10 +161,7 @@ class E2EDestroyView(generics.GenericAPIView):
             integration_cleanup_result = delete_integration_record(workspace.id)
 
             # Step 2: Execute database cleanup function
-            workspace_id = workspace.id
-            workspace_name = workspace.name
             deleted_at = timezone.now()
-
             with transaction.atomic():
                 with connection.cursor() as cursor:
                     logger.info(f"Calling delete_workspace({workspace_id}) database function")
@@ -172,15 +169,15 @@ class E2EDestroyView(generics.GenericAPIView):
                     result = cursor.fetchone()
                     logger.info(f"Database cleanup function completed. Result: {result}")
 
-            logger.info(f"E2E cleanup completed successfully for org_id: {org_id}")
+            logger.info(f"E2E cleanup completed successfully for workspace_id: {workspace_id}")
 
             return Response({
                 "success": True,
                 "message": "Test workspace deleted successfully",
                 "data": {
                     "workspace_id": workspace_id,
-                    "org_id": org_id,
-                    "workspace_name": workspace_name,
+                    "org_id": workspace.fyle_org_id,
+                    "workspace_name": workspace.name,
                     "deleted_at": deleted_at.isoformat(),
                     "cleanup_result": result[0] if result else "Success",
                     "integration_cleanup": integration_cleanup_result
