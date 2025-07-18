@@ -26,7 +26,7 @@ class E2ESetupSerializer(serializers.Serializer):
 
 class E2EDestroySerializer(serializers.Serializer):
     """Serializer for E2E Destroy API payload validation"""
-    workspace_id = serializers.CharField(required=True, help_text="ID of the workspace to destroy")
+    workspace_id = serializers.IntegerField(required=True, help_text="ID of the workspace to destroy")
 
     # Safety constants for allowed workspace names
     ALLOWED_WORKSPACE_NAMES = [
@@ -44,7 +44,7 @@ class E2EDestroySerializer(serializers.Serializer):
             )
         return attrs
 
-    def validate_workspace_id(self, value: str) -> str:
+    def validate_workspace_id(self, value: int) -> int:
         """Validate org ID and perform safety checks"""
         # Find and validate workspace
         try:
