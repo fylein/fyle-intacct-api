@@ -188,13 +188,13 @@ def test_e2e_destroy_view_failures(db, api_client, mocker):
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert 'only available in development/staging environments' in str(response.data)
 
-    # Test 2a: Empty org_id (Org ID is required)
+    # Test 2a: Empty workspace_id (workspace_id is required)
     mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
 
-    response = api_client.post(url, internal_data['e2e_destroy_empty_org_id_payload'], format='json')
+    response = api_client.post(url, internal_data['e2e_destroy_empty_payload'], format='json')
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert 'org_id' in response.data
+    assert 'workspace_id' in response.data
 
     # Test 2b: Safety check failed (workspace name not in allowed list)
     mock_unsafe_workspace = mocker.Mock()
@@ -204,8 +204,8 @@ def test_e2e_destroy_view_failures(db, api_client, mocker):
     response = api_client.post(url, internal_data['e2e_destroy_payload'], format='json')
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    org_id_errors = response.data.get('org_id')
-    assert org_id_errors and len(org_id_errors) > 0 and 'Safety check failed' in org_id_errors[0]
+    workspace_id_errors = response.data.get('workspace_id')
+    assert workspace_id_errors and len(workspace_id_errors) > 0 and 'Safety check failed' in workspace_id_errors[0]
 
     # Test 3: Workspace not found
     mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
@@ -216,8 +216,8 @@ def test_e2e_destroy_view_failures(db, api_client, mocker):
     response = api_client.post(url, internal_data['e2e_destroy_nonexistent_payload'], format='json')
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    org_id_errors = response.data.get('org_id')
-    assert org_id_errors and len(org_id_errors) > 0 and 'No workspace found' in org_id_errors[0]
+    workspace_id_errors = response.data.get('workspace_id')
+    assert workspace_id_errors and len(workspace_id_errors) > 0 and 'No workspace found' in workspace_id_errors[0]
 
     # Test 4: Integration deletion exception
     mocker.patch('apps.internal.serializers.is_safe_environment', return_value=True)
