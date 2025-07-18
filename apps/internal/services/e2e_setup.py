@@ -180,7 +180,7 @@ class E2ESetupService:
         self.fixture_factory.create_charge_card_transactions_and_lineitems(expense_groups)
 
         # 21. Create errors
-        self.fixture_factory.create_error_records(workspace, expense_groups[:-2])
+        # self.fixture_factory.create_error_records(workspace, expense_groups[:-2])
 
         # 22. Update the onboarding state
         workspace = Workspace.objects.get(id=self.workspace_id)
