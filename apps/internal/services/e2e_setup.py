@@ -88,7 +88,6 @@ class E2ESetupService:
             employee_field_mapping='VENDOR',
             reimbursable_expenses_object='BILL',
             corporate_credit_card_expenses_object='CHARGE_CARD_TRANSACTION',
-            import_categories=True,
             import_vendors_as_merchants=True,
             sync_fyle_to_sage_intacct_payments=False,
             sync_sage_intacct_to_fyle_payments=False,
