@@ -25,7 +25,7 @@ class FixtureFactory(BaseFixtureFactory):
         attrs_to_create = []
 
         # Create reimbursable expense payment types
-        for i in range(count):
+        for i in range(count // 2):
             attr = DestinationAttribute(
                 workspace=workspace,
                 attribute_type="EXPENSE_PAYMENT_TYPE",
@@ -38,7 +38,7 @@ class FixtureFactory(BaseFixtureFactory):
             attrs_to_create.append(attr)
 
         # Create CCC expense payment types
-        for i in range(count):
+        for i in range(count - count // 2):
             attr = DestinationAttribute(
                 workspace=workspace,
                 attribute_type="EXPENSE_PAYMENT_TYPE",
