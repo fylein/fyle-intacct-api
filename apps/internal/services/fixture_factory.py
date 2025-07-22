@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.utils import timezone
 from fyle_accounting_library.common_resources.models import DimensionDetail
 
-from apps.fyle.models import DependentFieldSetting, Expense, ExpenseGroup
+from apps.fyle.models import Expense, ExpenseGroup
 from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.models import Workspace
@@ -54,27 +54,6 @@ class FixtureFactory(BaseFixtureFactory):
 
         # Return combined list of all created destination attributes
         return base_attrs + created_payment_attrs
-
-    def create_dependent_field_settings(self, workspace: Workspace) -> list[DependentFieldSetting]:
-        """Create sample dependent field settings"""
-        # Create DependentFieldSetting instance without saving
-        setting = DependentFieldSetting(
-            workspace=workspace,
-            is_import_enabled=True,
-            project_field_id=1,
-            cost_code_field_name='PROJECT',
-            cost_code_field_id=1,
-            cost_code_placeholder='Select Project',
-            cost_type_field_name='COST_CENTER',
-            cost_type_placeholder='Select Cost Center',
-            created_at=timezone.now(),
-            updated_at=timezone.now()
-        )
-
-        # Use bulk_create to avoid triggering pre_save signals
-        settings = DependentFieldSetting.objects.bulk_create([setting])
-
-        return settings
 
     def create_dimension_details(self, workspace: Workspace) -> None:
         """Create sample dimension details"""
