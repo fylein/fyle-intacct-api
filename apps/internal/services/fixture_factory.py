@@ -10,11 +10,50 @@ from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, 
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.models import Workspace
 from fyle_accounting_mappings.e2e_fixtures import BaseFixtureFactory
-from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 
 
 class FixtureFactory(BaseFixtureFactory):
     """Factory for creating Intacct test fixture data"""
+
+    def create_destination_attributes(self, workspace: Workspace, count: int = 101) -> list[DestinationAttribute]:
+        """Create sample destination attributes for intacct"""
+        # Create common destination attributes
+        base_attrs = super().create_destination_attributes(workspace, count)
+
+        # Create intacct-specific destination attributes - EXPENSE_PAYMENT_TYPE
+        attrs_to_create = []
+
+        # Create reimbursable expense payment types
+        for i in range(count // 2):
+            attr = DestinationAttribute(
+                workspace=workspace,
+                attribute_type="EXPENSE_PAYMENT_TYPE",
+                value=f"E2E Reimbursable Payment Type {i + 1}",
+                display_name="expense payment type",
+                destination_id=f"reimb_{i + 1}",
+                detail={"is_reimbursable": True},
+                active=True,
+            )
+            attrs_to_create.append(attr)
+
+        # Create CCC expense payment types
+        for i in range(count - count // 2):
+            attr = DestinationAttribute(
+                workspace=workspace,
+                attribute_type="EXPENSE_PAYMENT_TYPE",
+                value=f"E2E CCC Payment Type {i + 1}",
+                display_name="expense payment type",
+                destination_id=f"ccc_{i + 1}",
+                detail={"is_reimbursable": False},
+                active=True,
+            )
+            attrs_to_create.append(attr)
+
+        created_payment_attrs = DestinationAttribute.objects.bulk_create(attrs_to_create)
+
+        # Return combined list of all created destination attributes
+        return base_attrs + created_payment_attrs
 
     def create_dependent_field_settings(self, workspace: Workspace) -> list[DependentFieldSetting]:
         """Create sample dependent field settings"""
