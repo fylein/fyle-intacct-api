@@ -121,16 +121,13 @@ class E2ESetupService:
         # 7. Create mapping_settings
         self.fixture_factory.create_mapping_settings(workspace)
 
-        # 8. Create dependent_field_settings
-        self.fixture_factory.create_dependent_field_settings(workspace)
-
-        # 9. Create destination_attributes
+        # 8. Create destination_attributes
         self.fixture_factory.create_destination_attributes(workspace)
 
-        # 10. Create dimension_details
+        # 9. Create dimension_details
         self.fixture_factory.create_dimension_details(workspace)
 
-        # 11. Create workspace_schedules
+        # 10. Create workspace_schedules
         WorkspaceSchedule.objects.create(
             workspace=workspace,
             enabled=False,
@@ -140,7 +137,7 @@ class E2ESetupService:
             updated_at=timezone.now()
         )
 
-        # 12. Create expense_attributes
+        # 11. Create expense_attributes
         self.fixture_factory.create_expense_attributes(workspace)
 
         logger.info("Phase 1 core data setup completed")
@@ -154,34 +151,34 @@ class E2ESetupService:
         expense_attrs = ExpenseAttribute.objects.filter(workspace=workspace).order_by('id')
         dest_attrs = DestinationAttribute.objects.filter(workspace=workspace).order_by('id')
 
-        # 13. Create mappings (1 mapping minimum) - using source_id FK to ExpenseAttribute
+        # 12. Create mappings (1 mapping minimum) - using source_id FK to ExpenseAttribute
         self.fixture_factory.create_mappings(workspace, expense_attrs, dest_attrs, count=1)
 
-        # 14. Create employee_mappings - using source_employee FK to ExpenseAttribute
+        # 13. Create employee_mappings - using source_employee FK to ExpenseAttribute
         self.fixture_factory.create_employee_mappings(workspace, expense_attrs, dest_attrs)
 
-        # 15. Create category_mappings - using source_category FK to ExpenseAttribute
+        # 14. Create category_mappings - using source_category FK to ExpenseAttribute
         self.fixture_factory.create_category_mappings(workspace, expense_attrs, dest_attrs)
 
-        # 16. Create expenses
+        # 15. Create expenses
         expenses = self.fixture_factory.create_expenses(workspace, count=22)
 
-        # 17. Create expense_groups
+        # 16. Create expense_groups
         expense_groups = self.fixture_factory.create_expense_groups(workspace, expenses, group_size=2)
 
-        # 18. Create task_logs
+        # 17. Create task_logs
         self.fixture_factory.create_task_logs(workspace, expense_groups)
 
-        # 19. Create bills and bill_lineitems (related to expense_groups)
+        # 18. Create bills and bill_lineitems (related to expense_groups)
         self.fixture_factory.create_bills_and_lineitems(expense_groups)
 
-        # 20. Create charge_card_transactions and charge_card_transaction_lineitems (related to expense_groups)
+        # 19. Create charge_card_transactions and charge_card_transaction_lineitems (related to expense_groups)
         self.fixture_factory.create_charge_card_transactions_and_lineitems(expense_groups)
 
-        # 21. Create errors
+        # 20. Create errors
         # self.fixture_factory.create_error_records(workspace, expense_groups[:-2])
 
-        # 22. Update the onboarding state
+        # 21. Update the onboarding state
         workspace = Workspace.objects.get(id=self.workspace_id)
         workspace.onboarding_state = 'COMPLETE'
         workspace.save()
