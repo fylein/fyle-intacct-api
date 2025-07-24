@@ -106,8 +106,6 @@ class E2ESetupView(generics.GenericAPIView):
         validated_data = serializer.validated_data
 
         try:
-            print(f'{validated_data=}')
-            print(f'{validated_data["use_real_intacct_credentials"]=}')
             # Initialize setup service
             setup_service = E2ESetupService(
                 validated_data['workspace_id'],
