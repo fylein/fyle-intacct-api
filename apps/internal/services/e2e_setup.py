@@ -1,4 +1,5 @@
 import logging
+import os
 
 from django.conf import settings
 from django.utils import timezone
@@ -73,6 +74,11 @@ class E2ESetupService:
             si_company_id = settings.E2E_TEST_COMPANY_ID or si_company_id
             si_user_password = settings.E2E_TEST_USER_PASSWORD or si_user_password
 
+        print('[x]', settings.E2E_TEST_USER_ID, settings.E2E_TEST_COMPANY_ID,settings.E2E_TEST_USER_PASSWORD)
+        print('[x]', os.environ.get('E2E_TEST_USER_ID'), os.environ.get('E2E_TEST_COMPANY_ID'), os.environ.get('E2E_TEST_USER_PASSWORD'))
+        print('[x]', os.getenv('E2E_TEST_USER_ID'), os.getenv('E2E_TEST_COMPANY_ID'), os.getenv('E2E_TEST_USER_PASSWORD'))
+        print(f'{self.use_real_intacct_credentials=}')
+        print(si_user_id, si_company_id, si_user_password)
         SageIntacctCredential.objects.create(
             workspace=workspace,
             si_user_id=si_user_id,
