@@ -9,6 +9,11 @@ class E2ESetupSerializer(serializers.Serializer):
     """Serializer for E2E Setup API payload validation"""
     workspace_id = serializers.IntegerField(required=True, help_text="Workspace ID")
 
+    use_real_intacct_credentials = serializers.BooleanField(
+        default=False,
+        help_text="Whether to use real Intacct credentials, or mock them out"
+    )
+
     def validate(self, attrs: dict) -> dict:
         """Validate environment safety"""
         if not is_safe_environment():

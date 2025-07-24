@@ -1,6 +1,6 @@
 import logging
-import os
 
+from django.conf import settings
 from django.utils import timezone
 
 from apps.fyle.models import ExpenseAttribute, ExpenseGroupSettings
@@ -16,9 +16,10 @@ logger.level = logging.INFO
 class E2ESetupService:
     """Service for setting up E2E test fixture data"""
 
-    def __init__(self, workspace_id: int) -> None:
+    def __init__(self, workspace_id: int, use_real_intacct_credentials: bool = False) -> None:
         self.workspace_id = workspace_id
         self.fixture_factory = FixtureFactory()
+        self.use_real_intacct_credentials = use_real_intacct_credentials
 
     def setup_organization(self) -> dict:
         """Main method to set up the test organization"""
@@ -64,11 +65,19 @@ class E2ESetupService:
         )
 
         # 3. Create Sage Intacct credentials (from env)
+        si_user_id = 'e2e_test_user'
+        si_company_id = 'E2E_TEST_COMPANY'
+        si_user_password = 'encrypted_password'
+        if self.use_real_intacct_credentials:
+            si_user_id = settings.E2E_TEST_USER_ID or si_user_id
+            si_company_id = settings.E2E_TEST_COMPANY_ID or si_company_id
+            si_user_password = settings.E2E_TEST_USER_PASSWORD or si_user_password
+
         SageIntacctCredential.objects.create(
             workspace=workspace,
-            si_user_id=os.getenv('SI_USER_ID', 'e2e_test_user'),
-            si_company_id=os.getenv('SI_COMPANY_ID', 'E2E_TEST_COMPANY'),
-            si_user_password=os.getenv('SI_USER_PASSWORD', 'encrypted_password'),
+            si_user_id=si_user_id,
+            si_company_id=si_company_id,
+            si_user_password=si_user_password,
             created_at=timezone.now(),
             updated_at=timezone.now()
         )
