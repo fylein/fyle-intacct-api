@@ -9,13 +9,13 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
-import sys
 import os
+import sys
 from logging.config import dictConfig
-from .logging_middleware import WorkerIDFilter
 
 import dj_database_url
 
+from .logging_middleware import WorkerIDFilter
 from .sentry import Sentry
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -307,6 +307,9 @@ EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 
 # E2E Settings
 ALLOW_E2E_SETUP = os.environ.get('ALLOW_E2E_SETUP')
+E2E_TEST_USER_ID = os.environ.get('E2E_TEST_USER_ID')
+E2E_TEST_COMPANY_ID = os.environ.get('E2E_TEST_COMPANY_ID')
+E2E_TEST_USER_PASSWORD = os.environ.get('E2E_TEST_USER_PASSWORD')
 
 CACHE_EXPIRY = 3600
 

@@ -108,7 +108,8 @@ class E2ESetupView(generics.GenericAPIView):
         try:
             # Initialize setup service
             setup_service = E2ESetupService(
-                workspace_id=validated_data['workspace_id']
+                validated_data['workspace_id'],
+                validated_data['use_real_intacct_credentials']
             )
 
             # Execute setup in transaction
