@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
         ('users', '0002_auto_20201228_0802'),
         ('mappings', '0016_auto_20250108_0702'),
         ('tasks', '0010_alter_tasklog_expense_group'),
-        ('workspaces','0041_auto_20250108_0702'),
+        ('workspaces','0043_configuration_skip_accounting_export_summary_post'),
         ('sage_intacct', '0030_auto_20241112_0425'),
     ]  # This is the first migration
     operations = safe_run_sql(sql_files)
