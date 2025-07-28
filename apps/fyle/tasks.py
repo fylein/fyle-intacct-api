@@ -574,7 +574,7 @@ def delete_expense_group_and_related_data(expense_group: ExpenseGroup, workspace
     worker_logger.info("Deleted expense group %s in workspace %s", group_id, workspace_id)
 
 
-def recreate_expense_groups(workspace_id: int, expense_ids: list[int]):
+def recreate_expense_groups(workspace_id: int, expense_ids: list[int]) -> None:
     """
     Recreate expense groups using standard grouping logic
     :param workspace_id: Workspace id
