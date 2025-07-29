@@ -1,24 +1,24 @@
-from dateutil import parser
 from datetime import datetime
 
+from dateutil import parser
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
 from apps.fyle.models import (
     Expense,
     ExpenseGroup,
+    ExpenseGroupSettings,
     Reimbursement,
     _format_date,
     _group_expenses,
-    ExpenseGroupSettings,
-    get_default_expense_state,
     get_default_ccc_expense_state,
-    get_default_expense_group_fields
+    get_default_expense_group_fields,
+    get_default_expense_state,
 )
-from apps.workspaces.models import Configuration, Workspace
-from apps.tasks.models import TaskLog
 from apps.fyle.tasks import create_expense_groups
 from apps.sage_intacct.models import get_transaction_date
-from .fixtures import data
+from apps.tasks.models import TaskLog
+from apps.workspaces.models import Configuration, Workspace
+from tests.test_fyle.fixtures import data
 
 
 def test_default_fields():
@@ -45,6 +45,14 @@ def test_create_expense_objects(db):
     expense = Expense.objects.last()
 
     assert expense.expense_id == 'tx4ziVSAyIsv'
+
+    payload = data['expenses'][0]
+    payload['expense_id'] = 'tx4ziVSAyIsv1'
+    payload['tax_amount'] = None
+    payload['tax_group_id'] = 'tgWdIdEwcKlK'
+    Expense.create_expense_objects([payload], workspace_id)
+    expense = Expense.objects.last()
+    assert expense.tax_amount == 0
 
 
 def test_create_eliminated_expense_objects(db):
