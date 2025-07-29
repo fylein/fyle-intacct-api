@@ -1,7 +1,9 @@
-from rest_framework.views import Response
 from rest_framework.serializers import ValidationError
+from rest_framework.views import Response
+
 from apps.workspaces.models import SageIntacctCredential
-from apps.sage_intacct.actions import patch_integration_settings
+from apps.workspaces.tasks import patch_integration_settings
+
 
 def assert_valid(condition: bool, message: str) -> Response or None:
     """
@@ -33,8 +35,6 @@ def invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials=N
 
     if sage_intacct_credentials:
         if not sage_intacct_credentials.is_expired:
-            # TODO: Uncomment this when we have a FE Changes ready
-            # patch_integration_settings(workspace_id, is_token_expired=True)
-            pass
+            patch_integration_settings(workspace_id, is_token_expired=True)
         sage_intacct_credentials.is_expired = True
         sage_intacct_credentials.save()

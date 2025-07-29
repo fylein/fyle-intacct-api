@@ -9,6 +9,8 @@ import requests
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from rest_framework.exceptions import ValidationError
@@ -17,8 +19,7 @@ from apps.fyle.models import DependentFieldSetting, Expense, ExpenseFilter, Expe
 from apps.mappings.tasks import construct_tasks_and_chain_import_fields_to_fyle
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import Configuration, FyleCredential, Workspace
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_library.common_resources.models import DimensionDetail
+from apps.workspaces.tasks import patch_integration_settings_for_unmapped_cards
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -197,6 +198,7 @@ def sync_dimensions(workspace_id: int, is_export: bool = False) -> None:
     :return: None
     """
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
     skip_dependent_field_ids = []
 
     dependent_field_settings = DependentFieldSetting.objects.filter(workspace_id=fyle_credentials.workspace_id, is_import_enabled=True).first()
@@ -211,6 +213,12 @@ def sync_dimensions(workspace_id: int, is_export: bool = False) -> None:
         is_export=is_export,
         skip_dependent_field_ids=skip_dependent_field_ids
     )
+
+    unmapped_card_count = ExpenseAttribute.objects.filter(
+        attribute_type="CORPORATE_CARD", workspace_id=workspace_id, active=True, mapping__isnull=True
+    ).count()
+    if configuration and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+        patch_integration_settings_for_unmapped_cards(workspace_id=workspace_id, unmapped_card_count=unmapped_card_count)
 
     update_dimension_details(platform=platform, workspace_id=fyle_credentials.workspace.id)
 

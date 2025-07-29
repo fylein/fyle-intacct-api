@@ -1,28 +1,28 @@
 import logging
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
 
-from django.db.models import Q
 from django.conf import settings
-from django_q.models import Schedule
+from django.db.models import Q
 from django.template.loader import render_to_string
-
-from fyle_rest_auth.helpers import get_fyle_admin
-from fyle_accounting_mappings.models import ExpenseAttribute
+from django_q.models import Schedule
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
+from fyle_rest_auth.helpers import get_fyle_admin
 
-from apps.tasks.models import TaskLog
-from apps.workspaces.utils import send_email
+from apps.fyle.helpers import patch_request, post_request
 from apps.fyle.tasks import create_expense_groups
-from apps.fyle.helpers import post_request
+from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.models import (
+    Configuration,
+    FyleCredential,
+    LastExportDetail,
+    SageIntacctCredential,
     Workspace,
     WorkspaceSchedule,
-    Configuration,
-    SageIntacctCredential,
-    FyleCredential
 )
+from apps.workspaces.utils import send_email
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -250,6 +250,50 @@ def post_to_integration_settings(workspace_id: int, active: bool) -> None:
         post_request(url, payload, refresh_token)
     except Exception as error:
         logger.error(error)
+
+
+def patch_integration_settings(workspace_id: int, errors: int = None, is_token_expired: bool = None, unmapped_card_count: int = None) -> None:
+    """
+    Patch integration settings
+    """
+    fyle_credential = FyleCredential.objects.get(workspace_id=workspace_id)
+    refresh_token = fyle_credential.refresh_token
+    url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
+    payload = {
+        'tpa_name': 'Fyle Sage Intacct Integration'
+    }
+
+    if errors is not None:
+        payload['errors_count'] = errors
+
+    if is_token_expired is not None:
+        payload['is_token_expired'] = is_token_expired
+
+    if unmapped_card_count is not None:
+        payload['unmapped_card_count'] = unmapped_card_count
+
+    try:
+        if fyle_credential.workspace.onboarding_state == 'COMPLETE':
+            patch_request(url, payload, refresh_token)
+        return True
+    except Exception as error:
+        logger.error(error, exc_info=True)
+        return False
+
+
+def patch_integration_settings_for_unmapped_cards(workspace_id: int, unmapped_card_count: int) -> None:
+    """
+    Patch integration settings for unmapped cards
+    :param workspace_id: Workspace id
+    :param unmapped_card_count: Unmapped card count
+    return: None
+    """
+    last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
+    if unmapped_card_count != last_export_detail.unmapped_card_count:
+        is_patched = patch_integration_settings(workspace_id=workspace_id, unmapped_card_count=unmapped_card_count)
+        if is_patched:
+            last_export_detail.unmapped_card_count = unmapped_card_count
+            last_export_detail.save(update_fields=['unmapped_card_count', 'updated_at'])
 
 
 def async_create_admin_subcriptions(workspace_id: int) -> None:
