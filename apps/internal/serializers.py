@@ -9,6 +9,11 @@ class E2ESetupSerializer(serializers.Serializer):
     """Serializer for E2E Setup API payload validation"""
     workspace_id = serializers.IntegerField(required=True, help_text="Workspace ID")
 
+    use_real_intacct_credentials = serializers.BooleanField(
+        default=False,
+        help_text="Whether to use real Intacct credentials, or mock them out"
+    )
+
     def validate(self, attrs: dict) -> dict:
         """Validate environment safety"""
         if not is_safe_environment():
@@ -26,7 +31,7 @@ class E2ESetupSerializer(serializers.Serializer):
 
 class E2EDestroySerializer(serializers.Serializer):
     """Serializer for E2E Destroy API payload validation"""
-    org_id = serializers.CharField(required=True, help_text="Org ID to destroy")
+    workspace_id = serializers.IntegerField(required=True, help_text="ID of the workspace to destroy")
 
     # Safety constants for allowed workspace names
     ALLOWED_WORKSPACE_NAMES = [
@@ -44,13 +49,13 @@ class E2EDestroySerializer(serializers.Serializer):
             )
         return attrs
 
-    def validate_org_id(self, value: str) -> str:
+    def validate_workspace_id(self, value: int) -> int:
         """Validate org ID and perform safety checks"""
         # Find and validate workspace
         try:
-            workspace = Workspace.objects.get(fyle_org_id=value)
+            workspace = Workspace.objects.get(id=value)
         except Workspace.DoesNotExist:
-            raise serializers.ValidationError(f"No workspace found for org_id: {value}")
+            raise serializers.ValidationError(f"No workspace found for id: {value}")
 
         # CRITICAL SAFETY CHECK: Validate workspace name
         if workspace.name not in self.ALLOWED_WORKSPACE_NAMES:

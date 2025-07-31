@@ -1,6 +1,6 @@
 import logging
-import os
 
+from django.conf import settings
 from django.utils import timezone
 
 from apps.fyle.models import ExpenseAttribute, ExpenseGroupSettings
@@ -16,9 +16,10 @@ logger.level = logging.INFO
 class E2ESetupService:
     """Service for setting up E2E test fixture data"""
 
-    def __init__(self, workspace_id: int) -> None:
+    def __init__(self, workspace_id: int, use_real_intacct_credentials: bool = False) -> None:
         self.workspace_id = workspace_id
         self.fixture_factory = FixtureFactory()
+        self.use_real_intacct_credentials = use_real_intacct_credentials
 
     def setup_organization(self) -> dict:
         """Main method to set up the test organization"""
@@ -64,11 +65,19 @@ class E2ESetupService:
         )
 
         # 3. Create Sage Intacct credentials (from env)
+        si_user_id = 'e2e_test_user'
+        si_company_id = 'E2E_TEST_COMPANY'
+        si_user_password = 'encrypted_password'
+        if self.use_real_intacct_credentials:
+            si_user_id = settings.E2E_TEST_USER_ID or si_user_id
+            si_company_id = settings.E2E_TEST_COMPANY_ID or si_company_id
+            si_user_password = settings.E2E_TEST_USER_PASSWORD or si_user_password
+
         SageIntacctCredential.objects.create(
             workspace=workspace,
-            si_user_id=os.getenv('SI_USER_ID', 'e2e_test_user'),
-            si_company_id=os.getenv('SI_COMPANY_ID', 'E2E_TEST_COMPANY'),
-            si_user_password=os.getenv('SI_USER_PASSWORD', 'encrypted_password'),
+            si_user_id=si_user_id,
+            si_company_id=si_company_id,
+            si_user_password=si_user_password,
             created_at=timezone.now(),
             updated_at=timezone.now()
         )
@@ -85,9 +94,9 @@ class E2ESetupService:
         # 5. Create configurations
         Configuration.objects.create(
             workspace=workspace,
+            employee_field_mapping='VENDOR',
             reimbursable_expenses_object='BILL',
             corporate_credit_card_expenses_object='CHARGE_CARD_TRANSACTION',
-            import_categories=True,
             import_vendors_as_merchants=True,
             sync_fyle_to_sage_intacct_payments=False,
             sync_sage_intacct_to_fyle_payments=False,
@@ -121,16 +130,13 @@ class E2ESetupService:
         # 7. Create mapping_settings
         self.fixture_factory.create_mapping_settings(workspace)
 
-        # 8. Create dependent_field_settings
-        self.fixture_factory.create_dependent_field_settings(workspace)
-
-        # 9. Create destination_attributes
+        # 8. Create destination_attributes
         self.fixture_factory.create_destination_attributes(workspace)
 
-        # 10. Create dimension_details
+        # 9. Create dimension_details
         self.fixture_factory.create_dimension_details(workspace)
 
-        # 11. Create workspace_schedules
+        # 10. Create workspace_schedules
         WorkspaceSchedule.objects.create(
             workspace=workspace,
             enabled=False,
@@ -140,7 +146,7 @@ class E2ESetupService:
             updated_at=timezone.now()
         )
 
-        # 12. Create expense_attributes
+        # 11. Create expense_attributes
         self.fixture_factory.create_expense_attributes(workspace)
 
         logger.info("Phase 1 core data setup completed")
@@ -151,37 +157,37 @@ class E2ESetupService:
         logger.info("Setting up Phase 2: Advanced test data")
 
         # First create some expense attributes for mappings to reference
-        expense_attrs = ExpenseAttribute.objects.filter(workspace=workspace)
-        dest_attrs = DestinationAttribute.objects.filter(workspace=workspace)
+        expense_attrs = ExpenseAttribute.objects.filter(workspace=workspace).order_by('id')
+        dest_attrs = DestinationAttribute.objects.filter(workspace=workspace).order_by('id')
 
-        # 13. Create mappings (1 mapping minimum) - using source_id FK to ExpenseAttribute
+        # 12. Create mappings (1 mapping minimum) - using source_id FK to ExpenseAttribute
         self.fixture_factory.create_mappings(workspace, expense_attrs, dest_attrs, count=1)
 
-        # 14. Create employee_mappings - using source_employee FK to ExpenseAttribute
+        # 13. Create employee_mappings - using source_employee FK to ExpenseAttribute
         self.fixture_factory.create_employee_mappings(workspace, expense_attrs, dest_attrs)
 
-        # 15. Create category_mappings - using source_category FK to ExpenseAttribute
+        # 14. Create category_mappings - using source_category FK to ExpenseAttribute
         self.fixture_factory.create_category_mappings(workspace, expense_attrs, dest_attrs)
 
-        # 16. Create expenses
+        # 15. Create expenses
         expenses = self.fixture_factory.create_expenses(workspace, count=22)
 
-        # 17. Create expense_groups
+        # 16. Create expense_groups
         expense_groups = self.fixture_factory.create_expense_groups(workspace, expenses, group_size=2)
 
-        # 18. Create task_logs
+        # 17. Create task_logs
         self.fixture_factory.create_task_logs(workspace, expense_groups)
 
-        # 19. Create bills and bill_lineitems (related to expense_groups)
+        # 18. Create bills and bill_lineitems (related to expense_groups)
         self.fixture_factory.create_bills_and_lineitems(expense_groups)
 
-        # 20. Create charge_card_transactions and charge_card_transaction_lineitems (related to expense_groups)
+        # 19. Create charge_card_transactions and charge_card_transaction_lineitems (related to expense_groups)
         self.fixture_factory.create_charge_card_transactions_and_lineitems(expense_groups)
 
-        # 21. Create errors
-        self.fixture_factory.create_error_records(workspace, expense_groups[:-2])
+        # 20. Create errors
+        # self.fixture_factory.create_error_records(workspace, expense_groups[:-2])
 
-        # 22. Update the onboarding state
+        # 21. Update the onboarding state
         workspace = Workspace.objects.get(id=self.workspace_id)
         workspace.onboarding_state = 'COMPLETE'
         workspace.save()

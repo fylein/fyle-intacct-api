@@ -4,55 +4,71 @@ from datetime import timedelta
 
 from django.utils import timezone
 from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_mappings.e2e_fixtures import BaseFixtureFactory
-from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.fyle.models import DependentFieldSetting, Expense, ExpenseGroup
+from apps.fyle.models import Expense, ExpenseGroup
 from apps.sage_intacct.models import Bill, BillLineitem, ChargeCardTransaction, ChargeCardTransactionLineitem
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.models import Workspace
+from fyle_accounting_mappings.e2e_fixtures import BaseFixtureFactory
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute
 
 
 class FixtureFactory(BaseFixtureFactory):
     """Factory for creating Intacct test fixture data"""
 
-    def create_dependent_field_settings(self, workspace: Workspace) -> list[DependentFieldSetting]:
-        """Create sample dependent field settings"""
-        # Create DependentFieldSetting instance without saving
-        setting = DependentFieldSetting(
-            workspace=workspace,
-            is_import_enabled=True,
-            project_field_id=1,
-            cost_code_field_name='PROJECT',
-            cost_code_field_id=1,
-            cost_code_placeholder='Select Project',
-            cost_type_field_name='COST_CENTER',
-            cost_type_placeholder='Select Cost Center',
-            created_at=timezone.now(),
-            updated_at=timezone.now()
-        )
+    def create_destination_attributes(self, workspace: Workspace, count: int = 101) -> list[DestinationAttribute]:
+        """Create sample destination attributes for intacct"""
+        # Create common destination attributes
+        base_attrs = super().create_destination_attributes(workspace, count)
 
-        # Use bulk_create to avoid triggering pre_save signals
-        settings = DependentFieldSetting.objects.bulk_create([setting])
+        # Create intacct-specific destination attributes - EXPENSE_PAYMENT_TYPE
+        attrs_to_create = []
 
-        return settings
-
-    def create_dimension_details(self, workspace: Workspace, count: int = 3) -> list[DimensionDetail]:
-        """Create sample dimension details"""
-        details = []
-
-        for i in range(count):
-            detail = DimensionDetail.objects.create(
+        # Create reimbursable expense payment types
+        for i in range(count // 2):
+            attr = DestinationAttribute(
                 workspace=workspace,
-                attribute_type=f'E2E_DIMENSION_{i + 1}',
-                display_name=f'E2E Dimension {i + 1}',
-                source_type='ACCOUNTING',
-                created_at=timezone.now(),
-                updated_at=timezone.now()
+                attribute_type="EXPENSE_PAYMENT_TYPE",
+                value=f"E2E Reimbursable Payment Type {i + 1}",
+                display_name="expense payment type",
+                destination_id=f"reimb_{i + 1}",
+                detail={"is_reimbursable": True},
+                active=True,
             )
-            details.append(detail)
+            attrs_to_create.append(attr)
 
-        return details
+        # Create CCC expense payment types
+        for i in range(count - count // 2):
+            attr = DestinationAttribute(
+                workspace=workspace,
+                attribute_type="EXPENSE_PAYMENT_TYPE",
+                value=f"E2E CCC Payment Type {i + 1}",
+                display_name="expense payment type",
+                destination_id=f"ccc_{i + 1}",
+                detail={"is_reimbursable": False},
+                active=True,
+            )
+            attrs_to_create.append(attr)
+
+        created_payment_attrs = DestinationAttribute.objects.bulk_create(attrs_to_create)
+
+        # Return combined list of all created destination attributes
+        return base_attrs + created_payment_attrs
+
+    def create_dimension_details(self, workspace: Workspace) -> None:
+        """Create sample dimension details"""
+        DimensionDetail.objects.update_or_create(
+            workspace=workspace,
+            source_type='FYLE',
+            attribute_type='PROJECT',
+            display_name='Custom Project',
+        )
+        DimensionDetail.objects.update_or_create(
+            workspace=workspace,
+            source_type='ACCOUNTING',
+            attribute_type='ACCOUNT',
+            display_name='Custom Account',
+        )
 
     def create_expenses(self, workspace: Workspace, count: int = 10) -> list[Expense]:
         """Create sample expenses"""

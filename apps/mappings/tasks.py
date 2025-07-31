@@ -1,33 +1,25 @@
 import logging
 from datetime import datetime, timezone
 
-from django_q.models import Schedule
 from django.utils.module_loading import import_string
-
-from fyle_accounting_mappings.models import EmployeeMapping, MappingSetting
+from django_q.models import Schedule
+from fyle.platform.exceptions import InternalServerError
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
-from fyle_integrations_imports.dataclasses import TaskSetting
-from fyle_integrations_imports.queues import chain_import_fields_to_fyle
+from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, MappingSetting
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import (
-    InvalidTokenError as FyleInvalidTokenError,
-    InternalServerError
-)
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
-from apps.mappings.constants import SYNC_METHODS
-from fyle_integrations_imports.models import ImportLog
 from apps.fyle.models import DependentFieldSetting
+from apps.mappings.constants import SYNC_METHODS
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.tasks.models import Error
-from apps.workspaces.models import (
-    SageIntacctCredential,
-    FyleCredential,
-    Configuration
-)
-
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from fyle_integrations_imports.dataclasses import TaskSetting
+from fyle_integrations_imports.models import ImportLog
+from fyle_integrations_imports.queues import chain_import_fields_to_fyle
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -323,15 +315,20 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
         }
 
     if configuration.import_categories:
+        destination_sync_methods = []
+        destination_field = None
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT' or \
             configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT':
             destination_field = 'EXPENSE_TYPE'
+            destination_sync_methods.append(SYNC_METHODS['ACCOUNT'])
+            destination_sync_methods.append(SYNC_METHODS['EXPENSE_TYPE'])
         else:
             destination_field = 'ACCOUNT'
+            destination_sync_methods.append(SYNC_METHODS['ACCOUNT'])
 
         task_settings['import_categories'] = {
             'destination_field': destination_field,
-            'destination_sync_methods': [SYNC_METHODS[destination_field]],
+            'destination_sync_methods': destination_sync_methods,
             'is_auto_sync_enabled': True,
             'is_3d_mapping': True,
             'charts_of_accounts': [],
@@ -373,3 +370,18 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
         }
 
     chain_import_fields_to_fyle(workspace_id, task_settings)
+
+
+def check_and_create_ccc_mappings(workspace_id: int) -> None:
+    """
+    Check and Create CCC Mappings
+    :param workspace_id: Workspace Id
+    :return: None
+    """
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+    if configuration and (
+        configuration.reimbursable_expenses_object == 'EXPENSE_REPORT'
+        and (configuration.corporate_credit_card_expenses_object and configuration.corporate_credit_card_expenses_object not in ['JOURNAL_ENTRY', 'BILL', 'CHARGE_CARD_TRANSACTION'])
+    ):
+        logger.info('Creating CCC Mappings for workspace_id - %s', workspace_id)
+        CategoryMapping.bulk_create_ccc_category_mappings(workspace_id)
