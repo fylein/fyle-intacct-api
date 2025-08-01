@@ -3,7 +3,6 @@ import pytest
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.tasks.models import TaskLog
-from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import (
     Workspace,
     Configuration,

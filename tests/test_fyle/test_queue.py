@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 from fyle_accounting_library.rabbitmq.data_class import Task
 
 from apps.fyle.queue import async_import_and_export_expenses
