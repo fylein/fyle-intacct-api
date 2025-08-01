@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
 from apps.workspaces.models import (
-    Workspace,
     Configuration,
     FyleCredential,
     LastExportDetail,
+    SageIntacctCredential,
+    Workspace,
     WorkspaceSchedule,
-    SageIntacctCredential
 )
 
 
@@ -96,4 +96,4 @@ class LastExportDetailSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = LastExportDetail
-        fields = '__all__'
+        exclude = ['unmapped_card_count']

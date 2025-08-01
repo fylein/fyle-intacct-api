@@ -1,16 +1,14 @@
-import pytest
-
-from unittest import mock
 from datetime import datetime, timezone
+from unittest import mock
 
+import pytest
 from fyle.platform import Platform
-from rest_framework.test import APIClient
 from fyle_rest_auth.models import AuthToken, User
+from rest_framework.test import APIClient
 
 from fyle_intacct_api.tests import settings
-from apps.fyle.helpers import get_access_token
-
-from .test_fyle.fixtures import data as fyle_data
+from fyle_intacct_api.utils import get_access_token
+from tests.test_fyle.fixtures import data as fyle_data
 
 
 @pytest.fixture
@@ -55,6 +53,12 @@ def default_session_fixture(request):
 
     patched_5 = mock.patch('sageintacctsdk.SageIntacctSDK.update_session_id')
     patched_5.__enter__()
+
+    patched_6 = mock.patch(
+        'tests.conftest.get_access_token',
+        return_value='mock_header.mock_payload.mock_signature'
+    )
+    patched_6.__enter__()
 
 
 @pytest.fixture()

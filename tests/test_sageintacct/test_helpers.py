@@ -1,10 +1,10 @@
-from apps.workspaces.models import Configuration, Workspace, FyleCredential
 from apps.sage_intacct.helpers import (
-    schedule_payment_sync,
     check_interval_and_sync_dimension,
-    is_dependent_field_import_enabled
+    is_dependent_field_import_enabled,
+    schedule_payment_sync,
 )
-from apps.sage_intacct.actions import patch_integration_settings
+from apps.workspaces.models import Configuration, FyleCredential, Workspace
+from apps.workspaces.tasks import patch_integration_settings
 
 
 def test_schedule_payment_sync(db):
@@ -50,9 +50,16 @@ def test_patch_integration_settings(db, mocker):
     fyle_credential = FyleCredential.objects.get(workspace_id=workspace_id)
     fyle_credential.refresh_token = refresh_token
     fyle_credential.save()
+    patch_request_mock = mocker.patch('apps.workspaces.tasks.patch_request')
 
-    patch_request_mock = mocker.patch('apps.fyle.helpers.patch_request')
+    patch_integration_settings(workspace_id, errors=5)
+    patch_request_mock.assert_not_called()
 
+    workspace = Workspace.objects.get(id=workspace_id)
+    workspace.onboarding_state = 'COMPLETE'
+    workspace.save()
+
+    patch_request_mock.reset_mock()
     patch_integration_settings(workspace_id, errors=5)
     patch_request_mock.assert_called_with(
         mocker.ANY,  # URL
@@ -94,12 +101,12 @@ def test_patch_integration_settings(db, mocker):
     patch_request_mock.reset_mock()
     patch_request_mock.side_effect = Exception('Test exception')
 
-    logger_mock = mocker.patch('apps.sage_intacct.actions.logger.error')
+    logger_mock = mocker.patch('apps.workspaces.tasks.logger.error')
 
     patch_integration_settings(workspace_id, errors=15)
 
     # Verify patch_request was called
     patch_request_mock.assert_called_once()
 
-    # Verify logger.error was called with the exception
+    # Verify logger.error was called
     logger_mock.assert_called_once()

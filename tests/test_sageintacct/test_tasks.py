@@ -1,47 +1,39 @@
-import json
-import random
 import logging
-from unittest import mock
+import random
 from datetime import datetime, timedelta, timezone
-from dateutil.relativedelta import relativedelta
+from unittest import mock
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
-from apps.exceptions import ValueErrorWithResponse
 from django_q.models import Schedule
-
-from fyle_accounting_mappings.models import EmployeeMapping, DestinationAttribute, ExpenseAttribute
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
-from sageintacctsdk.exceptions import WrongParamsError, InvalidTokenError, NoPrivilegeError
+from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
-from fyle_intacct_api.exceptions import BulkError
-
-from apps.tasks.models import Error, TaskLog
-from apps.mappings.models import GeneralMapping
+from apps.exceptions import ValueErrorWithResponse
 from apps.fyle.models import Expense, ExpenseGroup, Reimbursement
-from apps.workspaces.models import Configuration, LastExportDetail, SageIntacctCredential
-from apps.sage_intacct.utils import (
-    SageIntacctConnector
-)
+from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.actions import update_last_export_details
 from apps.sage_intacct.models import (
     Bill,
     BillLineitem,
-    JournalEntry,
-    ExpenseReport,
     ChargeCardTransaction,
+    ExpenseReport,
     ExpenseReportLineitem,
-    SageIntacctReimbursement
+    JournalEntry,
+    SageIntacctReimbursement,
 )
 from apps.sage_intacct.queue import (
-    schedule_bills_creation,
+    handle_skipped_exports,
     schedule_ap_payment_creation,
+    schedule_bills_creation,
+    schedule_charge_card_transaction_creation,
     schedule_expense_reports_creation,
     schedule_fyle_reimbursements_sync,
     schedule_journal_entries_creation,
-    schedule_charge_card_transaction_creation,
     schedule_sage_intacct_objects_status_sync,
     schedule_sage_intacct_reimbursement_creation,
-    handle_skipped_exports
 )
 from apps.sage_intacct.tasks import (
     __validate_employee_mapping,
@@ -62,10 +54,13 @@ from apps.sage_intacct.tasks import (
     mark_paid_on_fyle,
     process_fyle_reimbursements,
     search_and_upsert_vendors,
-    validate_for_skipping_payment
+    validate_for_skipping_payment,
 )
-from apps.sage_intacct.actions import update_last_export_details
-from .fixtures import data
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.models import Configuration, LastExportDetail, SageIntacctCredential
+from fyle_intacct_api.exceptions import BulkError
+from tests.test_sageintacct.fixtures import data
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -1756,11 +1751,9 @@ def test_update_last_export_details(mocker, db):
     assert last_export_detail.export_mode == 'MANUAL'
 
     # `update_last_export_details` when called with failed task logs
-    # should do a patch request to integrations settings api to
-    # update the `errors_count`
+    # should call patch_integration_settings to update the `errors_count`
 
-    mocked_patch = mock.MagicMock()
-    mocker.patch('apps.fyle.helpers.requests.patch', side_effect=mocked_patch)
+    mocked_patch_integration_settings = mocker.patch('apps.workspaces.tasks.patch_integration_settings')
 
     LastExportDetail.objects.update(
         workspace_id=workspace_id,
@@ -1776,12 +1769,9 @@ def test_update_last_export_details(mocker, db):
     update_last_export_details(workspace_id)
 
     failed_count = len([i for i in mock_task_logs if i['status'] in ('FAILED', 'FATAL')])
-    expected_payload = {'errors_count': failed_count, 'tpa_name': 'Fyle Sage Intacct Integration'}
 
-    _, kwargs = mocked_patch.call_args
-    actual_payload = json.loads(kwargs['data'])
-
-    assert actual_payload == expected_payload
+    # Verify patch_integration_settings was called with the correct arguments
+    mocked_patch_integration_settings.assert_called_once_with(workspace_id, errors=failed_count)
 
 
 def test__validate_employee_mapping(mocker, db):
@@ -2127,7 +2117,7 @@ def test_handle_skipped_exports(db, mocker):
     mock_post_summary = mocker.patch('apps.sage_intacct.queue.post_accounting_export_summary_for_skipped_exports', return_value=None)
     mock_update_last_export = mocker.patch('apps.sage_intacct.queue.update_last_export_details')
     mock_logger = mocker.patch('apps.sage_intacct.queue.logger')
-    mocker.patch('apps.sage_intacct.actions.patch_integration_settings', return_value=None)
+    mocker.patch('apps.workspaces.tasks.patch_integration_settings', return_value=None)
     mocker.patch('apps.fyle.actions.post_accounting_export_summary', return_value=None)
 
     # Create or get two expense groups

@@ -1538,7 +1538,7 @@ def test_invalidate_sage_intacct_credentials(mocker, db):
     sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=workspace_id, is_expired=False).first()
 
     mocked_patch = mocker.MagicMock()
-    mocker.patch('fyle_intacct_api.utils.patch_integration_settings', side_effect=mocked_patch)
+    mocker.patch('apps.workspaces.tasks.patch_integration_settings', side_effect=mocked_patch)
 
     # Should not fail if sage_intacct_credentials was not found
     sage_intacct_credentials.delete()

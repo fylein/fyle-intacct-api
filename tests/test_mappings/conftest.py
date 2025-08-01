@@ -1,14 +1,9 @@
 import pytest
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 
-from fyle_accounting_mappings.models import (
-    MappingSetting,
-    ExpenseAttribute,
-    DestinationAttribute
-)
-
-from apps.sage_intacct.models import CostType
 from apps.fyle.models import DependentFieldSetting
-from apps.workspaces.models import Configuration, Workspace
+from apps.sage_intacct.models import CostType
+from apps.workspaces.models import Configuration, LastExportDetail, Workspace
 
 
 @pytest.fixture
@@ -81,8 +76,18 @@ def add_configuration(db):
     """
     Pytest fixture to add configuration to a workspace
     """
-    workspace_id = [1, 98]
-    for workspace_id in workspace_id:
+    workspace_ids = [1, 98]
+
+    # Create Workspace objects first to satisfy foreign key constraints
+    for workspace_id in workspace_ids:
+        Workspace.objects.update_or_create(
+            id=workspace_id,
+            defaults={
+                'name': f'Test Workspace {workspace_id}',
+                'fyle_org_id': f'fyle_org_{workspace_id}'
+            }
+        )
+        LastExportDetail.objects.update_or_create(workspace_id=workspace_id)
         Configuration.objects.update_or_create(
             workspace_id=workspace_id,
             defaults={
@@ -259,9 +264,12 @@ def add_expense_destination_attributes_1():
 
     Workspace.objects.update_or_create(
         id=98,
-        name='Test Workspace_98',
-        fyle_org_id='12345'
+        defaults={
+            'name': 'Test Workspace_98',
+            'fyle_org_id': '12345'
+        }
     )
+    LastExportDetail.objects.update_or_create(workspace_id=98)
 
     for value in values:
         count += 1
@@ -317,16 +325,18 @@ def add_cost_center_mappings(db):
     """
     Pytest fixtue to add cost center mappings to a workspace
     """
-    Workspace.objects.update_or_create(
-        id=98,
-        name='Test Workspace_1',
-        fyle_org_id='12345'
-    )
-
     workspace_ids = [
         1, 98
     ]
     for workspace_id in workspace_ids:
+        Workspace.objects.update_or_create(
+            id=workspace_id,
+            defaults={
+                'name': f'Test Workspace_{workspace_id}',
+                'fyle_org_id': f'fyle_org_{workspace_id}'
+            }
+        )
+        LastExportDetail.objects.update_or_create(workspace_id=workspace_id)
         ExpenseAttribute.objects.create(
             workspace_id=workspace_id,
             attribute_type='COST_CENTER',
