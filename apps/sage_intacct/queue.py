@@ -145,15 +145,6 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
     if mapping_error:
         return True
 
-    if is_auto_export and interval_hours:
-        failed_task_log = TaskLog.objects.filter(
-            expense_group=expense_group,
-            workspace_id=expense_group.workspace.id,
-            status='FAILED'
-        ).first()
-        if failed_task_log:
-            return True
-
     return False
 
 
