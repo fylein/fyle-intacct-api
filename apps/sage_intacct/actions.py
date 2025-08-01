@@ -5,7 +5,6 @@ from django.utils.module_loading import import_string
 
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import LastExportDetail
-from apps.workspaces.tasks import patch_integration_settings
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -38,7 +37,7 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     last_export_detail.total_expense_groups_count = failed_exports + successful_exports
     last_export_detail.save()
 
-    patch_integration_settings(workspace_id, errors=failed_exports)
+    import_string('apps.workspaces.tasks.patch_integration_settings')(workspace_id, errors=failed_exports)
     try:
         import_string('apps.fyle.actions.post_accounting_export_summary')(workspace_id=workspace_id)
     except Exception as e:

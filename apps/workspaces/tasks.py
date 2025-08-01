@@ -10,7 +10,6 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from fyle_rest_auth.helpers import get_fyle_admin
 
-from apps.fyle.helpers import patch_request, post_request
 from apps.fyle.tasks import create_expense_groups
 from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
@@ -23,6 +22,7 @@ from apps.workspaces.models import (
     WorkspaceSchedule,
 )
 from apps.workspaces.utils import send_email
+from fyle_intacct_api.utils import patch_request, post_request
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO

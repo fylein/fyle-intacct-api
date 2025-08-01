@@ -1,37 +1,28 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from apps.fyle import helpers
-from requests.models import Response
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
+from requests.models import Response
+
+from apps.fyle import helpers
 
 
 # 2. Test get_request error branch
+@patch('apps.fyle.helpers.get_access_token')
 @patch('apps.fyle.helpers.requests.get')
-def test_get_request_error(mock_get):
+def test_get_request_error(mock_get, mock_get_access_token):
     """
     Test get_request error branch
     """
+    # Mock get_access_token to return a dummy token
+    mock_get_access_token.return_value = 'dummy_access_token'
+
     mock_response = MagicMock(spec=Response)
     mock_response.status_code = 400
     mock_response.text = 'error!'
     mock_get.return_value = mock_response
     with pytest.raises(Exception) as exc:
         helpers.get_request('http://fake', {}, 'token')
-    assert 'error!' in str(exc.value)
-
-
-# 3. Test patch_request error branch
-@patch('apps.fyle.helpers.requests.patch')
-def test_patch_request_error(mock_patch):
-    """
-    Test patch_request error branch
-    """
-    mock_response = MagicMock(spec=Response)
-    mock_response.status_code = 400
-    mock_response.text = 'error!'
-    mock_patch.return_value = mock_response
-    with pytest.raises(Exception) as exc:
-        helpers.patch_request('http://fake', {})
     assert 'error!' in str(exc.value)
 
 
@@ -74,11 +65,14 @@ def test_check_interval_and_sync_dimension(mock_get, mock_sync):
 
 
 # 6. Test sync_dimensions with/without dependent_field_settings
+@patch('apps.fyle.helpers.import_string')
 @patch('apps.fyle.helpers.update_dimension_details')
 @patch('apps.fyle.helpers.PlatformConnector')
 @patch('apps.fyle.helpers.DependentFieldSetting.objects.filter')
+@patch('apps.fyle.helpers.Configuration.objects.filter')
+@patch('apps.fyle.helpers.ExpenseAttribute.objects.filter')
 @patch('apps.fyle.helpers.FyleCredential.objects.get')
-def test_sync_dimensions(mock_get, mock_filter, mock_platform, mock_update):
+def test_sync_dimensions(mock_get, mock_expense_attr_filter, mock_config_filter, mock_filter, mock_platform, mock_update, mock_import_string):
     """
     Test sync_dimensions with/without dependent_field_settings
     """
@@ -86,6 +80,19 @@ def test_sync_dimensions(mock_get, mock_filter, mock_platform, mock_update):
     mock_cred.workspace_id = 1
     mock_cred.workspace.id = 1
     mock_get.return_value = mock_cred
+
+    # Mock Configuration.objects.filter().first()
+    mock_config = MagicMock()
+    mock_config.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'  # Set to avoid the import_string call
+    mock_config_filter.return_value.first.return_value = mock_config
+
+    # Mock ExpenseAttribute.objects.filter().count()
+    mock_expense_attr_filter.return_value.count.return_value = 5
+
+    # Mock import_string call
+    mock_import_func = MagicMock()
+    mock_import_string.return_value = mock_import_func
+
     mock_dep = MagicMock()
     mock_dep.cost_code_field_id = 1
     mock_dep.cost_type_field_id = 2

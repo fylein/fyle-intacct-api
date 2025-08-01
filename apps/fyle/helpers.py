@@ -9,6 +9,7 @@ import requests
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
+from django.utils.module_loading import import_string
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_mappings.models import ExpenseAttribute
@@ -19,41 +20,12 @@ from apps.fyle.models import DependentFieldSetting, Expense, ExpenseFilter, Expe
 from apps.mappings.tasks import construct_tasks_and_chain_import_fields_to_fyle
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import Configuration, FyleCredential, Workspace
-from apps.workspaces.tasks import patch_integration_settings_for_unmapped_cards
+from fyle_intacct_api.utils import get_access_token, post_request
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 SOURCE_ACCOUNT_MAP = {'PERSONAL': 'PERSONAL_CASH_ACCOUNT', 'CCC': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT'}
-
-
-def post_request(url: str, body: dict, refresh_token: str = None) -> Optional[dict]:
-    """
-    Create a HTTP post request.
-    :param url: URL
-    :param body: Body
-    :param refresh_token: Refresh token
-    :return: dict
-    """
-    access_token = None
-    api_headers = {
-        'content-type': 'application/json'
-    }
-    if refresh_token:
-        access_token = get_access_token(refresh_token)
-
-        api_headers['Authorization'] = 'Bearer {0}'.format(access_token)
-
-    response = requests.post(
-        url,
-        headers=api_headers,
-        data=json.dumps(body)
-    )
-
-    if response.status_code in [200, 201]:
-        return json.loads(response.text)
-    else:
-        raise Exception(response.text)
 
 
 def get_request(url: str, params: dict, refresh_token: str) -> Optional[dict]:
@@ -92,47 +64,6 @@ def get_request(url: str, params: dict, refresh_token: str) -> Optional[dict]:
         return json.loads(response.text)
     else:
         raise Exception(response.text)
-
-
-def patch_request(url: str, body: dict, refresh_token: Optional[str] = None) -> Optional[dict]:
-    """
-    Create a HTTP patch request.
-    """
-    access_token = None
-    api_headers = {
-        'Content-Type': 'application/json',
-    }
-    if refresh_token:
-        access_token = get_access_token(refresh_token)
-
-        api_headers['Authorization'] = 'Bearer {0}'.format(access_token)
-
-    response = requests.patch(
-        url,
-        headers=api_headers,
-        data=json.dumps(body)
-    )
-
-    if response.status_code in [200, 201]:
-        return json.loads(response.text)
-    else:
-        raise Exception(response.text)
-
-
-def get_access_token(refresh_token: str) -> str:
-    """
-    Get access token from fyle
-    :param refresh_token: Refresh token
-    :return: Access token
-    """
-    api_data = {
-        'grant_type': 'refresh_token',
-        'refresh_token': refresh_token,
-        'client_id': settings.FYLE_CLIENT_ID,
-        'client_secret': settings.FYLE_CLIENT_SECRET
-    }
-
-    return post_request(settings.FYLE_TOKEN_URI, body=api_data)['access_token']
 
 
 def get_fyle_orgs(refresh_token: str, cluster_domain: str) -> dict:
@@ -218,7 +149,7 @@ def sync_dimensions(workspace_id: int, is_export: bool = False) -> None:
         attribute_type="CORPORATE_CARD", workspace_id=workspace_id, active=True, mapping__isnull=True
     ).count()
     if configuration and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
-        patch_integration_settings_for_unmapped_cards(workspace_id=workspace_id, unmapped_card_count=unmapped_card_count)
+        import_string('apps.workspaces.tasks.patch_integration_settings_for_unmapped_cards')(workspace_id=workspace_id, unmapped_card_count=unmapped_card_count)
 
     update_dimension_details(platform=platform, workspace_id=fyle_credentials.workspace.id)
 
