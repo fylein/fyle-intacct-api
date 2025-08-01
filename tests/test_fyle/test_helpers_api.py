@@ -65,14 +65,14 @@ def test_check_interval_and_sync_dimension(mock_get, mock_sync):
 
 
 # 6. Test sync_dimensions with/without dependent_field_settings
-@patch('apps.fyle.helpers.import_string')
 @patch('apps.fyle.helpers.update_dimension_details')
+@patch('apps.fyle.helpers.import_string')
 @patch('apps.fyle.helpers.PlatformConnector')
 @patch('apps.fyle.helpers.DependentFieldSetting.objects.filter')
 @patch('apps.fyle.helpers.Configuration.objects.filter')
 @patch('apps.fyle.helpers.ExpenseAttribute.objects.filter')
 @patch('apps.fyle.helpers.FyleCredential.objects.get')
-def test_sync_dimensions(mock_get, mock_expense_attr_filter, mock_config_filter, mock_filter, mock_platform, mock_update, mock_import_string):
+def test_sync_dimensions(mock_get, mock_expense_attr_filter, mock_config_filter, mock_filter, mock_platform, mock_import_string, mock_update):
     """
     Test sync_dimensions with/without dependent_field_settings
     """
@@ -108,3 +108,80 @@ def test_sync_dimensions(mock_get, mock_expense_attr_filter, mock_config_filter,
     helpers.sync_dimensions(1)
     mock_platform_instance.import_fyle_dimensions.assert_called()
     mock_update.assert_called()
+
+
+@patch('apps.fyle.helpers.update_dimension_details')
+@patch('apps.fyle.helpers.import_string')
+@patch('apps.fyle.helpers.PlatformConnector')
+@patch('apps.fyle.helpers.DependentFieldSetting.objects.filter')
+@patch('apps.fyle.helpers.Configuration.objects.filter')
+@patch('apps.fyle.helpers.ExpenseAttribute.objects.filter')
+@patch('apps.fyle.helpers.FyleCredential.objects.get')
+def test_sync_dimensions_with_charge_card_transaction(mock_get, mock_expense_attr_filter, mock_config_filter, mock_filter, mock_platform, mock_import_string, mock_update):
+    """
+    Test sync_dimensions when corporate_credit_card_expenses_object is 'CHARGE_CARD_TRANSACTION'
+    """
+    mock_cred = MagicMock()
+    mock_cred.workspace_id = 1
+    mock_cred.workspace.id = 1
+    mock_get.return_value = mock_cred
+
+    mock_config = MagicMock()
+    mock_config.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    mock_config_filter.return_value.first.return_value = mock_config
+
+    mock_expense_attr_filter.return_value.count.return_value = 3
+
+    mock_patch_function = MagicMock()
+    mock_import_string.return_value = mock_patch_function
+
+    mock_filter.return_value.first.return_value = None
+
+    mock_platform_instance = MagicMock()
+    mock_platform.return_value = mock_platform_instance
+
+    helpers.sync_dimensions(1)
+
+    mock_import_string.assert_called_with('apps.workspaces.tasks.patch_integration_settings_for_unmapped_cards')
+
+    mock_patch_function.assert_called_once_with(workspace_id=1, unmapped_card_count=3)
+
+    mock_platform_instance.import_fyle_dimensions.assert_called_once()
+    mock_update.assert_called_once()
+
+
+@patch('apps.fyle.helpers.update_dimension_details')
+@patch('apps.fyle.helpers.import_string')
+@patch('apps.fyle.helpers.PlatformConnector')
+@patch('apps.fyle.helpers.DependentFieldSetting.objects.filter')
+@patch('apps.fyle.helpers.Configuration.objects.filter')
+@patch('apps.fyle.helpers.ExpenseAttribute.objects.filter')
+@patch('apps.fyle.helpers.FyleCredential.objects.get')
+def test_sync_dimensions_with_no_configuration(mock_get, mock_expense_attr_filter, mock_config_filter, mock_filter, mock_platform, mock_import_string, mock_update):
+    """
+    Test sync_dimensions when configuration is None
+    """
+    mock_cred = MagicMock()
+    mock_cred.workspace_id = 1
+    mock_cred.workspace.id = 1
+    mock_get.return_value = mock_cred
+
+    mock_config_filter.return_value.first.return_value = None
+
+    mock_expense_attr_filter.return_value.count.return_value = 2
+
+    mock_patch_function = MagicMock()
+    mock_import_string.return_value = mock_patch_function
+
+    mock_filter.return_value.first.return_value = None
+
+    mock_platform_instance = MagicMock()
+    mock_platform.return_value = mock_platform_instance
+
+    helpers.sync_dimensions(1)
+
+    mock_import_string.assert_not_called()
+    mock_patch_function.assert_not_called()
+
+    mock_platform_instance.import_fyle_dimensions.assert_called_once()
+    mock_update.assert_called_once()
