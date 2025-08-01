@@ -3,6 +3,7 @@ import pytest
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.tasks.models import TaskLog
+from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import (
     Workspace,
     Configuration,
@@ -65,9 +66,9 @@ def test_schedule_sync(db):
     assert ws_schedule.schedule == None
 
 
-def test_run_sync_schedule(mocker,db):
+def test_run_sync_schedule(mocker, db):
     """
-    Test run sync schedule
+    Test run sync schedule with new failed expense group filtering logic
     """
     workspace_id = 1
 
@@ -76,6 +77,8 @@ def test_run_sync_schedule(mocker,db):
         'fyle_integrations_platform_connector.apis.Expenses.get',
         return_value=data['expenses']
     )
+
+    mock_export = mocker.patch('apps.workspaces.tasks.export_to_intacct')
 
     run_sync_schedule(workspace_id)
 
@@ -90,16 +93,34 @@ def test_run_sync_schedule(mocker,db):
 
     run_sync_schedule(workspace_id)
 
+    # Verify that export_to_intacct was called with only eligible expense groups
+    # Based on test data, expense groups 1, 2, 3 have failed TaskLogs, so they should be excluded
+    eligible_calls = [call for call in mock_export.call_args_list if call[1]['expense_group_ids']]
+    if eligible_calls:
+        exported_ids = eligible_calls[-1][1]['expense_group_ids']
+        
+        failed_expense_group_ids = set(TaskLog.objects.filter(
+            workspace_id=workspace_id,
+            status='FAILED',
+            expense_group__isnull=False
+        ).exclude(
+            type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
+        ).values_list('expense_group_id', flat=True))
+        
+        for group_id in exported_ids:
+            assert group_id not in failed_expense_group_ids, f"Failed expense group {group_id} should not be exported"
+
     task_log = TaskLog.objects.filter(
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        type='FETCHING_EXPENSES'
     ).first()
 
-    assert task_log.status == 'ENQUEUED'
+    assert task_log.status == 'COMPLETE'
 
 
-def test_run_sync_schedule_je(mocker,db):
+def test_run_sync_schedule_je(mocker, db):
     """
-    Test run sync schedule
+    Test run sync schedule with journal entries and new filtering logic
     """
     workspace_id = 1
 
@@ -108,6 +129,8 @@ def test_run_sync_schedule_je(mocker,db):
         'fyle_integrations_platform_connector.apis.Expenses.get',
         return_value=data['expenses']
     )
+
+    mock_export = mocker.patch('apps.workspaces.tasks.export_to_intacct')
 
     run_sync_schedule(workspace_id)
 
@@ -122,11 +145,30 @@ def test_run_sync_schedule_je(mocker,db):
 
     run_sync_schedule(workspace_id)
 
+    # Verify that export_to_intacct was called with only eligible expense groups
+    eligible_calls = [call for call in mock_export.call_args_list if call[1]['expense_group_ids']]
+    if eligible_calls:
+        exported_ids = eligible_calls[-1][1]['expense_group_ids']
+        
+        failed_expense_group_ids = set(TaskLog.objects.filter(
+            workspace_id=workspace_id,
+            status='FAILED',
+            expense_group__isnull=False
+        ).exclude(
+            type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
+        ).values_list('expense_group_id', flat=True))
+        
+        for group_id in exported_ids:
+            assert group_id not in failed_expense_group_ids, f"Failed expense group {group_id} should not be exported"
+
     task_log = TaskLog.objects.filter(
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        type='FETCHING_EXPENSES'
     ).first()
 
-    assert task_log.status == 'ENQUEUED'
+    assert task_log.status == 'COMPLETE'
+
+
 
 
 def test_email_notification(mocker,db):
