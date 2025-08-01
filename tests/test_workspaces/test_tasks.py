@@ -98,7 +98,7 @@ def test_run_sync_schedule(mocker, db):
     eligible_calls = [call for call in mock_export.call_args_list if call[1]['expense_group_ids']]
     if eligible_calls:
         exported_ids = eligible_calls[-1][1]['expense_group_ids']
-        
+
         failed_expense_group_ids = set(TaskLog.objects.filter(
             workspace_id=workspace_id,
             status='FAILED',
@@ -106,7 +106,7 @@ def test_run_sync_schedule(mocker, db):
         ).exclude(
             type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
         ).values_list('expense_group_id', flat=True))
-        
+
         for group_id in exported_ids:
             assert group_id not in failed_expense_group_ids, f"Failed expense group {group_id} should not be exported"
 
@@ -149,7 +149,7 @@ def test_run_sync_schedule_je(mocker, db):
     eligible_calls = [call for call in mock_export.call_args_list if call[1]['expense_group_ids']]
     if eligible_calls:
         exported_ids = eligible_calls[-1][1]['expense_group_ids']
-        
+
         failed_expense_group_ids = set(TaskLog.objects.filter(
             workspace_id=workspace_id,
             status='FAILED',
@@ -157,7 +157,7 @@ def test_run_sync_schedule_je(mocker, db):
         ).exclude(
             type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
         ).values_list('expense_group_id', flat=True))
-        
+
         for group_id in exported_ids:
             assert group_id not in failed_expense_group_ids, f"Failed expense group {group_id} should not be exported"
 
@@ -167,8 +167,6 @@ def test_run_sync_schedule_je(mocker, db):
     ).first()
 
     assert task_log.status == 'COMPLETE'
-
-
 
 
 def test_email_notification(mocker,db):
