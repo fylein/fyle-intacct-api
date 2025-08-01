@@ -1,6 +1,5 @@
 import logging
-from dateutil.relativedelta import relativedelta
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import List
 
 from django.db.models import Q
@@ -145,30 +144,6 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
     ).first()
     if mapping_error:
         return True
-
-    if is_auto_export and interval_hours:
-        task_log = TaskLog.objects.filter(expense_group=expense_group, workspace_id=expense_group.workspace.id).first()
-        now = datetime.now(tz=timezone.utc)
-
-        if task_log:
-            # if the task log is created before 2 months
-            if task_log.created_at <= now - relativedelta(months=2):
-                task_log.is_retired = True
-                task_log.save()
-                return True
-
-            # if the task log is created in the last 2 months
-            if now - relativedelta(months=2) < task_log.created_at <= now - relativedelta(months=1):
-                if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(weeks=1):
-                    return True
-
-            # if the task log is created is the last month
-            if task_log.created_at > now - relativedelta(months=1):
-                created_updated_diff = task_log.updated_at - task_log.created_at
-                if created_updated_diff <= timedelta(seconds=5):
-                    return False
-                if now - task_log.updated_at.replace(tzinfo=timezone.utc) <= timedelta(hours=24):
-                    return True
 
     return False
 
