@@ -146,8 +146,10 @@ def run_sync_schedule(workspace_id: int) -> None:
             workspace_id=workspace_id,
             exported_at__isnull=True
         ).exclude(
-            Q(tasklog__status='FAILED') & ~Q(tasklog__type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT'])
+            Q(tasklog__status='FAILED', tasklog__re_attempt_export=False) &
+            ~Q(tasklog__type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT'])
         ).values_list('id', flat=True).distinct()
+
 
         if eligible_expense_group_ids:
             export_to_intacct(workspace_id, expense_group_ids=list(eligible_expense_group_ids), triggered_by=ExpenseImportSourceEnum.BACKGROUND_SCHEDULE)
