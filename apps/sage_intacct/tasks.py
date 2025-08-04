@@ -1375,7 +1375,6 @@ def create_ap_payment(workspace_id: int) -> None:
                         'message': 'Sage-Intacct Account not connected'
                     }
                     task_log.status = 'FAILED'
-                    
                     task_log.detail = detail
 
                     task_log.save()
