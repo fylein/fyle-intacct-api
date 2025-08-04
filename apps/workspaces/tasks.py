@@ -142,27 +142,12 @@ def run_sync_schedule(workspace_id: int) -> None:
     )
 
     if task_log.status == 'COMPLETE':
-        # Get failed expense group IDs to exclude from export (fatal errors should be retried)
-        failed_expense_group_ids = TaskLog.objects.filter(
-            workspace_id=workspace_id,
-            status__in=['FAILED'],
-            expense_group__isnull=False
-        ).exclude(
-            type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
-        ).values_list('expense_group_id', flat=True).distinct()
-
-        print('failed_expense_group_ids', failed_expense_group_ids)
-        unexported_expense_groups = ExpenseGroup.objects.filter(
+        eligible_expense_group_ids = ExpenseGroup.objects.filter(
             workspace_id=workspace_id,
             exported_at__isnull=True
-        )
-        print('unexported_expense_groups', unexported_expense_groups)
-
-        eligible_expense_group_ids = unexported_expense_groups.exclude(
-            id__in=failed_expense_group_ids
-        ).values_list('id', flat=True)
-
-        print('eligible_expense_group_ids', eligible_expense_group_ids)
+        ).exclude(
+            Q(tasklog__status='FAILED') & ~Q(tasklog__type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT'])
+        ).values_list('id', flat=True).distinct()
 
         if eligible_expense_group_ids:
             export_to_intacct(workspace_id, expense_group_ids=list(eligible_expense_group_ids), triggered_by=ExpenseImportSourceEnum.BACKGROUND_SCHEDULE)
