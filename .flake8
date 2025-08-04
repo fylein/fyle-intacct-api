@@ -71,7 +71,7 @@ docstring-convention = google
 
 # Return type and parameter annotations
 # ANN201: Missing return type annotation for public function
-# ANN202: Missing return type annotation for private function 
+# ANN202: Missing return type annotation for private function
 # ANN001-ANN003: Missing type annotations for arguments
 require-return-type = true
 require-parameter-type = true
@@ -96,7 +96,7 @@ import-order-style = pep8
 # Unused imports and variables
 # F401: Module imported but unused
 # F841: Local variable name is assigned to but never used
-extend-select = 
+extend-select =
     E225,
     E226,
     E251,
@@ -110,4 +110,4 @@ extend-select =
 per-file-ignores =
     tests/*: ANN001,ANN201
 
-exclude = *env, *.yml, .flake8, *.txt, *.yaml, gunicorn_config.py, apps/*/migrations/*, manage.py, fyle-integrations-db-migrations/*, fyle_intacct_api/*, create_sql_migration.py, scripts/*, test.py, Dockerfile, fyle_accounting_library/*, fyle_integrations_imports/*
+exclude = *env, *.html, *.yml, .flake8, *.txt, *.yaml, gunicorn_config.py, apps/*/migrations/*, manage.py, fyle-integrations-db-migrations/*, fyle_intacct_api/*, create_sql_migration.py, scripts/*, test.py, Dockerfile, fyle_accounting_library/*, fyle_integrations_imports/*
