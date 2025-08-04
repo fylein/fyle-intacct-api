@@ -67,7 +67,11 @@ def re_export_stuck_exports() -> None:
             schedule = schedules.filter(args=str(workspace_id)).first()
             # If schedule exist and it's within 1 hour, need not trigger it immediately
             if not (schedule and schedule.next_run < datetime.now(tz=schedule.next_run.tzinfo) + timedelta(minutes=60)):
-                export_expense_group_ids = list(expense_groups.filter(workspace_id=workspace_id).values_list('id', flat=True))
+                export_expense_group_ids = list(expense_groups.filter(
+                    workspace_id=workspace_id
+                ).exclude(
+                    Q(tasklog__status='FAILED') & ~Q(tasklog__type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT'])
+                ).values_list('id', flat=True).distinct())
                 if export_expense_group_ids and len(export_expense_group_ids) < 200:
                     logger.info('Re-triggering export for expense group %s since no 1 hour schedule for workspace  %s', export_expense_group_ids, workspace_id)
                     export_to_intacct(workspace_id=workspace_id, expense_group_ids=export_expense_group_ids, triggered_by=ExpenseImportSourceEnum.INTERNAL)
