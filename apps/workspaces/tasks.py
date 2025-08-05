@@ -144,8 +144,10 @@ def run_sync_schedule(workspace_id: int) -> None:
     if task_log.status == 'COMPLETE':
         eligible_expense_group_ids = ExpenseGroup.objects.filter(
             workspace_id=workspace_id,
-            exported_at__isnull=True,
-            tasklog__type__in=['CREATING_BILLS', 'CREATING_EXPENSE_REPORTS', 'CREATING_JOURNAL_ENTRY', 'CREATING_CHARGE_CARD_TRANSACTION']
+            exported_at__isnull=True
+        ).filter(
+            Q(tasklog__isnull=True) |
+            Q(tasklog__type__in=['CREATING_BILLS', 'CREATING_EXPENSE_REPORTS', 'CREATING_JOURNAL_ENTRY', 'CREATING_CHARGE_CARD_TRANSACTION'])
         ).exclude(
             tasklog__status='FAILED',
             tasklog__re_attempt_export=False
