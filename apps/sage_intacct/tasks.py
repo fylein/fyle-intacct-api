@@ -362,7 +362,7 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
     task_log.status = 'FAILED'
     task_log.detail = None
     task_log.sage_intacct_errors = errors
-    task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+    task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
     task_log.save()
 
     update_failed_expenses(expense_group.expenses.all(), False)
@@ -666,7 +666,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: b
         }
         task_log.status = 'FAILED'
         task_log.detail = detail
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
 
         task_log.save()
 
@@ -679,7 +679,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: b
         task_log.status = 'FAILED'
         task_log.detail = detail
         task_log.sage_intacct_errors = None
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
@@ -842,7 +842,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, last_export: 
         }
         task_log.status = 'FAILED'
         task_log.detail = detail
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
 
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
@@ -855,7 +855,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, last_export: 
         logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
         task_log.detail = detail
         task_log.sage_intacct_errors = None
 
@@ -1006,7 +1006,7 @@ def create_bill(expense_group_id: int, task_log_id: int, last_export: bool, is_a
             'message': 'Sage Intacct Account not connected'
         }
         task_log.status = 'FAILED'
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
         task_log.detail = detail
 
         task_log.save()
@@ -1020,7 +1020,7 @@ def create_bill(expense_group_id: int, task_log_id: int, last_export: bool, is_a
         logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
         task_log.detail = detail
         task_log.sage_intacct_errors = None
 
@@ -1172,7 +1172,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, last
             'message': 'Sage Intacct Account not connected'
         }
         task_log.status = 'FAILED'
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
         task_log.detail = detail
 
         task_log.save()
@@ -1186,7 +1186,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, last
         logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
-        task_log.re_attempt_export = False # this is to reset back re_attempt_export to false if it's retried from internal job
+        task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
         task_log.detail = detail
         task_log.sage_intacct_errors = None
 
