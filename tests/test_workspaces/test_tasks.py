@@ -3,6 +3,7 @@ import pytest
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.tasks.models import TaskLog
+from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import (
     Workspace,
     Configuration,
@@ -92,22 +93,27 @@ def test_run_sync_schedule(mocker, db):
 
     run_sync_schedule(workspace_id)
 
-    # Verify that export_to_intacct was called with only eligible expense groups
-    # Based on test data, expense groups 1, 2, 3 have failed TaskLogs, so they should be excluded
     eligible_calls = [call for call in mock_export.call_args_list if call[1]['expense_group_ids']]
     if eligible_calls:
-        exported_ids = eligible_calls[-1][1]['expense_group_ids']
+        exported_ids = set(eligible_calls[-1][1]['expense_group_ids'])
 
-        failed_expense_group_ids = set(TaskLog.objects.filter(
+        all_unexported_groups = set(ExpenseGroup.objects.filter(
             workspace_id=workspace_id,
-            status='FAILED',
-            expense_group__isnull=False
-        ).exclude(
-            type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
-        ).values_list('expense_group_id', flat=True))
+            exported_at__isnull=True
+        ).values_list('id', flat=True))
 
-        for group_id in exported_ids:
-            assert group_id not in failed_expense_group_ids, f"Failed expense group {group_id} should not be exported"
+        excluded_groups = all_unexported_groups - exported_ids
+
+        for group_id in excluded_groups:
+            task_logs = TaskLog.objects.filter(
+                workspace_id=workspace_id,
+                expense_group_id=group_id
+            ).exclude(
+                type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
+            )
+
+            failed_logs = task_logs.filter(status='FAILED')
+            assert failed_logs.exists(), f"Excluded expense group {group_id} should have FAILED task logs"
 
     task_log = TaskLog.objects.filter(
         workspace_id=workspace_id,
@@ -144,21 +150,79 @@ def test_run_sync_schedule_je(mocker, db):
 
     run_sync_schedule(workspace_id)
 
-    # Verify that export_to_intacct was called with only eligible expense groups
     eligible_calls = [call for call in mock_export.call_args_list if call[1]['expense_group_ids']]
     if eligible_calls:
-        exported_ids = eligible_calls[-1][1]['expense_group_ids']
+        exported_ids = set(eligible_calls[-1][1]['expense_group_ids'])
 
-        failed_expense_group_ids = set(TaskLog.objects.filter(
+        all_unexported_groups = set(ExpenseGroup.objects.filter(
             workspace_id=workspace_id,
-            status='FAILED',
-            expense_group__isnull=False
-        ).exclude(
-            type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
-        ).values_list('expense_group_id', flat=True))
+            exported_at__isnull=True
+        ).values_list('id', flat=True))
 
-        for group_id in exported_ids:
-            assert group_id not in failed_expense_group_ids, f"Failed expense group {group_id} should not be exported"
+        excluded_groups = all_unexported_groups - exported_ids
+
+        for group_id in excluded_groups:
+            task_logs = TaskLog.objects.filter(
+                workspace_id=workspace_id,
+                expense_group_id=group_id
+            ).exclude(
+                type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']
+            )
+
+            failed_logs = task_logs.filter(status='FAILED')
+            assert failed_logs.exists(), f"Excluded expense group {group_id} should have FAILED task logs"
+
+    task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        type='FETCHING_EXPENSES'
+    ).first()
+
+    assert task_log.status == 'COMPLETE'
+
+
+def test_run_sync_schedule_includes_expense_groups_without_task_logs(mocker, db):
+    """
+    Test that expense groups without task logs are included in the export
+    This verifies our new behavior of including expense groups with no task logs
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses']
+    )
+
+    mock_export = mocker.patch('apps.workspaces.tasks.export_to_intacct')
+
+    test_expense_group_1 = ExpenseGroup.objects.create(
+        workspace_id=workspace_id,
+        fund_source='PERSONAL',
+        exported_at=None
+    )
+
+    test_expense_group_2 = ExpenseGroup.objects.create(
+        workspace_id=workspace_id,
+        fund_source='CCC',
+        exported_at=None
+    )
+
+    run_sync_schedule(workspace_id)
+
+    eligible_calls = [call for call in mock_export.call_args_list if call[1]['expense_group_ids']]
+    if eligible_calls:
+        exported_ids = set(eligible_calls[-1][1]['expense_group_ids'])
+
+        groups_without_task_logs = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id,
+            exported_at__isnull=True,
+            tasklog__isnull=True
+        ).values_list('id', flat=True)
+
+        for group_id in groups_without_task_logs:
+            assert group_id in exported_ids, f"Expense group {group_id} without task logs should be included in export"
+
+        assert test_expense_group_1.id in exported_ids, f"Test expense group {test_expense_group_1.id} should be included in export"
+        assert test_expense_group_2.id in exported_ids, f"Test expense group {test_expense_group_2.id} should be included in export"
 
     task_log = TaskLog.objects.filter(
         workspace_id=workspace_id,
