@@ -1,4 +1,5 @@
 import logging
+import traceback
 from datetime import timedelta
 
 from cryptography.fernet import Fernet
@@ -79,7 +80,7 @@ class TokenHealthView(viewsets.ViewSet):
             except Exception:
                 status_code = status.HTTP_400_BAD_REQUEST
                 message = "Something went wrong for"
-                logger.error('Something went wrong for workspace_id - %s', workspace_id)
+                logger.error('Something went wrong for workspace_id - %s %s', workspace_id, traceback.format_exc())
 
         return Response({"message": message}, status=status_code)
 
