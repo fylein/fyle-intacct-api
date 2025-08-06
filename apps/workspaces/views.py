@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from cryptography.fernet import Fernet
@@ -39,6 +40,9 @@ from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credent
 User = get_user_model()
 auth_utils = AuthUtils()
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class TokenHealthView(viewsets.ViewSet):
     """
@@ -67,10 +71,15 @@ class TokenHealthView(viewsets.ViewSet):
                     sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
                     sage_intacct_connection.connection.locations.count()
                     cache.set(cache_key, True, timeout=timedelta(hours=24).total_seconds())
-            except Exception:
+            except sage_intacct_exc.InvalidTokenError:
                 invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
                 status_code = status.HTTP_400_BAD_REQUEST
                 message = "Intacct connection expired"
+                logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
+            except Exception:
+                status_code = status.HTTP_400_BAD_REQUEST
+                message = "Something went wrong for"
+                logger.error('Something went wrong for workspace_id - %s', workspace_id)
 
         return Response({"message": message}, status=status_code)
 
