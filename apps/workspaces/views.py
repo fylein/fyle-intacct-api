@@ -79,7 +79,7 @@ class TokenHealthView(viewsets.ViewSet):
                 logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
             except Exception:
                 status_code = status.HTTP_400_BAD_REQUEST
-                message = "Something went wrong for"
+                message = "Something went wrong"
                 logger.error('Something went wrong for workspace_id - %s %s', workspace_id, traceback.format_exc())
 
         return Response({"message": message}, status=status_code)
