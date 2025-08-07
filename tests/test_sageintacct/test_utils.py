@@ -1039,8 +1039,8 @@ def test_sanitize_vendor_name(db):
     assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
 
     # Test case 6: Vendor name with special characters and uppercase letters
-    vendor_name = "Vendor@ABC~!@#$%^&*()_+=|"
-    expected_output = "VendorABC"
+    vendor_name = "@ABC~!@#$%^&*()_+=|"
+    expected_output = "ABC"
     assert sage_intacct_connection.sanitize_vendor_name(vendor_name) == expected_output
 
     # Test case 7: Vendor name None
