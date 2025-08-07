@@ -2109,7 +2109,7 @@ class SageIntacctConnector:
             sanitized_name = re.sub(r'\s+', ' ', sanitized_name).strip()
 
         if sanitized_name:
-            return sanitized_name
+            return sanitized_name[:19]  # 20 is the max length of the vendor name in Sage Intacct
 
         return None
 
