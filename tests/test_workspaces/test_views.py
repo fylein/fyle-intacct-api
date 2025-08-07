@@ -1,24 +1,21 @@
 import json
-from unittest import mock
 from datetime import timedelta
+from unittest import mock
 
-from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-
-from fyle_rest_auth.utils import AuthUtils
+from django.urls import reverse
 from fyle.platform import exceptions as fyle_exc
-from sageintacctsdk import exceptions as sage_intacct_exc
 from fyle_accounting_mappings.models import MappingSetting
-
-from tests.helper import dict_compare_keys
+from fyle_rest_auth.utils import AuthUtils
+from sageintacctsdk import exceptions as sage_intacct_exc
 
 from apps.tasks.models import TaskLog
+from apps.workspaces.models import Configuration, LastExportDetail, SageIntacctCredential, Workspace
 from fyle_integrations_imports.models import ImportLog
-from apps.workspaces.models import SageIntacctCredential, Configuration, LastExportDetail, Workspace
-
-from .fixtures import data
+from tests.helper import dict_compare_keys
 from tests.test_fyle.fixtures import data as fyle_data
+from tests.test_workspaces.fixtures import data
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -91,6 +88,18 @@ def test_token_health_view(api_client, test_connection, mocker):
 
     response = api_client.get(url)
 
+    assert response.status_code == 400
+    assert response.data["message"] == "Something went wrong"
+
+    mocker.resetall()
+    mock_connector = mocker.patch('apps.workspaces.views.SageIntacctConnector')
+    mock_instance = mocker.MagicMock()
+    mock_connector.return_value = mock_instance
+    mock_instance.connection.locations.count.side_effect = sage_intacct_exc.InvalidTokenError("Invalid token")
+
+    mocker.patch('apps.workspaces.views.invalidate_sage_intacct_credentials', return_value=None)
+
+    response = api_client.get(url)
     assert response.status_code == 400
     assert response.data["message"] == "Intacct connection expired"
 
