@@ -21,6 +21,7 @@ from apps.workspaces.models import (
     Workspace,
     WorkspaceSchedule,
 )
+from apps.fyle.models import ExpenseGroup
 from apps.workspaces.utils import send_email
 from fyle_intacct_api.utils import patch_request, post_request
 
@@ -141,7 +142,19 @@ def run_sync_schedule(workspace_id: int) -> None:
     )
 
     if task_log.status == 'COMPLETE':
-        export_to_intacct(workspace_id=workspace_id, triggered_by=ExpenseImportSourceEnum.BACKGROUND_SCHEDULE)
+        eligible_expense_group_ids = ExpenseGroup.objects.filter(
+            workspace_id=workspace_id,
+            exported_at__isnull=True
+        ).filter(
+            Q(tasklog__isnull=True)
+            | Q(tasklog__type__in=['CREATING_BILLS', 'CREATING_EXPENSE_REPORTS', 'CREATING_JOURNAL_ENTRIES', 'CREATING_CHARGE_CARD_TRANSACTIONS'])
+        ).exclude(
+            tasklog__status='FAILED',
+            tasklog__re_attempt_export=False
+        ).values_list('id', flat=True).distinct()
+
+        if eligible_expense_group_ids:
+            export_to_intacct(workspace_id, expense_group_ids=list(eligible_expense_group_ids), triggered_by=ExpenseImportSourceEnum.BACKGROUND_SCHEDULE)
 
 
 def run_email_notification(workspace_id: int) -> None:

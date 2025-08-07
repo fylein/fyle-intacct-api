@@ -1,16 +1,7 @@
 #!/bin/bash
 echo "Current working directory: $(pwd)"
-
-echo "Checking if file exists:"
-ls -l ../../../scripts/sql/scripts/032-mark-split-expense-grouping.sql
-
-echo "Contents of scripts directory:"
-ls -l ../../../scripts/sql/scripts/
 # Setting value for DB Host
 export DB_HOST=db
-
-# # This step will login to psql and create the fixture database
-bash tests/sql_fixtures/reset_db_fixtures/reset_db.sh
 
 # # Changing the database name to the fixture database
 export DATABASE_URL=postgres://postgres:postgres@db:5432/test_intacct_db
