@@ -33,7 +33,7 @@ DECLARE
 	_fyle_org_id text;
 	expense_ids text;
 BEGIN
-  RAISE NOTICE 'Deleting failed expenses from workspace % ', _workspace_id; 
+  RAISE NOTICE 'Deleting failed expenses from workspace % ', _workspace_id;
 
 local_expense_group_ids := _expense_group_ids;
 
@@ -49,7 +49,7 @@ SELECT array_agg(expense_id) into temp_expenses from expense_groups_expenses whe
 
 _fyle_org_id := (select fyle_org_id from workspaces where id = _workspace_id);
 expense_ids := (
-    select string_agg(format('%L', expense_id), ', ') 
+    select string_agg(format('%L', expense_id), ', ')
     from expenses
     where workspace_id = _workspace_id
     and id in (SELECT unnest(temp_expenses))
@@ -66,12 +66,12 @@ DELETE
 	GET DIAGNOSTICS rcount = ROW_COUNT;
 	RAISE NOTICE 'Deleted % errors', rcount;
 
-DELETE 
+DELETE
 	FROM expense_groups_expenses WHERE expensegroup_id IN (SELECT unnest(local_expense_group_ids));
 	GET DIAGNOSTICS rcount = ROW_COUNT;
 	RAISE NOTICE 'Deleted % expense_groups_expenses', rcount;
 
-DELETE 
+DELETE
 	FROM expense_groups WHERE id in (SELECT unnest(local_expense_group_ids));
 	GET DIAGNOSTICS rcount = ROW_COUNT;
 	RAISE NOTICE 'Deleted % expense_groups', rcount;
@@ -93,7 +93,7 @@ IF NOT _delete_all THEN
 END IF;
 
 
-DELETE 
+DELETE
 	FROM expenses WHERE id in (SELECT unnest(temp_expenses));
 	GET DIAGNOSTICS rcount = ROW_COUNT;
 	RAISE NOTICE 'Deleted % expenses', rcount;
@@ -119,7 +119,7 @@ CREATE FUNCTION public.delete_test_orgs_schedule() RETURNS void
 DECLARE
     rcount integer;
 BEGIN
-    
+
     DELETE FROM workspace_schedules
     WHERE workspace_id NOT IN (
         SELECT id FROM prod_workspaces_view
@@ -601,20 +601,20 @@ BEGIN
     WHERE lem.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
     RAISE NOTICE 'Deleted % location_entity_mappings', rcount;
-    
-    DELETE 
+
+    DELETE
     FROM expense_fields ef
     WHERE ef.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
     RAISE NOTICE 'Deleted % expense_fields', rcount;
 
-    DELETE 
+    DELETE
     FROM errors e
     WHERE e.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
     RAISE NOTICE 'Deleted % errors', rcount;
 
-    DELETE 
+    DELETE
     FROM import_logs il
     WHERE il.workspace_id = _workspace_id;
     GET DIAGNOSTICS rcount = ROW_COUNT;
@@ -751,7 +751,7 @@ BEGIN
     -- RAISE NOTICE 'Deleted % expenses', rcount;
 
     -- DELETE
-    -- FROM expenses 
+    -- FROM expenses
     -- WHERE is_skipped=true and org_id in (SELECT fyle_org_id FROM workspaces WHERE id=_workspace_id);
     -- GET DIAGNOSTICS rcount = ROW_COUNT;
     -- RAISE NOTICE 'Deleted % skipped expenses', rcount;
@@ -914,10 +914,10 @@ CREATE FUNCTION public.trigger_auto_import(_workspace_id character varying) RETU
 DECLARE
     rcount integer;
 BEGIN
-    UPDATE django_q_schedule 
-    SET next_run = now() + INTERVAL '35 sec' 
+    UPDATE django_q_schedule
+    SET next_run = now() + INTERVAL '35 sec'
     WHERE args = _workspace_id and func = 'apps.mappings.tasks.construct_tasks_and_chain_import_fields_to_fyle';
-    
+
     GET DIAGNOSTICS rcount = ROW_COUNT;
 
     IF rcount > 0 THEN
@@ -943,10 +943,10 @@ CREATE FUNCTION public.trigger_auto_import_export(_workspace_id character varyin
 DECLARE
     rcount integer;
 BEGIN
-    UPDATE django_q_schedule 
-    SET next_run = now() + INTERVAL '35 sec' 
+    UPDATE django_q_schedule
+    SET next_run = now() + INTERVAL '35 sec'
     WHERE args = _workspace_id and func = 'apps.workspaces.tasks.run_sync_schedule';
-    
+
     GET DIAGNOSTICS rcount = ROW_COUNT;
 
     IF rcount > 0 THEN
@@ -999,7 +999,7 @@ CREATE FUNCTION public.ws_email(_workspace_id integer) RETURNS TABLE(workspace_i
     AS $$
 BEGIN
   RETURN QUERY
-  select w.id as workspace_id, w.name as workspace_name, u.email as email from workspaces w 
+  select w.id as workspace_id, w.name as workspace_name, u.email as email from workspaces w
     left join workspaces_user wu on wu.workspace_id = w.id
     left join users u on wu.user_id = u.id
     where w.id = _workspace_id;
@@ -2786,7 +2786,8 @@ CREATE TABLE public.last_export_details (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
-    next_export_at timestamp with time zone
+    next_export_at timestamp with time zone,
+    unmapped_card_count integer NOT NULL
 );
 
 
@@ -5981,10 +5982,11 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 240	workspaces	0047_configuration_top_level_memo_structure	2025-06-03 13:10:42.735621+00
 241	fyle_accounting_mappings	0030_expenseattributesdeletioncache_updated_at	2025-06-17 11:21:51.697718+00
 242	internal	0010_auto_generated_sql	2025-06-17 11:21:51.706446+00
-243	internal	0011_auto_generated_sql	2025-08-05 08:54:20.444771+00
-244	internal	0012_auto_generated_sql	2025-08-05 08:54:20.447205+00
-245	internal	0013_auto_generated_sql	2025-08-05 08:54:20.449839+00
-246	tasks	0015_tasklog_re_attempt_export	2025-08-05 08:54:20.464377+00
+243	internal	0011_auto_generated_sql	2025-07-31 11:52:06.408889+00
+244	internal	0012_auto_generated_sql	2025-07-31 11:52:06.419581+00
+245	internal	0013_auto_generated_sql	2025-07-31 11:52:06.434321+00
+246	workspaces	0048_lastexportdetail_unmapped_card_count	2025-07-31 11:52:06.481827+00
+247	tasks	0015_tasklog_re_attempt_export	2025-08-05 08:54:20.464377+00
 \.
 
 
@@ -9481,15 +9483,6 @@ COPY public.journal_entry_lineitems (id, gl_account_number, project_id, location
 
 
 --
--- Data for Name: last_export_details; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id, next_export_at) FROM stdin;
-4	2023-07-07 11:57:53.184441+00	MANUAL	2	0	0	2023-07-07 11:57:53.184441+00	2023-07-07 11:57:53.184441+00	1	\N
-\.
-
-
---
 -- Data for Name: location_entity_mappings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -9928,6 +9921,15 @@ COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updat
 
 
 --
+-- Data for Name: last_export_details; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.last_export_details (id, last_exported_at, export_mode, total_expense_groups_count, successful_expense_groups_count, failed_expense_groups_count, created_at, updated_at, workspace_id, next_export_at, unmapped_card_count) FROM stdin;
+5	2023-07-08 09:30:15.567890+00	MANUAL	5	4	1	2023-07-08 09:30:15.567890+00	2023-07-08 09:30:15.567890+00	1	2023-07-09 09:30:15.567890+00	0
+\.
+
+
+--
 -- Data for Name: workspaces_user; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -10024,7 +10026,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 53, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 246, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 247, true);
 
 
 --
@@ -10171,7 +10173,7 @@ SELECT pg_catalog.setval('public.journal_entry_lineitems_id_seq', 10, true);
 -- Name: last_export_details_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.last_export_details_id_seq', 4, true);
+SELECT pg_catalog.setval('public.last_export_details_id_seq', 5, true);
 
 
 --
@@ -12222,4 +12224,3 @@ ALTER TABLE ONLY public.workspaces_user
 --
 -- PostgreSQL database dump complete
 --
-

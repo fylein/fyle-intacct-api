@@ -1,15 +1,15 @@
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 
-from django.dispatch import receiver
 from django.db.models.signals import post_save
+from django.dispatch import receiver
+from fyle_accounting_mappings.models import ExpenseAttribute, MappingSetting
 
-from fyle_accounting_mappings.models import MappingSetting
-
-from apps.workspaces.models import Configuration
-from apps.sage_intacct.helpers import schedule_payment_sync
 from apps.fyle.helpers import add_expense_id_to_expense_group_settings
 from apps.mappings.helpers import schedule_or_delete_auto_mapping_tasks
+from apps.sage_intacct.helpers import schedule_payment_sync
+from apps.workspaces.models import Configuration
+from apps.workspaces.tasks import patch_integration_settings_for_unmapped_cards
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -70,6 +70,14 @@ def run_post_configration_triggers(sender: type[Configuration], instance: Config
         Configuration.objects.filter(
             workspace_id=instance.workspace_id
         ).update(auto_map_employees='NAME', updated_at=datetime.now(timezone.utc))
+
+    if instance.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION':
+        unmapped_card_count = ExpenseAttribute.objects.filter(
+            attribute_type="CORPORATE_CARD", workspace_id=instance.workspace_id, active=True, mapping__isnull=True
+        ).count()
+        patch_integration_settings_for_unmapped_cards(workspace_id=instance.workspace_id, unmapped_card_count=unmapped_card_count)
+    else:
+        patch_integration_settings_for_unmapped_cards(workspace_id=instance.workspace_id, unmapped_card_count=0)
 
     schedule_or_delete_auto_mapping_tasks(configuration=instance)
     schedule_payment_sync(configuration=instance)

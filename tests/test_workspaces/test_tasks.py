@@ -1,26 +1,28 @@
 import pytest
-
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.tasks.models import TaskLog
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.models import (
-    Workspace,
     Configuration,
     FyleCredential,
+    LastExportDetail,
+    SageIntacctCredential,
+    Workspace,
     WorkspaceSchedule,
-    SageIntacctCredential
 )
 from apps.workspaces.tasks import (
+    async_create_admin_subcriptions,
+    async_update_fyle_credentials,
+    async_update_workspace_name,
+    patch_integration_settings,
+    patch_integration_settings_for_unmapped_cards,
+    post_to_integration_settings,
+    run_email_notification,
     run_sync_schedule,
     schedule_sync,
-    run_email_notification,
-    async_update_fyle_credentials,
-    post_to_integration_settings,
-    async_create_admin_subcriptions,
-    async_update_workspace_name
 )
-from .fixtures import data
+from tests.test_workspaces.fixtures import data
 
 
 def test_schedule_sync(db):
@@ -338,3 +340,91 @@ def test_async_update_workspace_name(db, mocker):
 
     workspace = Workspace.objects.get(id=1)
     assert workspace.name == 'Test Org'
+
+
+def test_patch_integration_settings_with_unmapped_card_count(db, add_fyle_credentials, mocker):
+    """
+    Test patch_integration_settings with unmapped_card_count
+    """
+    workspace_id = 2
+
+    # Setup workspace with COMPLETE onboarding state
+    workspace = Workspace.objects.get(id=workspace_id)
+    workspace.onboarding_state = 'COMPLETE'
+    workspace.save()
+
+    # Setup FyleCredential with refresh token
+    fyle_credential = FyleCredential.objects.get(workspace_id=workspace_id)
+    fyle_credential.refresh_token = 'test_refresh_token'
+    fyle_credential.save()
+
+    patch_request_mock = mocker.patch('apps.workspaces.tasks.patch_request')
+    result = patch_integration_settings(workspace_id=workspace_id, unmapped_card_count=5)
+
+    patch_request_mock.assert_called_once_with(
+        mocker.ANY,  # URL
+        {
+            'tpa_name': 'Fyle Sage Intacct Integration',
+            'unmapped_card_count': 5
+        },
+        'test_refresh_token'
+    )
+
+    assert result is True
+
+    patch_request_mock.reset_mock()
+    patch_request_mock.side_effect = Exception('Test exception')
+
+    result = patch_integration_settings(workspace_id=workspace_id, unmapped_card_count=3)
+
+    assert result is False
+
+
+def test_patch_integration_settings_for_unmapped_cards(db, mocker):
+    """
+    Test patch_integration_settings_for_unmapped_cards
+    """
+    workspace_id = 1
+
+    last_export_detail, _ = LastExportDetail.objects.get_or_create(
+        workspace_id=workspace_id,
+        defaults={'unmapped_card_count': 0}
+    )
+    patch_integration_settings_mock = mocker.patch(
+        'apps.workspaces.tasks.patch_integration_settings',
+        return_value=True
+    )
+
+    new_unmapped_count = 10
+    patch_integration_settings_for_unmapped_cards(
+        workspace_id=workspace_id,
+        unmapped_card_count=new_unmapped_count
+    )
+
+    patch_integration_settings_mock.assert_called_once_with(
+        workspace_id=workspace_id,
+        unmapped_card_count=new_unmapped_count
+    )
+
+    last_export_detail.refresh_from_db()
+    assert last_export_detail.unmapped_card_count == new_unmapped_count
+    patch_integration_settings_mock.reset_mock()
+
+    patch_integration_settings_for_unmapped_cards(
+        workspace_id=workspace_id,
+        unmapped_card_count=new_unmapped_count
+    )
+    patch_integration_settings_mock.assert_not_called()
+    patch_integration_settings_mock.reset_mock()
+    patch_integration_settings_mock.return_value = False
+    last_export_detail.unmapped_card_count = 5
+    last_export_detail.save()
+
+    patch_integration_settings_for_unmapped_cards(
+        workspace_id=workspace_id,
+        unmapped_card_count=15
+    )
+
+    patch_integration_settings_mock.assert_called_once()
+    last_export_detail.refresh_from_db()
+    assert last_export_detail.unmapped_card_count == 5
