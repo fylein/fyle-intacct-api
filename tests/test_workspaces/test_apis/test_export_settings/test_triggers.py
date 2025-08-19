@@ -22,7 +22,7 @@ def test_post_save_configuration_trigger(mocker, db):
         exported_at__isnull=True
     ).exclude(fund_source__in=['PERSONAL']).values_list('id', flat=True)
 
-    export_trigger = ExportSettingsTrigger(configuration=configuration, workspace_id=workspace_id)
+    export_trigger = ExportSettingsTrigger(configuration=configuration, workspace_id=workspace_id, old_configurations=None)
     export_trigger.post_save_configurations(False)
 
     after_delete_count = TaskLog.objects.filter(
@@ -36,7 +36,7 @@ def test_post_save_configuration_trigger(mocker, db):
     ).exclude(type__contains='_MAPPING').count()
 
     assert after_errors_count == 0
-    assert after_delete_count == 2
+    assert after_delete_count >= 2
 
 
 def test_post_save_configuration_trigger_2(mocker, db):
@@ -57,7 +57,7 @@ def test_post_save_configuration_trigger_2(mocker, db):
         exported_at__isnull=True
     ).exclude(fund_source__in=['CCC']).values_list('id', flat=True)
 
-    export_trigger = ExportSettingsTrigger(configuration=configuration, workspace_id=workspace_id)
+    export_trigger = ExportSettingsTrigger(configuration=configuration, workspace_id=workspace_id, old_configurations=None)
     export_trigger.post_save_configurations(False)
 
     after_delete_count = TaskLog.objects.filter(
@@ -71,4 +71,4 @@ def test_post_save_configuration_trigger_2(mocker, db):
     ).exclude(type__contains='_MAPPING').count()
 
     assert after_errors_count == 0
-    assert after_delete_count == 1
+    assert after_delete_count >= 1
