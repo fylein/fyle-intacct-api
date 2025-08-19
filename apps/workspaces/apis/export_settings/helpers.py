@@ -13,7 +13,7 @@ def clear_workspace_errors_on_export_type_change(
     workspace_id: int,
     old_configuration: Optional[Dict] = None,
     new_configuration: Optional[Configuration] = None
-) -> Tuple[int, int]:
+) -> None:
     """
     Clear workspace errors when export type settings change.
 
@@ -93,13 +93,13 @@ def clear_workspace_errors_on_export_type_change(
 
                     mapping_errors_updated = 0
                     if errors_to_update:
-                        for error in errors_to_update:
-                            error.save(update_fields=['mapping_error_expense_group_ids'])
+                        Error.objects.bulk_update(errors_to_update, ['mapping_error_expense_group_ids'])
                         mapping_errors_updated = len(errors_to_update)
 
                     mapping_errors_deleted = 0
                     if mapping_errors_to_delete:
                         mapping_errors_deleted = Error.objects.filter(
+                            workspace_id=workspace_id,
                             id__in=mapping_errors_to_delete
                         ).delete()[0]
 
@@ -120,16 +120,19 @@ def clear_workspace_errors_on_export_type_change(
                         total_deleted_task_logs += deleted_task_logs
                         logger.info("Cleared %s failed task logs for affected expense groups", deleted_task_logs)
 
-                    enqueued_task_logs = TaskLog.objects.filter(
-                        workspace_id=workspace_id,
-                        status='ENQUEUED'
-                    ).exclude(type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT'])
+                    # Use select_for_update to prevent race conditions with workers
+                    # Skip tasks that might be in the process of being picked up by workers
+                    with transaction.atomic():
+                        enqueued_task_logs = TaskLog.objects.select_for_update(skip_locked=True).filter(
+                            workspace_id=workspace_id,
+                            status='ENQUEUED'
+                        ).exclude(type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT'])
 
-                    enqueued_count = enqueued_task_logs.count()
-                    if enqueued_count > 0:
-                        logger.info("Deleting %s ENQUEUED task logs for workspace %s so they can be re-queued with new settings", enqueued_count, workspace_id)
-                        enqueued_task_logs.delete()
-                        total_deleted_task_logs += enqueued_count
+                        enqueued_count = enqueued_task_logs.count()
+                        if enqueued_count > 0:
+                            logger.info("Deleting %s ENQUEUED task logs for workspace %s so they can be re-queued with new settings", enqueued_count, workspace_id)
+                            enqueued_task_logs.delete()
+                            total_deleted_task_logs += enqueued_count
 
             logger.info("Successfully cleared %s errors and %s task logs for workspace %s", total_deleted_errors, total_deleted_task_logs, workspace_id)
             return total_deleted_errors, total_deleted_task_logs

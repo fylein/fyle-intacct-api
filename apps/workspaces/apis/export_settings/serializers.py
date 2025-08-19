@@ -185,7 +185,6 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
             old_configurations = {
                 'reimbursable_expenses_object': pre_save_configurations.reimbursable_expenses_object,
                 'corporate_credit_card_expenses_object': pre_save_configurations.corporate_credit_card_expenses_object,
-                'auto_map_employees': pre_save_configurations.auto_map_employees,
             }
 
         configuration_instance, _ = Configuration.objects.update_or_create(
