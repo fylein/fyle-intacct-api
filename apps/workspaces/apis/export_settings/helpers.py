@@ -65,7 +65,7 @@ def clear_workspace_errors_on_export_type_change(
                         expense_group_id__in=affected_expense_group_ids
                     )
                     if expense_group_errors.exists():
-                        deleted_direct_errors = expense_group_errors.delete()[0]
+                        deleted_direct_errors, _ = expense_group_errors.delete()
                         total_deleted_errors += deleted_direct_errors
                         logger.info("Cleared %s direct expense group errors", deleted_direct_errors)
 
@@ -98,10 +98,10 @@ def clear_workspace_errors_on_export_type_change(
 
                     mapping_errors_deleted = 0
                     if mapping_errors_to_delete:
-                        mapping_errors_deleted = Error.objects.filter(
+                        mapping_errors_deleted, _ = Error.objects.filter(
                             workspace_id=workspace_id,
                             id__in=mapping_errors_to_delete
-                        ).delete()[0]
+                        ).delete()
 
                     if mapping_errors_updated > 0:
                         logger.info("Updated %s mapping errors by removing affected expense group IDs", mapping_errors_updated)
@@ -116,23 +116,20 @@ def clear_workspace_errors_on_export_type_change(
                         status__in=['FAILED', 'FATAL']
                     )
                     if failed_task_logs.exists():
-                        deleted_task_logs = failed_task_logs.delete()[0]
-                        total_deleted_task_logs += deleted_task_logs
-                        logger.info("Cleared %s failed task logs for affected expense groups", deleted_task_logs)
+                        deleted_failed_task_logs, _ = failed_task_logs.delete()
+                        total_deleted_task_logs += deleted_failed_task_logs
+                        logger.info("Cleared %s failed task logs for affected expense groups", deleted_failed_task_logs)
 
-                    # Use select_for_update to prevent race conditions with workers
-                    # Skip tasks that might be in the process of being picked up by workers
-                    with transaction.atomic():
-                        enqueued_task_logs = TaskLog.objects.select_for_update(skip_locked=True).filter(
-                            workspace_id=workspace_id,
-                            status='ENQUEUED'
-                        ).exclude(type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT'])
+                    enqueued_task_ids = list(TaskLog.objects.select_for_update(skip_locked=True).filter(
+                        workspace_id=workspace_id,
+                        status='ENQUEUED'
+                    ).exclude(type__in=['FETCHING_EXPENSES', 'CREATING_BILL_PAYMENT']).values_list('id', flat=True))
 
-                        enqueued_count = enqueued_task_logs.count()
-                        if enqueued_count > 0:
-                            logger.info("Deleting %s ENQUEUED task logs for workspace %s so they can be re-queued with new settings", enqueued_count, workspace_id)
-                            enqueued_task_logs.delete()
-                            total_deleted_task_logs += enqueued_count
+                    if enqueued_task_ids:
+                        logger.info("Deleting %s ENQUEUED task logs for workspace %s so they can be re-queued with new settings", len(enqueued_task_ids), workspace_id)
+                        deleted_enqueued_task_logs, _ = TaskLog.objects.filter(id__in=enqueued_task_ids).delete()
+                        total_deleted_task_logs += deleted_enqueued_task_logs
+                        logger.info("Successfully deleted %s ENQUEUED task logs", deleted_enqueued_task_logs)
 
             logger.info("Successfully cleared %s errors and %s task logs for workspace %s", total_deleted_errors, total_deleted_task_logs, workspace_id)
             return total_deleted_errors, total_deleted_task_logs
