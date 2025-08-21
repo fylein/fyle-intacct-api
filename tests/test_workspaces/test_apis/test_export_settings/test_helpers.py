@@ -18,7 +18,7 @@ def test_clear_workspace_errors_no_changes(add_workspace_with_settings):
         'corporate_credit_card_expenses_object': 'CHARGE_CARD_TRANSACTION'
     }
 
-    new_config, _ = Configuration.objects.get_or_create(
+    new_config, _ = Configuration.objects.update_or_create(
         workspace_id=workspace_id,
         defaults={
             'reimbursable_expenses_object': 'EXPENSE_REPORT',
