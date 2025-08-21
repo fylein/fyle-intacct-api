@@ -263,4 +263,3 @@ def test_clear_workspace_errors_complete_mapping_deletion(db):
 
     mapping_error_exists = Error.objects.filter(id=mapping_error.id).exists()
     assert mapping_error_exists is False
-
