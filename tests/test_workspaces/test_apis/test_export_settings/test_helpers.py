@@ -1,3 +1,4 @@
+import pytest
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
@@ -6,37 +7,12 @@ from apps.workspaces.models import Configuration, Workspace, LastExportDetail
 from apps.workspaces.apis.export_settings.helpers import clear_workspace_errors_on_export_type_change
 
 
-def create_workspace_with_settings(workspace_id: int) -> None:
-    """
-    Helper function to create workspace with all required related objects
-    """
-    Workspace.objects.update_or_create(
-        id=workspace_id,
-        defaults={
-            'name': f'Test Workspace {workspace_id}',
-            'fyle_org_id': f'fyle_org_{workspace_id}'
-        }
-    )
-    LastExportDetail.objects.update_or_create(workspace_id=workspace_id)
-
-    ExpenseGroupSettings.objects.update_or_create(
-        workspace_id=workspace_id,
-        defaults={
-            'reimbursable_expense_group_fields': ['employee_email', 'report_id', 'claim_number', 'fund_source'],
-            'corporate_credit_card_expense_group_fields': ['fund_source', 'employee_email', 'claim_number', 'expense_id', 'report_id'],
-            'expense_state': 'PAYMENT_PROCESSING',
-            'reimbursable_export_date_type': 'current_date',
-            'ccc_export_date_type': 'current_date'
-        }
-    )
-
-
-def test_clear_workspace_errors_no_changes(db):
+def test_clear_workspace_errors_no_changes(add_workspace_with_settings):
     """
     Test when no export settings change - uses existing workspace data
     """
     workspace_id = 1
-    create_workspace_with_settings(workspace_id)
+    add_workspace_with_settings(workspace_id)
 
     old_config = {
         'reimbursable_expenses_object': 'EXPENSE_REPORT',
@@ -68,12 +44,12 @@ def test_clear_workspace_errors_no_changes(db):
     assert enqueued_exists is True
 
 
-def test_clear_workspace_errors_with_mapping_errors(db):
+def test_clear_workspace_errors_with_mapping_errors(add_workspace_with_settings):
     """
     Test mapping error handling when reimbursable expenses object changes
     """
     workspace_id = 2
-    create_workspace_with_settings(workspace_id)
+    add_workspace_with_settings(workspace_id)
 
     _ = ExpenseGroup.objects.create(
         id=201,
@@ -151,12 +127,12 @@ def test_clear_workspace_errors_with_mapping_errors(db):
     assert task_log_exists is False
 
 
-def test_clear_workspace_errors_enqueued_tasks_deleted_on_change(db):
+def test_clear_workspace_errors_enqueued_tasks_deleted_on_change(add_workspace_with_settings):
     """
     Test that ENQUEUED task logs are deleted when export settings change
     """
     workspace_id = 3
-    create_workspace_with_settings(workspace_id)
+    add_workspace_with_settings(workspace_id)
 
     ExpenseGroup.objects.create(
         id=501,
@@ -214,12 +190,12 @@ def test_clear_workspace_errors_enqueued_tasks_deleted_on_change(db):
     assert excluded_exists is True
 
 
-def test_clear_workspace_errors_complete_mapping_deletion(db):
+def test_clear_workspace_errors_complete_mapping_deletion(add_workspace_with_settings):
     """
     Test when mapping error should be completely deleted (no remaining expense groups)
     """
     workspace_id = 4
-    create_workspace_with_settings(workspace_id)
+    add_workspace_with_settings(workspace_id)
 
     _ = ExpenseGroup.objects.create(
         id=301,
