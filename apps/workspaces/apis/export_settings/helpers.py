@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import List
 from django.db import transaction
 
 from apps.fyle.models import ExpenseGroup
@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 def clear_workspace_errors_on_export_type_change(
     workspace_id: int,
-    old_configuration: Optional[Dict] = None,
-    new_configuration: Optional[Configuration] = None
+    old_configuration: dict,
+    new_configuration: Configuration
 ) -> None:
     """
     Clear workspace errors when export type settings change.

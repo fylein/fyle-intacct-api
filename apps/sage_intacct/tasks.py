@@ -561,7 +561,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: b
     """
     worker_logger = get_logger()
     called_from = get_caller_info()
-    
+
     try:
         with transaction.atomic():
             task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
