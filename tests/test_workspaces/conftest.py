@@ -76,7 +76,7 @@ def add_workspace_with_settings(db):
     """
     Add workspace with all required settings for export settings tests
     """
-    def _create_workspace(workspace_id: int):
+    def _create_workspace(workspace_id: int) -> int:
         Workspace.objects.update_or_create(
             id=workspace_id,
             defaults={
