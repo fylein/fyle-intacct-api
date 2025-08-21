@@ -56,11 +56,9 @@ def test_clear_workspace_errors_no_changes(db):
         type='CREATING_EXPENSE_REPORT'
     )
 
-    deleted_errors, deleted_task_logs = clear_workspace_errors_on_export_type_change(
+    clear_workspace_errors_on_export_type_change(
         workspace_id, old_config, new_config
     )
-    assert deleted_errors is None
-    assert deleted_task_logs is None
 
     enqueued_exists = TaskLog.objects.filter(
         workspace_id=workspace_id,
@@ -135,7 +133,7 @@ def test_clear_workspace_errors_with_mapping_errors(db):
         }
     )
 
-    deleted_errors, deleted_task_logs = clear_workspace_errors_on_export_type_change(
+    clear_workspace_errors_on_export_type_change(
         workspace_id, old_config, new_config
     )
 
@@ -151,9 +149,6 @@ def test_clear_workspace_errors_with_mapping_errors(db):
         status='FAILED'
     ).exists()
     assert task_log_exists is False
-
-    assert deleted_errors >= 1
-    assert deleted_task_logs >= 1
 
 
 def test_clear_workspace_errors_enqueued_tasks_deleted_on_change(db):
@@ -201,7 +196,7 @@ def test_clear_workspace_errors_enqueued_tasks_deleted_on_change(db):
         }
     )
 
-    _, deleted_task_logs = clear_workspace_errors_on_export_type_change(
+    clear_workspace_errors_on_export_type_change(
         workspace_id, old_config, new_config
     )
 
@@ -217,8 +212,6 @@ def test_clear_workspace_errors_enqueued_tasks_deleted_on_change(db):
         type='FETCHING_EXPENSES'
     ).exists()
     assert excluded_exists is True
-
-    assert deleted_task_logs >= 2
 
 
 def test_clear_workspace_errors_complete_mapping_deletion(db):
@@ -264,11 +257,10 @@ def test_clear_workspace_errors_complete_mapping_deletion(db):
         }
     )
 
-    deleted_errors, _ = clear_workspace_errors_on_export_type_change(
+    clear_workspace_errors_on_export_type_change(
         workspace_id, old_config, new_config
     )
 
     mapping_error_exists = Error.objects.filter(id=mapping_error.id).exists()
     assert mapping_error_exists is False
 
-    assert deleted_errors >= 1
