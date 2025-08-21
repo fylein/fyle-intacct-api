@@ -59,8 +59,8 @@ def test_clear_workspace_errors_no_changes(db):
     deleted_errors, deleted_task_logs = clear_workspace_errors_on_export_type_change(
         workspace_id, old_config, new_config
     )
-    assert deleted_errors == 0
-    assert deleted_task_logs == 0
+    assert deleted_errors is None
+    assert deleted_task_logs is None
 
     enqueued_exists = TaskLog.objects.filter(
         workspace_id=workspace_id,

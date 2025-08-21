@@ -132,7 +132,6 @@ def clear_workspace_errors_on_export_type_change(
                         logger.info("Successfully deleted %s ENQUEUED task logs", deleted_enqueued_task_logs)
 
             logger.info("Successfully cleared %s errors and %s task logs for workspace %s", total_deleted_errors, total_deleted_task_logs, workspace_id)
-            return total_deleted_errors, total_deleted_task_logs
 
     except Exception as e:
         logger.error("Error clearing workspace errors for workspace %s: %s", workspace_id, str(e))
