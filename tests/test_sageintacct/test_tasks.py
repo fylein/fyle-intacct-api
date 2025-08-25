@@ -2156,3 +2156,63 @@ def test_handle_skipped_exports(db, mocker):
     mock_post_summary.assert_not_called()
     mock_update_last_export.assert_called_once_with(eg2.workspace_id)
     mock_logger.info.assert_called()
+
+
+def test_create_journal_entry_task_log_does_not_exist(mocker, db):
+    """
+    Test create_journal_entry when TaskLog.DoesNotExist is raised
+    Case: TaskLog with given task_log_id does not exist
+    """
+    mock_logger = mocker.patch('apps.sage_intacct.tasks.get_logger')
+    mock_logger.return_value.info = mocker.Mock()
+
+    create_journal_entry(expense_group_id=1, task_log_id=99999, last_export=True, is_auto_export=False)
+
+    mock_logger.return_value.info.assert_called_with(
+        'Task log %s no longer exists, skipping journal entry creation', 99999
+    )
+
+
+def test_create_expense_report_task_log_does_not_exist(mocker, db):
+    """
+    Test create_expense_report when TaskLog.DoesNotExist is raised
+    Case: TaskLog with given task_log_id does not exist
+    """
+    mock_logger = mocker.patch('apps.sage_intacct.tasks.get_logger')
+    mock_logger.return_value.info = mocker.Mock()
+
+    create_expense_report(expense_group_id=1, task_log_id=99999, last_export=True, is_auto_export=False)
+
+    mock_logger.return_value.info.assert_called_with(
+        'Task log %s was deleted (likely due to export settings change), skipping expense report creation', 99999
+    )
+
+
+def test_create_bill_task_log_does_not_exist(mocker, db):
+    """
+    Test create_bill when TaskLog.DoesNotExist is raised
+    Case: TaskLog with given task_log_id does not exist
+    """
+    mock_logger = mocker.patch('apps.sage_intacct.tasks.get_logger')
+    mock_logger.return_value.info = mocker.Mock()
+
+    create_bill(expense_group_id=1, task_log_id=99999, last_export=True, is_auto_export=False)
+
+    mock_logger.return_value.info.assert_called_with(
+        'Task log %s was deleted (likely due to export settings change), skipping bill creation', 99999
+    )
+
+
+def test_create_charge_card_transaction_task_log_does_not_exist(mocker, db):
+    """
+    Test create_charge_card_transaction when TaskLog.DoesNotExist is raised
+    Case: TaskLog with given task_log_id does not exist
+    """
+    mock_logger = mocker.patch('apps.sage_intacct.tasks.get_logger')
+    mock_logger.return_value.info = mocker.Mock()
+
+    create_charge_card_transaction(expense_group_id=1, task_log_id=99999, last_export=True, is_auto_export=False)
+
+    mock_logger.return_value.info.assert_called_with(
+        'Task log %s was deleted (likely due to export settings change), skipping charge card transaction creation', 99999
+    )

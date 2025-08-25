@@ -561,17 +561,22 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: b
     """
     worker_logger = get_logger()
     called_from = get_caller_info()
-    with transaction.atomic():
-        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
-        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-        worker_logger.info('Creating Journal Entry for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-            task_log.status = 'IN_PROGRESS'
-            task_log.save()
-        else:
-            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
-            return
+    try:
+        with transaction.atomic():
+            task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+            expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+            worker_logger.info('Creating Journal Entry for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
+
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+                task_log.status = 'IN_PROGRESS'
+                task_log.save()
+            else:
+                worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+                return
+    except TaskLog.DoesNotExist:
+        worker_logger.info('Task log %s no longer exists, skipping journal entry creation', task_log_id)
+        return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
@@ -737,17 +742,22 @@ def create_expense_report(expense_group_id: int, task_log_id: int, last_export: 
     """
     worker_logger = get_logger()
     called_from = get_caller_info()
-    with transaction.atomic():
-        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
-        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-        worker_logger.info('Creating Expense Report for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-            task_log.status = 'IN_PROGRESS'
-            task_log.save()
-        else:
-            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
-            return
+    try:
+        with transaction.atomic():
+            task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+            expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+            worker_logger.info('Creating Expense Report for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
+
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+                task_log.status = 'IN_PROGRESS'
+                task_log.save()
+            else:
+                worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+                return
+    except TaskLog.DoesNotExist:
+        worker_logger.info('Task log %s was deleted (likely due to export settings change), skipping expense report creation', task_log_id)
+        return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
@@ -915,17 +925,22 @@ def create_bill(expense_group_id: int, task_log_id: int, last_export: bool, is_a
     """
     worker_logger = get_logger()
     called_from = get_caller_info()
-    with transaction.atomic():
-        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
-        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-        worker_logger.info('Creating Bill for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-            task_log.status = 'IN_PROGRESS'
-            task_log.save()
-        else:
-            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
-            return
+    try:
+        with transaction.atomic():
+            task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+            expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+            worker_logger.info('Creating Bill for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
+
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+                task_log.status = 'IN_PROGRESS'
+                task_log.save()
+            else:
+                worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+                return
+    except TaskLog.DoesNotExist:
+        worker_logger.info('Task log %s was deleted (likely due to export settings change), skipping bill creation', task_log_id)
+        return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
@@ -1080,17 +1095,21 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, last
     """
     worker_logger = get_logger()
     called_from = get_caller_info()
-    with transaction.atomic():
-        task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
-        expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
-        worker_logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
+    try:
+        with transaction.atomic():
+            task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
+            expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
+            worker_logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-        if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
-            task_log.status = 'IN_PROGRESS'
-            task_log.save()
-        else:
-            worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
-            return
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+                task_log.status = 'IN_PROGRESS'
+                task_log.save()
+            else:
+                worker_logger.info('Task log %s is already in %s state, workspace id %s, so skipping the task', task_log_id, task_log.status, task_log.workspace_id)
+                return
+    except TaskLog.DoesNotExist:
+        worker_logger.info('Task log %s was deleted (likely due to export settings change), skipping charge card transaction creation', task_log_id)
+        return
 
     in_progress_expenses = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
