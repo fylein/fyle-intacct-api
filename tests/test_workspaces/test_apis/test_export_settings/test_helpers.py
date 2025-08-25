@@ -242,13 +242,11 @@ def test_clear_workspace_errors_complete_mapping_deletion(add_workspace_with_set
     assert mapping_error_exists is False
 
 
-
 def test_clear_workspace_errors_exception_handling(mocker, add_workspace_with_settings):
     """
     Test clear_workspace_errors_on_export_type_change exception handling
     Case: When an exception occurs during error cleanup
     """
-
     workspace_id = 6
     add_workspace_with_settings(workspace_id)
 
@@ -278,7 +276,7 @@ def test_clear_workspace_errors_exception_handling(mocker, add_workspace_with_se
         )
 
     mock_logger.error.assert_called_once_with(
-        "Error clearing workspace errors for workspace %s: %s", 
+        "Error clearing workspace errors for workspace %s: %s",
         workspace_id,
         'Database error'
     )
