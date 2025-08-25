@@ -1,5 +1,7 @@
 from fyle_accounting_mappings.models import ExpenseAttribute
 
+import pytest
+
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.models import Configuration
@@ -238,3 +240,45 @@ def test_clear_workspace_errors_complete_mapping_deletion(add_workspace_with_set
 
     mapping_error_exists = Error.objects.filter(id=mapping_error.id).exists()
     assert mapping_error_exists is False
+
+
+
+def test_clear_workspace_errors_exception_handling(mocker, add_workspace_with_settings):
+    """
+    Test clear_workspace_errors_on_export_type_change exception handling
+    Case: When an exception occurs during error cleanup
+    """
+
+    workspace_id = 6
+    add_workspace_with_settings(workspace_id)
+
+    old_config = {
+        'reimbursable_expenses_object': 'EXPENSE_REPORT',
+        'corporate_credit_card_expenses_object': 'CHARGE_CARD_TRANSACTION'
+    }
+
+    new_config, _ = Configuration.objects.get_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'reimbursable_expenses_object': 'BILL',
+            'corporate_credit_card_expenses_object': 'CHARGE_CARD_TRANSACTION'
+        }
+    )
+
+    mock_logger = mocker.patch('apps.workspaces.apis.export_settings.helpers.logger')
+
+    mocker.patch(
+        'apps.fyle.models.ExpenseGroup.objects.filter',
+        side_effect=Exception('Database error')
+    )
+
+    with pytest.raises(Exception, match='Database error'):
+        clear_workspace_errors_on_export_type_change(
+            workspace_id, old_config, new_config
+        )
+
+    mock_logger.error.assert_called_once_with(
+        "Error clearing workspace errors for workspace %s: %s", 
+        workspace_id,
+        'Database error'
+    )
