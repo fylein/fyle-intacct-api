@@ -12,7 +12,7 @@ class ExportSettingsTrigger:
     """
     Class containing all triggers for export_settings
     """
-    def __init__(self, workspace_id: int, configuration: Configuration, old_configurations: dict = None):
+    def __init__(self, workspace_id: int, configuration: Configuration, old_configurations: dict):
         self.__workspace_id = workspace_id
         self.__configuration = configuration
         self.__old_configurations = old_configurations
@@ -25,7 +25,9 @@ class ExportSettingsTrigger:
             ImportLog.objects.filter(workspace_id=self.__workspace_id, attribute_type='CATEGORY').update(last_successful_run_at=None, updated_at=datetime.now(timezone.utc))
             ExpenseAttribute.objects.filter(workspace_id=self.__workspace_id, attribute_type='CATEGORY').update(auto_mapped=False)
 
-        clear_workspace_errors_on_export_type_change(self.__workspace_id, self.__old_configurations, self.__configuration)
+        if self.__old_configurations and self.__configuration:
+            clear_workspace_errors_on_export_type_change(self.__workspace_id, self.__old_configurations, self.__configuration)
+
         last_export_detail = LastExportDetail.objects.filter(workspace_id=self.__workspace_id).first()
         if last_export_detail.last_exported_at:
             update_last_export_details(self.__workspace_id)

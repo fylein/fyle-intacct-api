@@ -25,10 +25,6 @@ def clear_workspace_errors_on_export_type_change(
     Returns:
         Tuple of (deleted_errors_count, deleted_task_logs_count)
     """
-    if not old_configuration or not new_configuration:
-        logger.warning("Missing configuration for workspace %s. Skipping error cleanup.", workspace_id)
-        return
-
     try:
         with transaction.atomic():
             old_reimburse = old_configuration.get('reimbursable_expenses_object')
@@ -100,7 +96,8 @@ def clear_workspace_errors_on_export_type_change(
                     if mapping_errors_to_delete:
                         mapping_errors_deleted, _ = Error.objects.filter(
                             workspace_id=workspace_id,
-                            id__in=mapping_errors_to_delete
+                            id__in=mapping_errors_to_delete,
+                            is_resolved=False
                         ).delete()
 
                     if mapping_errors_updated > 0:
@@ -132,6 +129,7 @@ def clear_workspace_errors_on_export_type_change(
                         logger.info("Successfully deleted %s ENQUEUED task logs", deleted_enqueued_task_logs)
 
             logger.info("Successfully cleared %s errors and %s task logs for workspace %s", total_deleted_errors, total_deleted_task_logs, workspace_id)
+            return total_deleted_errors, total_deleted_task_logs
 
     except Exception as e:
         logger.error("Error clearing workspace errors for workspace %s: %s", workspace_id, str(e))
