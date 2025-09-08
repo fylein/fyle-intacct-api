@@ -218,6 +218,8 @@ def test_disable_merchants(db, mocker):
             return Configuration
         elif path == 'apps.mappings.helpers.prepend_code_to_name':
             return lambda prepend_code_in_name, value, code: value if not prepend_code_in_name else f"{code}: {value}"
+        elif path == 'apps.workspaces.helpers.get_app_name':
+            return lambda: 'INTACCT'
         return None
 
     mocker.patch('fyle_integrations_imports.modules.merchants.import_string', side_effect=import_string_side_effect)
