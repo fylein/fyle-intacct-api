@@ -1,27 +1,21 @@
 from unittest import mock
-from datetime import datetime, timezone, timedelta
+from unittest.mock import MagicMock, patch
+from datetime import datetime, timedelta, timezone
 
-from fyle_accounting_mappings.models import (
-    Mapping,
-    CategoryMapping,
-    ExpenseAttribute,
-    DestinationAttribute
-)
 from fyle_integrations_platform_connector import PlatformConnector
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute, Mapping
 
 from apps.tasks.models import Error
+from apps.mappings.constants import SYNC_METHODS
 from fyle_integrations_imports.models import ImportLog
+from fyle_integrations_imports.modules.base import Base
 from apps.sage_intacct.utils import SageIntacctConnector
 from fyle_integrations_imports.modules.projects import Project
 from fyle_integrations_imports.modules.categories import Category
 from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
-from fyle_integrations_imports.modules.base import Base
 
-from .fixtures import data as destination_attributes_data
-from .helpers import get_platform_connection
-from apps.mappings.constants import SYNC_METHODS
-
-from unittest.mock import patch, MagicMock
+from tests.test_mappings.test_imports.test_modules.helpers import get_platform_connection
+from tests.test_mappings.test_imports.test_modules.fixtures import data as destination_attributes_data
 
 
 def test_sync_destination_attributes(mocker, db):
