@@ -1,68 +1,53 @@
 import logging
 import traceback
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 
+from dateutil.relativedelta import relativedelta
 from django.conf import settings
-from django.utils import timezone
-from django.db import transaction
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models.functions import Lower
+from django.utils import timezone
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
+from fyle_integrations_platform_connector import PlatformConnector
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
 from apps.exceptions import ValueErrorWithResponse
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from apps.sage_intacct.actions import update_last_export_details
-from fyle_integrations_platform_connector import PlatformConnector
-from sageintacctsdk.exceptions import (
-    NoPrivilegeError,
-    WrongParamsError,
-    InvalidTokenError
-)
-from fyle_accounting_mappings.models import (
-    Mapping,
-    EmployeeMapping,
-    CategoryMapping,
-    ExpenseAttribute,
-    DestinationAttribute,
-)
-
-from apps.tasks.models import TaskLog, Error
-from apps.mappings.models import GeneralMapping
-from apps.fyle.models import ExpenseGroup, Expense
-from fyle_intacct_api.exceptions import BulkError
-from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
-from apps.sage_intacct.utils import SageIntacctConnector
 from apps.fyle.actions import (
+    post_accounting_export_summary,
+    update_complete_expenses,
     update_expenses_in_progress,
     update_failed_expenses,
-    update_complete_expenses,
-    post_accounting_export_summary
 )
-from apps.workspaces.models import (
-    SageIntacctCredential,
-    FyleCredential,
-    Configuration
+from apps.fyle.models import Expense, ExpenseGroup
+from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.actions import update_last_export_details
+from apps.sage_intacct.errors.helpers import (
+    error_matcher,
+    get_entity_values,
+    remove_support_id,
+    replace_destination_id_with_values,
 )
 from apps.sage_intacct.models import (
-    ExpenseReport,
-    ExpenseReportLineitem,
+    APPayment,
+    APPaymentLineitem,
     Bill,
     BillLineitem,
     ChargeCardTransaction,
     ChargeCardTransactionLineitem,
-    APPayment,
-    APPaymentLineitem,
+    ExpenseReport,
+    ExpenseReportLineitem,
     JournalEntry,
     JournalEntryLineitem,
     SageIntacctReimbursement,
-    SageIntacctReimbursementLineitem
+    SageIntacctReimbursementLineitem,
 )
-from apps.sage_intacct.errors.helpers import (
-    error_matcher,
-    remove_support_id,
-    get_entity_values,
-    replace_destination_id_with_values
-)
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
+from fyle_intacct_api.exceptions import BulkError
+from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -550,7 +535,7 @@ def __validate_expense_group(expense_group: ExpenseGroup, configuration: Configu
         raise BulkError('Mappings are missing', bulk_errors)
 
 
-def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export: bool, last_export: bool = False) -> None:
     """
     Create journal entry
     :param expense_group_id: Expense Group ID
@@ -731,7 +716,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, last_export: b
         update_last_export_details(expense_group.workspace_id)
 
 
-def create_expense_report(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_export: bool, last_export: bool = False) -> None:
     """
     Create expense report
     :param expense_group_id: Expense Group ID
@@ -914,7 +899,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, last_export: 
             create_sage_intacct_reimbursement(workspace_id=expense_group.workspace.id)
 
 
-def create_bill(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, last_export: bool = False) -> None:
     """
     Create bill
     :param expense_group_id: Expense Group ID
@@ -1084,7 +1069,7 @@ def create_bill(expense_group_id: int, task_log_id: int, last_export: bool, is_a
             create_ap_payment(workspace_id=expense_group.workspace.id)
 
 
-def create_charge_card_transaction(expense_group_id: int, task_log_id: int, last_export: bool, is_auto_export: bool) -> None:
+def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_auto_export: bool, last_export: bool = False) -> None:
     """
     Create charge card transaction
     :param expense_group_id: Expense Group ID
