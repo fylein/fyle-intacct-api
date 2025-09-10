@@ -38,14 +38,17 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], run_in_ra
         task_executor.run(chain_tasks, workspace_id)
     else:
         chunk_size = 30
-        logger.info('Breaking chain of %s tasks into chunks of %s for workspace %s', len(chain_tasks), chunk_size, workspace_id)
+
+        if len(chain_tasks) > chunk_size:
+            logger.info('Breaking chain of %s tasks into chunks of %s for workspace %s', len(chain_tasks), chunk_size, workspace_id)
 
         for i in range(0, len(chain_tasks), chunk_size):
             chunk = chain_tasks[i:i + chunk_size]
             chunk_number = (i // chunk_size) + 1
             total_chunks = (len(chain_tasks) + chunk_size - 1) // chunk_size
 
-            logger.info('Processing chunk %s of %s with %s tasks for workspace %s', chunk_number, total_chunks, len(chunk), workspace_id)
+            if len(chain_tasks) > chunk_size:
+                logger.info('Processing chunk %s of %s with %s tasks for workspace %s', chunk_number, total_chunks, len(chunk), workspace_id)
 
             chain = Chain()
             # Only add sync_dimensions for the first chunk
