@@ -16,6 +16,12 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     :param workspace_id: Workspace Id
     :return: Last Export Detail
     """
+    is_task_processing = TaskLog.objects.filter(workspace_id=workspace_id, status__in=['IN_PROGRESS', 'ENQUEUED']).exists()
+    if is_task_processing:
+        logger.info(f"Task is processing for workspace id {workspace_id}, so skipping the update of last export details")
+        return
+
+    logger.info(f"Updating last export details for workspace id {workspace_id}")
     last_export_detail = LastExportDetail.objects.get(workspace_id=workspace_id)
 
     failed_exports = TaskLog.objects.filter(
