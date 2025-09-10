@@ -53,10 +53,10 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], run_in_ra
                 chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
 
             for j, task in enumerate(chunk):
-                # Remove is_auto_export from the args
+                # Remove last_export from the args
                 args = list(task.args[:-1])
 
-                # Add is_auto_export to the args for final task in chunk, each chunk is gonna have
+                # Add last_export to the args for final task in chunk, each chunk is gonna have
                 if j == len(chunk) - 1:
                     args.append(True)
                 chain.append(task.target, *args)
