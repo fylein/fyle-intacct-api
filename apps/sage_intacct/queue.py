@@ -9,13 +9,14 @@ from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_library.rabbitmq.data_class import Task
 from fyle_accounting_library.rabbitmq.helpers import TaskChainRunner
 
-from apps.tasks.models import TaskLog, Error
+from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
 from apps.fyle.helpers import check_interval_and_sync_dimension
 from apps.fyle.models import ExpenseGroup
-from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
-from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
 from apps.sage_intacct.actions import update_last_export_details
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.models import Configuration
+
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
@@ -36,13 +37,34 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], run_in_ra
         task_executor = TaskChainRunner()
         task_executor.run(chain_tasks, workspace_id)
     else:
-        chain = Chain()
-        chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
+        chunk_size = 30
 
-        for task in chain_tasks:
-            chain.append(task.target, *task.args)
+        if len(chain_tasks) > chunk_size:
+            logger.info('Breaking chain of %s tasks into chunks of %s for workspace %s', len(chain_tasks), chunk_size, workspace_id)
 
-        chain.run()
+        for i in range(0, len(chain_tasks), chunk_size):
+            chunk = chain_tasks[i:i + chunk_size]
+            chunk_number = (i // chunk_size) + 1
+            total_chunks = (len(chain_tasks) + chunk_size - 1) // chunk_size
+
+            if len(chain_tasks) > chunk_size:
+                logger.info('Processing chunk %s of %s with %s tasks for workspace %s', chunk_number, total_chunks, len(chunk), workspace_id)
+
+            chain = Chain()
+            # Only add sync_dimensions for the first chunk
+            if i == 0:
+                chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
+
+            for j, task in enumerate(chunk):
+                # Remove last_export from the args
+                args = list(task.args[:-1])
+
+                # Add last_export to the args for final task in chunk, each chunk is gonna have
+                if j == len(chunk) - 1:
+                    args.append(True)
+                chain.append(task.target, *args)
+
+            chain.run()
 
 
 def handle_skipped_exports(expense_groups: List[ExpenseGroup], index: int, skip_export_count: int, expense_group: ExpenseGroup, triggered_by: ExpenseImportSourceEnum) -> int:
@@ -122,7 +144,7 @@ def schedule_journal_entries_creation(
 
             chain_tasks.append(Task(
                 target='apps.sage_intacct.tasks.create_journal_entry',
-                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+                args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
 
         if len(chain_tasks) > 0:
@@ -194,7 +216,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
 
             chain_tasks.append(Task(
                 target='apps.sage_intacct.tasks.create_expense_report',
-                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+                args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
 
         if len(chain_tasks) > 0:
@@ -253,7 +275,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
 
             chain_tasks.append(Task(
                 target='apps.sage_intacct.tasks.create_bill',
-                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+                args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
 
         if len(chain_tasks) > 0:
@@ -313,7 +335,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
 
             chain_tasks.append(Task(
                 target='apps.sage_intacct.tasks.create_charge_card_transaction',
-                args=[expense_group.id, task_log.id, (expense_groups.count() == index + 1), is_auto_export]
+                args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
 
         if len(chain_tasks) > 0:
