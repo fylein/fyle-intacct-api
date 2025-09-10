@@ -15,7 +15,7 @@ def test_run_post_configration_triggers(db):
     assert general_settings.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
 
 
-def test_run_post_configration_triggers_auto_map_employees_update(db):
+def test_run_post_configration_triggers_auto_map_employees_update(db, add_fyle_credentials):
     """
     Test the signal branch that updates auto_map_employees to 'NAME'
     """

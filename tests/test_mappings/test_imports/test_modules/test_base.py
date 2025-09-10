@@ -1,27 +1,21 @@
 from unittest import mock
-from datetime import datetime, timezone, timedelta
+from unittest.mock import MagicMock, patch
+from datetime import datetime, timedelta, timezone
 
-from fyle_accounting_mappings.models import (
-    Mapping,
-    CategoryMapping,
-    ExpenseAttribute,
-    DestinationAttribute
-)
 from fyle_integrations_platform_connector import PlatformConnector
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute, Mapping
 
 from apps.tasks.models import Error
+from apps.mappings.constants import SYNC_METHODS
 from fyle_integrations_imports.models import ImportLog
+from fyle_integrations_imports.modules.base import Base
 from apps.sage_intacct.utils import SageIntacctConnector
 from fyle_integrations_imports.modules.projects import Project
 from fyle_integrations_imports.modules.categories import Category
 from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
-from fyle_integrations_imports.modules.base import Base
 
-from .fixtures import data as destination_attributes_data
-from .helpers import get_platform_connection
-from apps.mappings.constants import SYNC_METHODS
-
-from unittest.mock import patch, MagicMock
+from tests.test_mappings.test_imports.test_modules.helpers import get_platform_connection
+from tests.test_mappings.test_imports.test_modules.fixtures import data as destination_attributes_data
 
 
 def test_sync_destination_attributes(mocker, db):
@@ -142,7 +136,7 @@ def test_construct_attributes_filter(db):
     paginated_destination_attribute_values = ['Mobile App Redesign', 'Platform APIs', 'Fyle NetSuite Integration', 'Fyle Sage Intacct Integration', 'Support Taxes', 'T&M Project with Five Tasks', 'Fixed Fee Project with Five Tasks', 'General Overhead', 'General Overhead-Current', 'Youtube proj', 'Integrations', 'Yujiro', 'Pickle']
 
     base = Base(1, 'COST_CENTER', 'COST_CENTER', 'cost_centers', sync_after, mock.Mock(), [SYNC_METHODS['PROJECT']])
-    assert base.construct_attributes_filter('COST_CENTER', paginated_destination_attribute_values=paginated_destination_attribute_values, is_destination_type=True, is_auto_sync_enabled=True) == {'attribute_type': 'COST_CENTER', 'workspace_id': 1, 'updated_at__gte': sync_after, 'value__in': paginated_destination_attribute_values}
+    assert base.construct_attributes_filter('COST_CENTER', paginated_destination_attribute_values=paginated_destination_attribute_values, is_destination_type=True, is_auto_sync_enabled=True) == {'attribute_type': 'COST_CENTER', 'workspace_id': 1, 'updated_at__gte': sync_after, 'value_lower__in': [value.lower() for value in paginated_destination_attribute_values]}
 
 
 def test_auto_create_destination_attributes(mocker, db):

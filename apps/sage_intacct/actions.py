@@ -1,36 +1,13 @@
 import logging
 
-from django.conf import settings
 from django.db.models import Q
 from django.utils.module_loading import import_string
 
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import FyleCredential, LastExportDetail
+from apps.workspaces.models import LastExportDetail
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
-
-
-def patch_integration_settings(workspace_id: int, errors: int = None, is_token_expired: bool = None) -> None:
-    """
-    Patch integration settings
-    """
-    refresh_token = FyleCredential.objects.get(workspace_id=workspace_id).refresh_token
-    url = '{}/integrations/'.format(settings.INTEGRATIONS_SETTINGS_API)
-    payload = {
-        'tpa_name': 'Fyle Sage Intacct Integration'
-    }
-
-    if errors is not None:
-        payload['errors_count'] = errors
-
-    if is_token_expired is not None:
-        payload['is_token_expired'] = is_token_expired
-
-    try:
-        import_string('apps.fyle.helpers.patch_request')(url, payload, refresh_token)
-    except Exception as error:
-        logger.error(error, exc_info=True)
 
 
 def update_last_export_details(workspace_id: int) -> LastExportDetail:
@@ -60,7 +37,7 @@ def update_last_export_details(workspace_id: int) -> LastExportDetail:
     last_export_detail.total_expense_groups_count = failed_exports + successful_exports
     last_export_detail.save()
 
-    patch_integration_settings(workspace_id, errors=failed_exports)
+    import_string('apps.workspaces.tasks.patch_integration_settings')(workspace_id, errors=failed_exports)
     try:
         import_string('apps.fyle.actions.post_accounting_export_summary')(workspace_id=workspace_id)
     except Exception as e:
