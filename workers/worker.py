@@ -22,9 +22,9 @@ from workers.helpers import get_routing_key
 logger = logging.getLogger('workers')
 
 
-class ExportWorker(EventConsumer):
+class Worker(EventConsumer):
     """
-    Export Worker
+    Generic Worker
     """
     def __init__(self, *, qconnector_cls: RabbitMQConnector, **kwargs):
         """
@@ -90,7 +90,7 @@ def consume(queue_name: str) -> None:
 
     rabbitmq_url = os.environ.get('RABBITMQ_URL')
 
-    export_worker = ExportWorker(
+    worker = Worker(
         rabbitmq_url=rabbitmq_url,
         rabbitmq_exchange=RabbitMQExchangeEnum.INTACCT_EXCHANGE,
         queue_name=queue_name,
@@ -99,11 +99,11 @@ def consume(queue_name: str) -> None:
         event_cls=BaseEvent
     )
 
-    signal.signal(signal.SIGTERM, export_worker.shutdown)
-    signal.signal(signal.SIGINT, export_worker.shutdown)
+    signal.signal(signal.SIGTERM, worker.shutdown)
+    signal.signal(signal.SIGINT, worker.shutdown)
 
-    export_worker.connect()
-    export_worker.start_consuming()
+    worker.connect()
+    worker.start_consuming()
 
 
 if __name__ == "__main__":
