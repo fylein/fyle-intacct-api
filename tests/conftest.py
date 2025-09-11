@@ -1,14 +1,15 @@
-from datetime import datetime, timezone
 from unittest import mock
+from datetime import datetime, timezone
 
 import pytest
 from fyle.platform import Platform
-from fyle_rest_auth.models import AuthToken, User
 from rest_framework.test import APIClient
+from fyle_rest_auth.models import AuthToken, User
 
 from fyle_intacct_api.tests import settings
 from fyle_intacct_api.utils import get_access_token
 from tests.test_fyle.fixtures import data as fyle_data
+from apps.workspaces.models import FeatureConfig, Workspace
 
 
 @pytest.fixture
@@ -105,8 +106,6 @@ def setup_feature_config(db):
     """
     Setup FeatureConfig for workspace_id=1 that many tests use
     """
-    from apps.workspaces.models import FeatureConfig, Workspace
-    
     # Ensure workspace with id=1 exists (it should from SQL fixtures)
     workspace, _ = Workspace.objects.get_or_create(
         id=1,
@@ -115,7 +114,7 @@ def setup_feature_config(db):
             'fyle_org_id': 'or79Cob97KSh'
         }
     )
-    
+
     # Create FeatureConfig for workspace_id=1 if it doesn't exist
     FeatureConfig.objects.get_or_create(
         workspace=workspace,
