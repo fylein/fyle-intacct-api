@@ -9,12 +9,10 @@ from apps.fyle.views import (
     CustomFieldView,
     ExpenseGroupView,
     ExpenseFilterView,
-    ExpenseGroupByIdView,
     ExpenseGroupSyncView,
     SyncFyleDimensionView,
     ExpenseGroupCountView,
     ExpenseAttributesView,
-    ExpenseGroupExpenseView,
     ExpenseGroupSettingsView,
     RefreshFyleDimensionView,
     DependentFieldSettingView,
@@ -26,8 +24,6 @@ expense_groups_paths = [
     path('exportable_expense_groups/', ExportableExpenseGroupsView.as_view(), name='exportable-expense-groups'),
     path('expense_groups/count/', ExpenseGroupCountView.as_view()),
     path('expense_groups/sync/', ExpenseGroupSyncView.as_view(), name='sync-expense-groups'),
-    path('expense_groups/<int:pk>/', ExpenseGroupByIdView.as_view()),
-    path('expense_groups/<int:expense_group_id>/expenses/', ExpenseGroupExpenseView.as_view()),
     path('expense_group_settings/', ExpenseGroupSettingsView.as_view()),
     path('exports/', ExportView.as_view(), name='exports')
 ]

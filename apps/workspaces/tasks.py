@@ -170,7 +170,7 @@ def run_sync_schedule(workspace_id: int) -> None:
                         'run_in_rabbitmq_worker': True
                     }
                 }
-                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
+                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
             else:
                 export_to_intacct(
                     workspace_id,

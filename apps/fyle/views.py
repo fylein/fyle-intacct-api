@@ -41,7 +41,6 @@ from apps.fyle.serializers import (
     ExpenseFieldSerializer,
     ExpenseGroupSerializer,
     ExpenseFilterSerializer,
-    ExpenseGroupExpenseSerializer,
     ExpenseGroupSettingsSerializer,
     DependentFieldSettingSerializer
 )
@@ -101,42 +100,6 @@ class ExpenseGroupCountView(generics.ListAPIView):
             data={'count': expense_groups_count},
             status=status.HTTP_200_OK
         )
-
-
-class ExpenseGroupByIdView(generics.RetrieveAPIView):
-    """
-    Expense Group by Id view
-    """
-    serializer_class = ExpenseGroupSerializer
-    queryset = ExpenseGroup.objects.all()
-
-
-class ExpenseGroupExpenseView(generics.RetrieveAPIView):
-    """
-    Expense view
-    """
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get expenses
-        """
-        try:
-            expense_group = ExpenseGroup.objects.get(
-                workspace_id=kwargs['workspace_id'], pk=kwargs['expense_group_id']
-            )
-            expenses = Expense.objects.filter(
-                id__in=expense_group.expenses.values_list('id', flat=True)).order_by('-updated_at')
-            return Response(
-                data=ExpenseGroupExpenseSerializer(expenses, many=True).data,
-                status=status.HTTP_200_OK
-            )
-
-        except ExpenseGroup.DoesNotExist:
-            return Response(
-                data={
-                    'message': 'Expense group not found'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
 
 class ExpenseGroupSettingsView(generics.ListCreateAPIView):

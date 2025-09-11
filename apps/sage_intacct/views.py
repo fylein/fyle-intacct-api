@@ -87,28 +87,6 @@ class PaginatedDestinationAttributesView(generics.ListAPIView):
         return DestinationAttribute.objects.filter(**params).order_by('value')
 
 
-class DestinationAttributesCountView(generics.RetrieveAPIView):
-    """
-    Destination Attributes Count view
-    """
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get Destination Attributes Count
-        """
-        attribute_type = self.request.query_params.get('attribute_type')
-
-        attribute_count = DestinationAttribute.objects.filter(
-            attribute_type=attribute_type, workspace_id=self.kwargs['workspace_id']
-        ).count()
-
-        return Response(
-            data={
-                'count': attribute_count
-            },
-            status=status.HTTP_200_OK
-        )
-
-
 class SageIntacctFieldsView(generics.ListAPIView):
     """
     Sage Intacct Fields View
@@ -221,18 +199,16 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
 
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
-            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
 
             # If only specified dimensions are to be synced, sync them synchronously
             if dimensions_to_sync:
-                sync_dimensions(sage_intacct_credentials, workspace.id, dimensions_to_sync)
+                sync_dimensions(workspace.id, dimensions_to_sync)
             else:
                 payload = {
                     'workspace_id': workspace.id,
                     'action': WorkerActionEnum.SYNC_SAGE_INTACCT_DIMENSION.value,
                     'data': {
-                        'workspace_id': workspace.id,
-                        'si_credentials': sage_intacct_credentials
+                        'workspace_id': workspace.id
                     }
                 }
                 publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
@@ -250,7 +226,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         except InvalidTokenError:
-            invalidate_sage_intacct_credentials(workspace.id, sage_intacct_credentials)
+            invalidate_sage_intacct_credentials(workspace.id)
             logger.info('Invalid Sage Intact Token for workspace_id - %s', kwargs['workspace_id'])
             return Response(
                 data={
