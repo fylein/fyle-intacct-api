@@ -355,7 +355,7 @@ def test_handle_fund_source_changes_for_expense_ids(mocker, db):
     )
 
     handle_fund_source_changes_for_expense_ids(
-        workspace_id=workspace_id, 
+        workspace_id=workspace_id,
         changed_expense_ids=changed_expense_ids,
         report_id=report_id,
         affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids, 'CCC': []},
@@ -388,8 +388,8 @@ def test_process_expense_group_enqueued_status(mocker, db):
     )
 
     process_expense_group_for_fund_source_update(
-        expense_group=expense_group, 
-        changed_expense_ids=changed_expense_ids, 
+        expense_group=expense_group,
+        changed_expense_ids=changed_expense_ids,
         workspace_id=workspace_id,
         report_id='rp1s1L3QtMpF',
         affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
@@ -422,8 +422,8 @@ def test_process_expense_group_in_progress_status(mocker, db):
     )
 
     process_expense_group_for_fund_source_update(
-        expense_group=expense_group, 
-        changed_expense_ids=changed_expense_ids, 
+        expense_group=expense_group,
+        changed_expense_ids=changed_expense_ids,
         workspace_id=workspace_id,
         report_id='rp1s1L3QtMpF',
         affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
@@ -456,8 +456,8 @@ def test_process_expense_group_complete_status(mocker, db):
     )
 
     process_expense_group_for_fund_source_update(
-        expense_group=expense_group, 
-        changed_expense_ids=changed_expense_ids, 
+        expense_group=expense_group,
+        changed_expense_ids=changed_expense_ids,
         workspace_id=workspace_id,
         report_id='rp1s1L3QtMpF',
         affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
@@ -483,8 +483,8 @@ def test_process_expense_group_no_task_log(mocker, db):
     )
 
     process_expense_group_for_fund_source_update(
-        expense_group=expense_group, 
-        changed_expense_ids=changed_expense_ids, 
+        expense_group=expense_group,
+        changed_expense_ids=changed_expense_ids,
         workspace_id=workspace_id,
         report_id='rp1s1L3QtMpF',
         affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
@@ -667,7 +667,6 @@ def test_schedule_task_existing_schedule(mocker, db):
     # Generate the same task name that the function will generate
     hashed_name = hashlib.md5(str(changed_expense_ids).encode('utf-8')).hexdigest()[0:6]
     task_name = f'fund_source_change_retry_{hashed_name}_{workspace_id}'
-    
     existing_schedule = Schedule.objects.create(
         func='apps.fyle.tasks.handle_fund_source_changes_for_expense_ids',
         name=task_name,
@@ -681,7 +680,6 @@ def test_schedule_task_existing_schedule(mocker, db):
 
     expense = expense_group.expenses.first()
     report_id = expense.report_id
-    
     schedule_task_for_expense_group_fund_source_change(
         changed_expense_ids=changed_expense_ids,
         workspace_id=workspace_id,
@@ -691,14 +689,6 @@ def test_schedule_task_existing_schedule(mocker, db):
 
     assert mock_schedule.call_count == 0
     existing_schedule.delete()
-
-
-
-
-
-
-
-
 
 
 def test_cleanup_scheduled_task_exists(mocker, db):
@@ -717,4 +707,3 @@ def test_cleanup_scheduled_task_exists(mocker, db):
     cleanup_scheduled_task(task_name=task_name, workspace_id=workspace_id)
 
     assert not Schedule.objects.filter(id=schedule_obj.id).exists()
-
