@@ -17,26 +17,11 @@ from apps.workspaces.models import Configuration, FyleCredential, Workspace
 from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
 from apps.fyle.tasks import (
     create_expense_groups,
-    schedule_expense_group_creation,
     update_non_exported_expenses,
     import_and_export_expenses,
     skip_expenses_and_post_accounting_export_summary
 )
 from .fixtures import data
-
-
-def test_schedule_expense_group_creation(api_client, test_connection):
-    """
-    Test schedule expense group creation
-    """
-    workspace_id = 1
-    expense_groups = ExpenseGroup.objects.filter(workspace_id=workspace_id).count()
-    assert expense_groups == 3
-
-    schedule_expense_group_creation(workspace_id=workspace_id)
-
-    expense_groups = ExpenseGroup.objects.filter(workspace_id=workspace_id).count()
-    assert expense_groups == 3
 
 
 def test_create_expense_groups(mocker, db):

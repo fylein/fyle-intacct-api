@@ -12,9 +12,9 @@ from apps.workspaces.models import (
     WorkspaceSchedule,
 )
 from apps.workspaces.tasks import (
-    async_create_admin_subcriptions,
+    create_admin_subscriptions,
     async_update_fyle_credentials,
-    async_update_workspace_name,
+    update_workspace_name,
     patch_integration_settings,
     patch_integration_settings_for_unmapped_cards,
     post_to_integration_settings,
@@ -299,7 +299,7 @@ def test_async_update_fyle_credentials(db):
     assert fyle_credentials.refresh_token == refresh_token
 
 
-def test_async_create_admin_subcriptions(db, mocker):
+def test_create_admin_subscriptions(db, mocker):
     """
     Test async create admin subscriptions
     """
@@ -307,7 +307,7 @@ def test_async_create_admin_subcriptions(db, mocker):
         'fyle.platform.apis.v1.admin.Subscriptions.post',
         return_value={}
     )
-    async_create_admin_subcriptions(1)
+    create_admin_subscriptions(1)
 
 
 @pytest.mark.django_db(databases=['default'])
@@ -336,7 +336,7 @@ def test_async_update_workspace_name(db, mocker):
         return_value={'data': {'org': {'name': 'Test Org'}}}
     )
     workspace = Workspace.objects.get(id=1)
-    async_update_workspace_name(workspace, 'Bearer access_token')
+    update_workspace_name(workspace, 'Bearer access_token')
 
     workspace = Workspace.objects.get(id=1)
     assert workspace.name == 'Test Org'

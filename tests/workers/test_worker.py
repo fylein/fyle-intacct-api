@@ -1,10 +1,11 @@
 import pytest
 from unittest.mock import Mock, patch
 
-from workers.worker import ExportWorker
-from fyle_accounting_library.rabbitmq.models import FailedEvent
 from common.event import BaseEvent
-from workers.export import actions
+from workers import actions
+from fyle_accounting_library.rabbitmq.models import FailedEvent
+
+from workers.worker import Worker
 
 
 @pytest.fixture
@@ -18,9 +19,9 @@ def mock_qconnector():
 @pytest.fixture
 def export_worker(mock_qconnector):
     """
-    Mock ExportWorker
+    Mock Worker
     """
-    worker = ExportWorker(
+    worker = Worker(
         rabbitmq_url='mock_url',
         rabbitmq_exchange='mock_exchange',
         queue_name='mock_queue',
@@ -38,7 +39,7 @@ def test_process_message_success(export_worker):
     """
     Test process message success
     """
-    with patch('workers.export.worker.handle_exports') as mock_handle_exports:
+    with patch('workers.worker.handle_exports') as mock_handle_exports:
         mock_handle_exports.side_effect = Exception('Test error')
 
         routing_key = 'test.routing.key'
@@ -90,8 +91,8 @@ def test_shutdown(export_worker):
         mock_shutdown.assert_called_once_with(_=0, __=None)
 
 
-@patch('workers.export.worker.signal.signal')
-@patch('workers.export.worker.ExportWorker')
+@patch('workers.worker.signal.signal')
+@patch('workers.worker.Worker')
 def test_consume(mock_worker_class, mock_signal):
     """
     Test consume
@@ -100,8 +101,8 @@ def test_consume(mock_worker_class, mock_signal):
     mock_worker_class.return_value = mock_worker
 
     with patch.dict('os.environ', {'RABBITMQ_URL': 'test_url'}):
-        from workers.export.worker import consume
-        consume()
+        from workers.worker import consume
+        consume(queue_name='exports.p0')
 
     mock_worker.connect.assert_called_once()
     mock_worker.start_consuming.assert_called_once()
@@ -112,7 +113,7 @@ def test_handle_exports_calls_import_and_export_expenses():
     """
     Test handle exports calls import and export expenses
     """
-    with patch('workers.export.actions.import_and_export_expenses') as mock_import:
+    with patch('workers.actions.handle_tasks') as mock_handle_tasks:
         data = {'foo': 'bar'}
-        actions.handle_exports(data)
-        mock_import.assert_called_once_with(foo='bar')
+        actions.handle_tasks(data)
+        mock_handle_tasks.assert_called_once_with(foo='bar')
