@@ -1,8 +1,8 @@
+from django.db import models
+from django_q.models import Schedule
+from django.db.models import JSONField
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
-from django.db import models
-from django.db.models import JSONField
-from django_q.models import Schedule
 from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
 
 User = get_user_model()
@@ -37,38 +37,6 @@ CODE_IMPORT_FIELD_CHOICES = (
 )
 
 
-def get_default_onboarding_state() -> str:
-    """
-    Default onboarding state
-    """
-    return 'CONNECTION'
-
-
-class Workspace(models.Model):
-    """
-    Workspace model
-    """
-    id = models.AutoField(primary_key=True, help_text='Unique Id to identify a workspace')
-    name = models.CharField(max_length=255, help_text='Name of the workspace')
-    user = models.ManyToManyField(User, help_text='Reference to users table')
-    fyle_org_id = models.CharField(max_length=255, help_text='org id', unique=True)
-    cluster_domain = models.CharField(max_length=255, help_text='Cluster Domain', null=True)
-    last_synced_at = models.DateTimeField(help_text='Datetime when expenses were pulled last', null=True)
-    ccc_last_synced_at = models.DateTimeField(help_text='Datetime when ccc expenses were pulled last', null=True)
-    source_synced_at = models.DateTimeField(help_text='Datetime when source dimensions were pulled', null=True)
-    destination_synced_at = models.DateTimeField(help_text='Datetime when destination dimensions were pulled', null=True)
-    app_version = models.CharField(max_length=2, help_text='App version', default='v1', choices=APP_VERSION_CHOICES)
-    onboarding_state = models.CharField(
-        max_length=50, choices=ONBOARDING_STATE_CHOICES, default=get_default_onboarding_state,
-        help_text='Onboarding status of the workspace', null=True
-    )
-    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
-    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
-
-    class Meta:
-        db_table = 'workspaces'
-
-
 REIMBURSABLE_EXPENSES_OBJECT_CHOICES = (
     ('EXPENSE_REPORT', 'EXPENSE_REPORT'),
     ('BILL', 'BILL'),
@@ -94,11 +62,43 @@ EMPLOYEE_FIELD_MAPPING_CHOICES = (
 )
 
 
+def get_default_onboarding_state() -> str:
+    """
+    Default onboarding state
+    """
+    return 'CONNECTION'
+
+
 def get_default_memo_fields() -> list:
     """
     Default memo fields
     """
     return ['employee_email', 'category', 'spent_on', 'report_number', 'purpose', 'expense_link']
+
+
+class Workspace(models.Model):
+    """
+    Workspace model
+    """
+    id = models.AutoField(primary_key=True, help_text='Unique Id to identify a workspace')
+    name = models.CharField(max_length=255, help_text='Name of the workspace')
+    user = models.ManyToManyField(User, help_text='Reference to users table')
+    fyle_org_id = models.CharField(max_length=255, help_text='org id', unique=True)
+    cluster_domain = models.CharField(max_length=255, help_text='Cluster Domain', null=True)
+    last_synced_at = models.DateTimeField(help_text='Datetime when expenses were pulled last', null=True)
+    ccc_last_synced_at = models.DateTimeField(help_text='Datetime when ccc expenses were pulled last', null=True)
+    source_synced_at = models.DateTimeField(help_text='Datetime when source dimensions were pulled', null=True)
+    destination_synced_at = models.DateTimeField(help_text='Datetime when destination dimensions were pulled', null=True)
+    app_version = models.CharField(max_length=2, help_text='App version', default='v1', choices=APP_VERSION_CHOICES)
+    onboarding_state = models.CharField(
+        max_length=50, choices=ONBOARDING_STATE_CHOICES, default=get_default_onboarding_state,
+        help_text='Onboarding status of the workspace', null=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'workspaces'
 
 
 class Configuration(AutoAddCreateUpdateInfoMixin, models.Model):
@@ -248,3 +248,18 @@ class LastExportDetail(models.Model):
 
     class Meta:
         db_table = 'last_export_details'
+
+
+class FeatureConfig(models.Model):
+    """
+    Table to store Feature configs
+    """
+    id = models.AutoField(primary_key=True)
+    workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    export_via_rabbitmq = models.BooleanField(default=False, help_text='Enable export via rabbitmq')
+    import_via_rabbitmq = models.BooleanField(default=False, help_text='Enable import via rabbitmq')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'feature_configs'

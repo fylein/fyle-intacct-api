@@ -2,42 +2,42 @@ import logging
 import traceback
 from datetime import datetime
 
-from django.db import transaction
-from django_q.tasks import async_task
 from django.db.models import Q
+from django.db import transaction
+
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_integrations_platform_connector.apis.expenses import Expenses as FyleExpenses
-from fyle.platform.exceptions import (
-    NoPrivilegeError,
-    RetryException,
-    InternalServerError,
-    InvalidTokenError
-)
-from fyle_accounting_library.fyle_platform.branding import feature_configuration
-from fyle_accounting_library.fyle_platform.helpers import get_expense_import_states, filter_expenses_based_on_state
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_library.fyle_platform.branding import feature_configuration
+from fyle_integrations_platform_connector.apis.expenses import Expenses as FyleExpenses
+from fyle_accounting_library.fyle_platform.helpers import get_expense_import_states, filter_expenses_based_on_state
+from fyle.platform.exceptions import (
+    RetryException,
+    NoPrivilegeError,
+    InvalidTokenError,
+    InternalServerError
+)
 
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.models import (
     LastExportDetail,
     Workspace,
-    FyleCredential,
     Configuration,
+    FyleCredential,
     WorkspaceSchedule
 )
 from apps.fyle.models import (
     Expense,
-    ExpenseFilter,
     ExpenseGroup,
+    ExpenseFilter,
     ExpenseGroupSettings
 )
 from apps.fyle.helpers import (
     get_fund_source,
     get_source_account_type,
     handle_import_exception,
-    construct_expense_filter_query,
-    update_task_log_post_import
+    update_task_log_post_import,
+    construct_expense_filter_query
 )
 from apps.fyle.actions import (
     mark_expenses_as_skipped,
@@ -76,17 +76,6 @@ def get_task_log_and_fund_source(workspace_id: int) -> tuple[TaskLog, list[str]]
         fund_source.append('CCC')
 
     return task_log, fund_source
-
-
-def schedule_expense_group_creation(workspace_id: int) -> None:
-    """
-    Schedule Expense group creation
-    :param workspace_id: Workspace id
-    :return: None
-    """
-    task_log, fund_source = get_task_log_and_fund_source(workspace_id)
-
-    async_task('apps.fyle.tasks.create_expense_groups', workspace_id, fund_source, task_log)
 
 
 def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: TaskLog | None, imported_from: ExpenseImportSourceEnum) -> None:
@@ -311,7 +300,12 @@ def import_and_export_expenses(report_id: str, org_id: str, is_state_change_even
                     return
 
             logger.info(f'Exporting expenses for workspace {workspace.id} with expense group ids {expense_group_ids}, triggered by {imported_from}')
-            export_to_intacct(workspace_id=workspace.id, expense_group_ids=expense_group_ids, triggered_by=imported_from)
+            export_to_intacct(
+                workspace_id=workspace.id,
+                expense_group_ids=expense_group_ids,
+                triggered_by=imported_from,
+                run_in_rabbitmq_worker=True
+            )
 
     except Configuration.DoesNotExist:
         logger.info('Configuration does not exist for workspace_id: %s', workspace.id)

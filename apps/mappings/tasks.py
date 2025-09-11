@@ -1,25 +1,32 @@
 import logging
 from datetime import datetime, timezone
 
-from django.utils.module_loading import import_string
 from django_q.models import Schedule
-from fyle.platform.exceptions import InternalServerError
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
-from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
-from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, MappingSetting
-from fyle_integrations_platform_connector import PlatformConnector
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
+from django.utils.module_loading import import_string
 
-from apps.fyle.models import DependentFieldSetting
-from apps.mappings.constants import SYNC_METHODS
-from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.utils import SageIntacctConnector
+from fyle.platform.exceptions import InternalServerError
+from fyle_integrations_platform_connector import PlatformConnector
+from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
+from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, MappingSetting
+
 from apps.tasks.models import Error
-from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from fyle_integrations_imports.dataclasses import TaskSetting
+from apps.mappings.models import GeneralMapping
+from apps.mappings.constants import SYNC_METHODS
+from apps.fyle.models import DependentFieldSetting
 from fyle_integrations_imports.models import ImportLog
+from apps.sage_intacct.utils import SageIntacctConnector
+from fyle_integrations_imports.dataclasses import TaskSetting
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from fyle_integrations_imports.queues import chain_import_fields_to_fyle
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.workspaces.models import (
+    Configuration,
+    FeatureConfig,
+    FyleCredential,
+    SageIntacctCredential
+)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -267,7 +274,31 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
 
 def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
     """
-    Chain import fields to Fyle
+    Initiate the Import of dimensions to Fyle
+    :param workspace_id: Workspace Id
+    :return: None
+
+    Schedule will hit this func, if we want to process things via worker,
+    we can publish to rabbitmq else chain it as usual.
+    """
+    feature_configs = FeatureConfig.objects.get(workspace_id=workspace_id)
+    if feature_configs.import_via_rabbitmq:
+        payload = {
+            'workspace_id': workspace_id,
+            'action': WorkerActionEnum.IMPORT_DIMENSIONS_TO_FYLE.value,
+            'data': {
+                'workspace_id': workspace_id,
+                'run_in_rabbitmq_worker': True
+            }
+        }
+        publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
+    else:
+        initiate_import_to_fyle(workspace_id=workspace_id)
+
+
+def initiate_import_to_fyle(workspace_id: int, run_in_rabbitmq_worker: bool = False) -> None:
+    """
+    Initiate import fields to Fyle
     :param workspace_id: Workspace Id
     :return: None
     """
@@ -369,7 +400,11 @@ def construct_tasks_and_chain_import_fields_to_fyle(workspace_id: int) -> None:
             }
         }
 
-    chain_import_fields_to_fyle(workspace_id, task_settings)
+    chain_import_fields_to_fyle(
+        workspace_id=workspace_id,
+        task_settings=task_settings,
+        run_in_rabbitmq_worker=run_in_rabbitmq_worker
+    )
 
 
 def check_and_create_ccc_mappings(workspace_id: int) -> None:

@@ -1,19 +1,17 @@
 import logging
 
-from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
-
-from django_q.tasks import async_task
+from django.db.models.signals import pre_save, post_save
 
 from fyle_accounting_library.fyle_platform.enums import FundSourceEnum, ExpenseImportSourceEnum, ExpenseStateEnum
 
-from apps.fyle.tasks import re_run_skip_export_rule
-from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
-
-from apps.fyle.helpers import connect_to_platform
-from apps.fyle.models import DependentFieldSetting, ExpenseFilter, ExpenseGroupSettings
 from apps.workspaces.models import Configuration
+from apps.fyle.helpers import connect_to_platform
+from apps.fyle.tasks import re_run_skip_export_rule
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
+from apps.fyle.models import DependentFieldSetting, ExpenseFilter, ExpenseGroupSettings
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -89,11 +87,30 @@ def run_pre_save_expense_group_setting_triggers(sender: type[ExpenseGroupSetting
     if existing_expense_group_setting:
         configuration = Configuration.objects.filter(workspace_id=instance.workspace_id).first()
         if configuration:
-            # TODO: move these async_tasks to maintenance worker later
             if configuration.reimbursable_expenses_object and existing_expense_group_setting.expense_state != instance.expense_state and existing_expense_group_setting.expense_state == ExpenseStateEnum.PAID and instance.expense_state == ExpenseStateEnum.PAYMENT_PROCESSING:
                 logger.info(f'Reimbursable expense state changed from {existing_expense_group_setting.expense_state} to {instance.expense_state} for workspace {instance.workspace_id}, so pulling the data from Fyle')
-                async_task('apps.fyle.tasks.create_expense_groups', workspace_id=instance.workspace_id, fund_source=[FundSourceEnum.PERSONAL], task_log=None, imported_from=ExpenseImportSourceEnum.CONFIGURATION_UPDATE)
+                payload = {
+                    'workspace_id': instance.workspace_id,
+                    'action': WorkerActionEnum.CREATE_EXPENSE_GROUP.value,
+                    'data': {
+                        'workspace_id': instance.workspace_id,
+                        'fund_source': [FundSourceEnum.PERSONAL],
+                        'task_log': None,
+                        'imported_from': ExpenseImportSourceEnum.CONFIGURATION_UPDATE
+                    }
+                }
+                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
 
             if configuration.corporate_credit_card_expenses_object and existing_expense_group_setting.ccc_expense_state != instance.ccc_expense_state and existing_expense_group_setting.ccc_expense_state == ExpenseStateEnum.PAID and instance.ccc_expense_state == ExpenseStateEnum.APPROVED:
                 logger.info(f'Corporate credit card expense state changed from {existing_expense_group_setting.ccc_expense_state} to {instance.ccc_expense_state} for workspace {instance.workspace_id}, so pulling the data from Fyle')
-                async_task('apps.fyle.tasks.create_expense_groups', workspace_id=instance.workspace_id, fund_source=[FundSourceEnum.CCC], task_log=None, imported_from=ExpenseImportSourceEnum.CONFIGURATION_UPDATE)
+                payload = {
+                    'workspace_id': instance.workspace_id,
+                    'action': WorkerActionEnum.CREATE_EXPENSE_GROUP.value,
+                    'data': {
+                        'workspace_id': instance.workspace_id,
+                        'fund_source': [FundSourceEnum.CCC],
+                        'task_log': None,
+                        'imported_from': ExpenseImportSourceEnum.CONFIGURATION_UPDATE
+                    }
+                }
+                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
