@@ -12,12 +12,11 @@ from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
 from apps.fyle.tasks import (
     cleanup_scheduled_task,
     create_expense_groups,
-    delete_and_recreate_expense_group,
+    delete_expense_group_and_related_data,
     handle_fund_source_changes_for_expense_ids,
     import_and_export_expenses,
-    process_expense_group,
+    process_expense_group_for_fund_source_update,
     recreate_expense_groups,
-    retry_fund_source_change_handling,
     schedule_expense_group_creation,
     schedule_task_for_expense_group_fund_source_change,
     skip_expenses_and_post_accounting_export_summary,
@@ -29,7 +28,7 @@ from tests.helper import dict_compare_keys
 from tests.test_fyle.fixtures import data
 
 
-def test_schedule_expense_group_creation(api_client, test_connection):
+def test_schedule_expense_group_creation(api_client, test_connection, db):
     """
     Test schedule expense group creation
     """
@@ -105,7 +104,7 @@ def test_create_expense_groups(mocker, db):
     assert mock_call.call_count == 2
 
 
-def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
+def test_create_expense_group_skipped_flow(mocker, api_client, test_connection, db):
     """
     Test create expense groups
     """
@@ -154,7 +153,7 @@ def test_create_expense_group_skipped_flow(mocker, api_client, test_connection):
                 assert expense.is_skipped == True
 
 
-def test_update_non_exported_expenses(db, create_temp_workspace, mocker, api_client):
+def test_update_non_exported_expenses(db, mocker, api_client):
     """
     Test update non exported expenses
     """
@@ -346,14 +345,22 @@ def test_handle_fund_source_changes_for_expense_ids(mocker, db):
     workspace_id = 1
 
     expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
-    changed_expense_ids = [expense_group.expenses.first().id]
+    expense = expense_group.expenses.first()
+    changed_expense_ids = [expense.id]
+    report_id = expense.report_id  # Use the actual report_id from the expense
 
     mock_process_expense_group = mocker.patch(
-        'apps.fyle.tasks.process_expense_group',
+        'apps.fyle.tasks.process_expense_group_for_fund_source_update',
         return_value=None
     )
 
-    handle_fund_source_changes_for_expense_ids(workspace_id=workspace_id, changed_expense_ids=changed_expense_ids)
+    handle_fund_source_changes_for_expense_ids(
+        workspace_id=workspace_id, 
+        changed_expense_ids=changed_expense_ids,
+        report_id=report_id,
+        affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids, 'CCC': []},
+        task_name='test_task'
+    )
 
     assert mock_process_expense_group.call_count == 1
 
@@ -380,7 +387,13 @@ def test_process_expense_group_enqueued_status(mocker, db):
         return_value=None
     )
 
-    process_expense_group(expense_group=expense_group, changed_expense_ids=changed_expense_ids, workspace_id=workspace_id)
+    process_expense_group_for_fund_source_update(
+        expense_group=expense_group, 
+        changed_expense_ids=changed_expense_ids, 
+        workspace_id=workspace_id,
+        report_id='rp1s1L3QtMpF',
+        affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
+    )
     task_log.delete()
 
     assert mock_schedule.call_count == 1
@@ -408,7 +421,13 @@ def test_process_expense_group_in_progress_status(mocker, db):
         return_value=None
     )
 
-    process_expense_group(expense_group=expense_group, changed_expense_ids=changed_expense_ids, workspace_id=workspace_id)
+    process_expense_group_for_fund_source_update(
+        expense_group=expense_group, 
+        changed_expense_ids=changed_expense_ids, 
+        workspace_id=workspace_id,
+        report_id='rp1s1L3QtMpF',
+        affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
+    )
     task_log.delete()
 
     assert mock_schedule.call_count == 1
@@ -432,11 +451,17 @@ def test_process_expense_group_complete_status(mocker, db):
     )
 
     mock_delete_recreate = mocker.patch(
-        'apps.fyle.tasks.delete_and_recreate_expense_group',
+        'apps.fyle.tasks.delete_expense_group_and_related_data',
         return_value=None
     )
 
-    process_expense_group(expense_group=expense_group, changed_expense_ids=changed_expense_ids, workspace_id=workspace_id)
+    process_expense_group_for_fund_source_update(
+        expense_group=expense_group, 
+        changed_expense_ids=changed_expense_ids, 
+        workspace_id=workspace_id,
+        report_id='rp1s1L3QtMpF',
+        affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
+    )
     task_log.delete()
 
     assert mock_delete_recreate.call_count == 0
@@ -453,11 +478,17 @@ def test_process_expense_group_no_task_log(mocker, db):
     TaskLog.objects.filter(expense_group_id=expense_group.id).delete()
 
     mock_delete_recreate = mocker.patch(
-        'apps.fyle.tasks.delete_and_recreate_expense_group',
+        'apps.fyle.tasks.delete_expense_group_and_related_data',
         return_value=None
     )
 
-    process_expense_group(expense_group=expense_group, changed_expense_ids=changed_expense_ids, workspace_id=workspace_id)
+    process_expense_group_for_fund_source_update(
+        expense_group=expense_group, 
+        changed_expense_ids=changed_expense_ids, 
+        workspace_id=workspace_id,
+        report_id='rp1s1L3QtMpF',
+        affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
+    )
 
     assert mock_delete_recreate.call_count == 1
 
@@ -496,7 +527,7 @@ def test_delete_and_recreate_expense_group(mocker, db):
         return_value=None
     )
 
-    delete_and_recreate_expense_group(expense_group=expense_group, workspace_id=workspace_id)
+    delete_expense_group_and_related_data(expense_group=expense_group, workspace_id=workspace_id)
 
     assert not ExpenseGroup.objects.filter(id=expense_group.id).exists()
     assert not TaskLog.objects.filter(id=task_log.id).exists()
@@ -525,7 +556,7 @@ def test_delete_and_recreate_expense_group_empty_mapping_error(mocker, db):
         return_value=None
     )
 
-    delete_and_recreate_expense_group(expense_group=expense_group, workspace_id=workspace_id)
+    delete_expense_group_and_related_data(expense_group=expense_group, workspace_id=workspace_id)
 
     assert not Error.objects.filter(id=error_with_mapping.id).exists()
 
@@ -612,14 +643,15 @@ def test_schedule_task_for_expense_group_fund_source_change(mocker, db):
     changed_expense_ids = [expense_group.expenses.first().id]
 
     schedule_task_for_expense_group_fund_source_change(
-        expense_group_id=expense_group.id,
         changed_expense_ids=changed_expense_ids,
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        report_id='rp1s1L3QtMpF',
+        affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
     )
 
     assert Schedule.objects.filter(
-        func='apps.fyle.tasks.retry_fund_source_change_handling',
-        name=f'fund_source_change_retry_{expense_group.id}_{workspace_id}'
+        func='apps.fyle.tasks.handle_fund_source_changes_for_expense_ids',
+        name__startswith='fund_source_change_retry_'
     ).exists() is True
 
 
@@ -627,13 +659,17 @@ def test_schedule_task_existing_schedule(mocker, db):
     """
     Test schedule task when schedule already exists
     """
+    import hashlib
     workspace_id = 1
     expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
     changed_expense_ids = [expense_group.expenses.first().id]
 
-    task_name = f'fund_source_change_retry_{expense_group.id}_{workspace_id}'
+    # Generate the same task name that the function will generate
+    hashed_name = hashlib.md5(str(changed_expense_ids).encode('utf-8')).hexdigest()[0:6]
+    task_name = f'fund_source_change_retry_{hashed_name}_{workspace_id}'
+    
     existing_schedule = Schedule.objects.create(
-        func='apps.fyle.tasks.retry_fund_source_change_handling',
+        func='apps.fyle.tasks.handle_fund_source_changes_for_expense_ids',
         name=task_name,
         args='[]'
     )
@@ -643,150 +679,26 @@ def test_schedule_task_existing_schedule(mocker, db):
         return_value=None
     )
 
+    expense = expense_group.expenses.first()
+    report_id = expense.report_id
+    
     schedule_task_for_expense_group_fund_source_change(
-        expense_group_id=expense_group.id,
         changed_expense_ids=changed_expense_ids,
-        workspace_id=workspace_id
+        workspace_id=workspace_id,
+        report_id=report_id,
+        affected_fund_source_expense_ids={'PERSONAL': changed_expense_ids}
     )
 
     assert mock_schedule.call_count == 0
     existing_schedule.delete()
 
 
-def test_retry_fund_source_change_handling_nonexistent_group(mocker, db):
-    """
-    Test retry fund source change handling when expense group doesn't exist
-    """
-    workspace_id = 1
-    nonexistent_group_id = 99999
-    changed_expense_ids = [1, 2]
-
-    mock_process = mocker.patch(
-        'apps.fyle.tasks.process_expense_group',
-        return_value=None
-    )
-
-    mock_cleanup = mocker.patch(
-        'apps.fyle.tasks.cleanup_scheduled_task',
-        return_value=None
-    )
-
-    retry_fund_source_change_handling(
-        expense_group_id=nonexistent_group_id,
-        changed_expense_ids=changed_expense_ids,
-        workspace_id=workspace_id
-    )
-
-    assert mock_process.call_count == 0
-    assert mock_cleanup.call_count == 0
 
 
-def test_retry_fund_source_change_handling_enqueued_status(mocker, db):
-    """
-    Test retry fund source change handling when task log is ENQUEUED
-    """
-    workspace_id = 1
-    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
-    changed_expense_ids = [expense_group.expenses.first().id]
-
-    TaskLog.objects.filter(expense_group_id=expense_group.id).delete()
-
-    task_log = TaskLog.objects.create(
-        workspace_id=workspace_id,
-        type='CREATING_JOURNAL_ENTRY',
-        expense_group_id=expense_group.id,
-        status='ENQUEUED'
-    )
-
-    mock_process = mocker.patch(
-        'apps.fyle.tasks.process_expense_group',
-        return_value=None
-    )
-
-    retry_fund_source_change_handling(
-        expense_group_id=expense_group.id,
-        changed_expense_ids=changed_expense_ids,
-        workspace_id=workspace_id
-    )
-
-    assert mock_process.call_count == 0
-    task_log.delete()
 
 
-def test_retry_fund_source_change_handling_complete_status(mocker, db):
-    """
-    Test retry fund source change handling when task log is COMPLETE
-    """
-    workspace_id = 1
-    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
-    changed_expense_ids = [expense_group.expenses.first().id]
-
-    TaskLog.objects.filter(expense_group_id=expense_group.id).delete()
-
-    task_log = TaskLog.objects.create(
-        workspace_id=workspace_id,
-        type='CREATING_JOURNAL_ENTRY',
-        expense_group_id=expense_group.id,
-        status='COMPLETE'
-    )
-
-    mock_cleanup = mocker.patch(
-        'apps.fyle.tasks.cleanup_scheduled_task',
-        return_value=None
-    )
-
-    mock_process = mocker.patch(
-        'apps.fyle.tasks.process_expense_group',
-        return_value=None
-    )
-
-    retry_fund_source_change_handling(
-        expense_group_id=expense_group.id,
-        changed_expense_ids=changed_expense_ids,
-        workspace_id=workspace_id
-    )
-
-    assert mock_cleanup.call_count == 1
-    assert mock_process.call_count == 0
-    task_log.delete()
 
 
-def test_retry_fund_source_change_handling_failed_status(mocker, db):
-    """
-    Test retry fund source change handling when task log is FAILED
-    """
-    workspace_id = 1
-    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id).first()
-    changed_expense_ids = [expense_group.expenses.first().id]
-
-    TaskLog.objects.filter(expense_group_id=expense_group.id).delete()
-
-    task_log = TaskLog.objects.create(
-        workspace_id=workspace_id,
-        type='CREATING_JOURNAL_ENTRY',
-        expense_group_id=expense_group.id,
-        status='FAILED'
-    )
-
-    mock_cleanup = mocker.patch(
-        'apps.fyle.tasks.cleanup_scheduled_task',
-        return_value=None
-    )
-
-    mock_process = mocker.patch(
-        'apps.fyle.tasks.process_expense_group',
-        return_value=None
-    )
-
-    retry_fund_source_change_handling(
-        expense_group_id=expense_group.id,
-        changed_expense_ids=changed_expense_ids,
-        workspace_id=workspace_id
-    )
-
-    assert mock_cleanup.call_count == 1
-    assert mock_process.call_count == 1
-    task_log.delete()
 
 
 def test_cleanup_scheduled_task_exists(mocker, db):
@@ -797,7 +709,7 @@ def test_cleanup_scheduled_task_exists(mocker, db):
     task_name = 'test_task_name'
 
     schedule_obj = Schedule.objects.create(
-        func='apps.fyle.tasks.retry_fund_source_change_handling',
+        func='apps.fyle.tasks.handle_fund_source_changes_for_expense_ids',
         name=task_name,
         args='[]'
     )
@@ -805,3 +717,4 @@ def test_cleanup_scheduled_task_exists(mocker, db):
     cleanup_scheduled_task(task_name=task_name, workspace_id=workspace_id)
 
     assert not Schedule.objects.filter(id=schedule_obj.id).exists()
+
