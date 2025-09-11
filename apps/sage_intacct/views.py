@@ -2,35 +2,26 @@ import logging
 
 from django.db.models import Q
 from django.conf import settings
-from django_q.tasks import async_task
 
 from rest_framework import generics
 from rest_framework.views import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from fyle_accounting_mappings.models import DestinationAttribute
-from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
-
 from sageintacctsdk.exceptions import InvalidTokenError
+from fyle_accounting_mappings.models import DestinationAttribute
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from apps.sage_intacct.helpers import sync_dimensions
-from apps.workspaces.actions import export_to_intacct
 from apps.sage_intacct.serializers import SageIntacctFieldSerializer
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.workspaces.models import (
     Workspace,
     Configuration,
     SageIntacctCredential
-)
-from apps.sage_intacct.tasks import (
-    create_ap_payment,
-    create_sage_intacct_reimbursement,
-    check_sage_intacct_object_status,
-    process_fyle_reimbursements
 )
 
 logger = logging.getLogger(__name__)
@@ -118,44 +109,6 @@ class DestinationAttributesCountView(generics.RetrieveAPIView):
         )
 
 
-class TriggerExportsView(generics.GenericAPIView):
-    """
-    Trigger exports creation
-    """
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Trigger exports
-        """
-        export_to_intacct(workspace_id=self.kwargs['workspace_id'], triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
-
-        return Response(
-            status=status.HTTP_200_OK
-        )
-
-
-class TriggerPaymentsView(generics.GenericAPIView):
-    """
-    Trigger payments sync
-    """
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Trigger payments sync
-        """
-        configurations = Configuration.objects.get(workspace_id=kwargs['workspace_id'])
-
-        if configurations.sync_fyle_to_sage_intacct_payments:
-            create_ap_payment(workspace_id=self.kwargs['workspace_id'])
-            create_sage_intacct_reimbursement(workspace_id=self.kwargs['workspace_id'])
-
-        elif configurations.sync_sage_intacct_to_fyle_payments:
-            check_sage_intacct_object_status(workspace_id=self.kwargs['workspace_id'])
-            process_fyle_reimbursements(workspace_id=self.kwargs['workspace_id'])
-
-        return Response(
-            status=status.HTTP_200_OK
-        )
-
-
 class SageIntacctFieldsView(generics.ListAPIView):
     """
     Sage Intacct Fields View
@@ -224,10 +177,14 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
 
-            async_task(
-                'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
-                kwargs['workspace_id'],
-            )
+            payload = {
+                'workspace_id': workspace.id,
+                'action': WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION.value,
+                'data': {
+                    'workspace_id': workspace.id
+                }
+            }
+            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
@@ -270,11 +227,15 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
             if dimensions_to_sync:
                 sync_dimensions(sage_intacct_credentials, workspace.id, dimensions_to_sync)
             else:
-                async_task(
-                    'apps.sage_intacct.helpers.sync_dimensions',
-                    sage_intacct_credentials,
-                    workspace.id
-                )
+                payload = {
+                    'workspace_id': workspace.id,
+                    'action': WorkerActionEnum.SYNC_SAGE_INTACCT_DIMENSION.value,
+                    'data': {
+                        'workspace_id': workspace.id,
+                        'si_credentials': sage_intacct_credentials
+                    }
+                }
+                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
