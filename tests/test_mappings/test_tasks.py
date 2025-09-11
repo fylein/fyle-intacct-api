@@ -8,7 +8,7 @@ from apps.mappings.tasks import (
     async_auto_map_charge_card_account,
     async_auto_map_employees,
     check_and_create_ccc_mappings,
-    construct_tasks_and_chain_import_fields_to_fyle,
+    initiate_import_to_fyle,
     resolve_expense_attribute_errors,
     schedule_auto_map_charge_card_employees,
     schedule_auto_map_employees,
@@ -316,9 +316,9 @@ def test_check_and_create_ccc_mappings(mocker, db):
     mock_bulk_create.assert_called_once_with(workspace_id)
 
 
-def test_construct_tasks_and_chain_import_fields_to_fyle_with_account_destination(mocker, db):
+def test_initiate_import_to_fyle_with_account_destination(mocker, db):
     """
-    Test construct_tasks_and_chain_import_fields_to_fyle with ACCOUNT destination field (line 328 coverage)
+    Test initiate_import_to_fyle with ACCOUNT destination field
     """
     workspace_id = 1
 
@@ -332,12 +332,16 @@ def test_construct_tasks_and_chain_import_fields_to_fyle_with_account_destinatio
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
     configuration.save()
 
-    construct_tasks_and_chain_import_fields_to_fyle(workspace_id)
+    initiate_import_to_fyle(workspace_id)
 
     mock_chain_import.assert_called_once()
 
     call_args = mock_chain_import.call_args
-    task_settings = call_args[0][1]
+
+    if call_args[0] and len(call_args[0]) > 1:
+        task_settings = call_args[0].get('task_settings')
+    else:
+        task_settings = call_args.kwargs.get('task_settings', {})
 
     assert 'import_categories' in task_settings
     import_categories = task_settings['import_categories']

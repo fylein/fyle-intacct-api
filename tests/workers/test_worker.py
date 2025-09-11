@@ -39,8 +39,8 @@ def test_process_message_success(export_worker):
     """
     Test process message success
     """
-    with patch('workers.worker.handle_exports') as mock_handle_exports:
-        mock_handle_exports.side_effect = Exception('Test error')
+    with patch('workers.worker.handle_tasks') as mock_handle_tasks:
+        mock_handle_tasks.side_effect = Exception('Test error')
 
         routing_key = 'test.routing.key'
         payload_dict = {
@@ -50,10 +50,11 @@ def test_process_message_success(export_worker):
         event = BaseEvent()
         event.from_dict({'new': payload_dict})
 
-        # The process_message should handle the exception internally
-        export_worker.process_message(routing_key, event, 1)
+        # The process_message should re-raise the exception
+        with pytest.raises(Exception, match='Test error'):
+            export_worker.process_message(routing_key, event, 1)
 
-        mock_handle_exports.assert_called_once_with({'some': 'data'})
+        mock_handle_tasks.assert_called_once_with({'data': {'some': 'data'}, 'workspace_id': 123, 'retry_count': 1})
 
 
 @pytest.mark.django_db
@@ -116,4 +117,4 @@ def test_handle_exports_calls_import_and_export_expenses():
     with patch('workers.actions.handle_tasks') as mock_handle_tasks:
         data = {'foo': 'bar'}
         actions.handle_tasks(data)
-        mock_handle_tasks.assert_called_once_with(foo='bar')
+        mock_handle_tasks.assert_called_once_with({'foo': 'bar'})

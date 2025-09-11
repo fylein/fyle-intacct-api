@@ -101,6 +101,32 @@ def test_connection(db):
 
 
 @pytest.fixture(autouse=True)
+def setup_feature_config(db):
+    """
+    Setup FeatureConfig for workspace_id=1 that many tests use
+    """
+    from apps.workspaces.models import FeatureConfig, Workspace
+    
+    # Ensure workspace with id=1 exists (it should from SQL fixtures)
+    workspace, _ = Workspace.objects.get_or_create(
+        id=1,
+        defaults={
+            'name': 'Fyle For Arkham Asylum',
+            'fyle_org_id': 'or79Cob97KSh'
+        }
+    )
+    
+    # Create FeatureConfig for workspace_id=1 if it doesn't exist
+    FeatureConfig.objects.get_or_create(
+        workspace=workspace,
+        defaults={
+            'export_via_rabbitmq': False,
+            'import_via_rabbitmq': False
+        }
+    )
+
+
+@pytest.fixture(autouse=True)
 def mock_rabbitmq():
     """
     Mock RabbitMQ
