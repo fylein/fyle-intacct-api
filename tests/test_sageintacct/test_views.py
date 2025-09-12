@@ -167,11 +167,11 @@ def test_refresh_dimensions_invalid_token_error(mocker, api_client, test_connect
         pass
 
     # Patch InvalidTokenError to be our mock class so it gets caught properly
-    mock_invalid_token = mocker.patch('apps.sage_intacct.views.InvalidTokenError', MockInvalidTokenError)
-    
+    mocker.patch('apps.sage_intacct.views.InvalidTokenError', MockInvalidTokenError)
+
     # Mock sync_dimensions to raise our mock InvalidTokenError
     mocker.patch('apps.sage_intacct.views.sync_dimensions', side_effect=MockInvalidTokenError('Invalid token'))
-    
+
     # Mock invalidate_sage_intacct_credentials to track if it's called
     mock_invalidate = mocker.patch('apps.sage_intacct.views.invalidate_sage_intacct_credentials')
 
