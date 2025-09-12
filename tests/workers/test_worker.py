@@ -1,8 +1,9 @@
 import pytest
-from unittest.mock import Mock, patch
-
 from common.event import BaseEvent
+import sys
+from unittest.mock import Mock, patch
 from workers import actions
+from workers import worker
 from workers.actions import handle_tasks
 from workers.helpers import WorkerActionEnum
 from fyle_accounting_library.rabbitmq.models import FailedEvent
@@ -267,3 +268,16 @@ def test_handle_tasks_missing_data_key():
         # This should raise a TypeError because **None is invalid
         with pytest.raises(TypeError):
             handle_tasks(payload)
+
+
+def test_worker_entry_point(mocker):
+    """
+    Test worker entry point
+    """
+    mock_consume = mocker.patch("workers.worker.consume")
+
+    sys.argv = ["worker.py", "--queue_name", "import"]
+
+    worker.main()
+
+    mock_consume.assert_called_once_with(queue_name="import")
