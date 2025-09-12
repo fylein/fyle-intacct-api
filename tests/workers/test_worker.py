@@ -3,6 +3,8 @@ from unittest.mock import Mock, patch
 
 from common.event import BaseEvent
 from workers import actions
+from workers.actions import handle_tasks
+from workers.helpers import WorkerActionEnum
 from fyle_accounting_library.rabbitmq.models import FailedEvent
 
 from workers.worker import Worker
@@ -118,3 +120,150 @@ def test_handle_exports_calls_import_and_export_expenses():
         data = {'foo': 'bar'}
         actions.handle_tasks(data)
         mock_handle_tasks.assert_called_once_with({'foo': 'bar'})
+
+
+def test_handle_tasks_successful_execution():
+    """
+    Test handle_tasks with valid action and method
+    """
+    # Mock the import_string and the method it returns
+    with patch('workers.actions.import_string') as mock_import_string:
+        mock_method = Mock()
+        mock_import_string.return_value = mock_method
+
+        payload = {
+            'action': WorkerActionEnum.IMPORT_DIMENSIONS_TO_FYLE.value,
+            'data': {
+                'workspace_id': 1,
+                'run_in_rabbitmq_worker': True
+            }
+        }
+
+        handle_tasks(payload)
+
+        # Verify import_string was called with correct method path
+        mock_import_string.assert_called_once_with('apps.mappings.tasks.initiate_import_to_fyle')
+
+        # Verify the method was called with the correct data
+        mock_method.assert_called_once_with(workspace_id=1, run_in_rabbitmq_worker=True)
+
+
+def test_handle_tasks_action_is_none(caplog):
+    """
+    Test handle_tasks when action is None
+    """
+    with patch('workers.actions.import_string') as mock_import_string:
+        payload = {
+            'action': None,
+            'data': {'workspace_id': 1}
+        }
+
+        handle_tasks(payload)
+
+        # Verify import_string was never called
+        mock_import_string.assert_not_called()
+
+        # Verify error was logged
+        assert "Action is None for payload" in caplog.text
+
+
+def test_handle_tasks_missing_action_key(caplog):
+    """
+    Test handle_tasks when action key is missing from payload
+    """
+    with patch('workers.actions.import_string') as mock_import_string:
+        payload = {
+            'data': {'workspace_id': 1}
+        }
+
+        handle_tasks(payload)
+
+        # Verify import_string was never called
+        mock_import_string.assert_not_called()
+
+        # Verify error was logged
+        assert "Action is None for payload" in caplog.text
+
+
+def test_handle_tasks_method_not_found(caplog):
+    """
+    Test handle_tasks when method is not found in ACTION_METHOD_MAP
+    """
+    with patch('workers.actions.import_string') as mock_import_string:
+        payload = {
+            'action': 'NONEXISTENT_ACTION',
+            'data': {'workspace_id': 1}
+        }
+
+        handle_tasks(payload)
+
+        # Verify import_string was never called
+        mock_import_string.assert_not_called()
+
+        # Verify error was logged
+        assert "Method is None for action - NONEXISTENT_ACTION" in caplog.text
+
+
+def test_handle_tasks_empty_data():
+    """
+    Test handle_tasks with empty data
+    """
+    with patch('workers.actions.import_string') as mock_import_string:
+        mock_method = Mock()
+        mock_import_string.return_value = mock_method
+
+        payload = {
+            'action': WorkerActionEnum.CREATE_ADMIN_SUBSCRIPTION.value,
+            'data': {}
+        }
+
+        handle_tasks(payload)
+
+        # Verify import_string was called with correct method path
+        mock_import_string.assert_called_once_with('apps.workspaces.tasks.create_admin_subscriptions')
+
+        # Verify the method was called with empty kwargs
+        mock_method.assert_called_once_with()
+
+
+def test_handle_tasks_different_action():
+    """
+    Test handle_tasks with a different valid action
+    """
+    with patch('workers.actions.import_string') as mock_import_string:
+        mock_method = Mock()
+        mock_import_string.return_value = mock_method
+
+        payload = {
+            'action': WorkerActionEnum.UPDATE_WORKSPACE_NAME.value,
+            'data': {
+                'workspace_id': 5,
+                'workspace_name': 'Test Workspace'
+            }
+        }
+
+        handle_tasks(payload)
+
+        # Verify import_string was called with correct method path
+        mock_import_string.assert_called_once_with('apps.workspaces.tasks.update_workspace_name')
+
+        # Verify the method was called with the correct data
+        mock_method.assert_called_once_with(workspace_id=5, workspace_name='Test Workspace')
+
+
+def test_handle_tasks_missing_data_key():
+    """
+    Test handle_tasks when data key is missing from payload
+    This should cause a TypeError when trying to unpack **None
+    """
+    with patch('workers.actions.import_string') as mock_import_string:
+        mock_method = Mock()
+        mock_import_string.return_value = mock_method
+
+        payload = {
+            'action': WorkerActionEnum.CREATE_ADMIN_SUBSCRIPTION.value
+        }
+
+        # This should raise a TypeError because **None is invalid
+        with pytest.raises(TypeError):
+            handle_tasks(payload)
