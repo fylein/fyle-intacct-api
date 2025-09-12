@@ -2,7 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict Xcg2SCP4jZomDGz1GU9M0fDLz8IrGfraUMdWxBRuAxE6DpZHxMIbGm7CtZvip8C
 
 -- Dumped from database version 15.13 (Debian 15.13-1.pgdg120+1)
 -- Dumped by pg_dump version 17.6 (Debian 17.6-0+deb13u1)
@@ -10,7 +9,6 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -6025,8 +6023,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 245	internal	0013_auto_generated_sql	2025-07-31 11:52:06.434321+00
 246	workspaces	0048_lastexportdetail_unmapped_card_count	2025-07-31 11:52:06.481827+00
 247	tasks	0015_tasklog_re_attempt_export	2025-08-05 08:54:20.464377+00
-248	workspaces	0049_featureconfig	2025-09-11 15:13:57.10305+00
-249	workspaces	0050_featureconfig_import_via_rabbitmq_and_more	2025-09-11 15:13:57.121458+00
+248	workspaces	0049_featureconfig	2025-09-12 05:48:50.923799+00
+249	workspaces	0050_featureconfig_import_via_rabbitmq_and_more	2025-09-12 05:48:50.948371+00
 \.
 
 
@@ -12304,5 +12302,4 @@ ALTER TABLE ONLY public.workspaces_user
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Xcg2SCP4jZomDGz1GU9M0fDLz8IrGfraUMdWxBRuAxE6DpZHxMIbGm7CtZvip8C
 
