@@ -1,14 +1,15 @@
-from datetime import datetime, timezone
 from unittest import mock
+from datetime import datetime, timezone
 
 import pytest
 from fyle.platform import Platform
-from fyle_rest_auth.models import AuthToken, User
 from rest_framework.test import APIClient
+from fyle_rest_auth.models import AuthToken, User
 
 from fyle_intacct_api.tests import settings
 from fyle_intacct_api.utils import get_access_token
 from tests.test_fyle.fixtures import data as fyle_data
+from apps.workspaces.models import FeatureConfig, Workspace
 
 
 @pytest.fixture
@@ -101,11 +102,35 @@ def test_connection(db):
 
 
 @pytest.fixture(autouse=True)
+def setup_feature_config(db):
+    """
+    Setup FeatureConfig for workspace_id=1 that many tests use
+    """
+    # Ensure workspace with id=1 exists (it should from SQL fixtures)
+    workspace, _ = Workspace.objects.get_or_create(
+        id=1,
+        defaults={
+            'name': 'Fyle For Arkham Asylum',
+            'fyle_org_id': 'or79Cob97KSh'
+        }
+    )
+
+    # Create FeatureConfig for workspace_id=1 if it doesn't exist
+    FeatureConfig.objects.get_or_create(
+        workspace=workspace,
+        defaults={
+            'export_via_rabbitmq': False,
+            'import_via_rabbitmq': False
+        }
+    )
+
+
+@pytest.fixture(autouse=True)
 def mock_rabbitmq():
     """
     Mock RabbitMQ
     """
-    with mock.patch('apps.fyle.queue.RabbitMQConnection.get_instance') as mock_rabbitmq:
+    with mock.patch('workers.helpers.RabbitMQConnection.get_instance') as mock_rabbitmq:
         mock_instance = mock.Mock()
         mock_instance.publish.return_value = None
         mock_instance.connect.return_value = None

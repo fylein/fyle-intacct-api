@@ -106,10 +106,17 @@ def consume(queue_name: str) -> None:
     worker.start_consuming()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """
+    Entry Point
+    """
     parser = argparse.ArgumentParser(description="Start a worker with a specific queue name.")
     parser.add_argument("--queue_name", required=True, help="Name of the queue to consume")
 
     args = parser.parse_args()
 
     consume(queue_name=args.queue_name)
+
+
+if __name__ == "__main__":
+    main()

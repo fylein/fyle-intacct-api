@@ -9,13 +9,15 @@ from apps.mappings.tasks import (
     async_auto_map_employees,
     check_and_create_ccc_mappings,
     construct_tasks_and_chain_import_fields_to_fyle,
+    initiate_import_to_fyle,
     resolve_expense_attribute_errors,
     schedule_auto_map_charge_card_employees,
     schedule_auto_map_employees,
     sync_sage_intacct_attributes,
 )
 from apps.tasks.models import Error
-from apps.workspaces.models import Configuration, SageIntacctCredential
+from apps.workspaces.models import Configuration, FeatureConfig, SageIntacctCredential
+from workers.helpers import WorkerActionEnum, RoutingKeyEnum
 from tests.test_fyle.fixtures import data as fyle_data
 from tests.test_sageintacct.fixtures import data as intacct_data
 
@@ -316,9 +318,9 @@ def test_check_and_create_ccc_mappings(mocker, db):
     mock_bulk_create.assert_called_once_with(workspace_id)
 
 
-def test_construct_tasks_and_chain_import_fields_to_fyle_with_account_destination(mocker, db):
+def test_initiate_import_to_fyle_with_account_destination(mocker, db):
     """
-    Test construct_tasks_and_chain_import_fields_to_fyle with ACCOUNT destination field (line 328 coverage)
+    Test initiate_import_to_fyle with ACCOUNT destination field
     """
     workspace_id = 1
 
@@ -332,12 +334,16 @@ def test_construct_tasks_and_chain_import_fields_to_fyle_with_account_destinatio
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
     configuration.save()
 
-    construct_tasks_and_chain_import_fields_to_fyle(workspace_id)
+    initiate_import_to_fyle(workspace_id)
 
     mock_chain_import.assert_called_once()
 
     call_args = mock_chain_import.call_args
-    task_settings = call_args[0][1]
+
+    if call_args[0] and len(call_args[0]) > 1:
+        task_settings = call_args[0].get('task_settings')
+    else:
+        task_settings = call_args.kwargs.get('task_settings', {})
 
     assert 'import_categories' in task_settings
     import_categories = task_settings['import_categories']
@@ -345,3 +351,65 @@ def test_construct_tasks_and_chain_import_fields_to_fyle_with_account_destinatio
     assert 'accounts' in import_categories['destination_sync_methods']
     assert import_categories['is_auto_sync_enabled'] == True
     assert import_categories['is_3d_mapping'] == True
+
+
+def test_construct_tasks_and_chain_import_fields_to_fyle_with_rabbitmq(mocker, db):
+    """
+    Test construct_tasks_and_chain_import_fields_to_fyle with rabbitmq enabled
+    """
+    workspace_id = 1
+
+    # Mock FeatureConfig with rabbitmq enabled
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_via_rabbitmq = True
+    feature_config.save()
+
+    # Mock publish_to_rabbitmq
+    mock_publish = mocker.patch('apps.mappings.tasks.publish_to_rabbitmq')
+    mock_initiate_import = mocker.patch('apps.mappings.tasks.initiate_import_to_fyle')
+
+    # Call the function
+    construct_tasks_and_chain_import_fields_to_fyle(workspace_id)
+
+    # Verify publish_to_rabbitmq was called with correct payload
+    expected_payload = {
+        'workspace_id': workspace_id,
+        'action': WorkerActionEnum.IMPORT_DIMENSIONS_TO_FYLE.value,
+        'data': {
+            'workspace_id': workspace_id,
+            'run_in_rabbitmq_worker': True
+        }
+    }
+
+    mock_publish.assert_called_once_with(
+        payload=expected_payload,
+        routing_key=RoutingKeyEnum.IMPORT.value
+    )
+
+    # Verify initiate_import_to_fyle was NOT called
+    mock_initiate_import.assert_not_called()
+
+
+def test_construct_tasks_and_chain_import_fields_to_fyle_without_rabbitmq(mocker, db):
+    """
+    Test construct_tasks_and_chain_import_fields_to_fyle with rabbitmq disabled
+    """
+    workspace_id = 1
+
+    # Mock FeatureConfig with rabbitmq disabled
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_via_rabbitmq = False
+    feature_config.save()
+
+    # Mock publish_to_rabbitmq and initiate_import_to_fyle
+    mock_publish = mocker.patch('apps.mappings.tasks.publish_to_rabbitmq')
+    mock_initiate_import = mocker.patch('apps.mappings.tasks.initiate_import_to_fyle')
+
+    # Call the function
+    construct_tasks_and_chain_import_fields_to_fyle(workspace_id)
+
+    # Verify initiate_import_to_fyle was called with correct parameters
+    mock_initiate_import.assert_called_once_with(workspace_id=workspace_id)
+
+    # Verify publish_to_rabbitmq was NOT called
+    mock_publish.assert_not_called()

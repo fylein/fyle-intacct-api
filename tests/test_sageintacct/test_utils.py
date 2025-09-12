@@ -669,6 +669,379 @@ def test_sync_customers(mocker, db):
     assert new_customer_count == 526
 
 
+def test_get_dimensions_values_without_allocation(mocker, db):
+    """
+    Test __get_dimensions_values method without allocation_id
+    """
+    workspace_id = 1
+
+    # Create a mock lineitem without allocation_id
+    lineitem = type('MockLineitem', (), {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005',
+        'allocation_id': None,
+        'user_defined_dimensions': []
+    })()
+
+    # Mock Fernet to avoid encryption key issues
+    mocker.patch('apps.sage_intacct.utils.Fernet')
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    # Call the private method
+    result = sage_intacct_connection._SageIntacctConnector__get_dimensions_values(lineitem, workspace_id)
+
+    # Verify all dimensions are preserved
+    expected_result = {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005'
+    }
+
+    assert result == expected_result
+
+
+def test_get_dimensions_values_with_allocation(mocker, db):
+    """
+    Test __get_dimensions_values method with allocation_id
+    """
+    workspace_id = 1
+
+    # Create allocation destination attribute
+    allocation_detail = {
+        'LOCATIONID': 'ALLOC_LOCATION',
+        'DEPARTMENTID': 'ALLOC_DEPT',
+        'PROJECTID': 'ALLOC_PROJECT'
+    }
+
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='ALLOCATION',
+        value='ALLOCATION_123',
+        destination_id='ALLOCATION_123',
+        display_name='Test Allocation',
+        detail=allocation_detail
+    )
+
+    # Create a mock lineitem with allocation_id
+    lineitem = type('MockLineitem', (), {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005',
+        'allocation_id': 'ALLOCATION_123',
+        'user_defined_dimensions': [
+            {'LOCATIONID': 'UDD_LOCATION'},
+            {'DEPARTMENTID': 'UDD_DEPT'},
+            {'CUSTOM_FIELD': 'CUSTOM_VALUE'}
+        ]
+    })()
+
+    # Mock Fernet to avoid encryption key issues
+    mocker.patch('apps.sage_intacct.utils.Fernet')
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    # Call the private method
+    result = sage_intacct_connection._SageIntacctConnector__get_dimensions_values(lineitem, workspace_id)
+
+    # Verify dimensions affected by allocation are set to None
+    expected_result = {
+        'project_id': None,  # Should be None due to PROJECTID in allocation
+        'location_id': None,  # Should be None due to LOCATIONID in allocation
+        'department_id': None,  # Should be None due to DEPARTMENTID in allocation
+        'class_id': 'CLASS_001',  # Should remain unchanged
+        'customer_id': 'CUSTOMER_002',  # Should remain unchanged
+        'item_id': 'ITEM_003',  # Should remain unchanged
+        'task_id': 'TASK_004',  # Should remain unchanged
+        'cost_type_id': 'COST_TYPE_005'  # Should remain unchanged
+    }
+
+    assert result == expected_result
+
+    # Verify user_defined_dimensions are filtered
+    expected_filtered_dimensions = [
+        {'CUSTOM_FIELD': 'CUSTOM_VALUE'}  # Only non-allocation dimensions should remain
+    ]
+
+    assert lineitem.user_defined_dimensions == expected_filtered_dimensions
+
+
+def test_get_dimensions_values_with_partial_allocation(mocker, db):
+    """
+    Test __get_dimensions_values method with allocation_id containing only some dimensions
+    """
+    workspace_id = 1
+
+    # Create allocation destination attribute with only some dimensions
+    allocation_detail = {
+        'CLASSID': 'ALLOC_CLASS',
+        'CUSTOMERID': 'ALLOC_CUSTOMER'
+    }
+
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='ALLOCATION',
+        value='PARTIAL_ALLOCATION',
+        destination_id='PARTIAL_ALLOCATION',
+        display_name='Partial Allocation',
+        detail=allocation_detail
+    )
+
+    # Create a mock lineitem with allocation_id
+    lineitem = type('MockLineitem', (), {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005',
+        'allocation_id': 'PARTIAL_ALLOCATION',
+        'user_defined_dimensions': [
+            {'CLASSID': 'UDD_CLASS'},
+            {'OTHER_FIELD': 'OTHER_VALUE'}
+        ]
+    })()
+
+    # Mock Fernet to avoid encryption key issues
+    mocker.patch('apps.sage_intacct.utils.Fernet')
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    # Call the private method
+    result = sage_intacct_connection._SageIntacctConnector__get_dimensions_values(lineitem, workspace_id)
+
+    # Verify only dimensions in allocation are set to None
+    expected_result = {
+        'project_id': 'PROJECT_123',  # Should remain unchanged
+        'location_id': 'LOCATION_456',  # Should remain unchanged
+        'department_id': 'DEPT_789',  # Should remain unchanged
+        'class_id': None,  # Should be None due to CLASSID in allocation
+        'customer_id': None,  # Should be None due to CUSTOMERID in allocation
+        'item_id': 'ITEM_003',  # Should remain unchanged
+        'task_id': 'TASK_004',  # Should remain unchanged
+        'cost_type_id': 'COST_TYPE_005'  # Should remain unchanged
+    }
+
+    assert result == expected_result
+
+    # Verify user_defined_dimensions are filtered correctly
+    expected_filtered_dimensions = [
+        {'OTHER_FIELD': 'OTHER_VALUE'}  # Only non-allocation dimensions should remain
+    ]
+
+    assert lineitem.user_defined_dimensions == expected_filtered_dimensions
+
+
+def test_get_dimensions_values_with_empty_allocation(mocker, db):
+    """
+    Test __get_dimensions_values method with allocation_id but empty allocation details
+    """
+    workspace_id = 1
+
+    # Create allocation destination attribute with empty details
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='ALLOCATION',
+        value='EMPTY_ALLOCATION',
+        destination_id='EMPTY_ALLOCATION',
+        display_name='Empty Allocation',
+        detail={}
+    )
+
+    # Create a mock lineitem with allocation_id
+    lineitem = type('MockLineitem', (), {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005',
+        'allocation_id': 'EMPTY_ALLOCATION',
+        'user_defined_dimensions': [
+            {'CUSTOM_FIELD': 'CUSTOM_VALUE'}
+        ]
+    })()
+
+    # Mock Fernet to avoid encryption key issues
+    mocker.patch('apps.sage_intacct.utils.Fernet')
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    # Call the private method
+    result = sage_intacct_connection._SageIntacctConnector__get_dimensions_values(lineitem, workspace_id)
+
+    # Verify all dimensions remain unchanged since allocation is empty
+    expected_result = {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005'
+    }
+
+    assert result == expected_result
+
+    # Verify user_defined_dimensions remain unchanged
+    expected_filtered_dimensions = [
+        {'CUSTOM_FIELD': 'CUSTOM_VALUE'}
+    ]
+
+    assert lineitem.user_defined_dimensions == expected_filtered_dimensions
+
+
+def test_get_dimensions_values_with_all_allocation_dimensions(mocker, db):
+    """
+    Test __get_dimensions_values method with allocation containing all possible dimensions
+    """
+    workspace_id = 1
+
+    # Create allocation destination attribute with all dimensions
+    allocation_detail = {
+        'LOCATIONID': 'ALLOC_LOCATION',
+        'DEPARTMENTID': 'ALLOC_DEPT',
+        'CLASSID': 'ALLOC_CLASS',
+        'CUSTOMERID': 'ALLOC_CUSTOMER',
+        'ITEMID': 'ALLOC_ITEM',
+        'TASKID': 'ALLOC_TASK',
+        'COSTTYPEID': 'ALLOC_COST_TYPE',
+        'PROJECTID': 'ALLOC_PROJECT'
+    }
+
+    DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='ALLOCATION',
+        value='FULL_ALLOCATION',
+        destination_id='FULL_ALLOCATION',
+        display_name='Full Allocation',
+        detail=allocation_detail
+    )
+
+    # Create a mock lineitem with allocation_id
+    lineitem = type('MockLineitem', (), {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005',
+        'allocation_id': 'FULL_ALLOCATION',
+        'user_defined_dimensions': [
+            {'PROJECTID': 'UDD_PROJECT'},
+            {'LOCATIONID': 'UDD_LOCATION'},
+            {'CUSTOM_FIELD': 'CUSTOM_VALUE'}
+        ]
+    })()
+
+    # Mock Fernet to avoid encryption key issues
+    mocker.patch('apps.sage_intacct.utils.Fernet')
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    # Call the private method
+    result = sage_intacct_connection._SageIntacctConnector__get_dimensions_values(lineitem, workspace_id)
+
+    # Verify all dimensions are set to None due to allocation
+    expected_result = {
+        'project_id': None,
+        'location_id': None,
+        'department_id': None,
+        'class_id': None,
+        'customer_id': None,
+        'item_id': None,
+        'task_id': None,
+        'cost_type_id': None
+    }
+
+    assert result == expected_result
+
+    # Verify user_defined_dimensions are filtered to only non-allocation dimensions
+    expected_filtered_dimensions = [
+        {'CUSTOM_FIELD': 'CUSTOM_VALUE'}
+    ]
+
+    assert lineitem.user_defined_dimensions == expected_filtered_dimensions
+
+
+def test_get_dimensions_values_with_missing_allocation(mocker, db):
+    """
+    Test __get_dimensions_values method with allocation_id that doesn't exist in DestinationAttribute
+    This should raise an AttributeError when trying to access .detail on None
+    """
+    workspace_id = 1
+
+    # Create a mock lineitem with allocation_id that doesn't exist
+    lineitem = type('MockLineitem', (), {
+        'project_id': 'PROJECT_123',
+        'location_id': 'LOCATION_456',
+        'department_id': 'DEPT_789',
+        'class_id': 'CLASS_001',
+        'customer_id': 'CUSTOMER_002',
+        'item_id': 'ITEM_003',
+        'task_id': 'TASK_004',
+        'cost_type_id': 'COST_TYPE_005',
+        'allocation_id': 'NONEXISTENT_ALLOCATION',
+        'user_defined_dimensions': []
+    })()
+
+    # Mock Fernet to avoid encryption key issues
+    mocker.patch('apps.sage_intacct.utils.Fernet')
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+
+    # Call the private method and expect an AttributeError
+    with pytest.raises(AttributeError):
+        sage_intacct_connection._SageIntacctConnector__get_dimensions_values(lineitem, workspace_id)
+
+
 def test_post_bill_exception(mocker, db, create_bill):
     """
     Test post bill exception
