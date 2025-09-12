@@ -519,6 +519,86 @@ def test_export_to_intacct(mocker, api_client, test_connection):
     assert response.status_code == 200
 
 
+def test_export_to_intacct_with_rabbitmq(mocker, api_client, test_connection):
+    """
+    Test Export To Intacct with RabbitMQ enabled (covers lines 586, 595)
+    """
+    workspace_id = 1
+
+    # Enable export_via_rabbitmq in FeatureConfig
+    from apps.workspaces.models import FeatureConfig
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.export_via_rabbitmq = True
+    feature_config.save()
+
+    # Mock the RabbitMQ publish function to track if it's called
+    mock_publish_to_rabbitmq = mocker.patch('apps.workspaces.views.publish_to_rabbitmq')
+
+    url = '/api/workspaces/{}/exports/trigger/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.post(url)
+    assert response.status_code == 200
+
+    # Verify that publish_to_rabbitmq was called (covers line 595)
+    mock_publish_to_rabbitmq.assert_called_once()
+
+    # Verify the payload structure
+    call_args = mock_publish_to_rabbitmq.call_args
+    payload_arg = call_args[1]['payload']
+    routing_key_arg = call_args[1]['routing_key']
+
+    assert payload_arg['workspace_id'] == workspace_id
+    assert payload_arg['action'] == 'EXPORT.P0.DASHBOARD_SYNC'
+    assert payload_arg['data']['workspace_id'] == workspace_id
+    assert payload_arg['data']['triggered_by'] == 'DASHBOARD_SYNC'
+    assert payload_arg['data']['run_in_rabbitmq_worker'] == True
+    assert routing_key_arg == 'EXPORT.P0.*'
+
+    # Reset the feature config
+    feature_config.export_via_rabbitmq = False
+    feature_config.save()
+
+
+def test_workspaces_view_with_workspace_name_update(mocker, api_client, test_connection):
+    """
+    Test WorkspacesView to cover lines 151, 159 (RabbitMQ publish for workspace name update)
+    """
+    # Mock the RabbitMQ publish function to track if it's called
+    mock_publish_to_rabbitmq = mocker.patch('apps.workspaces.views.publish_to_rabbitmq')
+
+    # Get workspaces with org_id parameter and is_polling=False (or omitted)
+    url = '/api/workspaces/'
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    # Test with org_id and without is_polling (defaults to False)
+    response = api_client.get(url, {'org_id': 'or79Cob97KSh'})
+    assert response.status_code == 200
+
+    # Verify that publish_to_rabbitmq was called (covers line 159)
+    mock_publish_to_rabbitmq.assert_called_once()
+
+    # Verify the payload structure
+    call_args = mock_publish_to_rabbitmq.call_args
+    payload_arg = call_args[1]['payload']
+    routing_key_arg = call_args[1]['routing_key']
+
+    assert payload_arg['action'] == 'UTILITY.UPDATE_WORKSPACE_NAME'
+    assert payload_arg['data']['workspace_id'] == 1  # Should be the workspace ID from fixtures
+    assert 'access_token' in payload_arg['data']
+    assert routing_key_arg == 'UTILITY.*'
+
+    # Reset mock for next test
+    mock_publish_to_rabbitmq.reset_mock()
+
+    # Test with is_polling=True (should NOT trigger RabbitMQ)
+    response = api_client.get(url, {'org_id': 'or79Cob97KSh', 'is_polling': 'true'})
+    assert response.status_code == 200
+
+    # Verify that publish_to_rabbitmq was NOT called when polling
+    mock_publish_to_rabbitmq.assert_not_called()
+
+
 def test_last_export_detail_view(mocker, db, api_client, test_connection):
     """
     Test Last Export Detail View

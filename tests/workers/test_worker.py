@@ -281,3 +281,23 @@ def test_worker_entry_point(mocker):
     worker.main()
 
     mock_consume.assert_called_once_with(queue_name="import")
+
+
+def test_worker_main_function_coverage(mocker):
+    """
+    Test worker main function to ensure line 122 is covered
+    """
+    import sys
+    from unittest.mock import patch
+
+    mock_consume = mocker.patch("workers.worker.consume")
+
+    # Test the main function directly with mocked sys.argv
+    test_args = ["worker.py", "--queue_name", "test_queue"]
+
+    with patch.object(sys, 'argv', test_args):
+        # Import and call main function directly to cover line 122
+        from workers.worker import main
+        main()
+
+    mock_consume.assert_called_once_with(queue_name="test_queue")

@@ -656,6 +656,65 @@ def test_patch_integration_settings_with_unmapped_card_count(db, add_fyle_creden
     assert result is False
 
 
+def test_run_sync_schedule_with_rabbitmq_export(mocker, db):
+    """
+    Test run_sync_schedule with export_via_rabbitmq enabled (covers lines 162-163, 173)
+    """
+    workspace_id = 1
+
+    # Mock the expenses API call
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses']
+    )
+
+    # Mock the RabbitMQ publish function to track if it's called
+    mock_publish_to_rabbitmq = mocker.patch('apps.workspaces.tasks.publish_to_rabbitmq')
+
+    # Enable export_via_rabbitmq in FeatureConfig
+    from apps.workspaces.models import FeatureConfig
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.export_via_rabbitmq = True
+    feature_config.save()
+
+    # Create some expense groups to export
+    from apps.workspaces.models import Workspace
+    workspace = Workspace.objects.get(id=workspace_id)
+    ExpenseGroup.objects.create(
+        workspace=workspace,
+        fund_source='PERSONAL',
+        exported_at=None
+    )
+    ExpenseGroup.objects.create(
+        workspace=workspace,
+        fund_source='CCC',
+        exported_at=None
+    )
+
+    # Call run_sync_schedule - this should trigger the RabbitMQ path
+    run_sync_schedule(workspace_id)
+
+    # Verify that publish_to_rabbitmq was called (covers line 173)
+    mock_publish_to_rabbitmq.assert_called_once()
+
+    # Verify the payload structure
+    call_args = mock_publish_to_rabbitmq.call_args
+    payload_arg = call_args[1]['payload']
+    routing_key_arg = call_args[1]['routing_key']
+
+    assert payload_arg['workspace_id'] == workspace_id
+    assert payload_arg['action'] == 'EXPORT.P1.BACKGROUND_SCHEDULE_EXPORT'
+    assert payload_arg['data']['workspace_id'] == workspace_id
+    assert payload_arg['data']['triggered_by'] == 'BACKGROUND_SCHEDULE'
+    assert payload_arg['data']['run_in_rabbitmq_worker'] == True
+    assert routing_key_arg == 'EXPORT.P1.*'
+    assert isinstance(payload_arg['data']['expense_group_ids'], list)
+
+    # Reset the feature config
+    feature_config.export_via_rabbitmq = False
+    feature_config.save()
+
+
 def test_patch_integration_settings_for_unmapped_cards(db, mocker):
     """
     Test patch_integration_settings_for_unmapped_cards

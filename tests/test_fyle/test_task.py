@@ -280,6 +280,55 @@ def test_import_and_export_expenses_direct_export_case_2(mocker, db, test_connec
     assert mock_skip_expenses_and_post_accounting_export_summary.call_count == 1
 
 
+def test_import_and_export_expenses_with_export_call(mocker, db, test_connection):
+    """
+    Test import_and_export_expenses that hits the export_to_intacct call (line 303)
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+
+    # Mock the expenses API call to return expenses
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses_webhook']
+    )
+
+    # Mock the export_to_intacct call to track if it's called
+    mock_export_to_intacct = mocker.patch(
+        'apps.fyle.tasks.export_to_intacct'
+    )
+
+    # Create expense groups to ensure len(expense_group_ids) > 0
+    ExpenseGroup.objects.create(
+        workspace=workspace,
+        fund_source='PERSONAL',
+        description={
+            'report_id': 'rp1s1L3QtMpF',
+            'claim_number': 'C/2021/12/R/1',
+            'settlement_id': 'setqMAs7J5eOH',
+            'employee_email': 'user1@fylefortesting.in'
+        }
+    )
+
+    # Call with is_state_change_event=False to bypass the real-time export check
+    import_and_export_expenses(
+        report_id='rp1s1L3QtMpF',
+        org_id=workspace.fyle_org_id,
+        is_state_change_event=False,
+        imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC
+    )
+
+    # Verify that export_to_intacct was called (this covers line 303)
+    assert mock_export_to_intacct.call_count == 1
+
+    # Verify the call arguments
+    args, kwargs = mock_export_to_intacct.call_args
+    assert kwargs['workspace_id'] == workspace.id
+    assert kwargs['triggered_by'] == ExpenseImportSourceEnum.DASHBOARD_SYNC
+    assert kwargs['run_in_rabbitmq_worker'] == True
+    assert len(kwargs['expense_group_ids']) > 0
+
+
 @pytest.mark.django_db()
 def test_skip_expenses_and_post_accounting_export_summary(mocker, db):
     """
