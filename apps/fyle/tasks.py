@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from django.db.models import Count, Q
 from django_q.models import Schedule
-from django_q.tasks import async_task, schedule
+from django_q.tasks import schedule
 from django.db import transaction
 
 from fyle_integrations_platform_connector import PlatformConnector
@@ -40,18 +40,13 @@ from apps.fyle.helpers import (
     get_fund_source,
     get_source_account_type,
     handle_import_exception,
-    update_task_log_post_import,
-    construct_expense_filter_query
+    update_task_log_post_import
 )
 from apps.fyle.actions import (
     mark_expenses_as_skipped,
     post_accounting_export_summary
 )
 from apps.fyle.models import SOURCE_ACCOUNT_MAP as EXPENSE_SOURCE_ACCOUNT_MAP
-from apps.fyle.models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
-from apps.tasks.models import Error, TaskLog
-from apps.workspaces.actions import export_to_intacct
-from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, Workspace, WorkspaceSchedule
 from fyle_intacct_api.logging_middleware import get_logger
 
 logger = logging.getLogger(__name__)
