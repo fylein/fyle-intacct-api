@@ -58,10 +58,10 @@ def test_expense_group_settings(db):
     """
     Test expense group settings
     """
-    workspace_id = 98
+    workspace_id = 1
     payload = data['expense_group_settings_payload']
 
-    user = Workspace.objects.get(id=1).user
+    user = Workspace.objects.get(id=workspace_id).user
 
     ExpenseGroupSettings.update_expense_group_settings(
         payload, workspace_id, user
