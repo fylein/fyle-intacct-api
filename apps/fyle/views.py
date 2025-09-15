@@ -1,36 +1,33 @@
-from rest_framework import generics, status
 from rest_framework.request import Request
+from rest_framework import generics, status
 from rest_framework.response import Response
 
 from django.db.models import Q, QuerySet
-from django_q.tasks import async_task
 from django_filters.rest_framework import DjangoFilterBackend
 
 from fyle.platform.exceptions import PlatformError
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import ExpenseAttribute
-from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
-
 from fyle_intacct_api.utils import LookupFieldMixin
+from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_integrations_platform_connector import PlatformConnector
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
 from apps.tasks.models import TaskLog
 from apps.exceptions import handle_view_exceptions
+from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
 from apps.fyle.queue import async_import_and_export_expenses
 from apps.fyle.helpers import ExpenseSearchFilter, ExpenseGroupSearchFilter
-from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
-
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.workspaces.models import (
     Workspace,
-    FyleCredential,
-    Configuration
+    Configuration,
+    FyleCredential
 )
 from apps.fyle.tasks import (
     create_expense_groups,
-    get_task_log_and_fund_source,
-    schedule_expense_group_creation
+    get_task_log_and_fund_source
 )
 from apps.fyle.models import (
     Expense,
@@ -44,7 +41,6 @@ from apps.fyle.serializers import (
     ExpenseFieldSerializer,
     ExpenseGroupSerializer,
     ExpenseFilterSerializer,
-    ExpenseGroupExpenseSerializer,
     ExpenseGroupSettingsSerializer,
     DependentFieldSettingSerializer
 )
@@ -104,120 +100,6 @@ class ExpenseGroupCountView(generics.ListAPIView):
             data={'count': expense_groups_count},
             status=status.HTTP_200_OK
         )
-
-
-class ExpenseGroupScheduleView(generics.CreateAPIView):
-    """
-    Create expense group schedule
-    """
-
-    def post(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Post expense schedule
-        """
-        schedule_expense_group_creation(kwargs['workspace_id'])
-
-        return Response(
-            status=status.HTTP_200_OK
-        )
-
-
-class ExpenseGroupByIdView(generics.RetrieveAPIView):
-    """
-    Expense Group by Id view
-    """
-    serializer_class = ExpenseGroupSerializer
-    queryset = ExpenseGroup.objects.all()
-
-
-class ExpenseGroupExpenseView(generics.RetrieveAPIView):
-    """
-    Expense view
-    """
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        """
-        Get expenses
-        """
-        try:
-            expense_group = ExpenseGroup.objects.get(
-                workspace_id=kwargs['workspace_id'], pk=kwargs['expense_group_id']
-            )
-            expenses = Expense.objects.filter(
-                id__in=expense_group.expenses.values_list('id', flat=True)).order_by('-updated_at')
-            return Response(
-                data=ExpenseGroupExpenseSerializer(expenses, many=True).data,
-                status=status.HTTP_200_OK
-            )
-
-        except ExpenseGroup.DoesNotExist:
-            return Response(
-                data={
-                    'message': 'Expense group not found'
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-
-class EmployeeView(generics.ListCreateAPIView):
-    """
-    Employee view
-    """
-
-    serializer_class = ExpenseAttributeSerializer
-    pagination_class = None
-
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for employee
-        """
-        return ExpenseAttribute.objects.filter(
-            attribute_type='EMPLOYEE', workspace_id=self.kwargs['workspace_id']).order_by('value')
-
-
-class CategoryView(generics.ListCreateAPIView):
-    """
-    Category view
-    """
-    serializer_class = ExpenseAttributeSerializer
-    pagination_class = None
-
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for category
-        """
-        return ExpenseAttribute.objects.filter(
-            attribute_type='CATEGORY', workspace_id=self.kwargs['workspace_id']).order_by('value')
-
-
-class ProjectView(generics.ListCreateAPIView):
-    """
-    Project view
-    """
-    serializer_class = ExpenseAttributeSerializer
-    pagination_class = None
-
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for project
-        """
-        return ExpenseAttribute.objects.filter(
-            attribute_type='PROJECT', workspace_id=self.kwargs['workspace_id']).order_by('value')
-
-
-class CostCenterView(generics.ListCreateAPIView):
-    """
-    Cost Center view
-    """
-
-    serializer_class = ExpenseAttributeSerializer
-    pagination_class = None
-
-    def get_queryset(self) -> QuerySet:
-        """
-        Get queryset for cost center
-        """
-        return ExpenseAttribute.objects.filter(
-            attribute_type='COST_CENTER', workspace_id=self.kwargs['workspace_id']).order_by('value')
 
 
 class ExpenseGroupSettingsView(generics.ListCreateAPIView):
@@ -338,10 +220,14 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             FyleCredential.objects.get(workspace_id=workspace.id)
 
-            async_task(
-                'apps.fyle.helpers.check_interval_and_sync_dimension',
-                kwargs['workspace_id']
-            )
+            payload = {
+                'workspace_id': workspace.id,
+                'action': WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION.value,
+                'data': {
+                    'workspace_id': workspace.id,
+                }
+            }
+            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
@@ -375,7 +261,14 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
             FyleCredential.objects.get(workspace_id=workspace.id)
 
-            async_task('apps.fyle.helpers.handle_refresh_dimensions', kwargs['workspace_id'])
+            payload = {
+                'workspace_id': workspace.id,
+                'action': WorkerActionEnum.HANDLE_FYLE_REFRESH_DIMENSION.value,
+                'data': {
+                    'workspace_id': workspace.id,
+                }
+            }
+            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
