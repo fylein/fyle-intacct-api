@@ -11,6 +11,7 @@ from apps.workspaces.models import (
     SageIntacctCredential,
     Workspace,
     WorkspaceSchedule,
+    FeatureConfig
 )
 from apps.workspaces.tasks import (
     create_admin_subscriptions,
@@ -672,13 +673,11 @@ def test_run_sync_schedule_with_rabbitmq_export(mocker, db):
     mock_publish_to_rabbitmq = mocker.patch('apps.workspaces.tasks.publish_to_rabbitmq')
 
     # Enable export_via_rabbitmq in FeatureConfig
-    from apps.workspaces.models import FeatureConfig
     feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
     feature_config.export_via_rabbitmq = True
     feature_config.save()
 
     # Create some expense groups to export
-    from apps.workspaces.models import Workspace
     workspace = Workspace.objects.get(id=workspace_id)
     ExpenseGroup.objects.create(
         workspace=workspace,

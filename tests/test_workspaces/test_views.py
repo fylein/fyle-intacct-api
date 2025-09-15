@@ -11,7 +11,7 @@ from fyle_rest_auth.utils import AuthUtils
 from sageintacctsdk import exceptions as sage_intacct_exc
 
 from apps.tasks.models import TaskLog
-from apps.workspaces.models import Configuration, LastExportDetail, SageIntacctCredential, Workspace
+from apps.workspaces.models import Configuration, FeatureConfig, LastExportDetail, SageIntacctCredential, Workspace
 from fyle_integrations_imports.models import ImportLog
 from tests.helper import dict_compare_keys
 from tests.test_fyle.fixtures import data as fyle_data
@@ -526,7 +526,6 @@ def test_export_to_intacct_with_rabbitmq(mocker, api_client, test_connection):
     workspace_id = 1
 
     # Enable export_via_rabbitmq in FeatureConfig
-    from apps.workspaces.models import FeatureConfig
     feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
     feature_config.export_via_rabbitmq = True
     feature_config.save()

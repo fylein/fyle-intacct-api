@@ -202,10 +202,8 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
 
             # If only specified dimensions are to be synced, sync them synchronously
             if dimensions_to_sync:
-                print("here 1")
                 sync_dimensions(workspace.id, dimensions_to_sync)
             else:
-                print("here 2")
                 payload = {
                     'workspace_id': workspace.id,
                     'action': WorkerActionEnum.SYNC_SAGE_INTACCT_DIMENSION.value,
