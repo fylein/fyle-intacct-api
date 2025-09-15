@@ -15,6 +15,7 @@ from apps.fyle.tasks import (
     construct_filter_for_affected_expense_groups,
     create_expense_groups,
     delete_expense_group_and_related_data,
+    get_task_log_and_fund_source,
     handle_expense_fund_source_change,
     handle_fund_source_changes_for_expense_ids,
     import_and_export_expenses,
@@ -1082,3 +1083,110 @@ def test_cleanup_scheduled_task_no_task_found(mocker, db):
 
     # This should handle the case when no scheduled task is found
     cleanup_scheduled_task(task_name=task_name, workspace_id=workspace_id)
+
+
+def test_get_task_log_and_fund_source(db):
+    """
+    Test get_task_log_and_fund_source function - covers lines 68-83
+    """
+    workspace_id = 1
+    task_log, fund_source = get_task_log_and_fund_source(workspace_id)
+
+    assert task_log is not None
+    assert task_log.workspace_id == workspace_id
+    assert task_log.type == 'FETCHING_EXPENSES'
+    assert task_log.status == 'IN_PROGRESS'
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    expected_fund_source = []
+    if configuration.reimbursable_expenses_object:
+        expected_fund_source.append('PERSONAL')
+    if configuration.corporate_credit_card_expenses_object:
+        expected_fund_source.append('CCC')
+
+    assert fund_source == expected_fund_source
+
+
+def test_update_non_exported_expenses_fund_source_change_detection(mocker, db):
+    """
+    Test update_non_exported_expenses fund source change detection - covers lines 371-372
+    """
+    expense = Expense.objects.filter(workspace_id=1).first()
+    if not expense:
+        return
+
+    expense.fund_source = 'PERSONAL'
+    expense.save()
+
+    mocker.patch('apps.fyle.tasks.get_fund_source', side_effect=['PERSONAL', 'CCC'])
+    mock_handler = mocker.patch('apps.fyle.tasks.handle_fund_source_changes_for_expense_ids')
+
+    expense_objects = [{
+        'id': expense.expense_id,
+        'fund_source': 'CCC'
+    }]
+
+    update_non_exported_expenses(expense_objects, expense.workspace_id)
+    mock_handler.assert_called_once()
+
+
+def test_handle_expense_fund_source_change_simple(mocker, db):
+    """
+    Simple test for handle_expense_fund_source_change - covers lines 522-558
+    """
+    workspace_id = 1
+    report_id = 'test_simple'
+
+    mock_platform = mocker.MagicMock()
+    mock_platform.expenses.get.return_value = [
+        {
+            'id': 'exp123',
+            'source_account_type': 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT'
+        }
+    ]
+
+    mock_queryset = mocker.MagicMock()
+    mock_queryset.values_list.return_value = [('exp123', 'PERSONAL', 1)]
+    mocker.patch('apps.fyle.models.Expense.objects.filter', return_value=mock_queryset)
+
+    mock_create = mocker.patch('apps.fyle.models.Expense.create_expense_objects')
+    mock_handle = mocker.patch('apps.fyle.tasks.handle_fund_source_changes_for_expense_ids')
+
+    handle_expense_fund_source_change(workspace_id, report_id, mock_platform)
+
+    mock_create.assert_called_once()
+    mock_handle.assert_called_once()
+
+
+def test_recreate_expense_groups_with_filters_simple(mocker, db):
+    """
+    Simple test for recreate_expense_groups with filters - covers lines 733-737
+    """
+    workspace_id = 1
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+    if not configuration:
+        return
+
+    expenses = list(Expense.objects.filter(workspace_id=workspace_id)[:1])
+    if not expenses:
+        return
+
+    expense_filter = ExpenseFilter.objects.create(
+        workspace_id=workspace_id,
+        condition='employee_email',
+        operator='in',
+        values=['test@test.com'],
+        rank=1
+    )
+
+    mock_construct = mocker.patch('apps.fyle.tasks.construct_expense_filter_query', return_value={'test': 'filter'})
+    mock_skip = mocker.patch('apps.fyle.tasks.skip_expenses_and_post_accounting_export_summary')
+    mocker.patch('apps.fyle.tasks.Expense.objects.filter', return_value=expenses)
+    mocker.patch('apps.fyle.tasks.ExpenseGroup.create_expense_groups_by_report_id_fund_source')
+
+    recreate_expense_groups(configuration, expenses)
+
+    mock_construct.assert_called_once()
+    mock_skip.assert_called_once()
+
+    expense_filter.delete()
