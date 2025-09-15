@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.tasks.models import TaskLog
@@ -10,11 +11,12 @@ from apps.workspaces.models import (
     SageIntacctCredential,
     Workspace,
     WorkspaceSchedule,
+    FeatureConfig
 )
 from apps.workspaces.tasks import (
-    async_create_admin_subcriptions,
+    create_admin_subscriptions,
     async_update_fyle_credentials,
-    async_update_workspace_name,
+    update_workspace_name,
     patch_integration_settings,
     patch_integration_settings_for_unmapped_cards,
     post_to_integration_settings,
@@ -25,47 +27,322 @@ from apps.workspaces.tasks import (
 from tests.test_workspaces.fixtures import data
 
 
-def test_schedule_sync(db):
+def test_schedule_sync_enabled_with_regular_scheduling(mocker, db):
     """
-    Test schedule sync
+    Test schedule_sync with schedule_enabled=True and is_real_time_export_enabled=False
     """
     workspace_id = 1
 
-    schedule_sync(
-        hours=1,
+    # Mock datetime.now() to have predictable results
+    mock_now = mocker.patch('apps.workspaces.tasks.datetime')
+    mock_now.now.return_value = datetime(2023, 6, 15, 10, 30, 0)
+
+    # Mock schedule_email_notification
+    mock_email_notification = mocker.patch('apps.workspaces.tasks.schedule_email_notification')
+
+    result = schedule_sync(
+        workspace_id=workspace_id,
         schedule_enabled=True,
-        email_added=[
-            'ashwin.t@fyle.in'
-        ],
-        emails_selected=[
-            'ashwin.t@fyle.in'
-        ],
-        workspace_id=workspace_id,
+        hours=24,
+        email_added=['new_user@fyle.in'],
+        emails_selected=['user1@fyle.in', 'user2@fyle.in'],
         is_real_time_export_enabled=False
     )
 
-    ws_schedule = WorkspaceSchedule.objects.filter(
-        workspace_id=workspace_id
-    ).first()
+    # Verify WorkspaceSchedule was created/updated correctly
+    assert result.workspace_id == workspace_id
+    assert result.enabled == True
+    assert result.is_real_time_export_enabled == False
+    assert result.interval_hours == 24
+    assert result.emails_selected == ['user1@fyle.in', 'user2@fyle.in']
+    assert result.start_datetime == datetime(2023, 6, 15, 10, 30, 0)
+    assert ['new_user@fyle.in'] in result.additional_email_options
 
-    assert ws_schedule.schedule.func == 'apps.workspaces.tasks.run_sync_schedule'
+    # Verify Schedule was created
+    assert result.schedule is not None
+    assert result.schedule.func == 'apps.workspaces.tasks.run_sync_schedule'
+    assert result.schedule.args == '1'
+    assert result.schedule.minutes == 24 * 60
 
-    schedule_sync(
-        hours=1,
+    # Verify email notification was scheduled
+    mock_email_notification.assert_called_once_with(
+        workspace_id=workspace_id,
+        schedule_enabled=True,
+        hours=24
+    )
+
+
+def test_schedule_sync_enabled_with_real_time_export(mocker, db):
+    """
+    Test schedule_sync with schedule_enabled=True and is_real_time_export_enabled=True
+    """
+    workspace_id = 1
+
+    # Create an existing WorkspaceSchedule with a Schedule
+    from django_q.models import Schedule
+    existing_schedule = Schedule.objects.create(
+        func='apps.workspaces.tasks.run_sync_schedule',
+        args='1',
+        schedule_type=Schedule.MINUTES,
+        minutes=60
+    )
+
+    WorkspaceSchedule.objects.create(
+        workspace_id=workspace_id,
+        enabled=False,
+        schedule=existing_schedule
+    )
+
+    # Mock datetime.now()
+    mock_now = mocker.patch('apps.workspaces.tasks.datetime')
+    mock_now.now.return_value = datetime(2023, 6, 15, 10, 30, 0)
+
+    # Mock schedule_email_notification
+    mock_email_notification = mocker.patch('apps.workspaces.tasks.schedule_email_notification')
+
+    result = schedule_sync(
+        workspace_id=workspace_id,
+        schedule_enabled=True,
+        hours=12,
+        email_added=['realtime_user@fyle.in'],
+        emails_selected=['admin@fyle.in'],
+        is_real_time_export_enabled=True
+    )
+
+    # Verify WorkspaceSchedule was updated correctly
+    assert result.workspace_id == workspace_id
+    assert result.enabled == True
+    assert result.is_real_time_export_enabled == True
+    assert result.interval_hours == 12
+    assert result.emails_selected == ['admin@fyle.in']
+    assert result.start_datetime == datetime(2023, 6, 15, 10, 30, 0)
+    assert ['realtime_user@fyle.in'] in result.additional_email_options
+
+    # Verify the existing schedule was deleted and no new schedule created
+    assert result.schedule is None
+    assert not Schedule.objects.filter(id=existing_schedule.id).exists()
+
+    # Verify email notification was scheduled
+    mock_email_notification.assert_called_once_with(
+        workspace_id=workspace_id,
+        schedule_enabled=True,
+        hours=12
+    )
+
+
+def test_schedule_sync_disabled_with_existing_schedule(mocker, db):
+    """
+    Test schedule_sync with schedule_enabled=False and existing schedule
+    """
+    workspace_id = 1
+
+    # Create an existing WorkspaceSchedule with a Schedule
+    from django_q.models import Schedule
+    existing_schedule = Schedule.objects.create(
+        func='apps.workspaces.tasks.run_sync_schedule',
+        args='1',
+        schedule_type=Schedule.MINUTES,
+        minutes=120
+    )
+
+    WorkspaceSchedule.objects.create(
+        workspace_id=workspace_id,
+        enabled=True,
+        schedule=existing_schedule,
+        additional_email_options=[{'email': 'old@fyle.in', 'name': 'Old User'}]
+    )
+
+    # Mock schedule_email_notification
+    mock_email_notification = mocker.patch('apps.workspaces.tasks.schedule_email_notification')
+
+    result = schedule_sync(
+        workspace_id=workspace_id,
         schedule_enabled=False,
+        hours=6,
         email_added=None,
-        emails_selected=[
-            'ashwin.t@fyle.in'
-        ],
-        workspace_id=workspace_id,
+        emails_selected=['user@fyle.in'],
         is_real_time_export_enabled=False
     )
 
-    ws_schedule = WorkspaceSchedule.objects.filter(
-        workspace_id=workspace_id
-    ).first()
+    # Verify WorkspaceSchedule was updated correctly
+    assert result.workspace_id == workspace_id
+    assert result.enabled == False
+    assert result.is_real_time_export_enabled == False
 
-    assert ws_schedule.schedule == None
+    # Verify the existing schedule was deleted
+    assert result.schedule is None
+    assert not Schedule.objects.filter(id=existing_schedule.id).exists()
+
+    # Verify email notification was scheduled (even when disabled)
+    mock_email_notification.assert_called_once_with(
+        workspace_id=workspace_id,
+        schedule_enabled=False,
+        hours=6
+    )
+
+
+def test_schedule_sync_disabled_without_existing_schedule(mocker, db):
+    """
+    Test schedule_sync with schedule_enabled=False and no existing schedule
+    """
+    workspace_id = 1
+
+    # Mock schedule_email_notification
+    mock_email_notification = mocker.patch('apps.workspaces.tasks.schedule_email_notification')
+
+    result = schedule_sync(
+        workspace_id=workspace_id,
+        schedule_enabled=False,
+        hours=0,
+        email_added=None,
+        emails_selected=[],
+        is_real_time_export_enabled=False
+    )
+
+    # Verify WorkspaceSchedule was created correctly
+    assert result.workspace_id == workspace_id
+    assert result.enabled == False
+    assert result.is_real_time_export_enabled == False
+    assert result.schedule is None
+
+    # Verify email notification was scheduled
+    mock_email_notification.assert_called_once_with(
+        workspace_id=workspace_id,
+        schedule_enabled=False,
+        hours=0
+    )
+
+
+def test_schedule_sync_email_added_functionality(mocker, db):
+    """
+    Test schedule_sync email_added list functionality
+    """
+    workspace_id = 1
+
+    # Create an existing WorkspaceSchedule with some email options
+    WorkspaceSchedule.objects.create(
+        workspace_id=workspace_id,
+        enabled=False,
+        additional_email_options=[
+            {'email': 'existing1@fyle.in', 'name': 'Existing User 1'},
+            {'email': 'existing2@fyle.in', 'name': 'Existing User 2'}
+        ]
+    )
+
+    # Mock schedule_email_notification and datetime
+    mocker.patch('apps.workspaces.tasks.schedule_email_notification')
+    mock_now = mocker.patch('apps.workspaces.tasks.datetime')
+    mock_now.now.return_value = datetime(2023, 6, 15, 14, 0, 0)
+
+    result = schedule_sync(
+        workspace_id=workspace_id,
+        schedule_enabled=True,
+        hours=8,
+        email_added=['new1@fyle.in', 'new2@fyle.in'],
+        emails_selected=['admin1@fyle.in', 'admin2@fyle.in'],
+        is_real_time_export_enabled=False
+    )
+
+    # Verify email_added was appended to additional_email_options
+    expected_email_options = [
+        {'email': 'existing1@fyle.in', 'name': 'Existing User 1'},
+        {'email': 'existing2@fyle.in', 'name': 'Existing User 2'},
+        ['new1@fyle.in', 'new2@fyle.in']
+    ]
+    assert result.additional_email_options == expected_email_options
+
+    # Test with empty email_added - it should NOT be appended since code checks "if email_added:"
+    result2 = schedule_sync(
+        workspace_id=workspace_id,
+        schedule_enabled=True,
+        hours=8,
+        email_added=[],
+        emails_selected=['admin@fyle.in'],
+        is_real_time_export_enabled=False
+    )
+
+    # Verify empty email_added was NOT appended since empty lists are falsy
+    expected_email_options_2 = [
+        {'email': 'existing1@fyle.in', 'name': 'Existing User 1'},
+        {'email': 'existing2@fyle.in', 'name': 'Existing User 2'},
+        ['new1@fyle.in', 'new2@fyle.in']
+    ]
+    assert result2.additional_email_options == expected_email_options_2
+
+
+def test_schedule_sync_no_email_added(mocker, db):
+    """
+    Test schedule_sync when email_added is None
+    """
+    workspace_id = 1
+
+    # Mock schedule_email_notification and datetime
+    mocker.patch('apps.workspaces.tasks.schedule_email_notification')
+    mock_now = mocker.patch('apps.workspaces.tasks.datetime')
+    mock_now.now.return_value = datetime(2023, 6, 15, 16, 45, 0)
+
+    result = schedule_sync(
+        workspace_id=workspace_id,
+        schedule_enabled=True,
+        hours=6,
+        email_added=None,
+        emails_selected=['user@fyle.in'],
+        is_real_time_export_enabled=False
+    )
+
+    # Verify additional_email_options remains as default list
+    assert result.additional_email_options == []
+
+    # Verify other fields are set correctly
+    assert result.workspace_id == workspace_id
+    assert result.enabled == True
+    assert result.interval_hours == 6
+    assert result.emails_selected == ['user@fyle.in']
+
+
+def test_schedule_sync_update_existing_workspace_schedule(mocker, db):
+    """
+    Test schedule_sync updating an existing WorkspaceSchedule
+    """
+    workspace_id = 1
+
+    # Create an existing WorkspaceSchedule
+    existing_ws_schedule = WorkspaceSchedule.objects.create(
+        workspace_id=workspace_id,
+        enabled=True,
+        is_real_time_export_enabled=True,
+        interval_hours=12,
+        emails_selected=['old@fyle.in'],
+        additional_email_options=[{'old': 'data'}]
+    )
+
+    original_id = existing_ws_schedule.id
+
+    # Mock schedule_email_notification and datetime
+    mocker.patch('apps.workspaces.tasks.schedule_email_notification')
+    mock_now = mocker.patch('apps.workspaces.tasks.datetime')
+    mock_now.now.return_value = datetime(2023, 6, 15, 18, 0, 0)
+
+    result = schedule_sync(
+        workspace_id=workspace_id,
+        schedule_enabled=False,
+        hours=24,
+        email_added=['updated@fyle.in'],
+        emails_selected=['new@fyle.in'],
+        is_real_time_export_enabled=False
+    )
+
+    # Verify the same WorkspaceSchedule object was updated (not created new)
+    assert result.id == original_id
+    assert WorkspaceSchedule.objects.filter(workspace_id=workspace_id).count() == 1
+
+    # Verify fields were updated correctly
+    assert result.enabled == False
+    assert result.is_real_time_export_enabled == False
+    assert result.schedule is None  # Since schedule_enabled=False
+
+    # Note: When schedule_enabled=False, the schedule fields like interval_hours
+    # and emails_selected are not updated according to the current logic
 
 
 def test_run_sync_schedule(mocker, db):
@@ -299,7 +576,7 @@ def test_async_update_fyle_credentials(db):
     assert fyle_credentials.refresh_token == refresh_token
 
 
-def test_async_create_admin_subcriptions(db, mocker):
+def test_create_admin_subscriptions(db, mocker):
     """
     Test async create admin subscriptions
     """
@@ -307,7 +584,7 @@ def test_async_create_admin_subcriptions(db, mocker):
         'fyle.platform.apis.v1.admin.Subscriptions.post',
         return_value={}
     )
-    async_create_admin_subcriptions(1)
+    create_admin_subscriptions(1)
 
 
 @pytest.mark.django_db(databases=['default'])
@@ -336,7 +613,7 @@ def test_async_update_workspace_name(db, mocker):
         return_value={'data': {'org': {'name': 'Test Org'}}}
     )
     workspace = Workspace.objects.get(id=1)
-    async_update_workspace_name(workspace, 'Bearer access_token')
+    update_workspace_name(workspace.id, 'Bearer access_token')
 
     workspace = Workspace.objects.get(id=1)
     assert workspace.name == 'Test Org'
@@ -378,6 +655,63 @@ def test_patch_integration_settings_with_unmapped_card_count(db, add_fyle_creden
     result = patch_integration_settings(workspace_id=workspace_id, unmapped_card_count=3)
 
     assert result is False
+
+
+def test_run_sync_schedule_with_rabbitmq_export(mocker, db):
+    """
+    Test run_sync_schedule with export_via_rabbitmq enabled (covers lines 162-163, 173)
+    """
+    workspace_id = 1
+
+    # Mock the expenses API call
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses']
+    )
+
+    # Mock the RabbitMQ publish function to track if it's called
+    mock_publish_to_rabbitmq = mocker.patch('apps.workspaces.tasks.publish_to_rabbitmq')
+
+    # Enable export_via_rabbitmq in FeatureConfig
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.export_via_rabbitmq = True
+    feature_config.save()
+
+    # Create some expense groups to export
+    workspace = Workspace.objects.get(id=workspace_id)
+    ExpenseGroup.objects.create(
+        workspace=workspace,
+        fund_source='PERSONAL',
+        exported_at=None
+    )
+    ExpenseGroup.objects.create(
+        workspace=workspace,
+        fund_source='CCC',
+        exported_at=None
+    )
+
+    # Call run_sync_schedule - this should trigger the RabbitMQ path
+    run_sync_schedule(workspace_id)
+
+    # Verify that publish_to_rabbitmq was called (covers line 173)
+    mock_publish_to_rabbitmq.assert_called_once()
+
+    # Verify the payload structure
+    call_args = mock_publish_to_rabbitmq.call_args
+    payload_arg = call_args[1]['payload']
+    routing_key_arg = call_args[1]['routing_key']
+
+    assert payload_arg['workspace_id'] == workspace_id
+    assert payload_arg['action'] == 'EXPORT.P1.BACKGROUND_SCHEDULE_EXPORT'
+    assert payload_arg['data']['workspace_id'] == workspace_id
+    assert payload_arg['data']['triggered_by'] == 'BACKGROUND_SCHEDULE'
+    assert payload_arg['data']['run_in_rabbitmq_worker'] == True
+    assert routing_key_arg == 'EXPORT.P1.*'
+    assert isinstance(payload_arg['data']['expense_group_ids'], list)
+
+    # Reset the feature config
+    feature_config.export_via_rabbitmq = False
+    feature_config.save()
 
 
 def test_patch_integration_settings_for_unmapped_cards(db, mocker):

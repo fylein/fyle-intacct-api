@@ -37,10 +37,10 @@ class WorkerActionEnum(str, Enum):
 
 
 QUEUE_BINDKEY_MAP = {
-    'import': RoutingKeyEnum.IMPORT,
-    'utility': RoutingKeyEnum.UTILITY,
-    'export.p0': RoutingKeyEnum.EXPORT_P0,
-    'export.p1': RoutingKeyEnum.EXPORT_P1
+    'intacct_import': RoutingKeyEnum.IMPORT,
+    'intacct_utility': RoutingKeyEnum.UTILITY,
+    'intacct_export.p0': RoutingKeyEnum.EXPORT_P0,
+    'intacct_export.p1': RoutingKeyEnum.EXPORT_P1
 }
 
 
