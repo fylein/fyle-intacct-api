@@ -3,7 +3,10 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    dependencies = [('internal', '0013_auto_generated_sql')]
+    dependencies = [
+        ('internal', '0013_auto_generated_sql'),
+        ('workspaces', '0050_featureconfig_import_via_rabbitmq_and_more')
+    ]
 
     operations = [
         migrations.RunSQL(
