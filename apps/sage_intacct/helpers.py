@@ -56,13 +56,11 @@ def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> bool:
     """
     workspace = Workspace.objects.get(pk=workspace_id)
     try:
-        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-
         if workspace.destination_synced_at:
             time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
         if workspace.destination_synced_at is None or time_interval.days > 0:
-            sync_dimensions(sage_intacct_credentials, workspace.id)
+            sync_dimensions(workspace.id)
             workspace.destination_synced_at = datetime.now()
             workspace.save(update_fields=['destination_synced_at'])
     except SageIntacctCredential.DoesNotExist:
@@ -78,7 +76,7 @@ def is_dependent_field_import_enabled(workspace_id: int) -> bool:
     return DependentFieldSetting.objects.filter(workspace_id=workspace_id).exists()
 
 
-def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, dimensions: list = []) -> None:
+def sync_dimensions(workspace_id: int, dimensions: list = []) -> None:
     """
     Sync Dimensions
     :param si_credentials: Sage Intacct Credentials
@@ -86,9 +84,10 @@ def sync_dimensions(si_credentials: SageIntacctCredential, workspace_id: int, di
     :param dimensions: Dimensions List
     :return: None
     """
+    sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
     sage_intacct_connection = import_string(
         'apps.sage_intacct.utils.SageIntacctConnector'
-    )(si_credentials, workspace_id)
+    )(sage_intacct_credentials, workspace_id)
 
     update_timestamp = False
     if not dimensions:

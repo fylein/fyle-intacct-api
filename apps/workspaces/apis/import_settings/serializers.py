@@ -2,15 +2,16 @@ import logging
 
 from django.db.models import Q
 from django.db import transaction
-from django_q.tasks import async_task
 from rest_framework import serializers
+
 from fyle_accounting_mappings.models import MappingSetting
 
-from fyle_integrations_imports.models import ImportLog
 from apps.mappings.models import GeneralMapping
 from apps.fyle.models import DependentFieldSetting
+from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import Workspace, Configuration
 from apps.workspaces.apis.import_settings.triggers import ImportSettingsTrigger
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -253,7 +254,15 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
                 )
 
                 if reset_flag:
-                    async_task('apps.sage_intacct.dependent_fields.reset_flag_and_disable_cost_type_field', workspace_id=instance.id, reset_flag=reset_flag)
+                    payload = {
+                        'workspace_id': instance.id,
+                        'action': WorkerActionEnum.RESET_COST_TYPE_IMPORT_FLAG.value,
+                        'data': {
+                            'workspace_id': instance.id,
+                            'reset_flag': reset_flag
+                        }
+                    }
+                    publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             trigger.post_save_mapping_settings(configurations_instance)
 
