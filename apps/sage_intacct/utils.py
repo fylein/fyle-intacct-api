@@ -1,68 +1,70 @@
+import re
 import json
 import logging
-import re
-from datetime import datetime, timedelta
 from typing import Optional
+from datetime import datetime, timedelta
 
 import text_unidecode
-from cryptography.fernet import Fernet
-from django.conf import settings
+
 from django.db.models import Q
+from django.conf import settings
 from django.utils import timezone
-from django_q.tasks import async_task
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
+from cryptography.fernet import Fernet
+
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 
+from apps.workspaces.helpers import get_app_name
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
-from apps.sage_intacct.models import (
-    APPayment,
-    APPaymentLineitem,
-    Bill,
-    BillLineitem,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem,
-    CostCode,
-    CostType,
-    DimensionDetail,
-    ExpenseReport,
-    ExpenseReportLineitem,
-    JournalEntry,
-    JournalEntryLineitem,
-    SageIntacctReimbursement,
-    SageIntacctReimbursementLineitem,
-)
-from apps.workspaces.helpers import get_app_name
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
+from apps.sage_intacct.models import (
+    Bill,
+    CostType,
+    CostCode,
+    APPayment,
+    BillLineitem,
+    JournalEntry,
+    ExpenseReport,
+    DimensionDetail,
+    APPaymentLineitem,
+    JournalEntryLineitem,
+    ChargeCardTransaction,
+    ExpenseReportLineitem,
+    SageIntacctReimbursement,
+    ChargeCardTransactionLineitem,
+    SageIntacctReimbursementLineitem
+)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
 SYNC_UPPER_LIMIT = {
-    'projects': 25000,
-    'customers': 10000,
     'items': 5000,
     'classes': 1000,
     'accounts': 2000,
-    'expense_types': 1000,
-    'locations': 1000,
-    'departments': 1000,
     'vendors': 20000,
+    'locations': 1000,
+    'projects': 25000,
     'tax_details': 200,
-    'cost_types': 500000,
+    'customers': 10000,
     'cost_codes': 10000,
+    'departments': 1000,
+    'cost_types': 500000,
+    'expense_types': 1000,
     'user_defined_dimensions': 5000
 }
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
     'PROJECT': 'fyle_integrations_imports.modules.projects.disable_projects',
+    'VENDOR': 'fyle_integrations_imports.modules.merchants.disable_merchants',
     'ACCOUNT': 'fyle_integrations_imports.modules.categories.disable_categories',
     'EXPENSE_TYPE': 'fyle_integrations_imports.modules.categories.disable_categories',
-    'COST_CENTER': 'fyle_integrations_imports.modules.cost_centers.disable_cost_centers',
-    'VENDOR': 'fyle_integrations_imports.modules.merchants.disable_merchants'
+    'COST_CENTER': 'fyle_integrations_imports.modules.cost_centers.disable_cost_centers'
 }
 
 
@@ -372,13 +374,14 @@ class SageIntacctConnector:
         )
 
         if not is_expense_type_import_enabled:
-            async_task(
-                'apps.mappings.tasks.check_and_create_ccc_mappings',
-                workspace_id=self.workspace_id,
-                q_options={
-                    'cluster': 'import'
+            payload = {
+                'workspace_id': self.workspace_id,
+                'action': WorkerActionEnum.CHECK_AND_CREATE_CCC_MAPPINGS.value,
+                'data': {
+                    'workspace_id': self.workspace_id
                 }
-            )
+            }
+            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
         return []
 

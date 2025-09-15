@@ -2,40 +2,48 @@ import logging
 import traceback
 from datetime import timedelta
 
-from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from cryptography.fernet import Fernet
+from rest_framework.views import status
 from django.db.models import Q, QuerySet
-from django_q.tasks import async_task
-from fyle.platform import exceptions as fyle_exc
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
-from fyle_accounting_mappings.models import ExpenseAttribute
-from fyle_rest_auth.helpers import get_fyle_admin
-from fyle_rest_auth.models import AuthToken
-from fyle_rest_auth.utils import AuthUtils
-from rest_framework import generics, viewsets
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import status
-from sageintacctsdk import SageIntacctSDK
-from sageintacctsdk import exceptions as sage_intacct_exc
+from rest_framework import generics, viewsets
+from django.contrib.auth import get_user_model
+from rest_framework.permissions import IsAuthenticated
 
+from sageintacctsdk import SageIntacctSDK
+from fyle_rest_auth.utils import AuthUtils
+from fyle_rest_auth.models import AuthToken
+from fyle.platform import exceptions as fyle_exc
+from fyle_rest_auth.helpers import get_fyle_admin
+from sageintacctsdk import exceptions as sage_intacct_exc
+from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+
+from apps.tasks.models import TaskLog
 from apps.fyle.helpers import get_cluster_domain
 from apps.fyle.models import ExpenseGroupSettings
-from apps.sage_intacct.utils import SageIntacctConnector
-from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
-from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, SageIntacctCredential, Workspace
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.models import (
+    Workspace,
+    Configuration,
+    FeatureConfig,
+    FyleCredential,
+    LastExportDetail,
+    SageIntacctCredential
+)
 from apps.workspaces.serializers import (
+    WorkspaceSerializer,
     ConfigurationSerializer,
     FyleCredentialSerializer,
     LastExportDetailSerializer,
-    SageIntacctCredentialSerializer,
-    WorkspaceSerializer,
+    SageIntacctCredentialSerializer
 )
 from apps.workspaces.tasks import patch_integration_settings
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
 
 User = get_user_model()
@@ -115,6 +123,7 @@ class WorkspaceView(viewsets.ViewSet):
             ExpenseGroupSettings.objects.create(workspace_id=workspace.id)
 
             LastExportDetail.objects.create(workspace_id=workspace.id)
+            FeatureConfig.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 
@@ -139,12 +148,16 @@ class WorkspaceView(viewsets.ViewSet):
         workspaces = Workspace.objects.filter(user__in=[user], fyle_org_id=org_id).all()
 
         if workspaces and not is_polling:
-            async_task(
-                'apps.workspaces.tasks.async_update_workspace_name',
-                workspaces[0],
-                request.META.get('HTTP_AUTHORIZATION'),
-                q_options={'cluster': 'import'}
-            )
+            payload = {
+                'workspace_id': workspaces[0].id,
+                'action': WorkerActionEnum.UPDATE_WORKSPACE_NAME.value,
+                'data': {
+                    'workspace_id': workspaces[0].id,
+                    'access_token': request.META.get('HTTP_AUTHORIZATION'),
+                }
+            }
+            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.UTILITY.value)
+
         return Response(
             data=WorkspaceSerializer(workspaces, many=True).data,
             status=status.HTTP_200_OK
@@ -568,7 +581,23 @@ class ExportToIntacctView(viewsets.ViewSet):
         """
         Export to Intacct
         """
-        export_to_intacct(workspace_id=kwargs['workspace_id'], triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC)
+        feature_config = FeatureConfig.objects.get(workspace_id=kwargs['workspace_id'])
+        if feature_config.export_via_rabbitmq:
+            payload = {
+                'workspace_id': kwargs['workspace_id'],
+                'action': WorkerActionEnum.DASHBOARD_SYNC.value,
+                'data': {
+                    'workspace_id': kwargs['workspace_id'],
+                    'triggered_by': ExpenseImportSourceEnum.DASHBOARD_SYNC,
+                    'run_in_rabbitmq_worker': True
+                }
+            }
+            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P0.value)
+        else:
+            export_to_intacct(
+                workspace_id=kwargs['workspace_id'],
+                triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC
+            )
 
         return Response(
             status=status.HTTP_200_OK
