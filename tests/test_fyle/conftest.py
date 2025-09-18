@@ -1,9 +1,8 @@
-from datetime import datetime, timezone
-
 import pytest
 
+from datetime import datetime, timezone
+from apps.workspaces.models import Workspace
 from apps.fyle.models import ExpenseGroupSettings
-from apps.workspaces.models import LastExportDetail, Workspace
 
 
 @pytest.fixture
@@ -23,8 +22,6 @@ def create_temp_workspace(db):
     )
 
     workspace.save()
-
-    LastExportDetail.objects.update_or_create(workspace_id=98)
 
     ExpenseGroupSettings.objects.create(
         reimbursable_expense_group_fields='{employee_email,report_id,claim_number,fund_source}',
