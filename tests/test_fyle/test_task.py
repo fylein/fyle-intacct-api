@@ -328,7 +328,7 @@ def test_import_and_export_expenses_with_export_call(mocker, db, test_connection
     assert mock_export_to_intacct.call_count == 1
 
     # Verify the call arguments
-    args, kwargs = mock_export_to_intacct.call_args
+    _, kwargs = mock_export_to_intacct.call_args
     assert kwargs['workspace_id'] == workspace.id
     assert kwargs['triggered_by'] == ExpenseImportSourceEnum.DASHBOARD_SYNC
     assert kwargs['run_in_rabbitmq_worker'] == True
@@ -800,7 +800,7 @@ def test_update_non_exported_expenses_fund_source_change_logging(mocker, db):
         return_value=None
     )
 
-    update_non_exported_expenses([mock_expense_data], workspace_id=1)
+    update_non_exported_expenses(mock_expense_data)
 
     # Verify that the fund source change handler was called
     mock_handle_fund_source_changes.assert_called_once()
@@ -1126,7 +1126,7 @@ def test_update_non_exported_expenses_fund_source_change_detection(mocker, db):
         'fund_source': 'CCC'
     }]
 
-    update_non_exported_expenses(expense_objects, expense.workspace_id)
+    update_non_exported_expenses(expense_objects[0])
     mock_handler.assert_called_once()
 
 
@@ -1184,7 +1184,7 @@ def test_recreate_expense_groups_with_filters_simple(mocker, db):
     mocker.patch('apps.fyle.tasks.Expense.objects.filter', return_value=expenses)
     mocker.patch('apps.fyle.tasks.ExpenseGroup.create_expense_groups_by_report_id_fund_source')
 
-    recreate_expense_groups(configuration, expenses)
+    recreate_expense_groups(workspace_id=workspace_id, expense_ids=[expense.id for expense in expenses])
 
     mock_construct.assert_called_once()
     mock_skip.assert_called_once()
