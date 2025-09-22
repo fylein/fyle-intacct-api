@@ -1,19 +1,17 @@
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 from typing import List
 
 from django.conf import settings
 from django.db.models import Q
-
+from fyle.platform.exceptions import InternalServerError, RetryException
 from fyle.platform.internals.decorators import retry
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle.platform.exceptions import InternalServerError, RetryException
 
+from apps.fyle.helpers import get_batched_expenses, get_updated_accounting_export_summary
 from apps.fyle.models import Expense, ExpenseGroup
-from apps.workspaces.models import Workspace, FyleCredential, Configuration
-from fyle_intacct_api.logging_middleware import get_logger, get_caller_info
-
-from apps.fyle.helpers import get_updated_accounting_export_summary, get_batched_expenses
+from apps.workspaces.models import Configuration, FyleCredential, Workspace
+from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -40,18 +38,19 @@ def update_expenses_in_progress(in_progress_expenses: list[Expense]) -> None:
     """
     expense_to_be_updated = []
     for expense in in_progress_expenses:
-        expense_to_be_updated.append(
-            Expense(
-                id=expense.id,
-                accounting_export_summary=get_updated_accounting_export_summary(
-                    expense.expense_id,
-                    'IN_PROGRESS',
-                    None,
-                    '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
-                    False
+        if expense.accounting_export_summary.get('state') != 'DELETED':
+            expense_to_be_updated.append(
+                Expense(
+                    id=expense.id,
+                    accounting_export_summary=get_updated_accounting_export_summary(
+                        expense.expense_id,
+                        'IN_PROGRESS',
+                        None,
+                        '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
+                        False
+                    )
                 )
             )
-        )
 
     __bulk_update_expenses(expense_to_be_updated)
 
@@ -75,19 +74,20 @@ def mark_expenses_as_skipped(final_query: Q, expenses_object_ids: list, workspac
     skipped_expenses_list = list(expenses_to_be_skipped)
     expense_to_be_updated = []
     for expense in expenses_to_be_skipped:
-        expense_to_be_updated.append(
-            Expense(
-                id=expense.id,
-                is_skipped=True,
-                accounting_export_summary=get_updated_accounting_export_summary(
-                    expense.expense_id,
-                    'SKIPPED',
-                    None,
-                    '{}/main/export_log'.format(settings.INTACCT_INTEGRATION_APP_URL),
-                    False
+        if expense.accounting_export_summary.get('state') != 'DELETED':
+            expense_to_be_updated.append(
+                Expense(
+                    id=expense.id,
+                    is_skipped=True,
+                    accounting_export_summary=get_updated_accounting_export_summary(
+                        expense.expense_id,
+                        'SKIPPED',
+                        None,
+                        '{}/main/export_log'.format(settings.INTACCT_INTEGRATION_APP_URL),
+                        False
+                    )
                 )
             )
-        )
 
     if expense_to_be_updated:
         __bulk_update_expenses(expense_to_be_updated)
@@ -132,8 +132,8 @@ def update_failed_expenses(failed_expenses: list[Expense], is_mapping_error: boo
         error_type = 'MAPPING' if is_mapping_error else 'ACCOUNTING_INTEGRATION_ERROR'
 
         # Skip dummy updates (if it is already in error state with the same error type)
-        if not (expense.accounting_export_summary.get('state') == 'ERROR' and \
-            expense.accounting_export_summary.get('error_type') == error_type):
+        if (expense.accounting_export_summary.get('state') not in ['ERROR', 'DELETED'] and \
+            expense.accounting_export_summary.get('error_type') != error_type):
             expense_to_be_updated.append(
                 Expense(
                     id=expense.id,
@@ -159,18 +159,19 @@ def update_complete_expenses(exported_expenses: list[Expense], url: str) -> None
     """
     expense_to_be_updated = []
     for expense in exported_expenses:
-        expense_to_be_updated.append(
-            Expense(
-                id=expense.id,
-                accounting_export_summary=get_updated_accounting_export_summary(
-                    expense.expense_id,
-                    'COMPLETE',
-                    None,
-                    url,
-                    False
+        if expense.accounting_export_summary.get('state') != 'DELETED':
+            expense_to_be_updated.append(
+                Expense(
+                    id=expense.id,
+                    accounting_export_summary=get_updated_accounting_export_summary(
+                        expense.expense_id,
+                        'COMPLETE',
+                        None,
+                        url,
+                        False
+                    )
                 )
             )
-        )
 
     __bulk_update_expenses(expense_to_be_updated)
 
@@ -193,19 +194,23 @@ def __handle_post_accounting_export_summary_exception(exception: Exception, work
         for expense in error_response['response']['data']:
             if expense['message'] == 'Permission denied to perform this action.':
                 expense_instance = Expense.objects.get(expense_id=expense['key'], workspace_id=workspace_id)
-                expense_to_be_updated.append(
-                    Expense(
-                        id=expense_instance.id,
-                        accounting_export_summary=get_updated_accounting_export_summary(
-                            expense_instance.expense_id,
-                            'DELETED',
-                            None,
-                            '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
-                            True
-                        ),
-                        updated_at=current_time
+                fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+                platform = PlatformConnector(fyle_credentials)
+                platform_expense = platform.expenses.get(source_account_type=['PERSONAL_CASH_ACCOUNT', 'PERSONAL_CORPORATE_CREDIT_CARD_ACCOUNT'], expense_id=expense['key'])
+                if not platform_expense:
+                    expense_to_be_updated.append(
+                        Expense(
+                            id=expense_instance.id,
+                            accounting_export_summary=get_updated_accounting_export_summary(
+                                expense_instance.expense_id,
+                                'DELETED',
+                                None,
+                                '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
+                                True
+                            ),
+                            updated_at=current_time
+                        )
                     )
-                )
         if expense_to_be_updated:
             Expense.objects.bulk_update(expense_to_be_updated, ['accounting_export_summary', 'updated_at'], batch_size=50)
     else:
