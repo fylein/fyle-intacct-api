@@ -140,7 +140,7 @@ def test_handle_post_accounting_export_summary_exception(db):
 
             create_generator_and_post_in_batches([{
                 'id': expense_id
-            }], platform, 3)
+            }], platform, 1)
 
     expense = Expense.objects.get(expense_id=expense_id)
 
@@ -156,7 +156,7 @@ def test_handle_post_accounting_export_summary_exception(db):
         expense_id,
         'IN_PROGRESS',
         None,
-        '{}/main/dashboard'.format(settings.QBO_INTEGRATION_APP_URL),
+        '{}/main/dashboard'.format(settings.INTACCT_INTEGRATION_APP_URL),
         False
     )
     expense.save()
@@ -175,7 +175,7 @@ def test_handle_post_accounting_export_summary_exception(db):
 
             create_generator_and_post_in_batches([{
                 'id': expense_id
-            }], platform, 3)
+            }], platform, 1)
 
     expense = Expense.objects.get(expense_id=expense_id)
     assert expense.accounting_export_summary['synced'] == False
