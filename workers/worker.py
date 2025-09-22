@@ -13,7 +13,6 @@ from consumer.event_consumer import EventConsumer
 
 from fyle_accounting_library.rabbitmq.models import FailedEvent
 from fyle_accounting_library.rabbitmq.data_class import RabbitMQData
-from fyle_accounting_library.fyle_platform.enums import RoutingKeyEnum
 from fyle_accounting_library.rabbitmq.enums import RabbitMQExchangeEnum
 from fyle_accounting_library.rabbitmq.helpers import create_cache_table
 
@@ -67,7 +66,7 @@ class Worker(EventConsumer):
             data = RabbitMQData(
                 new=payload_dict
             )
-            self.qconnector.publish(RoutingKeyEnum.EXPORT, data.to_json())
+            self.qconnector.publish(routing_key, data.to_json())
 
             self.qconnector.reject_message(delivery_tag, requeue=False)
         else:
