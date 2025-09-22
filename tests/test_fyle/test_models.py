@@ -54,14 +54,14 @@ def test_create_eliminated_expense_objects(db):
     assert len(expense) == 1
 
 
-def test_expense_group_settings(create_temp_workspace, db):
+def test_expense_group_settings(db):
     """
     Test expense group settings
     """
-    workspace_id = 98
+    workspace_id = 1
     payload = data['expense_group_settings_payload']
 
-    user = Workspace.objects.get(id=1).user
+    user = Workspace.objects.get(id=workspace_id).user
 
     ExpenseGroupSettings.update_expense_group_settings(
         payload, workspace_id, user
