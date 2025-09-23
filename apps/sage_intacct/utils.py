@@ -1,5 +1,6 @@
 import re
 import json
+import random
 import logging
 from typing import Optional
 from datetime import datetime, timedelta
@@ -1004,6 +1005,8 @@ class SageIntacctConnector:
         try:
             if create:
                 vendor_id = self.sanitize_vendor_name(vendor_name)
+                if len(vendor_id) > 20:
+                    vendor_id = vendor_id[:17] + str(random.randint(100, 999))
                 created_vendor = self.post_vendor(vendor_id, vendor_name, email)
                 return self.create_destination_attribute(
                     'vendor', vendor_name, created_vendor['VENDORID'], email)
@@ -1028,7 +1031,7 @@ class SageIntacctConnector:
                         vendor = vendor if vendor['STATUS'] == 'active' else None
                     else:
                         try:
-                            vendor_id = vendor_id + '-1'
+                            vendor_id = vendor_id[:18] + '-1'
                             vendor = self.post_vendor(vendor_id, vendor_name, email)
                         except Exception as e:
                             logger.error("Error while creating vendor %s in Workspace %s: %s", vendor_name, self.workspace_id, e.response)
