@@ -13,6 +13,9 @@ def test_trigger_sync_payments(
     mock_configuration_get,
     mock_publish_to_rabbitmq
 ):
+    """
+    Test trigger_sync_payments function
+    """
     workspace_id = 1
     # Mock configuration and general_mappings
     mock_config = mock.Mock()

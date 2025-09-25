@@ -31,7 +31,7 @@ def re_export_stuck_exports() -> None:
     publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
 
 
-def retrigger_export_stuck_export():
+def retrigger_export_stuck_export() -> None:
     """
     Re-triggers export stuck exports by identifying failed export attempts
     and retrying them.
