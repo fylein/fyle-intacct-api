@@ -1,9 +1,9 @@
+from apps.sage_intacct.helpers import schedule_payment_sync
 from fyle_intacct_api.utils import assert_valid
 
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
 from apps.mappings.tasks import schedule_auto_map_accounting_fields
-from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_intacct_reimbursement_creation
 
 
 class MappingUtils:
@@ -97,17 +97,8 @@ class MappingUtils:
             }
         )
 
-        if configuration.reimbursable_expenses_object == 'BILL':
-            schedule_ap_payment_creation(
-                configuration=configuration,
-                workspace_id=self.__workspace_id
-            )
-
-        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
-            schedule_sage_intacct_reimbursement_creation(
-                configuration=configuration,
-                workspace_id=self.__workspace_id
-            )
+        if configuration.reimbursable_expenses_object == 'BILL' or configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
+            schedule_payment_sync(configuration=configuration)
 
         if general_mapping_object.default_charge_card_name:
             schedule_auto_map_accounting_fields(self.__workspace_id)

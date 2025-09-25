@@ -6,6 +6,7 @@ from unittest import mock
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
+from apps.sage_intacct.helpers import schedule_payment_sync
 from django_q.models import Schedule
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
@@ -26,14 +27,11 @@ from apps.sage_intacct.models import (
 )
 from apps.sage_intacct.queue import (
     handle_skipped_exports,
-    schedule_ap_payment_creation,
     schedule_bills_creation,
     schedule_charge_card_transaction_creation,
     schedule_expense_reports_creation,
     schedule_fyle_reimbursements_sync,
     schedule_journal_entries_creation,
-    schedule_sage_intacct_objects_status_sync,
-    schedule_sage_intacct_reimbursement_creation,
 )
 from apps.sage_intacct.tasks import (
     __validate_employee_mapping,
@@ -1419,15 +1417,10 @@ def test_schedule_ap_payment_creation(db):
     workspace_id = 1
     workspace_configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-    schedule_ap_payment_creation(configuration=workspace_configuration, workspace_id=workspace_id)
-    schedule = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_ap_payment').count()
+    schedule_payment_sync(configuration=workspace_configuration)
+    schedule = Schedule.objects.filter(func='apps.sage_intacct.queues.trigger_sync_payments').count()
 
     assert schedule == 1
-    workspace_configuration.sync_fyle_to_sage_intacct_payments = False
-    schedule_ap_payment_creation(configuration=workspace_configuration, workspace_id=workspace_id)
-    schedule = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_ap_payment').count()
-
-    assert schedule == 0
 
 
 def test_check_sage_intacct_object_status(mocker, db):
@@ -1540,16 +1533,11 @@ def test_schedule_sage_intacct_objects_status_sync(db):
     Test schedule_sage_intacct_objects_status_sync
     """
     workspace_id = 1
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    schedule_payment_sync(configuration=configuration)
 
-    schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments=True, workspace_id=workspace_id)
-
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.check_sage_intacct_object_status', args=workspace_id).count()
+    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queues.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
-
-    schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments=False, workspace_id=workspace_id)
-
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.check_sage_intacct_object_status', args=workspace_id).count()
-    assert schedule_count == 0
 
 
 def test_schedule_journal_entries_creation(mocker, db):
@@ -1603,16 +1591,10 @@ def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
     workspace_id = 1
     workspace_configuration = Configuration.objects.get(workspace_id=workspace_id)
     workspace_configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
-    schedule_sage_intacct_reimbursement_creation(configuration=workspace_configuration, workspace_id=workspace_id)
+    schedule_payment_sync(configuration=workspace_configuration)
 
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement', args=workspace_id).count()
+    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queues.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
-
-    workspace_configuration.sync_fyle_to_sage_intacct_payments = False
-    schedule_sage_intacct_reimbursement_creation(configuration=workspace_configuration, workspace_id=workspace_id)
-
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement', args=workspace_id).count()
-    assert schedule_count == 0
 
 
 def test__validate_expense_group(mocker, db):

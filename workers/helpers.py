@@ -21,6 +21,7 @@ class WorkerActionEnum(str, Enum):
     """
     DIRECT_EXPORT = 'EXPORT.P0.DIRECT_EXPORT'
     DASHBOARD_SYNC = 'EXPORT.P0.DASHBOARD_SYNC'
+    CREATE_AP_PAYMENT = 'EXPORT.P1.CREATE_AP_PAYMENT'
     AUTO_MAP_EMPLOYEES = 'IMPORT.AUTO_MAP_EMPLOYEES'
     CREATE_EXPENSE_GROUP = 'EXPORT.P1.CREATE_EXPENSE_GROUP'
     UPDATE_WORKSPACE_NAME = 'UTILITY.UPDATE_WORKSPACE_NAME'
@@ -33,9 +34,12 @@ class WorkerActionEnum(str, Enum):
     SYNC_SAGE_INTACCT_DIMENSION = 'IMPORT.SYNC_SAGE_INTACCT_DIMENSION'
     BACKGROUND_SCHEDULE_EXPORT = 'EXPORT.P1.BACKGROUND_SCHEDULE_EXPORT'
     AUTO_MAP_CHARGE_CARD_ACCOUNT = 'IMPORT.AUTO_MAP_CHARGE_CARD_ACCOUNT'
+    PROCESS_FYLE_REIMBURSEMENTS = 'EXPORT.P1.PROCESS_FYLE_REIMBURSEMENTS'
     CHECK_AND_CREATE_CCC_MAPPINGS = 'IMPORT.CHECK_AND_CREATE_CCC_MAPPINGS'
     HANDLE_FYLE_REFRESH_DIMENSION = 'IMPORT.HANDLE_FYLE_REFRESH_DIMENSION'
     EXPENSE_UPDATED_AFTER_APPROVAL = 'UTILITY.EXPENSE_UPDATED_AFTER_APPROVAL'
+    CHECK_SAGE_INTACCT_OBJECT_STATUS = 'EXPORT.P1.CHECK_SAGE_INTACCT_OBJECT_STATUS'
+    CREATE_SAGE_INTACCT_REIMBURSEMENT = 'EXPORT.P1.CREATE_SAGE_INTACCT_REIMBURSEMENT'
     CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION = 'IMPORT.CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION'
     CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION = 'IMPORT.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION'
 
@@ -53,6 +57,7 @@ ACTION_METHOD_MAP = {
     WorkerActionEnum.DASHBOARD_SYNC: 'apps.workspaces.actions.export_to_intacct',
     WorkerActionEnum.AUTO_MAP_EMPLOYEES: 'apps.mappings.tasks.auto_map_employees',
     WorkerActionEnum.CREATE_EXPENSE_GROUP: 'apps.fyle.tasks.create_expense_groups',
+    WorkerActionEnum.CREATE_AP_PAYMENT: 'apps.sage_intacct.tasks.create_ap_payment',
     WorkerActionEnum.EXPENSE_STATE_CHANGE: 'apps.fyle.tasks.import_and_export_expenses',
     WorkerActionEnum.UPDATE_WORKSPACE_NAME: 'apps.workspaces.tasks.update_workspace_name',
     WorkerActionEnum.BACKGROUND_SCHEDULE_EXPORT: 'apps.workspaces.actions.export_to_intacct',
@@ -65,7 +70,10 @@ ACTION_METHOD_MAP = {
     WorkerActionEnum.EXPENSE_UPDATED_AFTER_APPROVAL: 'apps.fyle.tasks.update_non_exported_expenses',
     WorkerActionEnum.AUTO_MAP_CHARGE_CARD_ACCOUNT: 'apps.mappings.tasks.auto_map_charge_card_account',
     WorkerActionEnum.CHECK_AND_CREATE_CCC_MAPPINGS: 'apps.mappings.tasks.check_and_create_ccc_mappings',
+    WorkerActionEnum.PROCESS_FYLE_REIMBURSEMENTS: 'apps.sage_intacct.tasks.process_fyle_reimbursements',
+    WorkerActionEnum.CHECK_SAGE_INTACCT_OBJECT_STATUS: 'apps.sage_intacct.tasks.check_sage_intacct_object_status',
     WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION: 'apps.fyle.helpers.check_interval_and_sync_dimension',
+    WorkerActionEnum.CREATE_SAGE_INTACCT_REIMBURSEMENT: 'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
     WorkerActionEnum.RESET_COST_TYPE_IMPORT_FLAG: 'apps.sage_intacct.dependent_fields.reset_flag_and_disable_cost_type_field',
     WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION: 'apps.sage_intacct.helpers.check_interval_and_sync_dimension'
 }
