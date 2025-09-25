@@ -2,7 +2,7 @@ import logging
 
 from django.db.models import Q
 from django.conf import settings
-
+from django.core.cache import cache
 from rest_framework import generics
 from rest_framework.views import status
 from rest_framework.request import Request
@@ -14,6 +14,7 @@ from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
+from apps.workspaces.enums import CacheKeyEnum
 from apps.sage_intacct.helpers import sync_dimensions
 from apps.sage_intacct.serializers import SageIntacctFieldSerializer
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
@@ -154,15 +155,20 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace.id)
+            cache_key = CacheKeyEnum.SAGE_INTACCT_SYNC_DIMENSIONS.value.format(workspace_id=workspace.id)
+            is_cached = cache.get(cache_key)
 
-            payload = {
-                'workspace_id': workspace.id,
-                'action': WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION.value,
-                'data': {
-                    'workspace_id': workspace.id
+            if not is_cached:
+                # Set cache to avoid multiple requests in the next 5 minutes
+                cache.set(cache_key, True, timeout=300)
+                payload = {
+                    'workspace_id': workspace.id,
+                    'action': WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION.value,
+                    'data': {
+                        'workspace_id': workspace.id
+                    }
                 }
-            }
-            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
+                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
@@ -199,19 +205,23 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
 
         try:
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
+            cache_key = CacheKeyEnum.SAGE_INTACCT_SYNC_DIMENSIONS.value.format(workspace_id=workspace.id)
+            is_cached = cache.get(cache_key)
 
-            # If only specified dimensions are to be synced, sync them synchronously
-            if dimensions_to_sync:
-                sync_dimensions(workspace.id, dimensions_to_sync)
-            else:
-                payload = {
-                    'workspace_id': workspace.id,
-                    'action': WorkerActionEnum.SYNC_SAGE_INTACCT_DIMENSION.value,
-                    'data': {
-                        'workspace_id': workspace.id
+            if not is_cached:
+                cache.set(cache_key, True, timeout=300)
+                # If only specified dimensions are to be synced, sync them synchronously
+                if dimensions_to_sync:
+                    sync_dimensions(workspace.id, dimensions_to_sync)
+                else:
+                    payload = {
+                        'workspace_id': workspace.id,
+                        'action': WorkerActionEnum.SYNC_SAGE_INTACCT_DIMENSION.value,
+                        'data': {
+                            'workspace_id': workspace.id
+                        }
                     }
-                }
-                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
+                    publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
