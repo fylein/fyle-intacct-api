@@ -1,7 +1,9 @@
+from apps.workspaces.enums import CacheKeyEnum
 from rest_framework.request import Request
 from rest_framework import generics, status
 from rest_framework.response import Response
 
+from django.core.cache import cache
 from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -219,15 +221,19 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
             # check if fyle credentials are present, and return 400 otherwise
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             FyleCredential.objects.get(workspace_id=workspace.id)
+            cache_key = CacheKeyEnum.FYLE_SYNC_DIMENSIONS.value.format(workspace_id=workspace.id)
+            is_cached = cache.get(cache_key)
 
-            payload = {
-                'workspace_id': workspace.id,
-                'action': WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION.value,
-                'data': {
+            if not is_cached:
+                cache.set(CacheKeyEnum.FYLE_SYNC_DIMENSIONS.value.format(workspace_id=workspace.id), True, 300)
+                payload = {
                     'workspace_id': workspace.id,
+                    'action': WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION.value,
+                    'data': {
+                        'workspace_id': workspace.id,
+                    }
                 }
-            }
-            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
+                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
@@ -260,15 +266,19 @@ class RefreshFyleDimensionView(generics.ListCreateAPIView):
             # check if fyle credentials are present, and return 400 otherwise
             workspace = Workspace.objects.get(id=kwargs['workspace_id'])
             FyleCredential.objects.get(workspace_id=workspace.id)
+            cache_key = CacheKeyEnum.FYLE_SYNC_DIMENSIONS.value.format(workspace_id=workspace.id)
+            is_cached = cache.get(cache_key)
 
-            payload = {
-                'workspace_id': workspace.id,
-                'action': WorkerActionEnum.HANDLE_FYLE_REFRESH_DIMENSION.value,
-                'data': {
+            if not is_cached:
+                cache.set(CacheKeyEnum.FYLE_SYNC_DIMENSIONS.value.format(workspace_id=workspace.id), True, 300)
+                payload = {
                     'workspace_id': workspace.id,
+                    'action': WorkerActionEnum.HANDLE_FYLE_REFRESH_DIMENSION.value,
+                    'data': {
+                        'workspace_id': workspace.id,
+                    }
                 }
-            }
-            publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
+                publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
             return Response(
                 status=status.HTTP_200_OK
