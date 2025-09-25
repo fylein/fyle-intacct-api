@@ -37,11 +37,11 @@ class Worker(EventConsumer):
         """
         payload_dict = event.new
         try:
-            logger.info('Processing task for workspace - %s with routing key - %s and payload - %s with delivery tag - %s', payload_dict['workspace_id'], routing_key, payload_dict, delivery_tag)
+            logger.info('Processing task for workspace - %s with routing key - %s and payload - %s with delivery tag - %s', payload_dict.get('workspace_id'), routing_key, payload_dict, delivery_tag)
 
             handle_tasks(payload_dict)
             self.qconnector.acknowledge_message(delivery_tag)
-            logger.info('Task processed successfully for workspace - %s with routing key - %s and delivery tag - %s', payload_dict['workspace_id'], routing_key, delivery_tag)
+            logger.info('Task processed successfully for workspace - %s with routing key - %s and delivery tag - %s', payload_dict.get('workspace_id'), routing_key, delivery_tag)
         except Exception as e:
             self.handle_exception(routing_key, payload_dict, e, delivery_tag)
             raise e

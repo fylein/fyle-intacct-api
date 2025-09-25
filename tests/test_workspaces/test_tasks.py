@@ -16,11 +16,11 @@ from apps.workspaces.models import (
 from apps.workspaces.tasks import (
     create_admin_subscriptions,
     async_update_fyle_credentials,
+    trigger_email_notification,
     update_workspace_name,
     patch_integration_settings,
     patch_integration_settings_for_unmapped_cards,
     post_to_integration_settings,
-    run_email_notification,
     run_sync_schedule,
     schedule_sync,
 )
@@ -535,7 +535,7 @@ def test_email_notification(mocker,db):
     mocker.patch('apps.workspaces.tasks.send_email',
                  return_value=None)
 
-    run_email_notification(workspace_id=workspace_id)
+    trigger_email_notification(workspace_id=workspace_id)
 
     updated_ws_schedule = WorkspaceSchedule.objects.filter(
         workspace_id=workspace_id, id=ws_schedule.id
@@ -550,7 +550,7 @@ def test_email_notification(mocker,db):
     ws_schedule.additional_email_options = [{'email': 'user5@fyleforgotham.in', 'name': 'Ashwin'}]
     ws_schedule.save()
 
-    run_email_notification(workspace_id=workspace_id)
+    trigger_email_notification(workspace_id=workspace_id)
     updated_ws_schedule = WorkspaceSchedule.objects.filter(
         workspace_id=workspace_id, id=ws_schedule.id
     ).first()
@@ -559,7 +559,7 @@ def test_email_notification(mocker,db):
 
     SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
 
-    run_email_notification(workspace_id=workspace_id)
+    trigger_email_notification(workspace_id=workspace_id)
 
 
 def test_async_update_fyle_credentials(db):

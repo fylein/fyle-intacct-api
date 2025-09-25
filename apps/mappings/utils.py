@@ -2,7 +2,7 @@ from fyle_intacct_api.utils import assert_valid
 
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
-from apps.mappings.tasks import schedule_auto_map_charge_card_employees
+from apps.mappings.tasks import schedule_auto_map_accounting_fields
 from apps.sage_intacct.queue import schedule_ap_payment_creation, schedule_sage_intacct_reimbursement_creation
 
 
@@ -110,6 +110,6 @@ class MappingUtils:
             )
 
         if general_mapping_object.default_charge_card_name:
-            schedule_auto_map_charge_card_employees(self.__workspace_id)
+            schedule_auto_map_accounting_fields(self.__workspace_id)
 
         return general_mapping_object

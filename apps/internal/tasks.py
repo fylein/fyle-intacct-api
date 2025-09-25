@@ -10,6 +10,7 @@ from apps.tasks.models import TaskLog
 from apps.fyle.models import ExpenseGroup
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.models import LastExportDetail, Workspace
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.fyle.actions import post_accounting_export_summary, update_failed_expenses
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,18 @@ target_func = ['apps.sage_intacct.tasks.create_bill', 'apps.sage_intacct.tasks.c
 def re_export_stuck_exports() -> None:
     """
     Re-exports stuck exports by identifying failed export attempts
+    and retrying them.
+    """
+    payload = {
+        'action': WorkerActionEnum.RE_EXPORT_STUCK_EXPORTS.value,
+        'data': {}
+    }
+    publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
+
+
+def retrigger_export_stuck_export():
+    """
+    Re-triggers export stuck exports by identifying failed export attempts
     and retrying them.
     """
     prod_workspace_ids = Workspace.objects.filter(
