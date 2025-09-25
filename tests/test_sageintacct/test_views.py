@@ -1,5 +1,7 @@
 import json
 
+from django.core.cache import cache
+from apps.workspaces.enums import CacheKeyEnum
 from apps.workspaces.models import SageIntacctCredential
 
 
@@ -116,6 +118,8 @@ def test_refresh_dimensions(mocker, api_client, test_connection):
     assert response.status_code == 200
 
     mocker.patch('apps.sage_intacct.views.publish_to_rabbitmq', side_effect=SageIntacctCredential.DoesNotExist)
+
+    cache.get(CacheKeyEnum.SAGE_INTACCT_SYNC_DIMENSIONS.value.format(workspace_id=workspace_id)).delete()
 
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_credentials.delete()
