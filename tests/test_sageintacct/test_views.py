@@ -119,7 +119,7 @@ def test_refresh_dimensions(mocker, api_client, test_connection):
 
     mocker.patch('apps.sage_intacct.views.publish_to_rabbitmq', side_effect=SageIntacctCredential.DoesNotExist)
 
-    cache.get(CacheKeyEnum.SAGE_INTACCT_SYNC_DIMENSIONS.value.format(workspace_id=workspace_id)).delete()
+    cache.delete(CacheKeyEnum.SAGE_INTACCT_SYNC_DIMENSIONS.value.format(workspace_id=workspace_id))
 
     sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
     sage_intacct_credentials.delete()
