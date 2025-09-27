@@ -31,13 +31,12 @@ def test_trigger_sync_payments(
     # Call function
     trigger_sync_payments(workspace_id)
 
-    # Should publish CREATE_AP_PAYMENT and CHECK_SAGE_INTACCT_OBJECT_STATUS and PROCESS_FYLE_REIMBURSEMENTS
-    assert mock_publish_to_rabbitmq.call_count == 3
+    # Should publish CREATE_AP_PAYMENT and CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS
+    assert mock_publish_to_rabbitmq.call_count == 2
     payloads = [call[1]['payload'] if 'payload' in call[1] else None for call in mock_publish_to_rabbitmq.call_args_list]
     actions = [p['action'] for p in payloads if p]
     assert WorkerActionEnum.CREATE_AP_PAYMENT.value in actions
-    assert WorkerActionEnum.CHECK_SAGE_INTACCT_OBJECT_STATUS.value in actions
-    assert WorkerActionEnum.PROCESS_FYLE_REIMBURSEMENTS.value in actions
+    assert WorkerActionEnum.CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS.value in actions
 
     # Test with reimbursable_expenses_object = 'EXPENSE_REPORT'
     mock_config.reimbursable_expenses_object = 'EXPENSE_REPORT'

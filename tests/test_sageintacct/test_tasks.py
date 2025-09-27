@@ -30,7 +30,6 @@ from apps.sage_intacct.queue import (
     schedule_bills_creation,
     schedule_charge_card_transaction_creation,
     schedule_expense_reports_creation,
-    schedule_fyle_reimbursements_sync,
     schedule_journal_entries_creation,
 )
 from apps.sage_intacct.tasks import (
@@ -1476,26 +1475,6 @@ def test_check_sage_intacct_object_status(mocker, db):
     with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_reports') as mock_call:
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         check_sage_intacct_object_status(workspace_id)
-
-
-def test_schedule_fyle_reimbursements_sync(db):
-    """
-    Test schedule_fyle_reimbursements_sync
-    """
-    workspace_id = 1
-
-    schedule = Schedule.objects.filter(func='apps.sage_intacct.tasks.process_fyle_reimbursements', args=workspace_id).count()
-    assert schedule == 0
-
-    schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments=True, workspace_id=workspace_id)
-
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.process_fyle_reimbursements', args=workspace_id).count()
-    assert schedule_count == 1
-
-    schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments=False, workspace_id=workspace_id)
-
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.process_fyle_reimbursements', args=workspace_id).count()
-    assert schedule_count == 0
 
 
 def test_process_fyle_reimbursements(db, mocker):

@@ -85,7 +85,7 @@ class GeneralMappingView(generics.ListCreateAPIView):
 
 class AutoMapEmployeeView(generics.CreateAPIView):
     """
-    Auto Map Employee viewg
+    Auto Map Employee view
     """
 
     def post(self, request: Request, *args, **kwargs) -> Response:
