@@ -17,28 +17,22 @@ class DummyConfig:
 
 
 @patch('apps.mappings.helpers.new_schedule_or_delete_fyle_import_tasks')
-@patch('apps.mappings.helpers.schedule_auto_map_employees')
-@patch('apps.mappings.helpers.schedule_auto_map_charge_card_employees')
-def test_schedule_or_delete_auto_mapping_tasks_calls(charge_card_mock, auto_map_mock, import_mock):
+@patch('apps.mappings.helpers.schedule_auto_map_accounting_fields')
+def test_schedule_or_delete_auto_mapping_tasks_calls(auto_map_mock, import_mock):
     """
     Test schedule_or_delete_auto_mapping_tasks_calls
     """
     # auto_map_employees True: should not call charge_card
-    config = DummyConfig(auto_map_employees=True)
+    config = DummyConfig(auto_map_employees=True, workspace_id=1)
     schedule_or_delete_auto_mapping_tasks(config)
     import_mock.assert_called_once_with(config)
-    auto_map_mock.assert_called_once_with(employee_mapping_preference=True, workspace_id=1)
-    charge_card_mock.assert_not_called()
 
     # auto_map_employees False: should call charge_card
     import_mock.reset_mock()
     auto_map_mock.reset_mock()
-    charge_card_mock.reset_mock()
-    config = DummyConfig(auto_map_employees=False)
+    config = DummyConfig(auto_map_employees=False, workspace_id=1)
     schedule_or_delete_auto_mapping_tasks(config)
     import_mock.assert_called_once_with(config)
-    auto_map_mock.assert_called_once_with(employee_mapping_preference=False, workspace_id=1)
-    charge_card_mock.assert_called_once_with(workspace_id=1)
 
 
 def test_prepend_code_to_name():

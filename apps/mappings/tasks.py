@@ -83,9 +83,9 @@ def resolve_expense_attribute_errors(
             Error.objects.filter(expense_attribute_id__in=mapped_attribute_ids).update(is_resolved=True, updated_at=datetime.now(timezone.utc))
 
 
-def async_auto_map_employees(workspace_id: int) -> None:
+def auto_map_employees(workspace_id: int) -> None:
     """
-    Async Auto Map Employees
+    Auto Map Employees
     :param workspace_id: Workspace Id
     :return: None
     """
@@ -132,43 +132,68 @@ def async_auto_map_employees(workspace_id: int) -> None:
         logger.info('Insufficient permission to access the requested module')
 
 
-def schedule_auto_map_employees(employee_mapping_preference: str, workspace_id: int) -> None:
+def auto_map_accounting_fields(workspace_id: int) -> None:
     """
-    Schedule Auto Map Employees
+    Auto Map Accounting Fields
     :param employee_mapping_preference: Employee Mapping Preference
     :param workspace_id: Workspace Id
     :return: None
     """
-    if employee_mapping_preference:
-        start_datetime = datetime.now()
+    configuration = Configuration.objects.filter(workspace_id=workspace_id).first()
+    if not configuration:
+        return
 
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.async_auto_map_employees',
-            cluster='import',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': start_datetime
+    if configuration.auto_map_employees:
+        payload = {
+            'workspace_id': workspace_id,
+            'action': WorkerActionEnum.AUTO_MAP_EMPLOYEES.value,
+            'data': {
+                'workspace_id': workspace_id
             }
-        )
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.async_auto_map_employees',
-            args='{}'.format(workspace_id)
-        ).first()
+        }
+        publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
-        if schedule:
-            schedule.delete()
+    if (
+        configuration.auto_map_employees
+        and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+    ):
+        payload = {
+            'workspace_id': workspace_id,
+            'action': WorkerActionEnum.AUTO_MAP_CHARGE_CARD_ACCOUNT.value,
+            'data': {
+                'workspace_id': workspace_id
+            }
+        }
+        publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.IMPORT.value)
 
 
-def async_auto_map_charge_card_account(workspace_id: int) -> None:
+def schedule_auto_map_accounting_fields(workspace_id: int) -> None:
     """
-    Async Auto Map Charge Card Account
+    Schedule Auto Map Accounting Fields to Fyle Fields
     :param workspace_id: Workspace Id
     :return: None
     """
-    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    Schedule.objects.update_or_create(
+        func='apps.mappings.tasks.auto_map_accounting_fields',
+        args='{}'.format(workspace_id),
+        defaults={
+            'schedule_type': Schedule.MINUTES,
+            'minutes': 24 * 60,
+            'next_run': datetime.now()
+        }
+    )
+
+
+def auto_map_charge_card_account(workspace_id: int) -> None:
+    """
+    Auto Map Charge Card Account
+    :param workspace_id: Workspace Id
+    :return: None
+    """
+    general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    if not (general_mappings and general_mappings.default_charge_card_id):
+        return
+
     default_charge_card_id = general_mappings.default_charge_card_id
 
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
@@ -183,42 +208,6 @@ def async_auto_map_charge_card_account(workspace_id: int) -> None:
         logger.info('Invalid Token for fyle in workspace - %s', workspace_id)
     except InternalServerError:
         logger.info('Fyle Internal Server Error in workspace - %s', workspace_id)
-
-
-def schedule_auto_map_charge_card_employees(workspace_id: int) -> None:
-    """
-    Schedule Auto Map Charge Card Employees
-    :param workspace_id: Workspace Id
-    :return: None
-    """
-    configuration = Configuration.objects.get(workspace_id=workspace_id)
-
-    if (
-        configuration.auto_map_employees
-        and configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
-    ):
-
-        start_datetime = datetime.now()
-
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.mappings.tasks.async_auto_map_charge_card_account',
-            cluster='import',
-            args='{0}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': start_datetime
-            }
-        )
-
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.mappings.tasks.async_auto_map_charge_card_account',
-            args='{}'.format(workspace_id)
-        ).first()
-
-        if schedule:
-            schedule.delete()
 
 
 def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: int) -> None:

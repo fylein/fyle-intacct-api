@@ -42,7 +42,6 @@ def schedule_email_notification(workspace_id: int, schedule_enabled: bool, hours
     if schedule_enabled and hours:
         schedule, _ = Schedule.objects.update_or_create(
             func='apps.workspaces.tasks.run_email_notification',
-            cluster='import',
             args='{}'.format(workspace_id),
             defaults={
                 'schedule_type': Schedule.MINUTES,
@@ -180,6 +179,22 @@ def run_sync_schedule(workspace_id: int) -> None:
 
 
 def run_email_notification(workspace_id: int) -> None:
+    """
+    Run email notification
+    :param workspace_id: workspace id
+    :return: None
+    """
+    payload = {
+        'workspace_id': workspace_id,
+        'action': WorkerActionEnum.TRIGGER_EMAIL_NOTIFICATION.value,
+        'data': {
+            'workspace_id': workspace_id
+        }
+    }
+    publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.UTILITY.value)
+
+
+def trigger_email_notification(workspace_id: int) -> None:
     """
     Run email notification
     :param workspace_id: workspace id

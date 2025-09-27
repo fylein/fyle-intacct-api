@@ -1719,6 +1719,16 @@ def process_fyle_reimbursements(workspace_id: int) -> None:
         mark_paid_on_fyle(platform, payloads, reports_to_be_marked, workspace_id)
 
 
+def check_sage_intacct_object_status_and_process_fyle_reimbursements(workspace_id: int) -> None:
+    """
+    Check Sage Intacct Object Status and Process Fyle Reimbursements
+    :param workspace_id: Workspace Id
+    :return: None
+    """
+    check_sage_intacct_object_status(workspace_id)
+    process_fyle_reimbursements(workspace_id)
+
+
 def mark_paid_on_fyle(platform: PlatformConnector, payloads:dict, reports_to_be_marked: list, workspace_id: int, retry_num: int = 10) -> None:
     """
     Mark Paid on Fyle
