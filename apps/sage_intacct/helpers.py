@@ -22,7 +22,7 @@ def schedule_payment_sync(configuration: Configuration) -> None:
     :return: None
     """
     Schedule.objects.update_or_create(
-        func='apps.sage_intacct.queues.trigger_sync_payments',
+        func='apps.sage_intacct.queue.trigger_sync_payments',
         args='{}'.format(configuration.workspace_id),
         defaults={
             'schedule_type': Schedule.MINUTES,

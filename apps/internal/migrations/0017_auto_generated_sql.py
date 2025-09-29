@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
                 -- Insert new merged schedule per workspace
                 INSERT INTO django_q_schedule (func, args, schedule_type, minutes, next_run, repeats)
                 SELECT
-                    'apps.sage_intacct.queues.trigger_sync_payments',
+                    'apps.sage_intacct.queue.trigger_sync_payments',
                     args,
                     'I',
                     '1440',
@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 HAVING NOT EXISTS (
                     SELECT 1
                     FROM django_q_schedule dqs2
-                    WHERE dqs2.func = 'apps.sage_intacct.queues.trigger_sync_payments'
+                    WHERE dqs2.func = 'apps.sage_intacct.queue.trigger_sync_payments'
                     AND dqs2.args = django_q_schedule.args
                 );
 
@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
             reverse_sql="""
                 -- Delete the merged schedule on rollback
                 DELETE FROM django_q_schedule
-                WHERE func = 'apps.sage_intacct.queues.trigger_sync_payments';
+                WHERE func = 'apps.sage_intacct.queue.trigger_sync_payments';
             """
         )
     ]

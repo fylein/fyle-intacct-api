@@ -102,7 +102,7 @@ def test_post_general_mappings(api_client, test_connection):
     )
     assert response.status_code == 200
 
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queues.trigger_sync_payments', args=workspace_id).count()
+    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queue.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
 
 

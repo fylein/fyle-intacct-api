@@ -1417,7 +1417,7 @@ def test_schedule_ap_payment_creation(db):
     workspace_configuration = Configuration.objects.get(workspace_id=workspace_id)
 
     schedule_payment_sync(configuration=workspace_configuration)
-    schedule = Schedule.objects.filter(func='apps.sage_intacct.queues.trigger_sync_payments').count()
+    schedule = Schedule.objects.filter(func='apps.sage_intacct.queue.trigger_sync_payments').count()
 
     assert schedule == 1
 
@@ -1515,7 +1515,7 @@ def test_schedule_sage_intacct_objects_status_sync(db):
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     schedule_payment_sync(configuration=configuration)
 
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queues.trigger_sync_payments', args=workspace_id).count()
+    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queue.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
 
 
@@ -1572,7 +1572,7 @@ def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
     workspace_configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
     schedule_payment_sync(configuration=workspace_configuration)
 
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queues.trigger_sync_payments', args=workspace_id).count()
+    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queue.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
 
 
