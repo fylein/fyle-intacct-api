@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
                 SELECT
                     'apps.sage_intacct.queue.trigger_sync_payments',
                     args,
-                    'I'
+                    'I',
                     '1440',
                     MAX(next_run) AS next_run,           -- next_run is max of old schedules
                     -1
