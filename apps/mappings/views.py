@@ -3,12 +3,11 @@ from rest_framework.views import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from django_q.tasks import Chain
 
-from fyle_intacct_api.utils import assert_valid
-
-from apps.workspaces.models import Configuration
 from apps.mappings.utils import MappingUtils
+from fyle_intacct_api.utils import assert_valid
+from apps.workspaces.models import Configuration
+from apps.mappings.tasks import auto_map_accounting_fields
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.mappings.serializers import GeneralMappingSerializer, LocationEntityMappingSerializer
 
@@ -97,8 +96,6 @@ class AutoMapEmployeeView(generics.CreateAPIView):
             workspace_id = kwargs['workspace_id']
             configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-            chain = Chain()
-
             if not configuration.auto_map_employees:
                 return Response(
                     data={
@@ -107,13 +104,7 @@ class AutoMapEmployeeView(generics.CreateAPIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            chain.append('apps.mappings.tasks.async_auto_map_employees', workspace_id, q_options={'cluster': 'import'})
-
-            general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
-            if general_mappings.default_charge_card_name:
-                chain.append('apps.mappings.tasks.async_auto_map_charge_card_account', workspace_id, q_options={'cluster': 'import'})
-
-            chain.run()
+            auto_map_accounting_fields(workspace_id=workspace_id)
 
             return Response(
                 data={},

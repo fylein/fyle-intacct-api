@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
+from django_q.models import Schedule
 from django.utils.module_loading import import_string
 
 from apps.fyle.models import DependentFieldSetting
@@ -8,12 +9,6 @@ from apps.workspaces.models import (
     Workspace,
     Configuration,
     SageIntacctCredential
-)
-from apps.sage_intacct.queue import (
-    schedule_ap_payment_creation,
-    schedule_fyle_reimbursements_sync,
-    schedule_sage_intacct_objects_status_sync,
-    schedule_sage_intacct_reimbursement_creation,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,24 +21,14 @@ def schedule_payment_sync(configuration: Configuration) -> None:
     :param configuration: Workspace Configuration Instance
     :return: None
     """
-    schedule_sage_intacct_objects_status_sync(
-        sync_sage_intacct_to_fyle_payments=configuration.sync_sage_intacct_to_fyle_payments,
-        workspace_id=configuration.workspace_id
-    )
-
-    schedule_fyle_reimbursements_sync(
-        sync_sage_intacct_to_fyle_payments=configuration.sync_sage_intacct_to_fyle_payments,
-        workspace_id=configuration.workspace_id
-    )
-
-    schedule_ap_payment_creation(
-        configuration=configuration,
-        workspace_id=configuration.workspace_id
-    )
-
-    schedule_sage_intacct_reimbursement_creation(
-        configuration=configuration,
-        workspace_id=configuration.workspace_id
+    Schedule.objects.update_or_create(
+        func='apps.sage_intacct.queue.trigger_sync_payments',
+        args='{}'.format(configuration.workspace_id),
+        defaults={
+            'schedule_type': Schedule.MINUTES,
+            'minutes': 24 * 60,
+            'next_run': datetime.now(timezone.utc),
+        }
     )
 
 

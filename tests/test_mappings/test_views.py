@@ -102,7 +102,7 @@ def test_post_general_mappings(api_client, test_connection):
     )
     assert response.status_code == 200
 
-    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement', args=workspace_id).count()
+    schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queue.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
 
 
@@ -128,16 +128,6 @@ def test_auto_map_employee(api_client, test_connection):
 
     response = api_client.post(url)
     assert response.status_code == 400
-
-    general_mappings.delete()
-    configuration.auto_map_employees = 'EMAIL'
-    configuration.save()
-
-    response = api_client.post(url)
-    assert response.status_code == 400
-
-    response = json.loads(response.content)
-    assert response['message'] == 'General mappings do not exist for this workspace'
 
 
 def test_location_entity_mappings(api_client, test_connection):

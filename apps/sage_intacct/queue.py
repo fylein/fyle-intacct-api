@@ -1,21 +1,21 @@
 import logging
-from datetime import datetime, timedelta
 from typing import List
 
 from django.db.models import Q
-from django_q.models import Schedule
 from django_q.tasks import Chain
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+
 from fyle_accounting_library.rabbitmq.data_class import Task
 from fyle_accounting_library.rabbitmq.helpers import TaskChainRunner
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
-from apps.fyle.helpers import check_interval_and_sync_dimension
 from apps.fyle.models import ExpenseGroup
-from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.actions import update_last_export_details
 from apps.tasks.models import Error, TaskLog
+from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import Configuration
+from apps.fyle.helpers import check_interval_and_sync_dimension
+from apps.sage_intacct.actions import update_last_export_details
+from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -342,121 +342,41 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
 
 
-def schedule_ap_payment_creation(configuration: Configuration, workspace_id: int) -> None:
+def trigger_sync_payments(workspace_id: int) -> None:
     """
-    Schedule AP payment creation
-    :param configuration: Configuration
+    Trigger sync payments
     :param workspace_id: workspace id
     :return: None
     """
-    general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
 
-    if general_mappings:
-        if configuration.sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id and configuration.reimbursable_expenses_object == 'BILL':
-            start_datetime = datetime.now()
-            schedule, _ = Schedule.objects.update_or_create(
-                func='apps.sage_intacct.tasks.create_ap_payment',
-                args='{}'.format(workspace_id),
-                defaults={
-                    'schedule_type': Schedule.MINUTES,
-                    'minutes': 24 * 60,
-                    'next_run': start_datetime
-                }
-            )
-            return
-
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.tasks.create_ap_payment',
-            args='{}'.format(workspace_id)
-        ).first()
-
-        if schedule:
-            schedule.delete()
-
-
-def schedule_sage_intacct_reimbursement_creation(configuration: Configuration, workspace_id: int) -> None:
-    """
-    Schedule Sage Intacct reimbursement creation
-    :param configuration: Configuration
-    :param workspace_id: workspace id
-    :return: None
-    """
-    general_mappings: GeneralMapping = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
-
-    if general_mappings:
-        if configuration.sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id and configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
-            start_datetime = datetime.now()
-            schedule, _ = Schedule.objects.update_or_create(
-                func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
-                args='{}'.format(workspace_id),
-                defaults={
-                    'schedule_type': Schedule.MINUTES,
-                    'minutes': 24 * 60,
-                    'next_run': start_datetime
-                }
-            )
-            return
-
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
-            args='{}'.format(workspace_id)
-        ).first()
-
-        if schedule:
-            schedule.delete()
-
-
-def schedule_sage_intacct_objects_status_sync(sync_sage_intacct_to_fyle_payments: bool, workspace_id: int) -> None:
-    """
-    Schedule Sage Intacct objects status sync
-    :param sync_sage_intacct_to_fyle_payments: Sync Sage Intacct to Fyle payments
-    :param workspace_id: workspace id
-    :return
-    """
-    if sync_sage_intacct_to_fyle_payments:
-        start_datetime = datetime.now()
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.sage_intacct.tasks.check_sage_intacct_object_status',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': start_datetime
+    if general_mappings and configuration.sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id and configuration.reimbursable_expenses_object == 'BILL':
+        payload = {
+            'workspace_id': workspace_id,
+            'action': WorkerActionEnum.CREATE_AP_PAYMENT.value,
+            'data': {
+                'workspace_id': workspace_id
             }
-        )
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.tasks.check_sage_intacct_object_status',
-            args='{}'.format(workspace_id)
-        ).first()
+        }
+        publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
 
-        if schedule:
-            schedule.delete()
-
-
-def schedule_fyle_reimbursements_sync(sync_sage_intacct_to_fyle_payments: bool, workspace_id: int) -> None:
-    """
-    Schedule Fyle reimbursements sync
-    :param sync_sage_intacct_to_fyle_payments: Sync Sage Intacct to Fyle payments
-    :param workspace_id: workspace id
-    :return None
-    """
-    if sync_sage_intacct_to_fyle_payments:
-        start_datetime = datetime.now() + timedelta(hours=12)
-        schedule, _ = Schedule.objects.update_or_create(
-            func='apps.sage_intacct.tasks.process_fyle_reimbursements',
-            args='{}'.format(workspace_id),
-            defaults={
-                'schedule_type': Schedule.MINUTES,
-                'minutes': 24 * 60,
-                'next_run': start_datetime
+    if general_mappings and configuration.sync_fyle_to_sage_intacct_payments and general_mappings.payment_account_id and configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
+        payload = {
+            'workspace_id': workspace_id,
+            'action': WorkerActionEnum.CREATE_SAGE_INTACCT_REIMBURSEMENT.value,
+            'data': {
+                'workspace_id': workspace_id
             }
-        )
-    else:
-        schedule: Schedule = Schedule.objects.filter(
-            func='apps.sage_intacct.tasks.process_fyle_reimbursements',
-            args='{}'.format(workspace_id)
-        ).first()
+        }
+        publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
 
-        if schedule:
-            schedule.delete()
+    if configuration.sync_sage_intacct_to_fyle_payments:
+        payload = {
+            'workspace_id': workspace_id,
+            'action': WorkerActionEnum.CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS.value,
+            'data': {
+                'workspace_id': workspace_id
+            }
+        }
+        publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.EXPORT_P1.value)
