@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Fyle</title>
+    <title>{{ brand_name }}</title>
   </head>
 
   <body style="margin: 0; padding: 0">
@@ -54,9 +54,9 @@
                   <tr>
                     <td>
                       <img
-                        src="{{integrations_app_url}}/assets/logos/email/fyle_logo_white_full.png"
-                        alt="Fyle"
-                        title="Fyle"
+                        src="{{integrations_app_url}}/assets/logos/email/{% if is_rebranded %}sage_logo_white_full.png{% else %}fyle_logo_white_full.png{% endif %}"
+                        alt="{{ brand_name }}"
+                        title="{{ brand_name }}"
                         style="display: block"
                         height="30"
                         width="90"
@@ -110,7 +110,7 @@
                             letter-spacing: 0.02em;
                           "
                         >
-                          <td>Fyle organization</td>
+                          <td>{{ brand_name }} organization</td>
                           <td>Sage Intacct company Id</td>
                         </tr>
                         <tr
@@ -135,7 +135,7 @@
                         <tr>
                           <td style="line-height: 22px; padding-top: 15px">
                             {{ errors }} expense groups failed to export from
-                            your Fyle org to Sage Intacct Entity
+                            your {{ brand_name }} org to Sage Intacct Entity
                           </td>
                         </tr>
                         <tr>
@@ -403,7 +403,7 @@
                       line-height: 15px;
                     "
                   >
-                    <td>{{ year }} Fyle. All Rights Reserved.</td>
+                    <td>{{ year }} {{ brand_name }}. All Rights Reserved.</td>
                   </tr>
                 </table>
               </td>

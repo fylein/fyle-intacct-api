@@ -239,6 +239,8 @@ def trigger_email_notification(workspace_id: int) -> None:
                 if task_logs and (ws_schedule.error_count is None or len(task_logs) > ws_schedule.error_count):
                     context = {
                         'name': admin_name,
+                        'brand_name': 'Sage Expense Management' if settings.IS_REBRANDED == 'True' else 'Fyle',
+                        'is_rebranded': settings.IS_REBRANDED == 'True',
                         'errors': len(task_logs),
                         'fyle_company': workspace.name,
                         'intacct_company': intacct.si_company_name,
