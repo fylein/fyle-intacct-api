@@ -341,7 +341,7 @@ class ImportSettingsSerializer(serializers.ModelSerializer):
         if not old_code_pref_list.issubset(new_code_pref_list):
             is_errored = True
 
-        if is_errored:
+        if is_errored and set(diff_code_pref_list).difference({'COST_CODE', 'COST_TYPE'}):
             raise serializers.ValidationError('Cannot change the code fields once they are imported')
 
         data.get('configurations')['import_code_fields'] = list(new_code_pref_list)
