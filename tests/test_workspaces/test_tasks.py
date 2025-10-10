@@ -532,6 +532,14 @@ def test_email_notification(mocker,db):
         workspace_id=workspace_id
     ).first()
 
+    # Create 3 failed task logs for the test
+    for i in range(3):
+        TaskLog.objects.create(
+            workspace_id=workspace_id,
+            type='CREATING_BILLS',
+            status='FAILED'
+        )
+
     mocker.patch('apps.workspaces.tasks.send_email',
                  return_value=None)
 
