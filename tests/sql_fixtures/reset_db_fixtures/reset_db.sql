@@ -442,6 +442,12 @@ BEGIN
     RAISE NOTICE 'Deleted % last_export_details', rcount;
 
     DELETE
+    FROM feature_configs fc
+    WHERE fc.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % feature_configs', rcount;
+
+    DELETE
     FROM django_q_schedule dqs
     WHERE dqs.args = _workspace_id::varchar(255);
     GET DIAGNOSTICS rcount = ROW_COUNT;
@@ -6025,6 +6031,13 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 247	tasks	0015_tasklog_re_attempt_export	2025-08-05 08:54:20.464377+00
 248	workspaces	0049_featureconfig	2025-09-12 05:48:50.923799+00
 249	workspaces	0050_featureconfig_import_via_rabbitmq_and_more	2025-09-12 05:48:50.948371+00
+250	internal	0014_auto_generated_sql	2025-10-10 09:38:10.294351+00
+251	internal	0015_auto_generated_sql	2025-10-10 09:38:10.300549+00
+252	internal	0016_auto_generated_sql	2025-10-10 09:38:10.303861+00
+253	internal	0017_auto_generated_sql	2025-10-10 09:38:10.306449+00
+254	internal	0018_auto_generated_sql	2025-10-10 09:38:10.308257+00
+255	internal	0019_auto_generated_sql	2025-10-10 09:38:10.32163+00
+256	workspaces	0051_alter_featureconfig_export_via_rabbitmq_and_more	2025-10-10 09:38:10.360728+00
 \.
 
 
@@ -6042,12 +6055,12 @@ COPY public.django_q_ormq (id, key, payload, lock) FROM stdin;
 
 COPY public.django_q_schedule (id, func, hook, args, kwargs, schedule_type, repeats, next_run, task, name, minutes, cron, cluster, intended_date_kwarg) FROM stdin;
 5	apps.mappings.tasks.auto_create_project_mappings	\N	1	\N	I	-5	2022-09-30 08:46:24.989603+00	54ab7ab7396741eea35de26e72b73c18	\N	1440	\N	\N	\N
-2	apps.mappings.tasks.async_auto_map_employees	\N	1	\N	I	-5	2022-09-30 08:46:24.994645+00	7820d0fa2f7f4ac78c1a5e283560a143	\N	1440	\N	import	\N
 3	apps.mappings.tasks.auto_create_tax_codes_mappings	\N	1	\N	I	-5	2022-09-30 08:46:25.03867+00	72495cee26334ea9ad64b337f757c4a6	\N	1440	\N	\N	\N
 4	apps.mappings.tasks.auto_create_vendors_as_merchants	\N	1	\N	I	-5	2022-09-30 08:46:25.0608+00	3bdcf280bd6c42a197ad24f932ce39c7	\N	1440	\N	\N	\N
-6	apps.sage_intacct.tasks.create_ap_payment	\N	1	\N	I	-4	2022-09-30 08:47:19.647275+00	334370e333c54c669f6bc9e876d3ec60	\N	1440	\N	\N	\N
-93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-03-05 13:25:42.96495+00	\N	\N	60	\N	import	\N
-94	apps.internal.tasks.pause_and_resume_export_schedules	\N	\N	\N	I	-1	2025-04-10 16:39:32.568532+00	\N	\N	1440	\N	import	\N
+93	apps.internal.tasks.re_export_stuck_exports	\N	\N	\N	I	-1	2025-03-05 13:25:42.96495+00	\N	\N	60	\N	\N	\N
+94	apps.internal.tasks.pause_and_resume_export_schedules	\N	\N	\N	I	-1	2025-04-10 16:39:32.568532+00	\N	\N	1440	\N	\N	\N
+95	apps.mappings.tasks.auto_map_accounting_fields	\N	1	\N	I	-1	2022-09-30 08:46:24.994645+00	\N	\N	1440	\N	\N	\N
+96	apps.sage_intacct.queue.trigger_sync_payments	\N	1	\N	I	-1	2022-09-30 08:47:19.647275+00	\N	\N	1440	\N	\N	\N
 \.
 
 
@@ -9483,6 +9496,7 @@ COPY public.failed_events (id, routing_key, payload, created_at, updated_at, err
 --
 
 COPY public.feature_configs (id, export_via_rabbitmq, created_at, updated_at, workspace_id, import_via_rabbitmq) FROM stdin;
+1	f	2025-10-10 09:38:10.289737+00	2025-10-10 09:38:10.289737+00	1	f
 \.
 
 
@@ -10072,7 +10086,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 54, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 249, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 256, true);
 
 
 --
@@ -10086,7 +10100,7 @@ SELECT pg_catalog.setval('public.django_q_ormq_id_seq', 89, true);
 -- Name: django_q_schedule_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 94, true);
+SELECT pg_catalog.setval('public.django_q_schedule_id_seq', 96, true);
 
 
 --
@@ -10142,7 +10156,7 @@ SELECT pg_catalog.setval('public.failed_events_id_seq', 1, false);
 -- Name: feature_configs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.feature_configs_id_seq', 1, false);
+SELECT pg_catalog.setval('public.feature_configs_id_seq', 1, true);
 
 
 --
