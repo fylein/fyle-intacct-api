@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime
+from django_q.models import Schedule
 from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.tasks.models import TaskLog
@@ -532,7 +533,16 @@ def test_email_notification(mocker,db):
         workspace_id=workspace_id
     ).first()
 
-    # Create 3 failed task logs for the test
+    assert ws_schedule is not None
+    assert ws_schedule.enabled == True
+    assert ws_schedule.emails_selected == ['user5@fyleforgotham.in']
+    
+    if ws_schedule.additional_email_options is None:
+        ws_schedule.additional_email_options = []
+        ws_schedule.save()
+
+    TaskLog.objects.filter(workspace_id=workspace_id, status='FAILED').delete()
+
     for i in range(3):
         TaskLog.objects.create(
             workspace_id=workspace_id,
@@ -540,8 +550,17 @@ def test_email_notification(mocker,db):
             status='FAILED'
         )
 
+    failed_task_logs = TaskLog.objects.filter(
+        workspace_id=workspace_id, 
+        status='FAILED',
+        type='CREATING_BILLS'
+    )
+    assert failed_task_logs.count() == 3
+
     mocker.patch('apps.workspaces.tasks.send_email',
                  return_value=None)
+    mocker.patch('apps.workspaces.tasks.render_to_string',
+                 return_value='<html>Test Email</html>')
 
     trigger_email_notification(workspace_id=workspace_id)
 
