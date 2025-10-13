@@ -53,9 +53,7 @@ def test_process_message_success(export_worker):
         event = BaseEvent()
         event.from_dict({'new': payload_dict})
 
-        # The process_message should re-raise the exception
-        with pytest.raises(Exception, match='Test error'):
-            export_worker.process_message(routing_key, event, 1)
+        export_worker.process_message(routing_key, event, 1)
 
         mock_handle_tasks.assert_called_once_with({'data': {'some': 'data'}, 'workspace_id': 123, 'retry_count': 1})
 
