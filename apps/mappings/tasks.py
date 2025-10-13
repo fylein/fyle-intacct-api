@@ -329,7 +329,7 @@ def initiate_import_to_fyle(workspace_id: int, run_in_rabbitmq_worker: bool = Fa
     if configuration.import_tax_codes:
         task_settings['import_tax'] = {
             'destination_field': 'TAX_DETAIL',
-            'destination_sync_methods': SYNC_METHODS['TAX_DETAIL'],
+            'destination_sync_methods': [SYNC_METHODS['TAX_DETAIL']],
             'is_auto_sync_enabled': False,
             'is_3d_mapping': False,
         }
