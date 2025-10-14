@@ -273,7 +273,7 @@ STATIC_URL = '/static/'
 
 # Fyle Settings
 BRAND_ID = os.environ.get('BRAND_ID', 'fyle')
-IS_REBRANDED = os.environ.get('IS_REBRANDED', False)
+IS_REBRANDED = os.environ.get('IS_REBRANDED', 'False')
 API_URL = os.environ.get('API_URL')
 FYLE_TOKEN_URI = os.environ.get('FYLE_TOKEN_URI')
 FYLE_BASE_URL = os.environ.get('FYLE_BASE_URL')
