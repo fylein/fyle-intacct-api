@@ -1,44 +1,42 @@
-import re
 import json
-import random
 import logging
-from typing import Optional
+import random
+import re
 from datetime import datetime, timedelta
+from typing import Optional
 
 import text_unidecode
-
-from django.db.models import Q
-from django.conf import settings
-from django.utils import timezone
 from cryptography.fernet import Fernet
-
-from sageintacctsdk import SageIntacctSDK
-from sageintacctsdk.exceptions import WrongParamsError
+from django.conf import settings
+from django.db.models import Q
+from django.utils import timezone
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
+from sageintacctsdk import SageIntacctSDK
+from sageintacctsdk.exceptions import WrongParamsError
 
-from apps.workspaces.helpers import get_app_name
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
-from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
-from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
 from apps.sage_intacct.models import (
-    Bill,
-    CostType,
-    CostCode,
     APPayment,
-    BillLineitem,
-    JournalEntry,
-    ExpenseReport,
-    DimensionDetail,
     APPaymentLineitem,
-    JournalEntryLineitem,
+    Bill,
+    BillLineitem,
     ChargeCardTransaction,
-    ExpenseReportLineitem,
-    SageIntacctReimbursement,
     ChargeCardTransactionLineitem,
-    SageIntacctReimbursementLineitem
+    CostCode,
+    CostType,
+    DimensionDetail,
+    ExpenseReport,
+    ExpenseReportLineitem,
+    JournalEntry,
+    JournalEntryLineitem,
+    SageIntacctReimbursement,
+    SageIntacctReimbursementLineitem,
 )
+from apps.workspaces.helpers import get_app_name
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -795,30 +793,33 @@ class SageIntacctConnector:
             })
 
             if dimension['userDefinedDimension'] == 'true':
-                dimension_attributes = []
-                dimension_name = dimension['objectName'].upper().replace(" ", "_")
-                dimension_count = self.connection.dimension_values.count(dimension_name=dimension['objectName'])
+                try:
+                    dimension_attributes = []
+                    dimension_name = dimension['objectName'].upper().replace(" ", "_")
+                    dimension_count = self.connection.dimension_values.count(dimension_name=dimension['objectName'])
 
-                is_sync_allowed = self.is_sync_allowed(attribute_type = 'user_defined_dimensions', attribute_count = dimension_count)
+                    is_sync_allowed = self.is_sync_allowed(attribute_type = 'user_defined_dimensions', attribute_count = dimension_count)
 
-                if not is_sync_allowed:
-                    logger.info('Skipping sync of UDD %s for workspace %s as it has %s counts which is over the limit', dimension_name, self.workspace_id, dimension_count)
-                    continue
+                    if not is_sync_allowed:
+                        logger.info('Skipping sync of UDD %s for workspace %s as it has %s counts which is over the limit', dimension_name, self.workspace_id, dimension_count)
+                        continue
 
-                dimension_values = self.connection.dimension_values.get_all(dimension['objectName'])
+                    dimension_values = self.connection.dimension_values.get_all(dimension['objectName'])
 
-                for value in dimension_values:
-                    dimension_attributes.append({
-                        'attribute_type': dimension_name,
-                        'display_name': dimension['termLabel'],
-                        'value': value['name'],
-                        'destination_id': value['id'],
-                        'active': True
-                    })
+                    for value in dimension_values:
+                        dimension_attributes.append({
+                            'attribute_type': dimension_name,
+                            'display_name': dimension['termLabel'],
+                            'value': value['name'],
+                            'destination_id': value['id'],
+                            'active': True
+                        })
 
-                DestinationAttribute.bulk_create_or_update_destination_attributes(
-                    dimension_attributes, dimension_name, self.workspace_id
-                )
+                    DestinationAttribute.bulk_create_or_update_destination_attributes(
+                        dimension_attributes, dimension_name, self.workspace_id
+                    )
+                except Exception as e:
+                    logger.error("Error while syncing user defined dimension %s for workspace %s: %s", dimension_name, self.workspace_id, e)
 
         DimensionDetail.bulk_create_or_update_dimension_details(
             dimensions=dimension_details,
