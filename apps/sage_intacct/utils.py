@@ -819,7 +819,7 @@ class SageIntacctConnector:
                         dimension_attributes, dimension_name, self.workspace_id
                     )
                 except Exception as e:
-                    logger.info("Error while syncing user defined dimension %s for workspace %s: %s", dimension_name, self.workspace_id, e)
+                    logger.error("Error while syncing user defined dimension %s for workspace %s: %s", dimension_name, self.workspace_id, e)
 
         DimensionDetail.bulk_create_or_update_dimension_details(
             dimensions=dimension_details,
