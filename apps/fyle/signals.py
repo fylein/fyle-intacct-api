@@ -1,17 +1,16 @@
 import logging
 
-from django.dispatch import receiver
 from django.core.exceptions import ValidationError
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import post_save, pre_save
+from django.dispatch import receiver
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum, ExpenseStateEnum, FundSourceEnum
 
-from fyle_accounting_library.fyle_platform.enums import FundSourceEnum, ExpenseImportSourceEnum, ExpenseStateEnum
-
-from apps.workspaces.models import Configuration
 from apps.fyle.helpers import connect_to_platform
-from apps.fyle.tasks import re_run_skip_export_rule
-from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
-from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
 from apps.fyle.models import DependentFieldSetting, ExpenseFilter, ExpenseGroupSettings
+from apps.fyle.tasks import re_run_skip_export_rule
+from apps.sage_intacct.dependent_fields import create_dependent_custom_field_in_fyle
+from apps.workspaces.models import Configuration
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -75,10 +74,10 @@ def run_post_save_expense_filters(sender: type[ExpenseFilter], instance: Expense
             raise ValidationError('Failed to process expense filter')
 
 
-@receiver(pre_save, sender=ExpenseGroupSettings)
-def run_pre_save_expense_group_setting_triggers(sender: type[ExpenseGroupSettings], instance: ExpenseGroupSettings, **kwargs) -> None:
+@receiver(post_save, sender=ExpenseGroupSettings)
+def run_post_save_expense_group_setting_triggers(sender: type[ExpenseGroupSettings], instance: ExpenseGroupSettings, **kwargs) -> None:
     """
-    Run pre save expense group setting triggers
+    Run post save expense group setting triggers
     """
     existing_expense_group_setting = ExpenseGroupSettings.objects.filter(
         workspace_id=instance.workspace_id
