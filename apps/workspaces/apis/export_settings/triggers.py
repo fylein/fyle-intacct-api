@@ -39,7 +39,7 @@ class ExportSettingsTrigger:
         if last_export_detail.last_exported_at:
             update_last_export_details(self.__workspace_id)
 
-    def post_save_expense_group_settings(self, expense_group_settings_instance: ExpenseGroupSettings):
+    def post_save_expense_group_settings(self, expense_group_settings_instance: ExpenseGroupSettings) -> None:
         existing_expense_group_setting = self.__old_configurations.get('expense_group_settings')
 
         if existing_expense_group_setting:
