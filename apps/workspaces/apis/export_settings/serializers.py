@@ -1,9 +1,9 @@
 from rest_framework import serializers
 
-from apps.workspaces.models import Workspace, Configuration
-from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroupSettings
+from apps.mappings.models import GeneralMapping
 from apps.workspaces.apis.export_settings.triggers import ExportSettingsTrigger
+from apps.workspaces.models import Configuration, Workspace
 
 
 class ReadWriteSerializerMethodField(serializers.SerializerMethodField):
@@ -182,9 +182,11 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         pre_save_configurations = Configuration.objects.filter(workspace_id=workspace_id).first()
         old_configurations = {}
         if pre_save_configurations:
+            existing_expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=instance.id)
             old_configurations = {
                 'reimbursable_expenses_object': pre_save_configurations.reimbursable_expenses_object,
                 'corporate_credit_card_expenses_object': pre_save_configurations.corporate_credit_card_expenses_object,
+                'expense_group_settings': existing_expense_group_settings
             }
 
         configuration_instance, _ = Configuration.objects.update_or_create(
@@ -227,7 +229,9 @@ class ExportSettingsSerializer(serializers.ModelSerializer):
         if not expense_group_settings['ccc_export_date_type']:
             expense_group_settings['ccc_export_date_type'] = 'current_date'
 
-        ExpenseGroupSettings.update_expense_group_settings(expense_group_settings, workspace_id=workspace_id, user=user)
+        expense_group_settings_instance, _ = ExpenseGroupSettings.update_expense_group_settings(expense_group_settings, workspace_id=workspace_id, user=user)
+
+        export_trigger.post_save_expense_group_settings(expense_group_settings_instance)
 
         GeneralMapping.objects.update_or_create(
             workspace=instance,
