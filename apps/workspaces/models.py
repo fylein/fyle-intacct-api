@@ -1,7 +1,6 @@
-from functools import cache
-
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
+from django.core.cache import cache
 from django.db import models
 from django.db.models import JSONField
 from django_q.models import Schedule
