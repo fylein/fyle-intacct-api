@@ -41,6 +41,7 @@ class WorkerActionEnum(str, Enum):
     CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION = 'IMPORT.CHECK_INTERVAL_AND_SYNC_FYLE_DIMENSION'
     CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION = 'IMPORT.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION'
     CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS = 'EXPORT.P1.CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS'
+    EXPENSE_ADDED_EJECTED_FROM_REPORT = 'UTILITY.EXPENSE_ADDED_EJECTED_FROM_REPORT'
 
 
 QUEUE_BINDKEY_MAP = {
@@ -74,6 +75,7 @@ ACTION_METHOD_MAP = {
     WorkerActionEnum.RESET_COST_TYPE_IMPORT_FLAG: 'apps.sage_intacct.dependent_fields.reset_flag_and_disable_cost_type_field',
     WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION: 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
     WorkerActionEnum.CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS: 'apps.sage_intacct.tasks.check_sage_intacct_object_status_and_process_fyle_reimbursements',
+    WorkerActionEnum.EXPENSE_ADDED_EJECTED_FROM_REPORT: 'apps.fyle.tasks.handle_expense_report_change',
 }
 
 
