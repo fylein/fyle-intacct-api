@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from apps.workspaces.models import FyleCredential, LastExportDetail, SageIntacctCredential, Workspace
 from apps.fyle.models import ExpenseGroupSettings
+from apps.workspaces.models import FeatureConfig, FyleCredential, LastExportDetail, SageIntacctCredential, Workspace
 
 
 @pytest.fixture
@@ -99,3 +99,22 @@ def add_workspace_with_settings(db):
         return workspace_id
 
     return _create_workspace
+
+
+@pytest.fixture()
+def add_feature_config(db):
+    """
+    Add or update FeatureConfig for a workspace
+    """
+    def _create_feature_config(workspace_id: int, export_via_rabbitmq: bool = True, fyle_webhook_sync_enabled: bool = False) -> FeatureConfig:
+        workspace = Workspace.objects.get(id=workspace_id)
+        feature_config, _ = FeatureConfig.objects.update_or_create(
+            workspace=workspace,
+            defaults={
+                'export_via_rabbitmq': export_via_rabbitmq,
+                'fyle_webhook_sync_enabled': fyle_webhook_sync_enabled
+            }
+        )
+        return feature_config
+
+    return _create_feature_config
