@@ -1501,7 +1501,7 @@ def test_skip_sync_attributes(mocker, db):
     )
     mocker.patch(
         'sageintacctsdk.apis.Accounts.count',
-        return_value=2001
+        return_value=3001
     )
     mocker.patch(
         'sageintacctsdk.apis.Locations.count',
