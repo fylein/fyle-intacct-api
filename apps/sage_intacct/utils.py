@@ -45,7 +45,7 @@ logger.level = logging.INFO
 SYNC_UPPER_LIMIT = {
     'items': 5000,
     'classes': 1000,
-    'accounts': 2000,
+    'accounts': 3000,
     'vendors': 20000,
     'locations': 1000,
     'projects': 25000,
