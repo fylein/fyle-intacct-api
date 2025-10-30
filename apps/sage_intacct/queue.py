@@ -3,18 +3,17 @@ from typing import List
 
 from django.db.models import Q
 from django_q.tasks import Chain
-
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_library.rabbitmq.data_class import Task
 from fyle_accounting_library.rabbitmq.helpers import TaskChainRunner
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from apps.fyle.models import ExpenseGroup
-from apps.tasks.models import Error, TaskLog
-from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import Configuration
-from apps.fyle.helpers import check_interval_and_sync_dimension
-from apps.sage_intacct.actions import update_last_export_details
 from apps.fyle.actions import post_accounting_export_summary_for_skipped_exports
+from apps.fyle.helpers import check_interval_and_sync_dimension
+from apps.fyle.models import ExpenseGroup
+from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.actions import update_last_export_details
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.models import Configuration, FeatureConfig
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 logger = logging.getLogger(__name__)
@@ -30,9 +29,12 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], run_in_ra
     :param run_in_rabbitmq_worker: Run in rabbitmq worker
     :return: None
     """
+    fyle_webhook_sync_enabled = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='fyle_webhook_sync_enabled')
+
     if run_in_rabbitmq_worker:
         # This function checks intervals and triggers sync if needed, syncing dimension for all exports is overkill
-        check_interval_and_sync_dimension(workspace_id)
+        if not fyle_webhook_sync_enabled:
+            check_interval_and_sync_dimension(workspace_id)
 
         task_executor = TaskChainRunner()
         task_executor.run(chain_tasks, workspace_id)
@@ -52,7 +54,7 @@ def __create_chain_and_run(workspace_id: int, chain_tasks: List[dict], run_in_ra
 
             chain = Chain()
             # Only add sync_dimensions for the first chunk
-            if i == 0:
+            if i == 0 and not fyle_webhook_sync_enabled:
                 chain.append('apps.fyle.helpers.sync_dimensions', workspace_id, True)
 
             for j, task in enumerate(chunk):

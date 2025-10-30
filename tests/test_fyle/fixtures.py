@@ -6929,5 +6929,229 @@ data = {
             "type": "CREATING_BILLS",
             "status": "FAILED"
         }
+    },
+    'webhook_payloads': {
+        'category_created': {
+            'action': 'CREATED',
+            'resource': 'CATEGORY',
+            'data': {
+                'id': 'cat_123',
+                'name': 'Travel',
+                'sub_category': 'Flight',
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'category_updated': {
+            'action': 'UPDATED',
+            'resource': 'CATEGORY',
+            'data': {
+                'id': 'cat_456',
+                'name': 'New Travel',
+                'sub_category': 'Train',
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'category_deleted': {
+            'action': 'DELETED',
+            'resource': 'CATEGORY',
+            'data': {
+                'id': 'cat_789',
+                'name': 'Old Category',
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'category_skip': {
+            'action': 'CREATED',
+            'resource': 'CATEGORY',
+            'data': {
+                'id': 'cat_skip',
+                'name': 'Should Be Skipped',
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'project_created': {
+            'action': 'CREATED',
+            'resource': 'PROJECT',
+            'data': {
+                'id': 'proj_123',
+                'name': 'Main Project',
+                'sub_project': 'Sub Project 1',
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'employee_created': {
+            'action': 'CREATED',
+            'resource': 'EMPLOYEE',
+            'data': {
+                'id': 'emp_123',
+                'user': {
+                    'email': 'employee@example.com',
+                    'full_name': 'John Doe'
+                },
+                'user_id': 'user_123',
+                'code': 'EMP001',
+                'location': 'New York',
+                'department': {
+                    'name': 'Engineering',
+                    'code': 'ENG'
+                },
+                'department_id': 'dept_123',
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'corporate_card_created': {
+            'action': 'CREATED',
+            'resource': 'CORPORATE_CARD',
+            'data': {
+                'id': 'card_123',
+                'bank_name': 'Chase',
+                'card_number': '1234-5678-9012-3456',
+                'cardholder_name': 'Jane Smith',
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'tax_group_created': {
+            'action': 'CREATED',
+            'resource': 'TAX_GROUP',
+            'data': {
+                'id': 'tax_123',
+                'name': 'GST 18%',
+                'percentage': 18.0,
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'cost_center_created': {
+            'action': 'CREATED',
+            'resource': 'COST_CENTER',
+            'data': {
+                'id': 'cc_123',
+                'name': 'Operations',
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'expense_field_select_created': {
+            'action': 'CREATED',
+            'resource': 'EXPENSE_FIELD',
+            'data': {
+                'id': 'field_123',
+                'field_name': 'Department',
+                'type': 'SELECT',
+                'options': ['Sales', 'Marketing', 'Engineering'],
+                'placeholder': 'Select Department',
+                'is_mandatory': True,
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'expense_field_region_updated': {
+            'action': 'UPDATED',
+            'resource': 'EXPENSE_FIELD',
+            'data': {
+                'id': 'field_456',
+                'field_name': 'Region',
+                'type': 'SELECT',
+                'options': ['North', 'South'],
+                'placeholder': 'Select Region',
+                'is_mandatory': False,
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'expense_field_text_created': {
+            'action': 'CREATED',
+            'resource': 'EXPENSE_FIELD',
+            'data': {
+                'id': 'field_789',
+                'field_name': 'Notes',
+                'type': 'TEXT',
+                'placeholder': 'Enter notes',
+                'is_mandatory': False,
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'cost_center_deleted': {
+            'action': 'DELETED',
+            'resource': 'COST_CENTER',
+            'data': {
+                'id': 'cc_delete',
+                'name': 'To Be Deleted',
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'unsupported_resource': {
+            'action': 'CREATED',
+            'resource': 'ORG_SETTING',
+            'data': {
+                'id': 'org_123',
+                'name': 'Some Setting',
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'queue_category_created': {
+            'action': 'CREATED',
+            'resource': 'CATEGORY',
+            'data': {
+                'id': 'cat_travel_789',
+                'name': 'Travel',
+                'sub_category': 'Flight',
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'queue_project_updated': {
+            'action': 'UPDATED',
+            'resource': 'PROJECT',
+            'data': {
+                'id': 'proj_webhook_marketing_456',
+                'name': 'Webhook Marketing Project Updated',
+                'sub_project': None,
+                'is_enabled': True,
+                'org_id': 'or79Cob97KSh'
+            }
+        },
+        'queue_category_deleted': {
+            'action': 'DELETED',
+            'resource': 'CATEGORY',
+            'data': {
+                'id': 'cat_webhook_food_123',
+                'name': 'Webhook Test Food',
+                'sub_category': None,
+                'is_enabled': False,
+                'org_id': 'or79Cob97KSh'
+            }
+        }
+    },
+    'webhook_test_data': {
+        'nested_value_data': {
+            'user': {
+                'email': 'test@example.com',
+                'profile': {
+                    'department': {
+                        'name': 'Engineering',
+                        'code': 'ENG'
+                    }
+                }
+            }
+        },
+        'category_with_subcategory': {
+            'id': 'cat_123',
+            'name': 'Travel',
+            'sub_category': 'Flight',
+            'is_enabled': True
+        },
+        'category_without_subcategory': {
+            'id': 'cat_456',
+            'name': 'Travel',
+            'sub_category': '',
+            'is_enabled': True
+        }
     }
 }

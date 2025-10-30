@@ -1,28 +1,27 @@
 import logging
 from datetime import date, datetime, timedelta
 
-from django.db.models import Q
 from django.conf import settings
-from django_q.models import Schedule
+from django.db.models import Q
 from django.template.loader import render_to_string
-
-from fyle_rest_auth.helpers import get_fyle_admin
+from django_q.models import Schedule
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_rest_auth.helpers import get_fyle_admin
 
-from apps.tasks.models import TaskLog
 from apps.fyle.models import ExpenseGroup
 from apps.fyle.tasks import create_expense_groups
+from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.models import (
-    Workspace,
     Configuration,
     FeatureConfig,
     FyleCredential,
     LastExportDetail,
+    SageIntacctCredential,
+    Workspace,
     WorkspaceSchedule,
-    SageIntacctCredential
 )
 from apps.workspaces.utils import send_email
 from fyle_intacct_api.utils import patch_request, post_request
@@ -156,8 +155,8 @@ def run_sync_schedule(workspace_id: int) -> None:
         ).values_list('id', flat=True).distinct()
 
         if eligible_expense_group_ids:
-            feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
-            if feature_config.export_via_rabbitmq:
+            export_via_rabbitmq = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='export_via_rabbitmq')
+            if export_via_rabbitmq:
                 logger.info(f"Exporting expenses via RabbitMQ for workspace id {workspace_id} triggered by {ExpenseImportSourceEnum.BACKGROUND_SCHEDULE}")
                 payload = {
                     'workspace_id': workspace_id,
@@ -366,7 +365,6 @@ def create_admin_subscriptions(workspace_id: int) -> None:
             'PROJECT',
             'COST_CENTER',
             'EXPENSE_FIELD',
-            'DEPENDENT_EXPENSE_FIELD',
             'CORPORATE_CARD',
             'EMPLOYEE',
             'TAX_GROUP',

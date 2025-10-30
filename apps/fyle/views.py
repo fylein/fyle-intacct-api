@@ -1,51 +1,41 @@
-from apps.workspaces.enums import CacheKeyEnum
-from rest_framework.request import Request
-from rest_framework import generics, status
-from rest_framework.response import Response
+import logging
 
 from django.core.cache import cache
 from django.db.models import Q, QuerySet
 from django_filters.rest_framework import DjangoFilterBackend
-
 from fyle.platform.exceptions import PlatformError
-from fyle_intacct_api.utils import LookupFieldMixin
-from fyle_accounting_mappings.models import ExpenseAttribute
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_mappings.models import ExpenseAttribute
+from fyle_accounting_mappings.serializers import ExpenseAttributeSerializer
+from fyle_integrations_platform_connector import PlatformConnector
+from rest_framework import generics, status
+from rest_framework.request import Request
+from rest_framework.response import Response
 
-from apps.tasks.models import TaskLog
 from apps.exceptions import handle_view_exceptions
 from apps.fyle.constants import DEFAULT_FYLE_CONDITIONS
-from apps.fyle.queue import async_import_and_export_expenses
-from apps.fyle.helpers import ExpenseSearchFilter, ExpenseGroupSearchFilter
-from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    FyleCredential
-)
-from apps.fyle.tasks import (
-    create_expense_groups,
-    get_task_log_and_fund_source
-)
-from apps.fyle.models import (
-    Expense,
-    ExpenseFilter,
-    ExpenseGroup,
-    ExpenseGroupSettings,
-    DependentFieldSetting
-)
+from apps.fyle.helpers import ExpenseGroupSearchFilter, ExpenseSearchFilter
+from apps.fyle.models import DependentFieldSetting, Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+from apps.fyle.queue import handle_webhook_callback
 from apps.fyle.serializers import (
-    ExpenseSerializer,
+    DependentFieldSettingSerializer,
     ExpenseFieldSerializer,
-    ExpenseGroupSerializer,
     ExpenseFilterSerializer,
+    ExpenseGroupSerializer,
     ExpenseGroupSettingsSerializer,
-    DependentFieldSettingSerializer
+    ExpenseSerializer,
 )
+from apps.fyle.tasks import create_expense_groups, get_task_log_and_fund_source
+from apps.tasks.models import TaskLog
+from apps.workspaces.enums import CacheKeyEnum
+from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, Workspace
+from fyle_intacct_api.utils import LookupFieldMixin
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 class ExpenseGroupView(LookupFieldMixin, generics.ListCreateAPIView):
@@ -221,6 +211,13 @@ class SyncFyleDimensionView(generics.ListCreateAPIView):
             # check if fyle credentials are present, and return 400 otherwise
             workspace = Workspace.objects.get(pk=kwargs['workspace_id'])
             FyleCredential.objects.get(workspace_id=workspace.id)
+
+            # Skip dimension sync if webhook sync is enabled and workspace has been synced before
+            fyle_webhook_sync_enabled = FeatureConfig.get_feature_config(workspace_id=kwargs['workspace_id'], key='fyle_webhook_sync_enabled')
+            if fyle_webhook_sync_enabled and workspace.source_synced_at is not None:
+                logger.info(f"Skipping sync_dimensions for workspace {kwargs['workspace_id']} as webhook sync is enabled")
+                return Response(status=status.HTTP_200_OK)
+
             cache_key = CacheKeyEnum.FYLE_SYNC_DIMENSIONS.value.format(workspace_id=workspace.id)
             is_cached = cache.get(cache_key)
 
@@ -434,6 +431,6 @@ class ExportView(generics.CreateAPIView):
         """
         Import and Export expenses
         """
-        async_import_and_export_expenses(request.data, int(kwargs['workspace_id']))
+        handle_webhook_callback(request.data, int(kwargs['workspace_id']))
 
         return Response(data={}, status=status.HTTP_200_OK)

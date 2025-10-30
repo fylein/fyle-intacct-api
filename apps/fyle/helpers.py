@@ -4,24 +4,25 @@ import traceback
 from datetime import datetime, timezone
 from typing import Optional, Union
 
-import requests
 import django_filters
+import requests
+from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.db.models import Q
-from django.conf import settings
-from rest_framework.exceptions import ValidationError
 from django.utils.module_loading import import_string
-
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_library.fyle_platform.enums import CacheKeyEnum
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from rest_framework.exceptions import ValidationError
 
-from apps.tasks.models import TaskLog
-from fyle_intacct_api.utils import get_access_token, post_request
-from apps.workspaces.models import Configuration, FyleCredential, Workspace
-from apps.mappings.tasks import construct_tasks_and_chain_import_fields_to_fyle
 from apps.fyle.models import DependentFieldSetting, Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+from apps.mappings.tasks import construct_tasks_and_chain_import_fields_to_fyle
+from apps.tasks.models import TaskLog
+from apps.workspaces.models import Configuration, FyleCredential, Workspace
+from fyle_intacct_api.utils import get_access_token, post_request
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -395,9 +396,21 @@ def assert_valid_request(workspace_id:int, fyle_org_id:str) -> None:
     :param fyle_org_id: Fyle Org ID
     :return: None
     """
-    workspace = Workspace.objects.get(fyle_org_id=fyle_org_id)
-    if workspace.id != workspace_id:
-        raise ValidationError('Workspace mismatch')
+    cache_key = CacheKeyEnum.WORKSPACE_VALIDATION.value.format(workspace_id=workspace_id, fyle_org_id=fyle_org_id)
+
+    cached_result = cache.get(cache_key)
+    if cached_result:
+        return
+
+    try:
+        workspace = Workspace.objects.get(fyle_org_id=fyle_org_id)
+        if workspace.id == workspace_id:
+            cache.set(cache_key, True, 2592000)  # Cache for 30 days
+            return
+        else:
+            raise ValidationError('Workspace mismatch')
+    except Workspace.DoesNotExist:
+        raise ValidationError('Workspace not found')
 
 
 def update_dimension_details(platform: PlatformConnector, workspace_id: int) -> None:
