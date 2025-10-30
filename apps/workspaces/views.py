@@ -2,49 +2,48 @@ import logging
 import traceback
 from datetime import timedelta
 
-from django.conf import settings
-from django.core.cache import cache
 from cryptography.fernet import Fernet
-from rest_framework.views import status
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db.models import Q, QuerySet
+from fyle.platform import exceptions as fyle_exc
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_mappings.models import ExpenseAttribute, FyleSyncTimestamp
+from fyle_rest_auth.helpers import get_fyle_admin
+from fyle_rest_auth.models import AuthToken
+from fyle_rest_auth.utils import AuthUtils
+from rest_framework import generics, viewsets
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework import generics, viewsets
-from django.contrib.auth import get_user_model
-from rest_framework.permissions import IsAuthenticated
-
+from rest_framework.views import status
 from sageintacctsdk import SageIntacctSDK
-from fyle_rest_auth.utils import AuthUtils
-from fyle_rest_auth.models import AuthToken
-from fyle.platform import exceptions as fyle_exc
-from fyle_rest_auth.helpers import get_fyle_admin
 from sageintacctsdk import exceptions as sage_intacct_exc
-from fyle_accounting_mappings.models import ExpenseAttribute
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 
-from apps.tasks.models import TaskLog
 from apps.fyle.helpers import get_cluster_domain
 from apps.fyle.models import ExpenseGroupSettings
-from apps.workspaces.actions import export_to_intacct
 from apps.sage_intacct.utils import SageIntacctConnector
+from apps.tasks.models import TaskLog
+from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.models import (
-    Workspace,
     Configuration,
     FeatureConfig,
     FyleCredential,
     LastExportDetail,
-    SageIntacctCredential
+    SageIntacctCredential,
+    Workspace,
 )
 from apps.workspaces.serializers import (
-    WorkspaceSerializer,
     ConfigurationSerializer,
     FyleCredentialSerializer,
     LastExportDetailSerializer,
-    SageIntacctCredentialSerializer
+    SageIntacctCredentialSerializer,
+    WorkspaceSerializer,
 )
 from apps.workspaces.tasks import patch_integration_settings
-from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -124,6 +123,7 @@ class WorkspaceView(viewsets.ViewSet):
 
             LastExportDetail.objects.create(workspace_id=workspace.id)
             FeatureConfig.objects.create(workspace_id=workspace.id)
+            FyleSyncTimestamp.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 
