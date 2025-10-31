@@ -1,18 +1,15 @@
-import pytest
-
 import json
 from unittest import mock
 
+import pytest
 from django.urls import reverse
-
 from fyle.platform.exceptions import PlatformError
 from fyle_accounting_mappings.models import MappingSetting
 
-from tests.helper import dict_compare_keys
-
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import FyleCredential, Workspace
-from .fixtures import data
+from tests.helper import dict_compare_keys
+from tests.test_fyle.fixtures import data
 
 
 def test_exportable_expense_group_view(api_client, test_connection):
@@ -215,9 +212,35 @@ def test_fyle_sync_dimension(api_client, test_connection, mocker):
     workspace = Workspace.objects.get(id=1)
     workspace.source_synced_at = None
     workspace.save()
-
     response = api_client.post(url)
     assert response.status_code == 200
+
+
+@pytest.mark.django_db(databases=['default'])
+def test_fyle_sync_dimension_skip_with_webhook_sync_enabled(api_client, test_connection, mocker):
+    """
+    Test fyle sync dimension skips when webhook sync is enabled
+    """
+    from datetime import datetime, timezone
+
+    from apps.workspaces.models import FeatureConfig
+    workspace = Workspace.objects.get(id=1)
+    feature_config = FeatureConfig.objects.get(workspace=workspace)
+    feature_config.fyle_webhook_sync_enabled = True
+    feature_config.save()
+    workspace.source_synced_at = datetime.now(tz=timezone.utc)
+    workspace.save()
+    mock_import = mocker.patch(
+        'fyle_integrations_platform_connector.fyle_integrations_platform_connector.PlatformConnector.import_fyle_dimensions'
+    )
+    access_token = test_connection.access_token
+    url = '/api/workspaces/1/fyle/sync_dimensions/'
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+    response = api_client.post(url)
+    assert response.status_code == 200
+    mock_import.assert_not_called()
+    feature_config.fyle_webhook_sync_enabled = False
+    feature_config.save()
 
 
 def test_fyle_sync_dimension_fail(api_client, test_connection):

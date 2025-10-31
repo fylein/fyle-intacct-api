@@ -150,8 +150,18 @@ CREATE FUNCTION public.delete_workspace(_workspace_id integer) RETURNS void
 DECLARE
     rcount integer;
     _org_id varchar(255);
+    _fyle_org_id text;
+    expense_ids text;
 BEGIN
     RAISE NOTICE 'Deleting data from workspace %', _workspace_id;
+
+    _fyle_org_id := (select fyle_org_id from workspaces where id = _workspace_id);
+
+    expense_ids := (
+        select string_agg(format('%L', e.expense_id), ', ')
+        from expenses e
+        where e.workspace_id = _workspace_id
+    );
 
     DELETE
     FROM dependent_field_settings dfs
@@ -448,6 +458,12 @@ BEGIN
     RAISE NOTICE 'Deleted % feature_configs', rcount;
 
     DELETE
+    FROM fyle_sync_timestamps fst
+    WHERE fst.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % fyle_sync_timestamps', rcount;
+
+    DELETE
     FROM django_q_schedule dqs
     WHERE dqs.args = _workspace_id::varchar(255);
     GET DIAGNOSTICS rcount = ROW_COUNT;
@@ -494,6 +510,8 @@ BEGIN
     RAISE NOTICE E'\n\n\n\n\n\n\n\n\nSwitch to prod db and run the below queries to delete dependent fields';
     RAISE NOTICE E'rollback;begin; delete from platform_schema.dependent_expense_field_mappings where expense_field_id in (select id from platform_schema.expense_fields where org_id =''%'' and type=''DEPENDENT_SELECT''); delete from platform_schema.expense_fields where org_id = ''%'' and type = ''DEPENDENT_SELECT'';\n\n\n\n\n\n\n\n\n\n\n', _org_id, _org_id;
 
+    RAISE NOTICE E'\n\n\nProd DB Queries to delete accounting export summaries:';
+    RAISE NOTICE E'rollback; begin; update platform_schema.expenses_wot set accounting_export_summary = \'{}\' where org_id = \'%\' and id in (%); update platform_schema.reports_wot set accounting_export_summary = \'{}\' where org_id = \'%\' and id in (select report->>\'id\' from platform_schema.expenses_rov where org_id = \'%\' and id in (%));', _fyle_org_id, expense_ids, _fyle_org_id, _fyle_org_id, expense_ids;
 
 RETURN;
 END
@@ -578,6 +596,143 @@ $$;
 
 
 ALTER FUNCTION public.log_update_event() OWNER TO postgres;
+
+--
+-- Name: re_export_expenses_intacct(integer, integer[], boolean); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.re_export_expenses_intacct(_workspace_id integer, _expense_group_ids integer[], trigger_export boolean DEFAULT false) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+
+DECLARE
+  	rcount integer;
+	temp_expenses integer[];
+	local_expense_group_ids integer[];
+	_fyle_org_id text;
+	expense_ids text;
+BEGIN
+  RAISE NOTICE 'Starting to delete exported entries from workspace % ', _workspace_id;
+
+local_expense_group_ids := _expense_group_ids;
+
+_fyle_org_id := (select fyle_org_id from workspaces where id = _workspace_id);
+
+SELECT array_agg(expense_id) into temp_expenses from expense_groups_expenses where expensegroup_id in (SELECT unnest(local_expense_group_ids));
+
+expense_ids := (
+	select string_agg(format('%L', expense_id), ', ')
+	from expenses
+	where workspace_id = _workspace_id
+	and id in (SELECT unnest(temp_expenses))
+);
+
+DELETE
+	FROM task_logs WHERE workspace_id = _workspace_id AND status = 'COMPLETE' and expense_group_id in (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % task_logs', rcount;
+
+DELETE
+	FROM errors
+	where expense_group_id IN (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % errors', rcount;
+
+DELETE
+	FROM bill_lineitems bl
+	WHERE bl.bill_id IN (
+		SELECT b.id FROM bills b WHERE b.expense_group_id IN (
+			SELECT unnest(local_expense_group_ids)
+		)
+	);
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % bill_lineitems', rcount;
+
+DELETE
+	FROM bills WHERE expense_group_id IN (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % bills', rcount;
+
+DELETE
+	FROM charge_card_transaction_lineitems ccpl
+	WHERE ccpl.charge_card_transaction_id IN (
+		SELECT ccp.id FROM charge_card_transactions ccp WHERE ccp.expense_group_id IN (
+			SELECT unnest(local_expense_group_ids)
+		)
+	);
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % charge_card_transaction_lineitems', rcount;
+
+DELETE
+	FROM charge_card_transactions WHERE expense_group_id IN (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % charge_card_transactions', rcount;
+
+DELETE
+	FROM journal_entry_lineitems jel
+	WHERE jel.journal_entry_id IN (
+		SELECT je.id FROM journal_entries je WHERE je.expense_group_id IN (
+			SELECT unnest(local_expense_group_ids)
+		)
+	);
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % journal_entry_lineitems', rcount;
+
+DELETE
+	FROM journal_entries WHERE expense_group_id IN (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % journal_entries', rcount;
+
+DELETE
+	FROM expense_report_lineitems cl
+	WHERE cl.expense_report_id IN (
+		SELECT cq.id FROM expense_reports cq WHERE cq.expense_group_id IN (
+			SELECT unnest(local_expense_group_ids)
+		)
+	);
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % expense_report_lineitems', rcount;
+
+DELETE
+	FROM expense_reports WHERE expense_group_id IN (SELECT unnest(local_expense_group_ids));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Deleted % expense_reports', rcount;
+
+UPDATE
+	expense_groups set exported_at = null, response_logs = null
+	WHERE id in (SELECT unnest(local_expense_group_ids)) and workspace_id = _workspace_id and exported_at is not null;
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Updating % expense_groups and resetting exported_at, response_logs', rcount;
+
+UPDATE
+	expenses set accounting_export_summary = '{}'
+	where id in (SELECT unnest(temp_expenses));
+	GET DIAGNOSTICS rcount = ROW_COUNT;
+	RAISE NOTICE 'Updating % expenses and resetting accounting_export_summary', rcount;
+
+RAISE NOTICE E'\n\n\nProd DB Queries to delete accounting export summaries:';
+RAISE NOTICE E'rollback; begin; update platform_schema.expenses_wot set accounting_export_summary = \'{}\' where org_id = \'%\' and id in (%); update platform_schema.reports_wot set accounting_export_summary = \'{}\' where org_id = \'%\' and id in (select report->>\'id\' from platform_schema.expenses_rov where org_id = \'%\' and id in (%));', _fyle_org_id, expense_ids, _fyle_org_id, _fyle_org_id, expense_ids;
+
+IF trigger_export THEN
+    UPDATE django_q_schedule
+        SET next_run = now() + INTERVAL '35 sec'
+        WHERE args = _workspace_id::text and func = 'apps.workspaces.tasks.run_sync_schedule';
+
+        GET DIAGNOSTICS rcount = ROW_COUNT;
+
+        IF rcount > 0 THEN
+            RAISE NOTICE 'Updated % schedule', rcount;
+        ELSE
+            RAISE NOTICE 'Schedule not updated since it doesnt exist';
+        END IF;
+END IF;
+
+RETURN;
+END
+$$;
+
+
+ALTER FUNCTION public.re_export_expenses_intacct(_workspace_id integer, _expense_group_ids integer[], trigger_export boolean) OWNER TO postgres;
 
 --
 -- Name: reset_location_entity_without_clearing_past_exports(integer); Type: FUNCTION; Schema: public; Owner: postgres
@@ -6082,6 +6237,9 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 256	workspaces	0051_alter_featureconfig_export_via_rabbitmq_and_more	2025-10-10 09:38:10.360728+00
 257	fyle_accounting_mappings	0031_fylesynctimestamp	2025-10-21 09:33:37.853529+00
 258	workspaces	0052_featureconfig_fyle_webhook_sync_enabled	2025-10-21 09:33:37.868431+00
+259	internal	0020_auto_generated_sql	2025-10-29 16:25:12.991416+00
+260	internal	0021_auto_generated_sql	2025-10-31 06:45:42.642859+00
+261	internal	0022_auto_generated_sql	2025-10-31 06:45:42.64653+00
 \.
 
 
@@ -9558,6 +9716,7 @@ COPY public.fyle_credentials (id, refresh_token, created_at, updated_at, workspa
 --
 
 COPY public.fyle_sync_timestamps (id, category_synced_at, project_synced_at, cost_center_synced_at, employee_synced_at, expense_field_synced_at, corporate_card_synced_at, dependent_field_synced_at, tax_group_synced_at, created_at, updated_at, workspace_id) FROM stdin;
+1	\N	\N	\N	\N	\N	\N	\N	\N	2025-10-31 06:45:42.644775+00	2025-10-31 06:45:42.644775+00	1
 \.
 
 
@@ -10138,7 +10297,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 55, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 258, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 261, true);
 
 
 --
@@ -10271,7 +10430,7 @@ SELECT pg_catalog.setval('public.fyle_rest_auth_authtokens_id_seq', 1, true);
 -- Name: fyle_sync_timestamps_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_sync_timestamps_id_seq', 1, false);
+SELECT pg_catalog.setval('public.fyle_sync_timestamps_id_seq', 1, true);
 
 
 --

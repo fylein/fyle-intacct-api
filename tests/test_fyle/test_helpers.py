@@ -1,34 +1,35 @@
-from apps.tasks.models import TaskLog
-import pytest
-
-from unittest import mock
 from asyncio.log import logger
+from unittest import mock
 
-from django.db.models import Q
+import pytest
 from django.conf import settings
-from rest_framework.views import status
-from rest_framework.response import Response
-
-from fyle_accounting_library.common_resources.models import DimensionDetail
+from django.core.cache import cache
+from django.db.models import Q
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.views import status
 
-from apps.workspaces.models import Configuration, Workspace
-from apps.fyle.models import Expense, ExpenseFilter
 from apps.fyle.actions import __bulk_update_expenses
 from apps.fyle.helpers import (
+    assert_valid_request,
+    check_interval_and_sync_dimension,
+    construct_expense_filter,
+    construct_expense_filter_query,
+    get_fund_source,
+    get_fyle_orgs,
+    get_request,
     get_source_account_type,
     get_updated_accounting_export_summary,
     handle_import_exception,
-    post_request,
-    get_request,
-    get_fyle_orgs,
-    get_fund_source,
-    construct_expense_filter,
-    update_dimension_details,
     handle_refresh_dimensions,
-    construct_expense_filter_query,
-    check_interval_and_sync_dimension,
+    post_request,
+    update_dimension_details,
 )
+from apps.fyle.models import Expense, ExpenseFilter
+from apps.tasks.models import TaskLog
+from apps.workspaces.models import Configuration, Workspace
 
 
 def test_post_request(mocker):
@@ -877,6 +878,40 @@ def test_handle_import_exception(db):
     """
     workspace_id = 1
     task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
-
     handle_import_exception(task_log=task_log)
     assert task_log.status == 'FATAL'
+
+
+def test_assert_valid_request(db):
+    """
+    Test assert_valid_request with caching
+    """
+    workspace = Workspace.objects.get(id=1)
+    cache.clear()
+    assert_valid_request(workspace_id=workspace.id, fyle_org_id=workspace.fyle_org_id)
+    from fyle_accounting_library.fyle_platform.enums import CacheKeyEnum
+    cache_key = CacheKeyEnum.WORKSPACE_VALIDATION.value.format(workspace_id=workspace.id, fyle_org_id=workspace.fyle_org_id)
+    cached_value = cache.get(cache_key)
+    assert cached_value is True
+    assert_valid_request(workspace_id=workspace.id, fyle_org_id=workspace.fyle_org_id)
+
+
+def test_assert_valid_request_workspace_mismatch(db):
+    """
+    Test assert_valid_request with workspace mismatch
+    """
+    workspace = Workspace.objects.get(id=1)
+    cache.clear()
+    with pytest.raises(ValidationError) as excinfo:
+        assert_valid_request(workspace_id=999, fyle_org_id=workspace.fyle_org_id)
+    assert str(excinfo.value.detail[0]) == 'Workspace mismatch'
+
+
+def test_assert_valid_request_workspace_not_found(db):
+    """
+    Test assert_valid_request with workspace not found
+    """
+    cache.clear()
+    with pytest.raises(ValidationError) as excinfo:
+        assert_valid_request(workspace_id=999, fyle_org_id='invalid_org_id')
+    assert str(excinfo.value.detail[0]) == 'Workspace not found'
