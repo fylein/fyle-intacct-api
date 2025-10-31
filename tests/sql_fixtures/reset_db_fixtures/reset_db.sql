@@ -458,6 +458,12 @@ BEGIN
     RAISE NOTICE 'Deleted % feature_configs', rcount;
 
     DELETE
+    FROM fyle_sync_timestamps fst
+    WHERE fst.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % fyle_sync_timestamps', rcount;
+
+    DELETE
     FROM django_q_schedule dqs
     WHERE dqs.args = _workspace_id::varchar(255);
     GET DIAGNOSTICS rcount = ROW_COUNT;
@@ -6232,6 +6238,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 257	fyle_accounting_mappings	0031_fylesynctimestamp	2025-10-21 09:33:37.853529+00
 258	workspaces	0052_featureconfig_fyle_webhook_sync_enabled	2025-10-21 09:33:37.868431+00
 259	internal	0020_auto_generated_sql	2025-10-29 16:25:12.991416+00
+260	internal	0021_auto_generated_sql	2025-10-31 06:45:42.642859+00
+261	internal	0022_auto_generated_sql	2025-10-31 06:45:42.64653+00
 \.
 
 
@@ -9708,6 +9716,7 @@ COPY public.fyle_credentials (id, refresh_token, created_at, updated_at, workspa
 --
 
 COPY public.fyle_sync_timestamps (id, category_synced_at, project_synced_at, cost_center_synced_at, employee_synced_at, expense_field_synced_at, corporate_card_synced_at, dependent_field_synced_at, tax_group_synced_at, created_at, updated_at, workspace_id) FROM stdin;
+1	\N	\N	\N	\N	\N	\N	\N	\N	2025-10-31 06:45:42.644775+00	2025-10-31 06:45:42.644775+00	1
 \.
 
 
@@ -10288,7 +10297,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 55, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 259, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 261, true);
 
 
 --
@@ -10421,7 +10430,7 @@ SELECT pg_catalog.setval('public.fyle_rest_auth_authtokens_id_seq', 1, true);
 -- Name: fyle_sync_timestamps_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.fyle_sync_timestamps_id_seq', 1, false);
+SELECT pg_catalog.setval('public.fyle_sync_timestamps_id_seq', 1, true);
 
 
 --
