@@ -109,5 +109,3 @@ Django Rest Framework API for Fyle Sage Intacct Integration
     ```
     docker-compose exec api /bin/bash
     ```
-
-# Django 4.2.26 security update
