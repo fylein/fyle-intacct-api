@@ -1,10 +1,16 @@
-from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta, timezone
+from unittest import mock
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from apps.mappings.helpers import (
-    schedule_or_delete_auto_mapping_tasks,
+    is_project_sync_allowed,
+    patch_corporate_card_integration_settings,
     prepend_code_to_name,
-    is_project_sync_allowed
+    schedule_or_delete_auto_mapping_tasks,
 )
+from apps.workspaces.models import Configuration
 
 
 class DummyConfig:
@@ -79,3 +85,35 @@ def test_is_project_sync_allowed_recent():
     dummy = MagicMock()
     dummy.last_successful_run_at = datetime.now(timezone.utc)
     assert is_project_sync_allowed(dummy) is False
+
+
+@pytest.mark.django_db()
+def test_patch_corporate_card_integration_settings(test_connection):
+    """
+    Test patch_corporate_card_integration_settings helper - tests all conditions
+    """
+    workspace_id = 1
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+    workspace_general_settings.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    workspace_general_settings.save()
+
+    with mock.patch('apps.mappings.helpers.patch_integration_settings_for_unmapped_cards') as mock_patch:
+        patch_corporate_card_integration_settings(workspace_id=workspace_id)
+        mock_patch.assert_called_once()
+        assert mock_patch.call_args[1]['workspace_id'] == workspace_id
+        assert 'unmapped_card_count' in mock_patch.call_args[1]
+
+    # Test that patch is NOT called for non-card expense types
+    workspace_general_settings.corporate_credit_card_expenses_object = 'BILL'
+    workspace_general_settings.save()
+
+    with mock.patch('apps.mappings.helpers.patch_integration_settings_for_unmapped_cards') as mock_patch:
+        patch_corporate_card_integration_settings(workspace_id=workspace_id)
+        mock_patch.assert_not_called()
+
+    workspace_general_settings.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    workspace_general_settings.save()
+
+    with mock.patch('apps.mappings.helpers.patch_integration_settings_for_unmapped_cards') as mock_patch:
+        patch_corporate_card_integration_settings(workspace_id=workspace_id)
+        mock_patch.assert_not_called()
