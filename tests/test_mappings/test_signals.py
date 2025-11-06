@@ -1,26 +1,17 @@
-import pytest
-
-from unittest import mock
 from asyncio.log import logger
 from datetime import datetime, timedelta, timezone
+from unittest import mock
 
+import pytest
 from django.db import transaction
 from django_q.models import Schedule
-
 from fyle.platform.exceptions import WrongParamsError
-from fyle_accounting_mappings.models import (
-    MappingSetting,
-    Mapping,
-    ExpenseAttribute,
-    EmployeeMapping,
-    CategoryMapping
-)
+from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, ExpenseAttribute, Mapping, MappingSetting
 
+from apps.mappings.models import LocationEntityMapping
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, SageIntacctCredential, Workspace
-from apps.mappings.models import LocationEntityMapping
 from fyle_integrations_imports.models import ImportLog
-
 from tests.test_fyle.fixtures import data as fyle_data
 
 
@@ -350,3 +341,33 @@ def test_run_pre_mapping_settings_triggers(db, mocker, test_connection):
             mapping_setting.save()
         except Exception:
             logger.info('Active Sage Intacct credentials not found in workspace')
+
+
+@pytest.mark.django_db()
+def test_patch_integration_settings_on_card_mapping(test_connection, mocker):
+    """
+    Test patch_corporate_card_integration_settings is called when corporate card mapping is created
+    """
+    workspace_id = 1
+
+    mock_patch = mocker.patch('apps.mappings.signals.patch_corporate_card_integration_settings')
+    mapping = Mapping(
+        source_type='CORPORATE_CARD',
+        destination_type='CREDIT_CARD_ACCOUNT',
+        source_id=2677,
+        destination_id=123,
+        workspace_id=workspace_id
+    )
+    mapping.save()
+    mock_patch.assert_called_once_with(workspace_id=workspace_id)
+
+    mock_patch.reset_mock()
+    mapping = Mapping(
+        source_type='CATEGORY',
+        destination_type='ACCOUNT',
+        source_id=106,
+        destination_id=585,
+        workspace_id=workspace_id
+    )
+    mapping.save()
+    mock_patch.assert_not_called()

@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from django.core.cache import cache
 from fyle_accounting_library.fyle_platform.enums import FyleAttributeTypeEnum
@@ -390,3 +392,26 @@ def test_attribute_field_mapping_exists():
     assert FyleAttributeTypeEnum.TAX_GROUP in ATTRIBUTE_FIELD_MAPPING
     assert FyleAttributeTypeEnum.EXPENSE_FIELD in ATTRIBUTE_FIELD_MAPPING
     assert FyleAttributeTypeEnum.DEPENDENT_FIELD in ATTRIBUTE_FIELD_MAPPING
+
+
+@pytest.mark.django_db
+def test_process_webhook_corporate_card_created_triggers_patch(db, mocker):
+    """Test CORPORATE_CARD CREATED webhook triggers patch and handles exceptions"""
+    workspace_id = 1
+    processor = WebhookAttributeProcessor(workspace_id)
+
+    # Test that webhook processing triggers the patch function
+    with mock.patch('apps.mappings.helpers.patch_corporate_card_integration_settings') as mock_patch:
+        processor.process_webhook(data['webhook_payloads']['corporate_card_created'])
+        mock_patch.assert_called_once_with(workspace_id=workspace_id)
+
+    # Test that webhook processing continues even if patch fails
+    with mock.patch('apps.mappings.helpers.patch_corporate_card_integration_settings') as mock_patch:
+        mock_patch.side_effect = Exception("Test error")
+        processor.process_webhook(data['webhook_payloads']['corporate_card_created'])
+        # Verify the card was still created despite patch failure
+        assert ExpenseAttribute.objects.filter(
+            workspace_id=workspace_id,
+            attribute_type='CORPORATE_CARD',
+            source_id='card_123'
+        ).exists()
