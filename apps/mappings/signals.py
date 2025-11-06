@@ -2,32 +2,25 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from django.db.models import Q
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save, post_delete
-
+from fyle.platform.exceptions import WrongParamsError
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, Mapping, MappingSetting
+from fyle_integrations_platform_connector import PlatformConnector
 from rest_framework.exceptions import ValidationError
 from sageintacctsdk.exceptions import InvalidTokenError
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from fyle.platform.exceptions import WrongParamsError
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.models import (
-    MappingSetting,
-    Mapping,
-    EmployeeMapping,
-    CategoryMapping,
-    DestinationAttribute
-)
 
-
-from apps.tasks.models import Error
-from apps.mappings.constants import SYNC_METHODS
 from apps.fyle.helpers import update_dimension_details
-from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
-from fyle_integrations_imports.models import ImportLog
+from apps.mappings.constants import SYNC_METHODS
+from apps.mappings.helpers import patch_corporate_card_integration_settings
 from apps.mappings.models import LocationEntityMapping
-from apps.sage_intacct.utils import SageIntacctConnector
-from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField
 from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.tasks.models import Error
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from fyle_integrations_imports.models import ImportLog
+from fyle_integrations_imports.modules.expense_custom_fields import ExpenseCustomField
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -213,3 +206,12 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
             last_successful_run_at = import_log.last_successful_run_at - timedelta(minutes=30)
             import_log.last_successful_run_at = last_successful_run_at
             import_log.save()
+
+
+@receiver(post_save, sender=Mapping)
+def patch_integration_settings_on_card_mapping(sender: type[Mapping], instance: Mapping, created: bool, **kwargs) -> None:
+    """
+    Patch integration settings when corporate card mapping is created
+    """
+    if instance.source_type == 'CORPORATE_CARD' and created:
+        patch_corporate_card_integration_settings(workspace_id=instance.workspace_id)
