@@ -48,26 +48,26 @@ Django Rest Framework API for Fyle Sage Intacct Integration
     ```
     $ mv docker-compose.yml.template docker-compose.yml
     ```
-  
+
 * Setup environment variables in docker_compose.yml
 
     ```yaml
-    environment: 
+    environment:
       SECRET_KEY: thisisthedjangosecretkey
-      ENCRYPTION_KEY: 
+      ENCRYPTION_KEY:
       ALLOWED_HOSTS: "*"
       DEBUG: "False"
       API_URL: http://localhost:8000/api
       DATABASE_URL: postgres://postgres:postgres@db:5432/intacct_db
-      FYLE_BASE_URL: 
-      FYLE_CLIENT_ID: 
-      FYLE_CLIENT_SECRET: 
-      FYLE_TOKEN_URI: 
-      FYLE_JOBS_URL: 
-      SI_SENDER_ID: 
-      SI_SENDER_PASSWORD: 
+      FYLE_BASE_URL:
+      FYLE_CLIENT_ID:
+      FYLE_CLIENT_SECRET:
+      FYLE_TOKEN_URI:
+      FYLE_JOBS_URL:
+      SI_SENDER_ID:
+      SI_SENDER_PASSWORD:
    ```
-  
+
 * Build docker images
 
     ```
@@ -87,7 +87,7 @@ Django Rest Framework API for Fyle Sage Intacct Integration
     ```
 
 * To tail the logs a service you can do
-    
+
     ```
     docker-compose logs -f <api / qcluster>
     ```
@@ -109,3 +109,5 @@ Django Rest Framework API for Fyle Sage Intacct Integration
     ```
     docker-compose exec api /bin/bash
     ```
+
+# Django 4.2.26 security update
