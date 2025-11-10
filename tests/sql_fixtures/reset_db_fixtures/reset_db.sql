@@ -3850,7 +3850,8 @@ CREATE TABLE public.sage_intacct_credentials (
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
-    is_expired boolean NOT NULL
+    is_expired boolean NOT NULL,
+    refresh_token text
 );
 
 
@@ -6240,6 +6241,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 259	internal	0020_auto_generated_sql	2025-10-29 16:25:12.991416+00
 260	internal	0021_auto_generated_sql	2025-10-31 06:45:42.642859+00
 261	internal	0022_auto_generated_sql	2025-10-31 06:45:42.64653+00
+262	workspaces	0053_sageintacctcredential_refresh_token	2025-11-10 07:51:10.660732+00
 \.
 
 
@@ -10134,8 +10136,8 @@ COPY public.reimbursements (id, settlement_id, reimbursement_id, state, created_
 -- Data for Name: sage_intacct_credentials; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired) FROM stdin;
-1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f
+COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired, refresh_token) FROM stdin;
+1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f	\N
 \.
 
 
@@ -10297,7 +10299,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 55, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 261, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 262, true);
 
 
 --
@@ -12556,3 +12558,5 @@ ALTER TABLE ONLY public.workspaces_user
 --
 -- PostgreSQL database dump complete
 --
+
+
