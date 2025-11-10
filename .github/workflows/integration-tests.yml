@@ -15,7 +15,7 @@ on:
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
-    
+    environment: CI Environment
     env:
       # SOAP credentials
       INTACCT_SENDER_ID: ${{ secrets.INTACCT_SENDER_ID }}
@@ -27,7 +27,12 @@ jobs:
       
       # REST credentials
       INTACCT_CLIENT_ID: ${{ secrets.INTACCT_CLIENT_ID }}
-      INTACCT_CLIENT_SECRET: ${{ secrets.INTACCT_CLIENT_SECRET }}    
+      INTACCT_CLIENT_SECRET: ${{ secrets.INTACCT_CLIENT_SECRET }}   
+
+      # Internal API credentials
+      INTERNAL_API_URL: ${{ secrets.INTERNAL_API_URL }}
+      INTERNAL_API_TOKEN: ${{ secrets.INTERNAL_API_TOKEN }}
+      INTERNAL_API_WORKSPACE_ID: ${{ secrets.INTERNAL_API_WORKSPACE_ID }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

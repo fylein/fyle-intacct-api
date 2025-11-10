@@ -28,10 +28,10 @@ class SoapClient:
         :return: Dictionary with SOAP credentials
         """
         return {
-            'user_id': os.environ.get('INTACCT_USER_ID'),
-            'sender_id': os.environ.get('INTACCT_SENDER_ID'),
-            'entity_id': os.environ.get('INTACCT_ENTITY_ID'),
-            'company_id': os.environ.get('INTACCT_COMPANY_ID'),
-            'user_password': os.environ.get('INTACCT_USER_PASSWORD'),
-            'sender_password': os.environ.get('INTACCT_SENDER_PASSWORD')
+            'user_id': os.environ.get('INTEGRATION_TEST_INTACCT_USER_ID'),
+            'sender_id': os.environ.get('INTEGRATION_TEST_INTACCT_SENDER_ID'),
+            'entity_id': os.environ.get('INTEGRATION_TEST_INTACCT_ENTITY_ID'),
+            'company_id': os.environ.get('INTEGRATION_TEST_INTACCT_COMPANY_ID'),
+            'user_password': os.environ.get('INTEGRATION_TEST_INTACCT_USER_PASSWORD'),
+            'sender_password': os.environ.get('INTEGRATION_TEST_INTACCT_SENDER_PASSWORD')
         }
