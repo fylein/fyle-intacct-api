@@ -1,0 +1,23 @@
+version: '3.7'
+
+services:
+  integration_test:
+    build:
+      context: ../..
+      dockerfile: tests/integration_tests/Dockerfile.integration_test
+    working_dir: /
+    volumes:
+      - ../../tests/integration_tests:/tests/integration_tests
+    environment:
+      # SOAP credentials
+      - INTACCT_SENDER_ID=${INTACCT_SENDER_ID}
+      - INTACCT_SENDER_PASSWORD=${INTACCT_SENDER_PASSWORD}
+      - INTACCT_USER_ID=${INTACCT_USER_ID}
+      - INTACCT_COMPANY_ID=${INTACCT_COMPANY_ID}
+      - INTACCT_USER_PASSWORD=${INTACCT_USER_PASSWORD}
+      - INTACCT_ENTITY_ID=${INTACCT_ENTITY_ID}
+      
+      # REST credentials
+      - INTACCT_CLIENT_ID=${INTACCT_CLIENT_ID}
+      - INTACCT_CLIENT_SECRET=${INTACCT_CLIENT_SECRET}
+      - INTACCT_REFRESH_TOKEN=${INTACCT_REFRESH_TOKEN}

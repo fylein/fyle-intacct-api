@@ -1,0 +1,55 @@
+name: Integration Tests - SOAP vs REST API Comparison
+
+on:
+  # Run daily at 12 PM IST (6:30 AM UTC)
+  schedule:
+    - cron: '30 6 * * *'
+  
+  # push:
+  #   branches:
+  #     - master
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    
+    env:
+      # SOAP credentials
+      INTACCT_SENDER_ID: ${{ secrets.INTACCT_SENDER_ID }}
+      INTACCT_SENDER_PASSWORD: ${{ secrets.INTACCT_SENDER_PASSWORD }}
+      INTACCT_USER_ID: ${{ secrets.INTACCT_USER_ID }}
+      INTACCT_COMPANY_ID: ${{ secrets.INTACCT_COMPANY_ID }}
+      INTACCT_USER_PASSWORD: ${{ secrets.INTACCT_USER_PASSWORD }}
+      INTACCT_ENTITY_ID: ${{ secrets.INTACCT_ENTITY_ID }}
+      
+      # REST credentials
+      INTACCT_CLIENT_ID: ${{ secrets.INTACCT_CLIENT_ID }}
+      INTACCT_CLIENT_SECRET: ${{ secrets.INTACCT_CLIENT_SECRET }}    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build & Up Docker image
+        run: |
+          docker compose -f tests/integration_tests/docker-compose-integration.yml build
+          docker compose -f tests/integration_tests/docker-compose-integration.yml up -d
+
+      - name: Run integration tests
+        run: |
+          docker compose -f tests/integration_tests/docker-compose-integration.yml run --rm integration_test pytest tests/integration_tests -m integration -v --tb=short --junit-xml=test-reports/integration-report.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-results
+          path: test-reports/integration-tests-report.xml
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose -f tests/integration_tests/docker-compose-integration.yml down -v
+
