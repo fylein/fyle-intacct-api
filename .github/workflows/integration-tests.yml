@@ -51,9 +51,3 @@ jobs:
       - name: Evaluate Coverage
         if: ${{ (env.STATUS == 'FAIL') || (env.FAILED > 0) }}
         run: exit 1
-
-      - name: Cleanup
-        if: always()
-        run: |
-          docker compose -f tests/integration_tests/docker-compose-integration.yml down -v
-
