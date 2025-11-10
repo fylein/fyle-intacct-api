@@ -35,7 +35,7 @@ jobs:
       INTERNAL_API_WORKSPACE_ID: ${{ secrets.INTERNAL_API_WORKSPACE_ID }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Build & Up Docker image
         run: |
@@ -44,14 +44,13 @@ jobs:
 
       - name: Run integration tests
         run: |
-          docker compose -f tests/integration_tests/docker-compose-integration.yml run --rm integration_test pytest tests/integration_tests -m integration -v --tb=short --junit-xml=test-reports/integration-report.xml
+          docker compose -f tests/integration_tests/docker-compose-integration.yml run --rm integration_test pytest tests/integration_tests -m integration -v --tb=short --junit-xml=test-reports/integration-report.xml --cov-report=xml --cov-report=term-missing | tee pytest-coverage.txt
+          echo "STATUS=$(cat pytest-coverage.txt | grep 'Required test' | awk '{ print $1 }')" >> $GITHUB_ENV
+          echo "FAILED=$(cat test-reports/report.xml | awk -F'=' '{print $5}' | awk -F' ' '{gsub(/"/, "", $1); print $1}')" >> $GITHUB_ENV
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: integration-test-results
-          path: test-reports/integration-tests-report.xml
+      - name: Evaluate Coverage
+        if: ${{ (env.STATUS == 'FAIL') || (env.FAILED > 0) }}
+        run: exit 1
 
       - name: Cleanup
         if: always()
