@@ -4,13 +4,6 @@ on:
   # Run daily at 12 PM IST (6:30 AM UTC)
   schedule:
     - cron: '30 6 * * *'
-  
-  # push:
-  #   branches:
-  #     - master
-
-  pull_request:
-    types: [opened, synchronize, reopened]
 
 jobs:
   integration-tests:
