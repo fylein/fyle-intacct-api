@@ -178,6 +178,7 @@ class SageIntacctCredential(models.Model):
     si_user_password = models.TextField(help_text='Stores Sage Intacct user password')
     is_expired = models.BooleanField(default=False, help_text='Sage Intacct Password expiry flag')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    refresh_token = models.TextField(help_text='Stores Sage Intacct refresh token', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
