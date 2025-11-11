@@ -38,12 +38,9 @@ class BaseTestPost:
         """
         rest_module = self.get_module(rest_client, self.REST_MODULE_NAME)
         soap_module = self.get_module(soap_client, self.SOAP_MODULE_NAME)
-        try:
-            rest_response = rest_module.post(self.REST_PAYLOAD)
-            soap_response = soap_module.post(self.SOAP_PAYLOAD)
-        except Exception as e:
-            logger.error(f"Error in test_post: {e.response}")
-            raise e
+
+        rest_response = rest_module.post(self.REST_PAYLOAD)
+        soap_response = soap_module.post(self.SOAP_PAYLOAD)
 
         rest_object_id = self.get_rest_object_id(rest_response)
         soap_object_id = self.get_soap_object_id(soap_response)
@@ -55,9 +52,8 @@ class BaseTestPost:
             self.assert_post_response(rest_get_response, soap_get_response)
 
         finally:
-            pass
-            # rest_module.delete(key=rest_object_id)
-            # rest_module.delete(key=soap_object_id)
+            rest_module.delete(key=rest_object_id)
+            rest_module.delete(key=soap_object_id)
 
     def get_rest_get_response(self, rest_module: RestClient, object_id: str) -> dict:
         """
