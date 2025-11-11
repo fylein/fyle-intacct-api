@@ -1,0 +1,17 @@
+FROM python:3.10-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV PYTHONPATH=/:/tests/integration_tests
+
+WORKDIR /
+
+# Copy requirements
+COPY tests/integration_tests/requirements.txt /tests/integration_tests/requirements.txt
+
+# Install dependencies
+RUN pip install -r /tests/integration_tests/requirements.txt
+
+# Copy code - preserve the directory structure
+COPY tests/integration_tests/ /tests/integration_tests/

@@ -1,0 +1,46 @@
+name: Integration Tests - SOAP vs REST API Comparison
+
+on:
+  # Run daily at 12 PM IST (6:30 AM UTC)
+  schedule:
+    - cron: '30 6 * * *'
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    environment: CI Environment
+    env:
+      # SOAP credentials
+      INTEGRATION_TEST_INTACCT_SENDER_ID: ${{ secrets.INTEGRATION_TEST_INTACCT_SENDER_ID }}
+      INTEGRATION_TEST_INTACCT_SENDER_PASSWORD: ${{ secrets.INTEGRATION_TEST_INTACCT_SENDER_PASSWORD }}
+      INTEGRATION_TEST_INTACCT_USER_ID: ${{ secrets.INTEGRATION_TEST_INTACCT_USER_ID }}
+      INTEGRATION_TEST_INTACCT_COMPANY_ID: ${{ secrets.INTEGRATION_TEST_INTACCT_COMPANY_ID }}
+      INTEGRATION_TEST_INTACCT_USER_PASSWORD: ${{ secrets.INTEGRATION_TEST_INTACCT_USER_PASSWORD }}
+      INTEGRATION_TEST_INTACCT_ENTITY_ID: ${{ secrets.INTEGRATION_TEST_INTACCT_ENTITY_ID }}
+      
+      # REST credentials
+      INTEGRATION_TEST_INTACCT_CLIENT_ID: ${{ secrets.INTEGRATION_TEST_INTACCT_CLIENT_ID }}
+      INTEGRATION_TEST_INTACCT_CLIENT_SECRET: ${{ secrets.INTEGRATION_TEST_INTACCT_CLIENT_SECRET }}   
+
+      # Internal API credentials
+      INTEGRATION_TEST_INTERNAL_API_URL: ${{ secrets.INTEGRATION_TEST_INTERNAL_API_URL }}
+      INTEGRATION_TEST_INTERNAL_API_TOKEN: ${{ secrets.INTEGRATION_TEST_INTERNAL_API_TOKEN }}
+      INTEGRATION_TEST_INTERNAL_API_WORKSPACE_ID: ${{ secrets.INTEGRATION_TEST_INTERNAL_API_WORKSPACE_ID }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Build & Up Docker image
+        run: |
+          docker compose -f tests/integration_tests/docker-compose-integration.yml build
+          docker compose -f tests/integration_tests/docker-compose-integration.yml up -d
+
+      - name: Run integration tests
+        run: |
+          docker compose -f tests/integration_tests/docker-compose-integration.yml run --rm integration_test pytest tests/integration_tests -m integration -v --tb=short --junit-xml=test-reports/integration-report.xml --cov-report=xml --cov-report=term-missing | tee pytest-coverage.txt
+          echo "STATUS=$(cat pytest-coverage.txt | grep 'Required test' | awk '{ print $1 }')" >> $GITHUB_ENV
+          echo "FAILED=$(cat test-reports/report.xml | awk -F'=' '{print $5}' | awk -F' ' '{gsub(/"/, "", $1); print $1}')" >> $GITHUB_ENV
+
+      - name: Evaluate Coverage
+        if: ${{ (env.STATUS == 'FAIL') || (env.FAILED > 0) }}
+        run: exit 1
