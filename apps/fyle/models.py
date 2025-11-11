@@ -1,19 +1,18 @@
-from dateutil import parser
 from datetime import datetime, timezone
 
-from django.db import models
-from django.db.models import Count, JSONField
+from dateutil import parser
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
+from django.db import models
+from django.db.models import Count, JSONField
 from django.db.models.fields.json import KeyTextTransform
-
-from fyle_accounting_mappings.models import ExpenseAttribute
-from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
 from fyle_accounting_library.fyle_platform.constants import IMPORTED_FROM_CHOICES
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
+from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.users.models import User
-from apps.workspaces.models import Workspace, Configuration
+from apps.workspaces.models import Configuration, Workspace
 
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
@@ -167,7 +166,8 @@ class Expense(models.Model):
         db_table = 'expenses'
         indexes = [
             models.Index(fields=['accounting_export_summary', 'workspace_id']),
-            models.Index(fields=['fund_source', 'workspace_id'])
+            models.Index(fields=['fund_source', 'workspace_id']),
+            models.Index(fields=['workspace_id', 'report_id'])
         ]
 
     @staticmethod
