@@ -2,7 +2,6 @@ import random
 from datetime import datetime
 
 
-
 today_date = datetime.now().strftime('%Y-%m-%d')
 year = datetime.now().year
 month = datetime.now().month
@@ -24,7 +23,7 @@ REST_JOURNAL_ENTRY_CREATE_PAYLOAD = {
       "isBillable": False,
       "description": f"owner@fyleforintegrationtests.in - 1900: Goodwill - {today_date} - C/{year}/{month}/R/{random_int} - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txyacPycOcqE&org_id=orjMvhugUguK",
       "glAccount": {
-        "id": "1900"
+        "id": "2000"
       },
       "allocation": {
         "id": None
@@ -68,7 +67,7 @@ REST_JOURNAL_ENTRY_CREATE_PAYLOAD = {
       "isBillable": False,
       "description": f"owner@fyleforintegrationtests.in - 1900: Goodwill - {today_date} - C/{year}/{month}/R/{random_int} - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txyacPycOcqE&org_id=orjMvhugUguK",
       "glAccount": {
-        "id": "2000"
+        "id": "1900"
       },
       "allocation": {
         "id": None

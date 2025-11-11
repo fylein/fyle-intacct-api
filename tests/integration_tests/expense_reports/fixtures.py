@@ -2,7 +2,6 @@ import random
 from datetime import datetime
 
 
-
 today_date = datetime.now().strftime('%Y-%m-%d')
 year = datetime.now().year
 month = datetime.now().month
@@ -24,7 +23,7 @@ REST_EXPENSE_REPORT_CREATE_PAYLOAD = {
   "reimbursement": {
     "reimbursementCurrency": "USD"
   },
-  "description": f"owner@fyleforintegrationtests.in - 1900: Goodwill - {today_date} - C/{year}/{month}/R/{random_int} - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txRZmAk6Jz3i&org_id=orjMvhugUguK",
+  "description": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}",
   "lines": [
     {
       "expenseType": {
@@ -32,9 +31,11 @@ REST_EXPENSE_REPORT_CREATE_PAYLOAD = {
       },
       "txnCurrency": "USD",
       "txnAmount": "123.0",
+      "entryDate": today_date,
       "paymentType": {
         "id": "Elon Baba CCC"
       },
+      "paidTo": f"owner@fyleforintegrationtests.in - 1900: Goodwill - {today_date} - C/{year}/{month}/R/{random_int} - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txRZmAk6Jz3i&org_id=orjMvhugUguK",
       "dimensions": {
         "location": {
           "id": "RES002"

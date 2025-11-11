@@ -2,7 +2,6 @@ import random
 from datetime import datetime
 
 
-
 today_date = datetime.now().strftime('%Y-%m-%d')
 year = datetime.now().year
 month = datetime.now().month
@@ -16,8 +15,6 @@ REST_BILL_CREATE_PAYLOAD = {
   "vendor": {
     "id": "V100"
   },
-  "referenceNumber": f"E/{year}/{month}/T/{random_int}",
-  "description": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}",
   "createdDate": today_date,
   "postingDate": today_date,
   "dueDate": today_date,
@@ -51,7 +48,7 @@ REST_BILL_CREATE_PAYLOAD = {
           "id": None
         },
         "vendor": {
-          "id": "V100"
+          "id": None
         },
         "employee": {
           "id": None
@@ -61,6 +58,12 @@ REST_BILL_CREATE_PAYLOAD = {
         },
         "class": {
             "id": "TestClassId"
+        },
+        "task": {
+          "id": "123"
+        },
+        "costType": {
+          "id": "89"
         }
       },
       "memo": f"owner@fyleforintegrationtests.in - 1900: Goodwill - {today_date} - C/{year}/{month}/R/{random_int} -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txdhZD3g8mQL&org_id=orjMvhugUguK",

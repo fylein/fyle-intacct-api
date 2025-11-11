@@ -2,7 +2,6 @@ import random
 from datetime import datetime
 
 
-
 today_date = datetime.now().strftime('%Y-%m-%d')
 year = datetime.now().year
 month = datetime.now().month
