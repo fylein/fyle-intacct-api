@@ -38,7 +38,6 @@ class TestCostCodesGet(BaseTestGet):
         Get REST all generator parameters.
         :return: REST filters
         """
-        print(self.LAST_UPDATED_AT)
         return {
             'fields': self.REST_FIELDS,
             'filters': [{

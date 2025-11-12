@@ -56,13 +56,16 @@ REST_EXPENSE_REPORT_CREATE_PAYLOAD = {
           "id": "V104"
         },
         "customer": {
-          "id": None
+          "id": "C00010--Amazon"
         },
         "project": {
           "id": "12"
         },
         "task": {
           "id": "123"
+        },
+        "nsp::udd_test": {
+          "key": "10002"
         }
       }
     }
@@ -101,15 +104,15 @@ SOAP_EXPENSE_REPORT_CREATE_PAYLOAD = {
                 "customfields": {
                     "customfield": [
                         {
-                            "customfieldname": "FYLE_EXPENSE_URL",
-                            "customfieldvalue": "https://staging1.fyle.tech/app/admin/#/company_expenses?txnId=txRZmAk6Jz3i&org_id=orjMvhugUguK"
+                            "customfieldname": "GLDIMUDD_TEST",
+                            "customfieldvalue": "10002"
                         }
                     ]
                 },
                 "projectid": "12",
                 "taskid": "123",
                 "costtypeid": "89",
-                "customerid": None,
+                "customerid": "C00010--Amazon",
                 "itemid": "CN014",
                 "classid": "TestClassId",
                 "billable": False,

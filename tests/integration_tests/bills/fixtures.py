@@ -34,6 +34,9 @@ REST_BILL_CREATE_PAYLOAD = {
       },
       "txnAmount": "123.00",
       "totalTxnAmount": "123.00",
+      "allocation": {
+        "id": None
+      },
       "dimensions": {
         "location": {
           "id": "GC-DAL"
@@ -45,7 +48,7 @@ REST_BILL_CREATE_PAYLOAD = {
           "id": "12"
         },
         "customer": {
-          "id": None
+          "id": "C00010--Amazon"
         },
         "vendor": {
           "id": None
@@ -95,7 +98,7 @@ SOAP_BILL_CREATE_PAYLOAD = {
                 "LOCATIONID": "GC-DAL",
                 "DEPARTMENTID": "001",
                 "PROJECTID": "12",
-                "CUSTOMERID": None,
+                "CUSTOMERID": "C00010--Amazon",
                 "ITEMID": "CN014",
                 "TASKID": "123",
                 "COSTTYPEID": "89",
@@ -106,12 +109,123 @@ SOAP_BILL_CREATE_PAYLOAD = {
                     "TAXENTRY": {
                         "DETAILID": None
                     }
+                }
+            }
+        ]
+    }
+}
+
+
+
+# REST payload for bill
+REST_BILL_CREATE_PAYLOAD_WITH_ALLOCATION = {
+  "billNumber": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_1",
+  "vendor": {
+    "id": "V100"
+  },
+  "createdDate": today_date,
+  "postingDate": today_date,
+  "dueDate": today_date,
+  "currency": {
+    "baseCurrency": "USD",
+    "txnCurrency": "USD",
+  },
+  "attachment": {
+    "id": None,
+    "key": None
+  },
+  "isTaxInclusive": False,
+  "lines": [
+    {
+      "glAccount": {
+        "id": "1900"
+      },
+      "txnAmount": "123.00",
+      "totalTxnAmount": "123.00",
+      "allocation": {
+        "id": "RENT"
+      },
+      "dimensions": {
+        "location": {
+          "id": None
+        },
+        "department": {
+          "id": "001"
+        },
+        "project": {
+          "id": "12"
+        },
+        "customer": {
+          "id": None
+        },
+        "vendor": {
+          "id": None
+        },
+        "employee": {
+          "id": None
+        },
+        "item": {
+          "id": "CN014"
+        },
+        "class": {
+            "id": "TestClassId"
+        },
+        "task": {
+          "id": "123"
+        },
+        "costType": {
+          "id": "89"
+        },
+        "nsp::udd_test": {
+          "key": "10002"
+        }
+      },
+      "memo": f"owner@fyleforintegrationtests.in - 1900: Goodwill - {today_date} - C/{year}/{month}/R/{random_int} -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txdhZD3g8mQL&org_id=orjMvhugUguK",
+    }
+  ]
+}
+
+
+
+created_date = datetime.now().strftime('%m/%d/%Y')
+
+# SOAP payload for bill  
+SOAP_BILL_CREATE_PAYLOAD_WITH_ALLOCATION = {
+    "WHENCREATED": created_date,
+    "VENDORID": "V100",
+    "RECORDID": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_2",
+    "WHENDUE": created_date,
+    "BASECURR": "USD",
+    "SUPDOCID": None,
+    "CURRENCY": "USD",
+    "EXCH_RATE_TYPE_ID": None,
+    "APBILLITEMS": {
+        "APBILLITEM": [
+            {
+                "ACCOUNTNO": "1900",
+                "TRX_AMOUNT": 123.0,
+                "TOTALTRXAMOUNT": 123.0,
+                "ENTRYDESCRIPTION": f"owner@fyleforintegrationtests.in - 1900: Goodwill - {today_date} - C/{year}/{month}/R/{random_int} -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txdhZD3g8mQL&org_id=orjMvhugUguK",
+                "LOCATIONID": None,
+                "DEPARTMENTID": "001",
+                "PROJECTID": "12",
+                "CUSTOMERID": None,
+                "ITEMID": "CN014",
+                "TASKID": "123",
+                "COSTTYPEID": "89",
+                "CLASSID": "TestClassId",
+                "BILLABLE": False,
+                "ALLOCATION": "RENT",
+                "TAXENTRIES": {
+                    "TAXENTRY": {
+                        "DETAILID": None
+                    }
                 },
                 "customfields": {
                     "customfield": [
                         {
-                            "customfieldname": "FYLE_EXPENSE_URL",
-                            "customfieldvalue": "https://staging1.fyle.tech/app/admin/#/company_expenses?txnId=txdhZD3g8mQL&org_id=orjMvhugUguK"
+                            "customfieldname": "GLDIMUDD_TEST",
+                            "customfieldvalue": "10002"
                         }
                     ]
                 }

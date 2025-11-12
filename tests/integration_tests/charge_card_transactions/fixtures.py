@@ -49,7 +49,7 @@ REST_CHARGE_CARD_TRANSACTION_CREATE_PAYLOAD = {
           "id": "14"
         },
         "customer": {
-          "id": None
+          "id": "C00010--Amazon"
         },
         "vendor": {
           "id": "V164"
@@ -62,6 +62,9 @@ REST_CHARGE_CARD_TRANSACTION_CREATE_PAYLOAD = {
         },
         "class": {
           "id": "TestClassId"
+        },
+        "nsp::udd_test": {
+          "key": "10002"
         }
       },
       "description": f"owner@fyleforintegrationtests.in - 1005: Chase Checking - {today_date} - C/{year}/{month}/R/{random_int} - Testing CCC Export {random_int} - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txQaQgXrVx68&org_id=orjMvhugUguK",
@@ -103,7 +106,7 @@ SOAP_CHARGE_CARD_TRANSACTION_CREATE_PAYLOAD = {
                 "paymentamount": 123.0,
                 "departmentid": "001",
                 "locationid": "GC-DAL",
-                "customerid": None,
+                "customerid": "C00010--Amazon",
                 "vendorid": "V164",
                 "projectid": "14",
                 "taskid": "78",
@@ -113,8 +116,8 @@ SOAP_CHARGE_CARD_TRANSACTION_CREATE_PAYLOAD = {
                 "customfields": {
                     "customfield": [
                         {
-                            "customfieldname": "FYLE_EXPENSE_URL",
-                            "customfieldvalue": "https://staging1.fyle.tech/app/admin/#/company_expenses?txnId=txQaQgXrVx68&org_id=orjMvhugUguK"
+                            "customfieldname": "GLDIMUDD_TEST",
+                            "customfieldvalue": "10002"
                         }
                     ]
                 },
@@ -129,4 +132,3 @@ SOAP_CHARGE_CARD_TRANSACTION_CREATE_PAYLOAD = {
         ]
     }
 }
-
