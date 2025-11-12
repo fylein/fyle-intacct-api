@@ -15,14 +15,14 @@ class TestBillsPost(BaseTestPost):
     """
     REST_MODULE_NAME = 'bills'
     SOAP_MODULE_NAME = 'bills'
-    REST_FIELDS = ['referenceNumber', 'description']
-    SOAP_FIELDS = ['RECORDID', 'DESCRIPTION']
+    REST_FIELDS = ['vendor.id', 'description']
+    SOAP_FIELDS = ['VENDORID', 'DESCRIPTION']
     REST_PAYLOAD = REST_BILL_CREATE_PAYLOAD
     SOAP_PAYLOAD = SOAP_BILL_CREATE_PAYLOAD
     KEY_MAPPINGS = [
         {
-            'rest': 'referenceNumber',
-            'soap': 'REFERENCENO'
+            'rest': 'vendor.id',
+            'soap': 'VENDORID'
         },
         {
             'rest': 'description',
@@ -58,14 +58,14 @@ class TestBillsPostWithAllocation(BaseTestPost):
     """
     REST_MODULE_NAME = 'bills'
     SOAP_MODULE_NAME = 'bills'
-    REST_FIELDS = ['referenceNumber', 'description']
-    SOAP_FIELDS = ['RECORDID', 'DESCRIPTION']
+    REST_FIELDS = ['vendor.id', 'description']
+    SOAP_FIELDS = ['VENDORID', 'DESCRIPTION']
     REST_PAYLOAD = REST_BILL_CREATE_PAYLOAD_WITH_ALLOCATION
     SOAP_PAYLOAD = SOAP_BILL_CREATE_PAYLOAD_WITH_ALLOCATION
     KEY_MAPPINGS = [
         {
-            'rest': 'referenceNumber',
-            'soap': 'REFERENCENO'
+            'rest': 'vendor.id',
+            'soap': 'VENDORID'
         },
         {
             'rest': 'description',

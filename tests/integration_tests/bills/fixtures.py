@@ -6,12 +6,13 @@ today_date = datetime.now().strftime('%Y-%m-%d')
 year = datetime.now().year
 month = datetime.now().month
 day = datetime.now().day
-random_int = random.randint(1, 1000)
+random_int = random.randint(100, 100000)
+random_string = random.randbytes(5).hex()
 
 
 # REST payload for bill
 REST_BILL_CREATE_PAYLOAD = {
-  "billNumber": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_1",
+  "billNumber": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_{random_string}_1",
   "vendor": {
     "id": "V100"
   },
@@ -82,7 +83,7 @@ created_date = datetime.now().strftime('%m/%d/%Y')
 SOAP_BILL_CREATE_PAYLOAD = {
     "WHENCREATED": created_date,
     "VENDORID": "V100",
-    "RECORDID": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_2",
+    "RECORDID": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_{random_string}_2",
     "WHENDUE": created_date,
     "BASECURR": "USD",
     "SUPDOCID": None,
@@ -116,10 +117,9 @@ SOAP_BILL_CREATE_PAYLOAD = {
 }
 
 
-
 # REST payload for bill
 REST_BILL_CREATE_PAYLOAD_WITH_ALLOCATION = {
-  "billNumber": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_1",
+  "billNumber": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_{random_string}_3",
   "vendor": {
     "id": "V100"
   },
@@ -193,7 +193,7 @@ created_date = datetime.now().strftime('%m/%d/%Y')
 SOAP_BILL_CREATE_PAYLOAD_WITH_ALLOCATION = {
     "WHENCREATED": created_date,
     "VENDORID": "V100",
-    "RECORDID": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_2",
+    "RECORDID": f"owner@fyleforintegrationtests.in - Hrishabh T - E/{year}/{month}/T/{random_int}_{random_string}_4",
     "WHENDUE": created_date,
     "BASECURR": "USD",
     "SUPDOCID": None,
