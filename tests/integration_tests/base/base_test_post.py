@@ -53,7 +53,7 @@ class BaseTestPost:
 
         finally:
             rest_module.delete(key=rest_object_id)
-            soap_module.delete(key=soap_object_id)
+            rest_module.delete(key=soap_object_id)
 
     def get_rest_get_response(self, rest_module: RestClient, object_id: str) -> dict:
         """
@@ -90,11 +90,9 @@ class BaseTestPost:
         :param soap_response: SOAP response
         :return: None
         """
-        rest_items = list[dict](rest_response)
-        soap_items = list[dict](soap_response)
-
-        print("rest items", rest_items)
-        print("soap items", soap_items)
+        # Convert generators to lists first to avoid exhaustion
+        rest_items = list[Any](rest_response)
+        soap_items = list(soap_response)
 
         assert len(rest_items[0]) == len(soap_items[0]), f"Length of REST and SOAP items do not match: {len(rest_items[0])} != {len(soap_items[0])}"
         assert len(rest_items[0]) > 0, f"REST item is empty: {rest_items[0]}"
