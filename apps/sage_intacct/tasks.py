@@ -1826,12 +1826,18 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
         if ccc_group_ids and (configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION' or (
             configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.use_merchant_in_journal_line
         )):
+            expense_ids = ExpenseGroup.objects.filter(
+                id__in=ccc_group_ids,
+                workspace_id=workspace_id
+            ).values_list('expenses', flat=True)
+
             vendors = Expense.objects.filter(
+                id__in=expense_ids,
                 workspace_id=workspace_id,
-                expensegroup__id__in=ccc_group_ids,
                 vendor__isnull=False
-            ).values_list('vendor', flat=True)
-            vendors_list.update(v for v in vendors if v)
+            ).values_list('vendor', flat=True).distinct()
+
+            vendors_list.update(vendors)
 
         elif ccc_group_ids and configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR':
             employee_names = get_employee_as_vendors_name(workspace_id=workspace_id, expense_group_ids=ccc_group_ids)
@@ -1885,11 +1891,16 @@ def get_employee_as_vendors_name(workspace_id: int, expense_group_ids: list) -> 
     :param workspace_id: Workspace ID
     :param expense_group_ids: Expense Group ID
     """
+    expense_ids = ExpenseGroup.objects.filter(
+        id__in=expense_group_ids,
+        workspace_id=workspace_id
+    ).values_list('expenses', flat=True)
+
     employee_email_list = Expense.objects.filter(
+        id__in=expense_ids,
         workspace_id=workspace_id,
-        expensegroup__id__in=expense_group_ids,
         employee_email__isnull=False
-    ).values_list('employee_email', flat=True)
+    ).values_list('employee_email', flat=True).distinct()
 
     employee_attr_ids = ExpenseAttribute.objects.filter(
         workspace_id=workspace_id,
