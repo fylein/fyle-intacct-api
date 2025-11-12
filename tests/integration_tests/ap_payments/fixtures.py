@@ -8,10 +8,10 @@ month = datetime.now().month
 day = datetime.now().day
 random_int = random.randint(1, 1000)
 
-def get_rest_ap_payment_create_payload(id: str) -> dict:
+def get_rest_ap_payment_create_payload(key: str) -> dict:
   """
   Get REST AP Payment create payload
-  :param id: ID
+  :param key: Key
   :return: REST AP Payment create payload
   """
   return {
@@ -28,15 +28,15 @@ def get_rest_ap_payment_create_payload(id: str) -> dict:
 		},
 		"paymentMethod": "Cash",
 		"vendor": {
-			"id": "V104"
+			"id": "V100"
 		},
 		"details": [
 			{
 				"txnCurrency": {
-					"paymentAmount": "126.00"
+					"paymentAmount": "123.00"
 				},
 				"bill": {
-					"id": id
+					"key": key
 				}
 			}
 		]
@@ -56,7 +56,7 @@ def get_soap_ap_payment_create_payload(record_key: str) -> dict:
   return {
 	"FINANCIALENTITY": "TCG WF Checking",
 	"PAYMENTMETHOD": "Cash",
-	"VENDORID": "V104",
+	"VENDORID": "V100",
 	"DESCRIPTION": f"Payment for Bill - C/{year}/{month}/R/{random_int}",
 	"PAYMENTDATE": payment_date,
 	"CURRENCY": "USD",
@@ -64,7 +64,8 @@ def get_soap_ap_payment_create_payload(record_key: str) -> dict:
 	"APPYMTDETAILS": {
 		"APPYMTDETAIL": [{
 			"RECORDKEY": record_key,
-			"TRX_PAYMENTAMOUNT": 126.0
+			"TRX_PAYMENTAMOUNT": 123.0
 		}]
 	}
 }
+
