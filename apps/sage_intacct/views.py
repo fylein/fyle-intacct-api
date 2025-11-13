@@ -311,14 +311,6 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
         if response.status_code == status.HTTP_200_OK:
             return response.json()['refresh_token']
 
-        elif response.status_code == status.HTTP_401_UNAUTHORIZED:
-            logger.error(f"Invalid code or redirect URI for workspace_id - {workspace_id}: {response.text}")
-            raise ValidationError(
-                detail={
-                    'message': 'Invalid code or redirect URI'
-                }
-            )
-
         else:
             logger.error(f"Error exchanging refresh token for authorization code for workspace_id - {workspace_id}: {response.text}")
             raise ValidationError(
@@ -335,7 +327,7 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
         :return: Company ID
         """
         try:
-            return jwt.decode(refresh_token, options={"verify_signature": False}, algorithms=['HS256'])['cnyId']
+            return jwt.decode(refresh_token, options={"verify_signature": False})['cnyId']
         except Exception as e:
             logger.error(f"Error decoding refresh token for workspace_id - {workspace_id}: {e.__str__()}")
             raise ValidationError(

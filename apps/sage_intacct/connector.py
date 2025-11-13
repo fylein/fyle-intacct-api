@@ -1,3 +1,5 @@
+import jwt
+
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 
@@ -92,9 +94,8 @@ class SageIntacctRestConnector:
         :param refresh_token: Refresh token
         :return: None
         """
-        ACCESS_TOKEN_EXPIRATION_TIME = 4  # 4 hours (access token expires in 6 hours)
         self.credential_object.refresh_from_db()
-        self.credential_object.access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRATION_TIME)
+        self.credential_object.access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=self.__get_access_token_expiry_time(access_token))
         self.credential_object.access_token = access_token
         self.credential_object.refresh_token = refresh_token
         self.credential_object.save(update_fields=[
@@ -103,3 +104,18 @@ class SageIntacctRestConnector:
             'refresh_token',
             'updated_at',
         ])
+
+    def __get_access_token_expiry_time(self, access_token: str) -> int:
+        """
+        Get access token expiry time
+        :return: int
+        """
+        access_token_expiry_timestamp = jwt.decode(access_token, options={"verify_signature": False})['exp']
+
+        hours_remaining = (access_token_expiry_timestamp - datetime.now(timezone.utc).timestamp()) / 3600
+
+        # If more than 4 hours remain, reduce by 2 hours
+        if hours_remaining > 4:
+            hours_remaining = hours_remaining - 2
+
+        return int(hours_remaining)
