@@ -1,6 +1,12 @@
+import random
+
+
+random_string = random.randbytes(5).hex()
+
+
 # REST payload for attachment
 REST_ATTACHMENT_CREATE_PAYLOAD = {
-  "id": "Random 1234",
+  "id": f"Random-{random_string}-1",
   "name": "Random 123 - 1",
   "folder": {
     "id": "FyleAttachments"
@@ -17,7 +23,7 @@ REST_ATTACHMENT_CREATE_PAYLOAD = {
 
 # SOAP payload for attachment  
 SOAP_ATTACHMENT_CREATE_PAYLOAD = {
-    'supdocid': 'Random 123',
+    'supdocid': f'Random-{random_string}-2',
     'supdocfoldername': 'FyleAttachments',
     'attachments': {
         'attachment': [{
