@@ -114,7 +114,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "${{ steps.test_results.outputs.status_emoji }} Integration Tests ${{ steps.test_results.outputs.status == 'success' && 'Passed' || 'Failed' }}",
+                    "text": "${{ steps.test_results.outputs.status_emoji }} Intacct Integration Tests ${{ steps.test_results.outputs.status == 'success' && 'Passed' || 'Failed' }}",
                     "emoji": true
                   }
                 },
