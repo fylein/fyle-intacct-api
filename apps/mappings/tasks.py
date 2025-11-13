@@ -1,32 +1,26 @@
 import logging
 from datetime import datetime, timezone
 
-from django_q.models import Schedule
 from django.utils.module_loading import import_string
-
+from django_q.models import Schedule
 from fyle.platform.exceptions import InternalServerError
-from fyle_integrations_platform_connector import PlatformConnector
-from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
-from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
+from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, MappingSetting
+from fyle_integrations_platform_connector import PlatformConnector
+from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
-from apps.tasks.models import Error
-from apps.mappings.models import GeneralMapping
-from apps.mappings.constants import SYNC_METHODS
 from apps.fyle.models import DependentFieldSetting
-from fyle_integrations_imports.models import ImportLog
+from apps.mappings.constants import SYNC_METHODS
+from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.utils import SageIntacctConnector
-from fyle_integrations_imports.dataclasses import TaskSetting
+from apps.tasks.models import Error
+from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, SageIntacctCredential
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from fyle_integrations_imports.dataclasses import TaskSetting
+from fyle_integrations_imports.models import ImportLog
 from fyle_integrations_imports.queues import chain_import_fields_to_fyle
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
-from apps.workspaces.models import (
-    Configuration,
-    FeatureConfig,
-    FyleCredential,
-    SageIntacctCredential
-)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -125,11 +119,14 @@ def auto_map_employees(workspace_id: int) -> None:
     except FyleInvalidTokenError:
         logger.info('Invalid Token for fyle')
 
-    except WrongParamsError:
-        logger.info('Error while syncing employee/vendor from Sage Intacct in workspace - %s', workspace_id)
+    except (WrongParamsError, InternalServerError) as e:
+        logger.info('Error while syncing employee/vendor from Sage Intacct in workspace - %s %s', workspace_id, e)
 
     except NoPrivilegeError:
         logger.info('Insufficient permission to access the requested module')
+
+    except Exception:
+        logger.exception('Error while auto mapping employees in workspace - %s', workspace_id)
 
 
 def auto_map_accounting_fields(workspace_id: int) -> None:

@@ -8,7 +8,7 @@ from fyle.platform.exceptions import WrongParamsError
 from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, Mapping, MappingSetting
 from fyle_integrations_platform_connector import PlatformConnector
 from rest_framework.exceptions import ValidationError
-from sageintacctsdk.exceptions import InvalidTokenError
+from sageintacctsdk.exceptions import InternalServerError, InvalidTokenError
 
 from apps.fyle.helpers import update_dimension_details
 from apps.mappings.constants import SYNC_METHODS
@@ -170,7 +170,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
 
             # NOTE: We are not setting the import_log status to COMPLETE
             # since the post_save trigger will run the import again in async manner
-        except WrongParamsError as error:
+        except (WrongParamsError, InternalServerError) as error:
             logger.error(
                 'Error while creating %s workspace_id - %s in Fyle %s %s',
                 instance.source_field, instance.workspace_id, error.message, {'error': error.response}
@@ -197,6 +197,13 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
 
             raise ValidationError({
                 'message': 'Invalid Sage Intacct Token Error for workspace_id - %s',
+                'field_name': instance.source_field
+            })
+
+        except Exception:
+            logger.exception('Error while creating %s workspace_id - %s in Fyle', instance.source_field, workspace_id)
+            raise ValidationError({
+                'message': 'Something went wrong while creating %s workspace_id - %s in Fyle',
                 'field_name': instance.source_field
             })
 
