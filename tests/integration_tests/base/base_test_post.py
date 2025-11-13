@@ -38,9 +38,12 @@ class BaseTestPost:
         """
         rest_module = self.get_module(rest_client, self.REST_MODULE_NAME)
         soap_module = self.get_module(soap_client, self.SOAP_MODULE_NAME)
-
-        rest_response = rest_module.post(self.REST_PAYLOAD)
-        soap_response = soap_module.post(self.SOAP_PAYLOAD)
+        try:
+            rest_response = rest_module.post(self.REST_PAYLOAD)
+            soap_response = soap_module.post(self.SOAP_PAYLOAD)
+        except Exception as e:
+            print(f"Error in test_post: {e.response}")
+            assert 1==2
 
         rest_object_id = self.get_rest_object_id(rest_response)
         soap_object_id = self.get_soap_object_id(soap_response)

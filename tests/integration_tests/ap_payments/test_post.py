@@ -7,8 +7,8 @@ from tests.integration_tests.ap_payments.fixtures import (
 from tests.integration_tests.base.rest_client import RestClient
 from tests.integration_tests.base.soap_client import SoapClient
 from tests.integration_tests.bills.fixtures import (
-    REST_BILL_CREATE_PAYLOAD,
-    SOAP_BILL_CREATE_PAYLOAD
+    get_rest_bill_create_payload,
+    get_soap_bill_create_payload
 )
 
 @pytest.mark.integration
@@ -44,8 +44,8 @@ class TestAPPaymentsPost(BaseTestPost):
         ap_payments_rest_module = self.get_module(rest_client, self.REST_MODULE_NAME)
         ap_payments_soap_module = self.get_module(soap_client, self.SOAP_MODULE_NAME)
 
-        bill_rest_response = bill_rest_module.post(REST_BILL_CREATE_PAYLOAD)
-        bill_soap_response = bill_soap_module.post(SOAP_BILL_CREATE_PAYLOAD)
+        bill_rest_response = bill_rest_module.post(get_rest_bill_create_payload())
+        bill_soap_response = bill_soap_module.post(get_soap_bill_create_payload())
 
         bill_rest_object_id = self.get_rest_object_id(bill_rest_response)
         bill_soap_object_id = self.get_soap_object_id(bill_soap_response)
