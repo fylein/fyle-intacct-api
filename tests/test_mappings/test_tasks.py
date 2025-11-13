@@ -2,18 +2,19 @@ from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMappin
 
 from apps.fyle.models import ExpenseGroup
 from apps.mappings.tasks import (
+    auto_map_accounting_fields,
+    auto_map_employees,
     check_and_create_ccc_mappings,
     construct_tasks_and_chain_import_fields_to_fyle,
     initiate_import_to_fyle,
     resolve_expense_attribute_errors,
     sync_sage_intacct_attributes,
-    auto_map_accounting_fields
 )
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, FeatureConfig, SageIntacctCredential
-from workers.helpers import WorkerActionEnum, RoutingKeyEnum
 from tests.test_fyle.fixtures import data as fyle_data
 from tests.test_sageintacct.fixtures import data as intacct_data
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum
 
 
 def test_resolve_expense_attribute_errors(db):
@@ -104,7 +105,7 @@ def test_async_auto_map_employees(mocker, db):
     general_settings.employee_field_mapping = 'EMPLOYEE'
     general_settings.save()
 
-    auto_map_accounting_fields(workspace_id)
+    auto_map_employees(workspace_id)
 
     employee_mappings = EmployeeMapping.objects.filter(workspace_id=workspace_id).count()
     assert employee_mappings == 1
@@ -112,10 +113,176 @@ def test_async_auto_map_employees(mocker, db):
     general_settings.employee_field_mapping = 'VENDOR'
     general_settings.save()
 
-    auto_map_accounting_fields(workspace_id)
+    auto_map_employees(workspace_id)
 
     employee_mappings = EmployeeMapping.objects.filter(workspace_id=workspace_id).count()
     assert employee_mappings == 1
+
+
+def test_auto_map_employees_with_sage_intacct_credentials_not_exist(mocker, db):
+    """
+    Test auto_map_employees when SageIntacctCredential does not exist
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.mappings.tasks.SageIntacctCredential.get_active_sage_intacct_credentials',
+        side_effect=SageIntacctCredential.DoesNotExist
+    )
+
+    mock_logger = mocker.patch('apps.mappings.tasks.logger.info')
+
+    auto_map_employees(workspace_id)
+
+    mock_logger.assert_called_with('Sage Intacct credentials does not exist workspace_id - {0}'.format(workspace_id))
+
+
+def test_auto_map_employees_with_invalid_token_error(mocker, db):
+    """
+    Test auto_map_employees when InvalidTokenError is raised
+    """
+    from sageintacctsdk.exceptions import InvalidTokenError
+
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.mappings.tasks.SageIntacctCredential.get_active_sage_intacct_credentials',
+        side_effect=InvalidTokenError('Invalid token')
+    )
+
+    mock_invalidate = mocker.patch('apps.mappings.tasks.invalidate_sage_intacct_credentials')
+    mock_logger = mocker.patch('apps.mappings.tasks.logger.info')
+
+    auto_map_employees(workspace_id)
+
+    mock_invalidate.assert_called_once_with(workspace_id)
+
+    mock_logger.assert_called_with('Invalid Sage Intacct Token Error for workspace_id - {0}'.format(workspace_id))
+
+
+def test_auto_map_employees_with_fyle_invalid_token_error(mocker, db):
+    """
+    Test auto_map_employees when FyleInvalidTokenError is raised
+    """
+    from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.mappings.tasks.PlatformConnector',
+        side_effect=FyleInvalidTokenError('Invalid Fyle token')
+    )
+
+    mock_logger = mocker.patch('apps.mappings.tasks.logger.info')
+
+    auto_map_employees(workspace_id)
+
+    mock_logger.assert_called_with('Invalid Token for fyle')
+
+
+def test_auto_map_employees_with_wrong_params_error(mocker, db):
+    """
+    Test auto_map_employees when WrongParamsError is raised
+    """
+    from sageintacctsdk.exceptions import WrongParamsError
+
+    workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.Employees.get_all_generator',
+        side_effect=WrongParamsError('Wrong params')
+    )
+
+    mocker.patch(
+        'fyle.platform.apis.v1.admin.Employees.list_all',
+        return_value=fyle_data['get_all_employees']
+    )
+
+    mock_logger = mocker.patch('apps.mappings.tasks.logger.info')
+
+    general_settings = Configuration.objects.get(workspace_id=workspace_id)
+    general_settings.employee_field_mapping = 'EMPLOYEE'
+    general_settings.save()
+
+    auto_map_employees(workspace_id)
+
+    assert any('Error while syncing employee/vendor from Sage Intacct in workspace' in str(call)
+              for call in mock_logger.call_args_list)
+
+
+def test_auto_map_employees_with_internal_server_error(mocker, db):
+    """
+    Test auto_map_employees when InternalServerError is raised
+    """
+    from fyle.platform.exceptions import InternalServerError
+
+    workspace_id = 1
+
+    mock_platform = mocker.patch('apps.mappings.tasks.PlatformConnector')
+    mock_platform.return_value.employees.sync.side_effect = InternalServerError('Internal server error')
+
+    mocker.patch(
+        'sageintacctsdk.apis.Employees.get_all_generator',
+        return_value=intacct_data['get_employees']
+    )
+
+    mock_logger = mocker.patch('apps.mappings.tasks.logger.info')
+
+    general_settings = Configuration.objects.get(workspace_id=workspace_id)
+    general_settings.employee_field_mapping = 'EMPLOYEE'
+    general_settings.save()
+
+    auto_map_employees(workspace_id)
+
+    assert any('Error while syncing employee/vendor from Sage Intacct in workspace' in str(call)
+              for call in mock_logger.call_args_list)
+
+
+def test_auto_map_employees_with_no_privilege_error(mocker, db):
+    """
+    Test auto_map_employees when NoPrivilegeError is raised
+    """
+    from sageintacctsdk.exceptions import NoPrivilegeError
+
+    workspace_id = 1
+
+    mocker.patch(
+        'sageintacctsdk.apis.Employees.get_all_generator',
+        side_effect=NoPrivilegeError('No privilege')
+    )
+
+    mocker.patch(
+        'fyle.platform.apis.v1.admin.Employees.list_all',
+        return_value=fyle_data['get_all_employees']
+    )
+
+    mock_logger = mocker.patch('apps.mappings.tasks.logger.info')
+
+    general_settings = Configuration.objects.get(workspace_id=workspace_id)
+    general_settings.employee_field_mapping = 'EMPLOYEE'
+    general_settings.save()
+
+    auto_map_employees(workspace_id)
+
+    mock_logger.assert_called_with('Insufficient permission to access the requested module')
+
+
+def test_auto_map_employees_with_generic_exception(mocker, db):
+    """
+    Test auto_map_employees when a generic Exception is raised
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.mappings.tasks.PlatformConnector',
+        side_effect=Exception('Unexpected error')
+    )
+
+    mock_logger = mocker.patch('apps.mappings.tasks.logger.exception')
+
+    auto_map_employees(workspace_id)
+
+    mock_logger.assert_called_with('Error while auto mapping employees in workspace - %s', workspace_id)
 
 
 def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting, create_cost_type):
@@ -323,3 +490,58 @@ def test_construct_tasks_and_chain_import_fields_to_fyle_without_rabbitmq(mocker
 
     # Verify publish_to_rabbitmq was NOT called
     mock_publish.assert_not_called()
+
+
+def test_auto_map_accounting_fields_without_configuration(mocker, db):
+    """
+    Test auto_map_accounting_fields when configuration doesn't exist
+    """
+    workspace_id = 999
+
+    Configuration.objects.filter(workspace_id=workspace_id).delete()
+
+    mock_publish = mocker.patch('apps.mappings.tasks.publish_to_rabbitmq')
+
+    auto_map_accounting_fields(workspace_id)
+
+    mock_publish.assert_not_called()
+
+
+def test_auto_map_accounting_fields_with_charge_card_transaction(mocker, db):
+    """
+    Test auto_map_accounting_fields when corporate_credit_card_expenses_object is CHARGE_CARD_TRANSACTION
+    """
+    workspace_id = 1
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.auto_map_employees = 'EMAIL'
+    configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
+    configuration.save()
+
+    mock_publish = mocker.patch('apps.mappings.tasks.publish_to_rabbitmq')
+
+    auto_map_accounting_fields(workspace_id)
+
+    assert mock_publish.call_count == 2
+
+    first_call = mock_publish.call_args_list[0]
+    expected_first_payload = {
+        'workspace_id': workspace_id,
+        'action': WorkerActionEnum.AUTO_MAP_EMPLOYEES.value,
+        'data': {
+            'workspace_id': workspace_id
+        }
+    }
+    assert first_call.kwargs['payload'] == expected_first_payload
+    assert first_call.kwargs['routing_key'] == RoutingKeyEnum.IMPORT.value
+
+    second_call = mock_publish.call_args_list[1]
+    expected_second_payload = {
+        'workspace_id': workspace_id,
+        'action': WorkerActionEnum.AUTO_MAP_CHARGE_CARD_ACCOUNT.value,
+        'data': {
+            'workspace_id': workspace_id
+        }
+    }
+    assert second_call.kwargs['payload'] == expected_second_payload
+    assert second_call.kwargs['routing_key'] == RoutingKeyEnum.IMPORT.value
