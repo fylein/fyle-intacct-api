@@ -270,7 +270,7 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
         )
 
         sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=kwargs['workspace_id']).first()
-        company_id = self.decode_refresh_token(refresh_token=refresh_token)
+        company_id = self.decode_refresh_token(refresh_token=refresh_token, workspace_id=kwargs['workspace_id'])
 
         if sage_intacct_credentials and sage_intacct_credentials.si_company_id != company_id:
             raise ValidationError(
@@ -298,30 +298,48 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
         """
         Exchange refresh token for code
         """
-        try:
-            payload = {
-                'grant_type': 'authorization_code',
-                'code': code,
-                'redirect_uri': redirect_uri,
-                'client_id': settings.INTACCT_CLIENT_ID,
-                'client_secret': settings.INTACCT_CLIENT_SECRET
-            }
+        payload = {
+            'grant_type': 'authorization_code',
+            'code': code,
+            'redirect_uri': redirect_uri,
+            'client_id': settings.INTACCT_CLIENT_ID,
+            'client_secret': settings.INTACCT_CLIENT_SECRET
+        }
 
-            response = requests.post(settings.INTACCT_TOKEN_URI, data=payload)
+        response = requests.post(settings.INTACCT_TOKEN_URI, data=payload)
 
-            if response.status_code != 200:
-                raise Exception(response.text)
-
+        if response.status_code == status.HTTP_200_OK:
             return response.json()['refresh_token']
 
-        except Exception as e:
-            logger.error(f"Error exchanging refresh token for authorization code for workspace_id - {workspace_id}: {str(e)}")
-            raise Exception(f"Error exchanging refresh token for authorization code for workspace_id - {workspace_id}")
+        elif response.status_code == status.HTTP_401_UNAUTHORIZED:
+            logger.error(f"Invalid code or redirect URI for workspace_id - {workspace_id}: {response.text}")
+            raise ValidationError(
+                detail={
+                    'message': 'Invalid code or redirect URI'
+                }
+            )
 
-    def decode_refresh_token(self, refresh_token: str) -> str:
+        else:
+            logger.error(f"Error exchanging refresh token for authorization code for workspace_id - {workspace_id}: {response.text}")
+            raise ValidationError(
+                detail={
+                    'message': 'Error exchanging refresh token for authorization code'
+                }
+            )
+
+    def decode_refresh_token(self, refresh_token: str, workspace_id: int) -> str:
         """
         Decode refresh token
         :param refresh_token: Refresh token
+        :param workspace_id: Workspace ID
         :return: Company ID
         """
-        return jwt.decode(refresh_token, settings.INTACCT_CLIENT_SECRET, algorithms=['HS256'])['cnyId']
+        try:
+            return jwt.decode(refresh_token, options={"verify_signature": False}, algorithms=['HS256'])['cnyId']
+        except Exception as e:
+            logger.error(f"Error decoding refresh token for workspace_id - {workspace_id}: {e.__str__()}")
+            raise ValidationError(
+                detail={
+                    'message': 'Error decoding refresh token'
+                }
+            )
