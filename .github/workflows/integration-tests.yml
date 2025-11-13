@@ -37,9 +37,11 @@ jobs:
 
       - name: Run integration tests
         run: |
+          mkdir -p test-reports
           docker compose -f tests/integration_tests/docker-compose-integration.yml run --rm integration_test pytest tests/integration_tests -m integration -v --tb=short --junit-xml=test-reports/integration-report.xml --cov-report=xml --cov-report=term-missing | tee pytest-coverage.txt
-          echo "STATUS=$(cat pytest-coverage.txt | grep 'Required test' | awk '{ print $1 }')" >> $GITHUB_ENV
-          echo "FAILED=$(cat test-reports/report.xml | awk -F'=' '{print $5}' | awk -F' ' '{gsub(/"/, "", $1); print $1}')" >> $GITHUB_ENV
+          echo "Generated files:" && ls -R test-reports
+          echo "STATUS=$(grep 'Required test' pytest-coverage.txt | awk '{ print $1 }')" >> $GITHUB_ENV
+          echo "FAILED=$(cat test-reports/integration-report.xml | awk -F'=' '{print $5}' | awk -F' ' '{gsub(/"/, "", $1); print $1}')" >> $GITHUB_ENV
 
       - name: Evaluate Coverage
         if: ${{ (env.STATUS == 'FAIL') || (env.FAILED > 0) }}
