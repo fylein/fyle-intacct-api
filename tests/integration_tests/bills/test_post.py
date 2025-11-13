@@ -1,8 +1,8 @@
 import pytest
 from tests.integration_tests.base.base_test_post import BaseTestPost
 from tests.integration_tests.bills.fixtures import (
-    REST_BILL_CREATE_PAYLOAD,
-    SOAP_BILL_CREATE_PAYLOAD,
+    get_rest_bill_create_payload,
+    get_soap_bill_create_payload,
     REST_BILL_CREATE_PAYLOAD_WITH_ALLOCATION,
     SOAP_BILL_CREATE_PAYLOAD_WITH_ALLOCATION
 )
@@ -17,8 +17,8 @@ class TestBillsPost(BaseTestPost):
     SOAP_MODULE_NAME = 'bills'
     REST_FIELDS = ['vendor.id', 'description']
     SOAP_FIELDS = ['VENDORID', 'DESCRIPTION']
-    REST_PAYLOAD = REST_BILL_CREATE_PAYLOAD
-    SOAP_PAYLOAD = SOAP_BILL_CREATE_PAYLOAD
+    REST_PAYLOAD = get_rest_bill_create_payload()
+    SOAP_PAYLOAD = get_soap_bill_create_payload()
     KEY_MAPPINGS = [
         {
             'rest': 'vendor.id',

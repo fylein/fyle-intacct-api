@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: '30 6 * * *'
 
+  pull_request:
+    types: [opened, synchronize, reopened]
+
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
@@ -36,13 +39,125 @@ jobs:
           docker compose -f tests/integration_tests/docker-compose-integration.yml up -d
 
       - name: Run integration tests
+        id: run_tests
+        continue-on-error: true
         run: |
           mkdir -p test-reports
           docker compose -f tests/integration_tests/docker-compose-integration.yml run --rm integration_test pytest tests/integration_tests -m integration -v --tb=short --junit-xml=test-reports/integration-report.xml --cov-report=xml --cov-report=term-missing | tee pytest-coverage.txt
-          echo "Generated files:" && ls -R test-reports
-          echo "STATUS=$(grep 'Required test' pytest-coverage.txt | awk '{ print $1 }')" >> $GITHUB_ENV
-          echo "FAILED=$(cat test-reports/integration-report.xml | awk -F'=' '{print $5}' | awk -F' ' '{gsub(/"/, "", $1); print $1}')" >> $GITHUB_ENV
+          TEST_EXIT_CODE=${PIPESTATUS[0]}
+          echo "test_exit_code=$TEST_EXIT_CODE" >> $GITHUB_OUTPUT
+          echo "Generated files:" && ls -R test-reports || echo "test-reports directory not found"
+          
+          # Check if pytest ran successfully (regardless of test results)
+          if [ -f "pytest-coverage.txt" ]; then
+            echo "Pytest output captured successfully"
+          else
+            echo "ERROR: pytest-coverage.txt not found"
+            exit 1
+          fi
+          
+          exit $TEST_EXIT_CODE
 
       - name: Evaluate Coverage
-        if: ${{ (env.STATUS == 'FAIL') || (env.FAILED > 0) }}
-        run: exit 1
+        if: always()
+        run: |
+          if [ "${{ steps.run_tests.outputs.test_exit_code }}" != "0" ]; then
+            echo "Tests failed with exit code: ${{ steps.run_tests.outputs.test_exit_code }}"
+            exit 1
+          else
+            echo "All tests passed successfully"
+          fi
+
+      - name: Extract Test Results
+        if: always()
+        id: test_results
+        run: |
+          if [ -f "pytest-coverage.txt" ]; then
+            PASSED=$(grep -oP '\d+(?= passed)' pytest-coverage.txt | head -1 || echo "0")
+            FAILED=$(grep -oP '\d+(?= failed)' pytest-coverage.txt | head -1 || echo "0")
+            SKIPPED=$(grep -oP '\d+(?= skipped)' pytest-coverage.txt | head -1 || echo "0")
+            DURATION=$(grep -oP '\d+\.\d+s' pytest-coverage.txt | tail -1 || echo "N/A")
+            
+            echo "passed=$PASSED" >> $GITHUB_OUTPUT
+            echo "failed=$FAILED" >> $GITHUB_OUTPUT
+            echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+            echo "duration=$DURATION" >> $GITHUB_OUTPUT
+            
+            if [ "$FAILED" -gt "0" ]; then
+              echo "status=failure" >> $GITHUB_OUTPUT
+              echo "status_emoji=:x:" >> $GITHUB_OUTPUT
+              echo "status_color=#FF0000" >> $GITHUB_OUTPUT
+            else
+              echo "status=success" >> $GITHUB_OUTPUT
+              echo "status_emoji=:white_check_mark:" >> $GITHUB_OUTPUT
+              echo "status_color=#36a64f" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "status=error" >> $GITHUB_OUTPUT
+            echo "status_emoji=:warning:" >> $GITHUB_OUTPUT
+            echo "status_color=#FFA500" >> $GITHUB_OUTPUT
+            echo "passed=0" >> $GITHUB_OUTPUT
+            echo "failed=0" >> $GITHUB_OUTPUT
+            echo "skipped=0" >> $GITHUB_OUTPUT
+            echo "duration=N/A" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack Notification
+        if: always()
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "Integration Tests - SOAP vs REST API Comparison",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "${{ steps.test_results.outputs.status_emoji }} Integration Tests ${{ steps.test_results.outputs.status == 'success' && 'Passed' || 'Failed' }}",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Status:*\n${{ steps.test_results.outputs.status == 'success' && 'Success :white_check_mark:' || 'Failed :x:' }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Duration:*\n${{ steps.test_results.outputs.duration }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Passed:*\n${{ steps.test_results.outputs.passed }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Failed:*\n${{ steps.test_results.outputs.failed }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Skipped:*\n${{ steps.test_results.outputs.skipped }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "cc: <!subteam^S03FMDZPN4C> | Triggered by: ${{ github.triggering_actor }} | Branch: ${{ github.ref_name }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
