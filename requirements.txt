@@ -35,4 +35,7 @@ flake8==7.1.1
 flake8-docstrings==1.7.0
 flake8-annotations==3.1.1
 
+# JWT
+PyJWT==2.10.1
+
 git+https://github.com/fylein/pgevents.git@main#egg=pgevents

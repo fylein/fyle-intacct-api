@@ -1,4 +1,6 @@
+import jwt
 import logging
+import requests
 
 from django.db.models import Q
 from django.conf import settings
@@ -8,6 +10,7 @@ from rest_framework.views import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from rest_framework.exceptions import ValidationError
 from sageintacctsdk.exceptions import InvalidTokenError
 from fyle_accounting_mappings.models import DestinationAttribute
 from fyle_accounting_library.common_resources.models import DimensionDetail
@@ -17,7 +20,7 @@ from fyle_accounting_library.common_resources.enums import DimensionDetailSource
 from apps.workspaces.enums import CacheKeyEnum
 from apps.sage_intacct.helpers import sync_dimensions
 from apps.sage_intacct.serializers import SageIntacctFieldSerializer
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.workspaces.models import (
     Workspace,
@@ -244,3 +247,81 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class AuthorizationCodeView(generics.ListCreateAPIView):
+    """
+    Authorization Code View
+    """
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Get authorization code
+        """
+        code = request.data.get('code')
+        redirect_uri = request.data.get('redirect_uri')
+
+        assert_valid(code is not None, 'Code is required')
+        assert_valid(redirect_uri is not None, 'Redirect URI is required')
+
+        refresh_token = self.exchange_refresh_token_for_code(
+            code=code,
+            redirect_uri=redirect_uri,
+            workspace_id=kwargs['workspace_id']
+        )
+
+        sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=kwargs['workspace_id']).first()
+        company_id = self.decode_refresh_token(refresh_token=refresh_token)
+
+        if sage_intacct_credentials and sage_intacct_credentials.si_company_id != company_id:
+            raise ValidationError(
+                detail={
+                    'message': f"Company ID mismatch for workspace_id - {kwargs['workspace_id']}"
+                }
+            )
+
+        SageIntacctCredential.objects.update_or_create(
+            workspace_id=kwargs['workspace_id'],
+            defaults={
+                'refresh_token': refresh_token,
+                'si_company_id': company_id
+            }
+        )
+
+        return Response(
+            status=status.HTTP_200_OK,
+            data={
+                'message': 'Authorization code exchanged successfully'
+            }
+        )
+
+    def exchange_refresh_token_for_code(self, code: str, redirect_uri: str, workspace_id: int) -> str:
+        """
+        Exchange refresh token for code
+        """
+        try:
+            payload = {
+                'grant_type': 'authorization_code',
+                'code': code,
+                'redirect_uri': redirect_uri,
+                'client_id': settings.INTACCT_CLIENT_ID,
+                'client_secret': settings.INTACCT_CLIENT_SECRET
+            }
+
+            response = requests.post(settings.INTACCT_TOKEN_URI, data=payload)
+
+            if response.status_code != 200:
+                raise Exception(response.text)
+
+            return response.json()['refresh_token']
+
+        except Exception as e:
+            logger.error(f"Error exchanging refresh token for authorization code for workspace_id - {workspace_id}: {str(e)}")
+            raise Exception(f"Error exchanging refresh token for authorization code for workspace_id - {workspace_id}")
+
+    def decode_refresh_token(self, refresh_token: str) -> str:
+        """
+        Decode refresh token
+        :param refresh_token: Refresh token
+        :return: Company ID
+        """
+        return jwt.decode(refresh_token, settings.INTACCT_CLIENT_SECRET, algorithms=['HS256'])['cnyId']
