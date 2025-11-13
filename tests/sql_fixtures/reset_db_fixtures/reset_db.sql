@@ -3064,7 +3064,8 @@ CREATE TABLE public.feature_configs (
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     import_via_rabbitmq boolean NOT NULL,
-    fyle_webhook_sync_enabled boolean NOT NULL
+    fyle_webhook_sync_enabled boolean NOT NULL,
+    migrated_to_rest_api boolean NOT NULL
 );
 
 
@@ -6242,6 +6243,10 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 260	internal	0021_auto_generated_sql	2025-10-31 06:45:42.642859+00
 261	internal	0022_auto_generated_sql	2025-10-31 06:45:42.64653+00
 262	workspaces	0053_sageintacctcredential_refresh_token	2025-11-10 07:51:10.660732+00
+263	fyle	0042_expense_expenses_workspa_ad984e_idx	2025-11-13 11:11:43.58984+00
+264	workspaces	0054_alter_featureconfig_fyle_webhook_sync_enabled	2025-11-13 11:11:43.630578+00
+265	internal	0023_auto_generated_sql	2025-11-13 11:11:43.640549+00
+266	workspaces	0055_featureconfig_migrated_to_rest_api	2025-11-13 11:11:43.675733+00
 \.
 
 
@@ -9699,8 +9704,8 @@ COPY public.failed_events (id, routing_key, payload, created_at, updated_at, err
 -- Data for Name: feature_configs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.feature_configs (id, export_via_rabbitmq, created_at, updated_at, workspace_id, import_via_rabbitmq, fyle_webhook_sync_enabled) FROM stdin;
-1	f	2025-10-10 09:38:10.289737+00	2025-10-10 09:38:10.289737+00	1	f	f
+COPY public.feature_configs (id, export_via_rabbitmq, created_at, updated_at, workspace_id, import_via_rabbitmq, fyle_webhook_sync_enabled, migrated_to_rest_api) FROM stdin;
+1	f	2025-10-10 09:38:10.289737+00	2025-10-10 09:38:10.289737+00	1	f	t	f
 \.
 
 
@@ -10299,7 +10304,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 55, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 262, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 266, true);
 
 
 --
@@ -11713,6 +11718,13 @@ CREATE INDEX expenses_expense_id_0e3511ea_like ON public.expenses USING btree (e
 --
 
 CREATE INDEX expenses_fund_so_386913_idx ON public.expenses USING btree (fund_source, workspace_id);
+
+
+--
+-- Name: expenses_workspa_ad984e_idx; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX expenses_workspa_ad984e_idx ON public.expenses USING btree (workspace_id, report_id);
 
 
 --

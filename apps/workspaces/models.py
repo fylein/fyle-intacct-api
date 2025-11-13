@@ -6,6 +6,7 @@ from django.db.models import JSONField
 from django_q.models import Schedule
 from fyle_accounting_library.fyle_platform.enums import CacheKeyEnum
 from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
+from apps.workspaces.enums import CacheKeyEnum as WorkspaceCacheKeyEnum
 
 User = get_user_model()
 
@@ -262,6 +263,7 @@ class FeatureConfig(models.Model):
     export_via_rabbitmq = models.BooleanField(default=True, help_text='Enable export via rabbitmq')
     import_via_rabbitmq = models.BooleanField(default=True, help_text='Enable import via rabbitmq')
     fyle_webhook_sync_enabled = models.BooleanField(default=True, help_text='Enable fyle attribute webhook sync')
+    migrated_to_rest_api = models.BooleanField(default=False, help_text='Migrated to using rest api')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
@@ -276,7 +278,8 @@ class FeatureConfig(models.Model):
         """
         cache_key_map = {
             'export_via_rabbitmq': CacheKeyEnum.FEATURE_CONFIG_EXPORT_VIA_RABBITMQ,
-            'fyle_webhook_sync_enabled': CacheKeyEnum.FEATURE_CONFIG_FYLE_WEBHOOK_SYNC_ENABLED
+            'fyle_webhook_sync_enabled': CacheKeyEnum.FEATURE_CONFIG_FYLE_WEBHOOK_SYNC_ENABLED,
+            'migrated_to_rest_api': WorkspaceCacheKeyEnum.FEATURE_CONFIG_MIGRATED_TO_REST_API
         }
 
         cache_key_enum = cache_key_map.get(key)
