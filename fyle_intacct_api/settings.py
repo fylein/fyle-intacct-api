@@ -300,6 +300,12 @@ SENDGRID_API_KEY = os.environ.get('SENDGRID_KEY')
 EMAIL = os.environ.get('SENDGRID_EMAIL')
 EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
 
+# Sage Intacct REST API Env
+INTACCT_CLIENT_ID = os.environ.get('INTACCT_CLIENT_ID')
+INTACCT_CLIENT_SECRET = os.environ.get('INTACCT_CLIENT_SECRET')
+INTACCT_TOKEN_URI = os.environ.get('INTACCT_TOKEN_URI')
+
+
 # E2E Settings
 ALLOW_E2E_SETUP = os.environ.get('ALLOW_E2E_SETUP')
 E2E_TEST_USER_ID = os.environ.get('E2E_TEST_USER_ID')

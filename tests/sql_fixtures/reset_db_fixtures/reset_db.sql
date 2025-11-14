@@ -3852,7 +3852,9 @@ CREATE TABLE public.sage_intacct_credentials (
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     is_expired boolean NOT NULL,
-    refresh_token text
+    refresh_token text,
+    access_token text,
+    access_token_expires_at timestamp with time zone
 );
 
 
@@ -6247,6 +6249,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 264	workspaces	0054_alter_featureconfig_fyle_webhook_sync_enabled	2025-11-13 11:11:43.630578+00
 265	internal	0023_auto_generated_sql	2025-11-13 11:11:43.640549+00
 266	workspaces	0055_featureconfig_migrated_to_rest_api	2025-11-13 11:11:43.675733+00
+267	workspaces	0056_sageintacctcredential_access_token_and_more	2025-11-13 18:29:54.777978+00
 \.
 
 
@@ -10141,8 +10144,8 @@ COPY public.reimbursements (id, settlement_id, reimbursement_id, state, created_
 -- Data for Name: sage_intacct_credentials; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired, refresh_token) FROM stdin;
-1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f	\N
+COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired, refresh_token, access_token, access_token_expires_at) FROM stdin;
+1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f	\N	\N	\N
 \.
 
 
@@ -10304,7 +10307,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 55, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 266, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 267, true);
 
 
 --
