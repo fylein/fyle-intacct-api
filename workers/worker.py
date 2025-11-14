@@ -2,6 +2,7 @@ import os
 import signal
 import logging
 import argparse
+import traceback
 
 # isort: off
 from workers.actions import handle_tasks
@@ -49,14 +50,18 @@ class Worker(EventConsumer):
         """
         Handle exception
         """
-        logger.error('Error while handling exports for workspace - %s, error: %s', payload_dict, str(error))
+        logger.error(
+            'Error while handling exports for workspace - %s, traceback: %s',
+            payload_dict,
+            traceback.format_exc()
+        )
 
         payload_dict['retry_count'] = payload_dict.get('retry_count', 0) + 1
 
         FailedEvent.objects.create(
             routing_key=routing_key,
             payload=payload_dict,
-            error_traceback=str(error),
+            error_traceback=traceback.format_exc(),
             workspace_id=payload_dict['workspace_id'] if payload_dict.get('workspace_id') else None
         )
 
