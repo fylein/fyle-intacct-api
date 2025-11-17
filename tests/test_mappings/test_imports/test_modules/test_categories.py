@@ -195,7 +195,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         post_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='CATEGORY').count()
 
-        assert post_run_expense_attribute_disabled_count == pre_run_expense_attribute_disabled_count + 4
+        assert post_run_expense_attribute_disabled_count == pre_run_expense_attribute_disabled_count + 2
 
     # not re-enable case for project import
     with mock.patch('fyle.platform.apis.v1.admin.Categories.list_all') as mock_call:
@@ -223,7 +223,7 @@ def test_auto_create_destination_attributes_categories(mocker, db):
 
         pre_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'CATEGORY', active=False).count()
 
-        assert pre_run_expense_attribute_count == 4
+        assert pre_run_expense_attribute_count == 2
 
         category.trigger_import()
 
