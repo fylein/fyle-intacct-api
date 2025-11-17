@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
 from django.core.cache import cache
@@ -298,3 +299,59 @@ class FeatureConfig(models.Model):
 
     class Meta:
         db_table = 'feature_configs'
+
+
+class IntacctSyncedTimestamp(models.Model):
+    """
+    Model to store the timestamps of the last sync for each entity
+    """
+    id = models.AutoField(primary_key=True)
+    account_synced_at = models.DateTimeField(help_text='Datetime when accounts were synced last', null=True)
+    vendor_synced_at = models.DateTimeField(help_text='Datetime when vendors were synced last', null=True)
+    customer_synced_at = models.DateTimeField(help_text='Datetime when customers were synced last', null=True)
+    class_synced_at = models.DateTimeField(help_text='Datetime when classes were synced last', null=True)
+    employee_synced_at = models.DateTimeField(help_text='Datetime when employees were synced last', null=True)
+    item_synced_at = models.DateTimeField(help_text='Datetime when items were synced last', null=True)
+    location_synced_at = models.DateTimeField(help_text='Datetime when locations were synced last', null=True)
+    allocation_synced_at = models.DateTimeField(help_text='Datetime when allocations were synced last', null=True)
+    tax_detail_synced_at = models.DateTimeField(help_text='Datetime when tax details were synced last', null=True)
+    department_synced_at = models.DateTimeField(help_text='Datetime when departments were synced last', null=True)
+    project_synced_at = models.DateTimeField(help_text='Datetime when projects were synced last', null=True)
+    expense_type_synced_at = models.DateTimeField(help_text='Datetime when expense types were synced last', null=True)
+    location_entity_synced_at = models.DateTimeField(help_text='Datetime when location entities were synced last', null=True)
+    payment_account_synced_at = models.DateTimeField(help_text='Datetime when payment accounts were synced last', null=True)
+    expense_payment_type_synced_at = models.DateTimeField(help_text='Datetime when expense payment types were synced last', null=True)
+    workspace = models.ForeignKey(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'intacct_sync_timestamps'
+
+    @classmethod
+    def get_latest_synced_timestamp(cls, workspace_id: int) -> 'IntacctSyncedTimestamp':
+        """
+        Get the latest synced timestamp.
+        :param workspace_id: Workspace ID
+        :return: IntacctSyncedTimestamp
+        """
+        synced_timestamp = cls.objects.get(workspace_id=workspace_id)
+
+        return synced_timestamp
+
+    @classmethod
+    def update_latest_synced_timestamp(cls, workspace_id: int, key: str) -> None:
+        """
+        Update the latest synced timestamp.
+        :param workspace_id: Workspace ID
+        :param key: field to update
+        :return: None
+        """
+        timestamp = datetime.now(timezone.utc)
+
+        cls.objects.filter(workspace_id=workspace_id).update(
+            **{
+                key: timestamp,
+                'updated_at': timestamp
+            }
+        )

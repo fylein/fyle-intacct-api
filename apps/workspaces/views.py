@@ -30,6 +30,7 @@ from apps.workspaces.models import (
     Configuration,
     FeatureConfig,
     FyleCredential,
+    IntacctSyncedTimestamp,
     LastExportDetail,
     SageIntacctCredential,
     Workspace,
@@ -124,6 +125,7 @@ class WorkspaceView(viewsets.ViewSet):
             LastExportDetail.objects.create(workspace_id=workspace.id)
             FeatureConfig.objects.create(workspace_id=workspace.id)
             FyleSyncTimestamp.objects.create(workspace_id=workspace.id)
+            IntacctSyncedTimestamp.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 
