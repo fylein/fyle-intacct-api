@@ -190,17 +190,22 @@ class SageIntacctRestConnector:
         return self.soap_sdk_connection
 
 
-class SageIntacctDimensionSyncer(SageIntacctRestConnector):
+class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
     """
-    Sage Intacct Dimension Sync
+    Sage Intacct Dimension Sync Manager
     """
     def __init__(self, workspace_id: int):
         """
-        Initialize the Sage Intacct Rest Dimension Syncer
+        Initialize the Sage Intacct Rest Dimension Sync Manager
         :param: workspace_id: Workspace ID
         """
         super().__init__(workspace_id)
         self.intacct_synced_timestamp_object = self.__get_intacct_synced_timestamp_object()
+        self.count_filter = [{
+            '$eq': {
+                'status': 'active'
+            }
+        }]
 
     def __get_intacct_synced_timestamp_object(self) -> 'IntacctSyncedTimestamp':
         """
@@ -257,7 +262,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
                 }
             })
 
-        if active_status_only:
+        if not latest_synced_timestamp and active_status_only:
             filters.append({
                 '$eq': {
                     'status': 'active'
@@ -351,7 +356,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync accounts
         """
-        attribute_count = self.connection.accounts.count()
+        attribute_count = self.connection.accounts.count(filters=self.count_filter)
 
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.ACCOUNT.value, attribute_count=attribute_count):
             logger.info('Skipping sync of accounts for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
@@ -400,7 +405,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync departments
         """
-        attribute_count = self.connection.departments.count()
+        attribute_count = self.connection.departments.count(filters=self.count_filter)
 
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.DEPARTMENT.value, attribute_count=attribute_count):
             logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
@@ -441,14 +446,13 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync expense types
         """
-        attribute_count = self.connection.expense_types.count()
+        attribute_count = self.connection.expense_types.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.EXPENSE_TYPE.value, attribute_count=attribute_count):
             logger.info('Skipping sync of expense_type for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
         fields = ['id', 'description', 'glAccount.id', 'glAccount.name', 'status']
         latest_synced_timestamp = self.intacct_synced_timestamp_object.expense_type_synced_at
-        params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp)
         params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp)
         is_expense_type_import_enabled = self.__is_import_enabled(DestinationAttributeTypeEnum.EXPENSE_TYPE.value)
         expense_type_generator = self.connection.expense_types.get_all_generator(**params)
@@ -497,7 +501,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync charge card accounts
         """
-        attribute_count = self.connection.charge_card_accounts.count()
+        attribute_count = self.connection.charge_card_accounts.count(filters=self.count_filter)
 
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.CHARGE_CARD_NUMBER.value, attribute_count=attribute_count):
             logger.info('Skipping sync of charge card number for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
@@ -531,11 +535,11 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
             True
         )
 
-    def sync_payment_accounts(self) -> list:
+    def sync_payment_accounts(self) -> None:
         """
-        Get Payment accounts
+        Sync payment accounts
         """
-        fields = ['id', 'bankAccountDetails.bankName']
+        fields = ['id', 'bankAccountDetails.bankName', 'status']
         latest_synced_timestamp = self.intacct_synced_timestamp_object.payment_account_synced_at
         params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp)
         payment_account_generator = self.connection.checking_accounts.get_all_generator(**params)
@@ -549,7 +553,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
                     'display_name': 'Payment Account',
                     'value': '{} - {}'.format(payment_account['bankAccountDetails.bankName'], payment_account['id']),
                     'destination_id': payment_account['id'],
-                    'active': True
+                    'active': payment_account['status'] == 'active'
                 })
 
         DestinationAttribute.bulk_create_or_update_destination_attributes(
@@ -565,7 +569,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync Cost Types
         """
-        attribute_count = self.connection.cost_types.count()
+        attribute_count = self.connection.cost_types.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.COST_TYPE.value, attribute_count=attribute_count):
             logger.info('Skipping sync of cost_types for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
@@ -627,11 +631,11 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         dependent_field_setting.last_synced_at = datetime.now()
         dependent_field_setting.save()
 
-    def sync_projects(self) -> list:
+    def sync_projects(self) -> None:
         """
         Sync projects
         """
-        attribute_count = self.connection.projects.count()
+        attribute_count = self.connection.projects.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.PROJECT.value, attribute_count=attribute_count):
             logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
@@ -674,32 +678,36 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
 
         self.__update_intacct_synced_timestamp_object(key='project_synced_at')
 
-    def sync_items(self) -> list:
+    def sync_items(self) -> None:
         """
         Sync items
         """
-        attribute_count = self.connection.items.count()
+        attribute_count = self.connection.items.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.ITEM.value, attribute_count=attribute_count):
             logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
         fields = ['id', 'name', 'status', 'itemType']
         latest_synced_timestamp = self.intacct_synced_timestamp_object.item_synced_at
-        params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp)
+        extra_filter_params = [{
+            '$eq': {
+                'itemType': 'nonInventory'
+            }
+        }]
+        params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp, extra_filter_params=extra_filter_params)
         item_generator = self.connection.items.get_all_generator(**params)
 
         item_attributes = []
 
         for items in item_generator:
             for item in items:
-                if item['itemType'] == 'nonInventory':
-                    item_attributes.append({
-                        'attribute_type': DestinationAttributeTypeEnum.ITEM.value,
-                        'display_name': 'item',
-                        'value': item['name'],
-                        'destination_id': item['id'],
-                        'active': item['status'] == 'active'
-                    })
+                item_attributes.append({
+                    'attribute_type': DestinationAttributeTypeEnum.ITEM.value,
+                    'display_name': 'item',
+                    'value': item['name'],
+                    'destination_id': item['id'],
+                    'active': item['status'] == 'active'
+                })
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 item_attributes,
@@ -718,7 +726,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync locations
         """
-        attribute_count = self.connection.locations.count()
+        attribute_count = self.connection.locations.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.LOCATION.value, attribute_count=attribute_count):
             logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
@@ -828,7 +836,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync classes
         """
-        attribute_count = self.connection.classes.count()
+        attribute_count = self.connection.classes.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.CLASS.value, attribute_count=attribute_count):
             logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
@@ -867,7 +875,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync Customers
         """
-        attribute_count = self.connection.customers.count()
+        attribute_count = self.connection.customers.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.CUSTOMER.value, attribute_count=attribute_count):
             logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
@@ -907,7 +915,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync Tax Details
         """
-        attribute_count = self.connection.tax_details.count()
+        attribute_count = self.connection.tax_details.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.TAX_DETAIL.value, attribute_count=attribute_count):
             logger.info('Skipping sync of tax_details for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
@@ -946,7 +954,7 @@ class SageIntacctDimensionSyncer(SageIntacctRestConnector):
         """
         Sync vendors
         """
-        attribute_count = self.connection.vendors.count()
+        attribute_count = self.connection.vendors.count(filters=self.count_filter)
         if not self.__is_sync_allowed(attribute_type=DestinationAttributeTypeEnum.VENDOR.value, attribute_count=attribute_count):
             logger.info('Skipping sync of vendors for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
