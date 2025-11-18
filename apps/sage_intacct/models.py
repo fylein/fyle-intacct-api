@@ -1838,6 +1838,67 @@ class CostType(models.Model):
         if cost_types_to_be_created:
             CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
 
+    @staticmethod
+    def bulk_create_or_update_rest(cost_types: list[dict], workspace_id: int) -> None:
+        """
+        Bulk create or update cost types from rest response
+        """
+        record_number_list = [cost_type['key'] for cost_type in cost_types]
+
+        filters = {
+            'record_number__in': record_number_list,
+            'workspace_id': workspace_id
+        }
+
+        existing_cost_types = CostType.objects.filter(**filters).values(
+            'id',
+            'record_number',
+            'name',
+            'status',
+            'project_name',
+            'project_id'
+        )
+
+        existing_cost_type_record_numbers = []
+
+        primary_key_map = {}
+
+        for existing_cost_type in existing_cost_types:
+            existing_cost_type_record_numbers.append(existing_cost_type['record_number'])
+
+            primary_key_map[existing_cost_type['record_number']] = {
+                'id': existing_cost_type['id'],
+                'name': existing_cost_type['name'],
+                'status': existing_cost_type['status'],
+                'project_name': existing_cost_type['project_name'],
+                'project_id': existing_cost_type['project_id']
+            }
+
+        cost_types_to_be_created = []
+
+        for cost_type in cost_types:
+            cost_type_object = CostType(
+                record_number=cost_type['key'],
+                project_key=cost_type['project.key'],
+                project_id=cost_type['project.id'],
+                project_name=cost_type['project.name'],
+                task_key=cost_type['task.key'],
+                task_id=cost_type['task.id'],
+                task_name=cost_type['task.name'],
+                cost_type_id=cost_type['id'],
+                name=cost_type['name'],
+                status=cost_type['status'],
+                when_created=cost_type['audit.createdDateTime'] if 'audit.createdDateTime' in cost_type else None,
+                when_modified=cost_type['audit.modifiedDateTime'] if 'audit.modifiedDateTime' in cost_type else None,
+                workspace_id=workspace_id
+            )
+
+            if cost_type['key'] not in existing_cost_type_record_numbers:
+                cost_types_to_be_created.append(cost_type_object)
+
+        if cost_types_to_be_created:
+            CostType.objects.bulk_create(cost_types_to_be_created, batch_size=2000)
+
 
 class CostCode(models.Model):
     """
@@ -1897,6 +1958,51 @@ class CostCode(models.Model):
                         task_name=cost_code['NAME'],
                         project_id=cost_code['PROJECTID'],
                         project_name=cost_code['PROJECTNAME'],
+                        workspace_id=workspace_id
+                    )
+                )
+
+        if cost_codes_to_be_created:
+            CostCode.objects.bulk_create(cost_codes_to_be_created, batch_size=50)
+
+    @staticmethod
+    def bulk_create_or_update_rest(cost_codes: list[dict], workspace_id: int) -> None:
+        """
+        Bulk create or update cost codes from rest response
+        :param cost_codes: List of cost codes
+        :param workspace_id: Workspace ID
+        """
+        if not cost_codes:
+            return
+
+        # Get all task_ids and project_ids from the incoming cost codes
+        task_ids = [cost_code['key'] for cost_code in cost_codes]
+        project_ids = [cost_code['project.key'] for cost_code in cost_codes]
+
+        # Get existing cost codes
+        existing_cost_codes = CostCode.objects.filter(
+            workspace_id=workspace_id,
+            task_id__in=task_ids,
+            project_id__in=project_ids
+        )
+
+        # Create a set of existing (task_id, project_id) combinations
+        existing_cost_code_keys = {
+            (cost_code.task_id, cost_code.project_id)
+            for cost_code in existing_cost_codes
+        }
+
+        # Create new cost codes only for combinations that don't exist
+        cost_codes_to_be_created = []
+        for cost_code in cost_codes:
+            key = (cost_code['key'], cost_code['project.key'])
+            if key not in existing_cost_code_keys:
+                cost_codes_to_be_created.append(
+                    CostCode(
+                        task_id=cost_code['key'],
+                        task_name=cost_code['name'],
+                        project_id=cost_code['project.key'],
+                        project_name=cost_code['project.name'],
                         workspace_id=workspace_id
                     )
                 )
