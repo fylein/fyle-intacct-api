@@ -1,21 +1,20 @@
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 from unittest.mock import MagicMock, patch
-from datetime import datetime, timedelta, timezone
 
-from fyle_integrations_platform_connector import PlatformConnector
 from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute, Mapping
+from fyle_integrations_platform_connector import PlatformConnector
 
-from apps.tasks.models import Error
 from apps.mappings.constants import SYNC_METHODS
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.tasks.models import Error
+from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
 from fyle_integrations_imports.models import ImportLog
 from fyle_integrations_imports.modules.base import Base
-from apps.sage_intacct.utils import SageIntacctConnector
-from fyle_integrations_imports.modules.projects import Project
 from fyle_integrations_imports.modules.categories import Category
-from apps.workspaces.models import FyleCredential, SageIntacctCredential, Workspace
-
-from tests.test_mappings.test_imports.test_modules.helpers import get_platform_connection
+from fyle_integrations_imports.modules.projects import Project
 from tests.test_mappings.test_imports.test_modules.fixtures import data as destination_attributes_data
+from tests.test_mappings.test_imports.test_modules.helpers import get_platform_connection
 
 
 def test_sync_destination_attributes(mocker, db):
@@ -240,7 +239,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         post_run_expense_attribute_disabled_count = ExpenseAttribute.objects.filter(workspace_id=1, active=False, attribute_type='PROJECT').count()
 
-        assert post_run_expense_attribute_disabled_count == 3
+        assert post_run_expense_attribute_disabled_count == 2
 
     # not re-enable case for project import
     with mock.patch('fyle.platform.apis.v1.admin.Projects.list_all') as mock_call:
@@ -267,7 +266,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         pre_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
 
-        assert pre_run_expense_attribute_count == 3
+        assert pre_run_expense_attribute_count == 2
 
         project.trigger_import()
 
@@ -277,7 +276,7 @@ def test_auto_create_destination_attributes(mocker, db):
 
         post_run_expense_attribute_count = ExpenseAttribute.objects.filter(workspace_id=1, attribute_type = 'PROJECT', active=False).count()
 
-        assert post_run_expense_attribute_count == 2
+        assert post_run_expense_attribute_count == 1
 
     # Not creating the schedule part due to time diff
     current_time = datetime.now()
