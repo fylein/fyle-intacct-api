@@ -18,7 +18,6 @@ from apps.fyle.helpers import (
     construct_expense_filter,
     construct_expense_filter_query,
     get_fund_source,
-    get_fyle_orgs,
     get_request,
     get_source_account_type,
     get_updated_accounting_export_summary,
@@ -86,21 +85,6 @@ def test_get_request(mocker):
     )
     try:
         get_request(url='sdfghjk', params={'sample': True}, refresh_token='srtyu')
-    except Exception:
-        logger.info('Error in post request')
-
-
-def test_get_fyle_orgs(mocker):
-    """
-    Test get Fyle orgs
-    """
-    mocker.patch(
-        'apps.fyle.helpers.requests.get',
-        return_value=mock.MagicMock(status_code=200, text="{'orgs': 'dfghjk'}")
-    )
-    try:
-        response = get_fyle_orgs(refresh_token='srtyu', cluster_domain='erty')
-        assert response == {'orgs': 'dfghjk'}
     except Exception:
         logger.info('Error in post request')
 

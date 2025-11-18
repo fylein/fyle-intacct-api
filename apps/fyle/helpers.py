@@ -68,18 +68,6 @@ def get_request(url: str, params: dict, refresh_token: str) -> Optional[dict]:
         raise Exception(response.text)
 
 
-def get_fyle_orgs(refresh_token: str, cluster_domain: str) -> dict:
-    """
-    Get fyle orgs of a user
-    :param refresh_token: (str)
-    :param cluster_domain: (str)
-    :return: fyle_orgs (dict)
-    """
-    api_url = '{0}/api/orgs/'.format(cluster_domain)
-
-    return get_request(api_url, {}, refresh_token)
-
-
 def get_cluster_domain(refresh_token: str) -> str:
     """
     Get cluster domain name from fyle
