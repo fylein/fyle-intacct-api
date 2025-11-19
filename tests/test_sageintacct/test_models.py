@@ -651,7 +651,7 @@ def test_get_memo_or_purpose_top_level(db):
 
         # Expected format: employee_email - employee_name - group_by
         # Since expense_group_settings.description has claim_number, group_by should be claim_number
-        expected_memo = 'ashwin.t@fyle.in -  - C/2022/09/R/22'
+        expected_memo = 'ashwin.t@fyle.in - C/2022/09/R/22'
         assert top_level_memo == expected_memo
 
     # Test with different top_level_memo_structure
@@ -665,7 +665,7 @@ def test_get_memo_or_purpose_top_level(db):
         top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
 
         # Expected format: employee_name - group_by
-        expected_memo = ' - C/2022/09/R/22'
+        expected_memo = 'C/2022/09/R/22'
         assert top_level_memo == expected_memo
 
     # Test with empty top_level_memo_structure (should fall back to regular memo_structure)
