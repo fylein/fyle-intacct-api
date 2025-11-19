@@ -11,20 +11,20 @@ logger.level = logging.INFO
 def construct_expense_report_payload(
     workspace_id: int,
     expense_report: ExpenseReport,
-    expense_report_lineitems: list[ExpenseReportLineitem]
+    expense_report_line_items: list[ExpenseReportLineitem]
 ) -> dict:
     """
     Construct Expense Report Payload
     :param workspace_id: Workspace ID
     :param expense_report: ExpenseReport object
-    :param expense_report_lineitems: ExpenseReportLineitem objects
+    :param expense_report_line_items: ExpenseReportLineitem objects
     :return: constructed expense report payload
     """
     transaction_date = expense_report.transaction_date.strftime('%Y-%m-%d')
 
     expense_report_line_item_payload = construct_expense_report_line_item_payload(
         workspace_id=workspace_id,
-        expense_report_lineitems=expense_report_lineitems
+        expense_report_line_items=expense_report_line_items
     )
     expense_report_payload = {
         'state': 'submitted',
@@ -46,23 +46,24 @@ def construct_expense_report_payload(
     }
 
     logger.info("| Payload for the expense report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, EXPENSE_REPORT_PAYLOAD = {}}}".format(workspace_id, expense_report.expense_group.id, expense_report_payload))
+
     return expense_report_payload
 
 
 def construct_expense_report_line_item_payload(
     workspace_id: int,
-    expense_report_lineitems: ExpenseReportLineitem
+    expense_report_line_items: ExpenseReportLineitem
 ) -> dict:
     """
     Construct Expense Report Line Item Payload
     :param workspace_id: Workspace ID
-    :param lineitem: ExpenseReportLineitem object
+    :param expense_report_line_items: ExpenseReportLineitem objects
     :return: constructed expense report line item payload
     """
     expense_report_lineitem_payloads = []
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
 
-    for lineitem in expense_report_lineitems:
+    for lineitem in expense_report_line_items:
         transaction_date = lineitem.transaction_date.strftime('%Y-%m-%d')
         tax_exclusive_amount, _ = get_tax_exclusive_amount(
             workspace_id=workspace_id,

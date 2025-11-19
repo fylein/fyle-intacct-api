@@ -13,7 +13,7 @@ logger.level = logging.INFO
 def construct_bill_payload(
     workspace_id: int,
     bill: Bill,
-    bill_lineitems: list[BillLineitem]
+    bill_line_items: list[BillLineitem]
 ) -> dict:
     """
     Construct bill payload
@@ -29,7 +29,7 @@ def construct_bill_payload(
 
     bill_line_item_payload = construct_bill_line_item_payload(
         workspace_id=workspace_id,
-        bill_line_items=bill_lineitems
+        bill_line_items=bill_line_items
     )
 
     bill_payload = {
@@ -55,7 +55,7 @@ def construct_bill_payload(
             'taxSolution': {
                 'id': get_tax_solution_id_or_none(
                     workspace_id=workspace_id,
-                    lineitems=bill_lineitems
+                    line_items=bill_line_items
                 )
             }
         })

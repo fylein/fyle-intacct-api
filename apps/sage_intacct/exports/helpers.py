@@ -36,12 +36,12 @@ def get_tax_exclusive_amount(workspace_id: int, amount: float | int, default_tax
 
 def get_tax_solution_id_or_none(
     workspace_id: int,
-    lineitems: list[ExpenseReportLineitem | BillLineitem | JournalEntryLineitem | ChargeCardTransactionLineitem]
+    line_items: list[ExpenseReportLineitem | BillLineitem | JournalEntryLineitem | ChargeCardTransactionLineitem]
 ) -> str:
     """
     Get Tax Solution Id or None
     :param workspace_id: Workspace ID
-    :param lineitems: List of lineitems
+    :param line_items: List of line_items
     :return: Tax Solution Id or None
     """
     general_mappings = GeneralMapping.objects.filter(workspace_id=workspace_id).first()
@@ -49,7 +49,7 @@ def get_tax_solution_id_or_none(
     if general_mappings.location_entity_id:
         return None
     else:
-        tax_code = lineitems[0].tax_code
+        tax_code = line_items[0].tax_code
 
         if tax_code:
             destination_attribute = DestinationAttribute.objects.get(value=tax_code, workspace_id=workspace_id)
