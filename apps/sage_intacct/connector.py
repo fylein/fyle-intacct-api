@@ -1,4 +1,7 @@
+import re
 import jwt
+import json
+import random
 import text_unidecode
 
 import logging
@@ -10,16 +13,17 @@ from django.conf import settings
 
 from intacctsdk import IntacctRESTSDK
 from sageintacctsdk import SageIntacctSDK
+from intacctsdk.exceptions import BadRequestError
 
 from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_mappings.models import DestinationAttribute, MappingSetting
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 
 from apps.workspaces.helpers import get_app_name
 from apps.fyle.models import DependentFieldSetting
-from apps.mappings.models import LocationEntityMapping
 from apps.sage_intacct.models import CostCode, CostType
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
+from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.workspaces.models import (
     Workspace,
@@ -1151,3 +1155,404 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
             )
 
             self.__update_intacct_synced_timestamp_object(key='location_entity_synced_at')
+
+
+class SageIntacctObjectCreationManager(SageIntacctRestConnector):
+    """
+    Sage Intacct Object Creation Manager
+    """
+    def __init__(self, workspace_id: int):
+        """
+        Initialize the Sage Intacct Rest Object Creation Manager
+        :param: workspace_id: Workspace ID
+        """
+        super().__init__(workspace_id)
+
+    def __create_destination_attribute(
+        self,
+        attribute_type: str,
+        value: str,
+        destination_id: str,
+        email: str = None,
+    ) -> DestinationAttribute:
+        """
+        Create Destination Attribute
+        :param attribute_type: Attribute Type
+        :param value: Value
+        :param destination_id: Destination Id
+        :param email: Email
+        :return: Destination Attribute
+        """
+        created_attribute = DestinationAttribute.create_or_update_destination_attribute(
+            workspace_id=self.workspace_id,
+            attribute={
+                'attribute_type': attribute_type.upper(),
+                'display_name': attribute_type,
+                'value': value,
+                'destination_id': destination_id,
+                'active': True,
+                'detail': {
+                    'email': email
+                }
+            },
+        )
+
+        return created_attribute
+
+    def __sanitize_vendor_name(self, vendor_name: str = None) -> str:
+        """
+        Remove special characters from Vendor Name
+        :param vendor_name: Vendor Name
+        :return: Sanitized Vendor Name
+        """
+        sanitized_name = None
+        if vendor_name:
+            pattern = r'[!@#$%^&*()\-_=\+\[\]{}|\\:;"\'<>,.?/~`]'
+            sanitized_name = re.sub(pattern, '', vendor_name)
+            sanitized_name = re.sub(r'\s+', ' ', sanitized_name).strip()
+
+        if sanitized_name:
+            return sanitized_name[:19]  # 20 is the max length of the vendor name in Sage Intacct
+
+        return None
+
+    def __get_object_key_from_response(self, response: dict) -> Optional[str]:
+        """
+        Get object key from response
+        :param response: Response
+        :return: Object Key or None
+        """
+        return response['ia::result']['key'] if 'key' in response['ia::result'] else None
+
+    def __get_employee(self, employee_name: str) -> Optional[dict]:
+        """
+        Get employee
+        :param employee_name: Employee Name
+        :return: Employee or None
+        """
+        fields = [
+            'id',
+            'name',
+            'status',
+            'location.id',
+            'department.id',
+            'primaryContact.email1',
+            'primaryContact.printAs'
+        ]
+        params = {
+            'fields': fields,
+            'filters': [
+                {
+                    '$eq': {
+                        'name': employee_name
+                    }
+                }
+            ]
+        }
+
+        employee_generator = self.connection.employees.get_all_generator(**params)
+
+        for employees in employee_generator:
+            for employee in employees:
+                return employee
+
+        return None
+
+    def __get_vendor(self, vendor_name: str) -> Optional[dict]:
+        """
+        Get vendor
+        :param vendor_name: Vendor Name
+        :return: Vendor or None
+        """
+        fields = ['id', 'name', 'status', 'contacts.default.email1']
+        params = {
+            'fields': fields,
+            'filters': [
+                {
+                    '$eq': {
+                        'name': vendor_name
+                    }
+                },
+                {
+                    '$eq': {
+                        'status': 'active'
+                    }
+                }
+            ],
+            'order_by': [
+                {
+                    'audit.modifiedDateTime': 'desc'
+                }
+            ]
+        }
+
+        vendor_generator = self.connection.vendors.get_all_generator(**params)
+        for vendors in vendor_generator:
+            for vendor in vendors:
+                return vendor
+
+        return None
+
+    def __get_vendor_from_key(self, key: str) -> Optional[dict]:
+        """
+        Get vendor from key
+        :param key: Key
+        :return: Vendor or None
+        """
+        response = self.connection.vendors.get_by_key(key=key)
+        return response['ia::result']
+
+    def __get_contact_from_key(self, key: str) -> Optional[dict]:
+        """
+        Get contact from key
+        :param key: Key
+        :return: Contact or None
+        """
+        response = self.connection.contacts.get_by_key(key=key)
+        return response['ia::result']
+
+    def __get_employee_from_key(self, key: str) -> Optional[dict]:
+        """
+        Get employee from key
+        :param key: Key
+        :return: Employee or None
+        """
+        response = self.connection.employees.get_by_key(key=key)
+        return response['ia::result']
+
+    def create_vendor(
+        self,
+        vendor_id: str,
+        vendor_name: str,
+        email: str = None
+    ) -> Optional[dict]:
+        """
+        Create a Vendor in Sage Intacct
+        :param vendor_id: Vendor ID
+        :param vendor_name: Vendor Name
+        :param email: Email
+        :return: Vendor or None
+        """
+        sage_intacct_display_name = vendor_name
+
+        name = vendor_name.split(' ')
+
+        vendor_payload = {
+            'id': vendor_id,
+            'name': sage_intacct_display_name,
+            'contacts': {
+                'default': {
+                    'printAs': sage_intacct_display_name,
+                    'email1': email,
+                    'firstName': name[0],
+                    'lastName': name[-1] if len(name) == 2 else None
+                }
+            }
+        }
+
+        logger.info("| Payload for the vendor creation | Content : {{WORKSPACE_ID = {}, VENDOR_PAYLOAD = {}}}".format(self.workspace_id, vendor_payload))
+
+        response = self.connection.vendors.post(vendor_payload)
+        object_key = self.__get_object_key_from_response(response)
+
+        if not object_key:
+            return None
+
+        return self.__get_vendor_from_key(key=object_key)
+
+    def create_contact(
+        self,
+        contact_id: str,
+        contact_name: str,
+        email: str = None,
+        first_name: str = None,
+        last_name: str = None
+    ) -> Optional[dict]:
+        """
+        Create a Contact in Sage Intacct
+        :param contact_id: Contact ID
+        :param contact_name: Contact Name
+        :param email: Email
+        :return: Contact or None
+        """
+        contact_payload = {
+            'id': contact_id,
+            'printAs': contact_name,
+            'email1': email,
+            'firstName': first_name,
+            'lastName': last_name
+        }
+        try:
+            response = self.connection.contacts.post(contact_payload)
+            object_key = self.__get_object_key_from_response(response)
+        except Exception as e:
+            logger.info("Error while creating contact %s in workspace %s: %s", contact_name, self.workspace_id, e.response)
+            return None
+
+        if not object_key:
+            return None
+
+        return self.__get_contact_from_key(key=object_key)
+
+    def create_employee(self, employee: ExpenseAttribute) -> Optional[dict]:
+        """
+        Create an Employee in Sage Intacct
+        :param employee: employee attribute to be created
+        :return Employee or None
+        """
+        department = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id, attribute_type=DestinationAttributeTypeEnum.DEPARTMENT.value,
+            value__iexact=employee.detail['department']
+        ).first()
+
+        location = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id, attribute_type=DestinationAttributeTypeEnum.LOCATION.value,
+            value__iexact=employee.detail['location']
+        ).first()
+
+        general_mappings = GeneralMapping.objects.filter(workspace_id=self.workspace_id).first()
+
+        location_id = location.destination_id if location else None
+        department_id = department.destination_id if department else None
+
+        if not location_id and general_mappings:
+            location_id = general_mappings.default_location_id
+
+        if not department_id and general_mappings:
+            department_id = general_mappings.default_department_id
+
+        sage_intacct_display_name = employee.detail['full_name']
+        name = employee.detail['full_name'].split(' ')
+
+        if location_id is None:
+            logger.info("Location Id not found for employee %s in workspace %s", employee.detail['full_name'], self.workspace_id)
+            return
+
+        contact = self.create_contact(
+            contact_id=employee.value,
+            contact_name=sage_intacct_display_name,
+            email=employee.value,
+            first_name=name[0],
+            last_name=name[-1] if len(name) == 2 else None
+        )
+
+        employee_payload = {
+            'id': sage_intacct_display_name,
+            'primaryContact': {
+                'id': contact['id']
+            },
+            'location': {
+                'id': location_id
+            },
+            'department': {
+                'id': department_id
+            }
+        }
+
+        try:
+            response = self.connection.employees.post(employee_payload)
+            object_key = self.__get_object_key_from_response(response)
+        except Exception as e:
+            logger.info("Error while creating employee %s in workspace %s: %s", employee.detail['full_name'], self.workspace_id, e.response)
+            return None
+
+        if not object_key:
+            return None
+
+        return self.__get_employee_from_key(key=object_key)
+
+    def get_or_create_employee(self, source_employee: ExpenseAttribute) -> DestinationAttribute:
+        """
+        Get or create employee
+        :param source_employee: employee attribute to be created
+        :return: Destination Attribute
+        """
+        employee_name = source_employee.detail['full_name']
+        employee = self.__get_employee(employee_name=employee_name)
+
+        if not employee:
+            employee = self.create_employee(source_employee)
+
+        return self.__create_destination_attribute(
+            attribute_type=DestinationAttributeTypeEnum.EMPLOYEE.value,
+            value=employee['name'],
+            destination_id=employee['id'],
+            email=source_employee.value
+        )
+
+    def get_or_create_vendor(
+        self,
+        vendor_name: str,
+        email: str = None,
+        create: bool = False
+    ) -> Optional[DestinationAttribute]:
+        """
+        Get or create vendor
+        :param vendor_name: Name of the vendor
+        :param email: Email of the vendor
+        :param create: False to just Get and True to Get or Create if not exists
+        :return: Vendor or None
+        """
+        vendor_from_db = DestinationAttribute.objects.filter(
+            workspace_id=self.workspace_id,
+            attribute_type=DestinationAttributeTypeEnum.VENDOR.value,
+            active=True
+        ).filter(
+            Q(value__iexact=vendor_name.lower()) | Q(destination_id__iexact=vendor_name.lower())
+        ).first()
+
+        if vendor_from_db:
+            return vendor_from_db
+
+        try:
+            if create:
+                vendor_id = self.__sanitize_vendor_name(vendor_name)
+
+                if len(vendor_id) > 20:
+                    vendor_id = vendor_id[:17] + str(random.randint(100, 999))
+
+                created_vendor = self.create_vendor(vendor_id, vendor_name, email)
+
+                return self.__create_destination_attribute(
+                    attribute_type=DestinationAttributeTypeEnum.VENDOR.value,
+                    value=vendor_name,
+                    destination_id=created_vendor['id'],
+                    email=email
+                )
+
+        except BadRequestError as e:
+            logger.info("Error while creating vendor %s in workspace %s: %s", vendor_name, self.workspace_id, e.response)
+
+            try:
+                error_response = json.loads(e.response) if isinstance(e.response, str) else e.response
+            except (json.JSONDecodeError, TypeError):
+                logger.error("Failed to parse error response for vendor %s in workspace %s", vendor_name, self.workspace_id)
+                return None
+
+            if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
+                sage_intacct_errors = error_response['ia::result']['ia::error']
+
+                if 'Another record with the value' in str(sage_intacct_errors['details']):
+                    logger.info('Searching for vendor: %s in Sage Intacct in workspace %s', vendor_name, self.workspace_id)
+                    vendor_from_intacct = self.__get_vendor(vendor_name=vendor_name.replace("'", "\\'"))
+                    vendor_name = vendor_name.replace(',', '').replace("'", ' ').replace('-', ' ')[:20]
+
+                    if not vendor_from_intacct:
+                        try:
+                            vendor_id = vendor_id[:18] + '-1'
+                            vendor_from_intacct = self.create_vendor(
+                                vendor_id=vendor_id,
+                                vendor_name=vendor_name,
+                                email=email
+                            )
+                        except Exception as e:
+                            logger.error("Error while creating vendor %s in workspace %s: %s", vendor_name, self.workspace_id, e.response)
+                            return None
+
+                    if vendor_from_intacct:
+                        return self.__create_destination_attribute(
+                            attribute_type=DestinationAttributeTypeEnum.VENDOR.value,
+                            value=vendor_name,
+                            destination_id=vendor_from_intacct['id'],
+                            email=email
+                        )
