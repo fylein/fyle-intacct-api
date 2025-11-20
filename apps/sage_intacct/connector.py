@@ -24,18 +24,27 @@ from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
 from apps.sage_intacct.exports.bills import construct_bill_payload
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
+from apps.sage_intacct.exports.ap_payments import construct_ap_payment_payload
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.sage_intacct.exports.reimbursements import construct_reimbursement_payload
+from apps.sage_intacct.exports.journal_entries import construct_journal_entry_payload
 from apps.sage_intacct.exports.expense_reports import construct_expense_report_payload
 from apps.sage_intacct.exports.charge_card_transactions import construct_charge_card_transaction_payload
 from apps.sage_intacct.models import (
     Bill,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem,
     CostCode,
     CostType,
+    APPayment,
+    JournalEntry,
     BillLineitem,
     ExpenseReport,
-    ExpenseReportLineitem
+    APPaymentLineitem,
+    JournalEntryLineitem,
+    ChargeCardTransaction,
+    ExpenseReportLineitem,
+    SageIntacctReimbursement,
+    ChargeCardTransactionLineitem,
+    SageIntacctReimbursementLineitem,
 )
 from apps.workspaces.models import (
     Workspace,
@@ -1724,3 +1733,91 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
 
             if not is_exception_handled:
                 raise
+
+    def post_journal_entry(
+        self,
+        journal_entry: JournalEntry,
+        journal_entry_line_items: list[JournalEntryLineitem]
+    ) -> dict:
+        """
+        Post journal_entry  to Sage Intacct
+        :param journal_entry: JournalEntry object
+        :param journal_entry_lineitems: JournalEntryLineitem objects
+        :return: created journal_entry
+        """
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            journal_entry_payload = construct_journal_entry_payload(
+                workspace_id=self.workspace_id,
+                journal_entry=journal_entry,
+                journal_entry_line_items=journal_entry_line_items
+            )
+            created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+            return created_journal_entry
+
+        except BadRequestError as exception:
+            logger.info(exception.response)
+            is_exception_handled = False
+
+            try:
+                error_response = json.loads(exception.response) if isinstance(exception.response, str) else exception.response
+            except (json.JSONDecodeError, TypeError):
+                logger.error("Failed to parse error response for journal entry in workspace %s", self.workspace_id)
+
+            if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
+                sage_intacct_errors = error_response['ia::result']['ia::error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+
+                if any(word in str(sage_intacct_errors['details']) for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+                        journal_entry_payload = construct_journal_entry_payload(
+                            workspace_id=self.workspace_id,
+                            journal_entry=journal_entry,
+                            journal_entry_line_items=journal_entry_line_items
+                        )
+                        journal_entry_payload['postingDate'] = first_day_of_month.strftime('%Y-%m-%d')
+                        created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+                        is_exception_handled = True
+
+                        return created_journal_entry
+
+            if not is_exception_handled:
+                raise
+
+    def post_ap_payment(self, ap_payment: APPayment, ap_payment_lineitems: list[APPaymentLineitem]) -> dict:
+        """
+        Post AP Payment to Sage Intacct
+        :param ap_payment: APPayment object
+        :param ap_payment_lineitems: APPaymentLineItem objects
+        :return: created AP Payment
+        """
+        ap_payment_payload = construct_ap_payment_payload(
+            workspace_id=self.workspace_id,
+            ap_payment=ap_payment,
+            ap_payment_lineitems=ap_payment_lineitems
+        )
+        created_ap_payment = self.connection.ap_payments.post(ap_payment_payload)
+        return created_ap_payment
+
+    def post_reimbursement(
+        self,
+        reimbursement: SageIntacctReimbursement,
+        reimbursement_lineitems: list[SageIntacctReimbursementLineitem]
+    ) -> dict:
+        """
+        Post Reimbursement to Sage Intacct
+        :param reimbursement: SageIntacctReimbursement object
+        :param reimbursement_lineitems: SageIntacctReimbursementLineItem objects
+        :return: created Reimbursement
+        """
+        reimbursement_payload = construct_reimbursement_payload(
+            workspace_id=self.workspace_id,
+            reimbursement=reimbursement,
+            reimbursement_lineitems=reimbursement_lineitems
+        )
+
+        sdk_soap_connection = self.get_soap_connection()
+        created_reimbursement = sdk_soap_connection.reimbursements.post(reimbursement_payload)
+
+        return created_reimbursement
