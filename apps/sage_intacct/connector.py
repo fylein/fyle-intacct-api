@@ -21,10 +21,22 @@ from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribu
 
 from apps.workspaces.helpers import get_app_name
 from apps.fyle.models import DependentFieldSetting
-from apps.sage_intacct.models import CostCode, CostType
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
+from apps.sage_intacct.exports.bills import construct_bill_payload
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.sage_intacct.exports.expense_reports import construct_expense_report_payload
+from apps.sage_intacct.exports.charge_card_transactions import construct_charge_card_transaction_payload
+from apps.sage_intacct.models import (
+    Bill,
+    ChargeCardTransaction,
+    ChargeCardTransactionLineitem,
+    CostCode,
+    CostType,
+    BillLineitem,
+    ExpenseReport,
+    ExpenseReportLineitem
+)
 from apps.workspaces.models import (
     Workspace,
     Configuration,
@@ -1556,3 +1568,159 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                             destination_id=vendor_from_intacct['id'],
                             email=email
                         )
+
+    def post_expense_report(
+        self,
+        expense_report: ExpenseReport,
+        expense_report_line_items: list[ExpenseReportLineitem]
+    ) -> None:
+        """
+        Post expense report to Sage Intacct
+        :param expense_report: ExpenseReport object
+        :param expense_report_line_items: ExpenseReportLineitem objects
+        :return: None
+        """
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            expense_report_payload = construct_expense_report_payload(
+                workspace_id=self.workspace_id,
+                expense_report=expense_report,
+                expense_report_line_items=expense_report_line_items
+            )
+            created_expense_report = self.connection.expense_reports.post(expense_report_payload)
+            return created_expense_report
+
+        except BadRequestError as e:
+            logger.info(e.response)
+            is_exception_handled = False
+
+            try:
+                error_response = json.loads(e.response) if isinstance(e.response, str) else e.response
+            except (json.JSONDecodeError, TypeError):
+                logger.error("Failed to parse error response for expense report in workspace %s", self.workspace_id)
+
+            if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
+                sage_intacct_errors = error_response['ia::result']['ia::error']
+
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+                if any(word in str(sage_intacct_errors['details']) for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+
+                        expense_report_payload = construct_expense_report_payload(
+                            workspace_id=self.workspace_id,
+                            expense_report=expense_report,
+                            expense_report_line_items=expense_report_line_items
+                        )
+                        expense_report_payload['createdDate'] = first_day_of_month.strftime('%Y-%m-%d'),
+                        created_expense_report = self.connection.expense_reports.post(expense_report_payload)
+                        is_exception_handled = True
+
+                        return created_expense_report
+
+            if not is_exception_handled:
+                raise
+
+    def post_bill(
+        self,
+        bill: Bill,
+        bill_line_items: list[BillLineitem]
+    ) -> dict:
+        """
+        Post bill to Sage Intacct
+        :param bill: Bill object
+        :param bill_line_items: BillLineitem objects
+        :return: created bill
+        """
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            bill_payload = construct_bill_payload(
+                workspace_id=self.workspace_id,
+                bill=bill,
+                bill_line_items=bill_line_items
+            )
+            created_bill = self.connection.bills.post(bill_payload)
+            return created_bill
+
+        except BadRequestError as e:
+            logger.info(e.response)
+            is_exception_handled = False
+
+            try:
+                error_response = json.loads(e.response) if isinstance(e.response, str) else e.response
+            except (json.JSONDecodeError, TypeError):
+                logger.error("Failed to parse error response for bill in workspace %s", self.workspace_id)
+
+            if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
+                sage_intacct_errors = error_response['ia::result']['ia::error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+
+                if any(word in str(sage_intacct_errors['details']) for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+
+                        bill_payload = construct_bill_payload(
+                            workspace_id=self.workspace_id,
+                            bill=bill,
+                            bill_line_items=bill_line_items
+                        )
+                        bill_payload['createdDate'] = first_day_of_month.strftime('%Y-%m-%d')
+                        created_bill = self.connection.bills.post(bill_payload)
+                        is_exception_handled = True
+
+                        return created_bill
+
+            if not is_exception_handled:
+                raise
+
+    def post_charge_card_transaction(
+        self,
+        charge_card_transaction: ChargeCardTransaction,
+        charge_card_transaction_line_items: list[ChargeCardTransactionLineitem]
+    ) -> dict:
+        """
+        Post charge card transaction to Sage Intacct
+        :param charge_card_transaction: ChargeCardTransaction object
+        :param charge_card_transaction_line_items: ChargeCardTransactionLineitem objects
+        :return: created charge card transaction
+        """
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            charge_card_transaction_payload = construct_charge_card_transaction_payload(
+                workspace_id=self.workspace_id,
+                charge_card_transaction=charge_card_transaction,
+                charge_card_transaction_line_items=charge_card_transaction_line_items
+            )
+            created_charge_card_transaction = self.connection.charge_card_transactions.post(charge_card_transaction_payload)
+            return created_charge_card_transaction
+
+        except BadRequestError as e:
+            logger.info(e.response)
+            is_exception_handled = False
+
+            try:
+                error_response = json.loads(e.response) if isinstance(e.response, str) else e.response
+            except (json.JSONDecodeError, TypeError):
+                logger.error("Failed to parse error response for charge card transaction in workspace %s", self.workspace_id)
+
+            if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
+                sage_intacct_errors = error_response['ia::result']['ia::error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+
+                if any(word in str(sage_intacct_errors['details']) for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+
+                        charge_card_transaction_payload = construct_charge_card_transaction_payload(
+                            workspace_id=self.workspace_id,
+                            charge_card_transaction=charge_card_transaction,
+                            charge_card_transaction_lineitems=charge_card_transaction_line_items
+                        )
+                        charge_card_transaction_payload['txnDate'] = first_day_of_month.strftime('%Y-%m-%d')
+                        created_charge_card_transaction = self.connection.charge_card_transactions.post(charge_card_transaction_payload)
+                        is_exception_handled = True
+
+                        return created_charge_card_transaction
+
+            if not is_exception_handled:
+                raise
