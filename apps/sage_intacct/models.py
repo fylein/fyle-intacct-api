@@ -1,38 +1,26 @@
 from datetime import datetime
 from typing import Optional, Union
 
-from django.db import models
 from django.conf import settings
-from django.db.models import JSONField, Value, CharField
+from django.db import models
+from django.db.models import CharField, JSONField, Value
 from django.db.models.functions import Concat
 from django.utils.module_loading import import_string
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, Mapping, MappingSetting
 
 from apps.exceptions import ValueErrorWithResponse
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_mappings.models import (
-    Mapping,
-    MappingSetting,
-    CategoryMapping,
-    EmployeeMapping,
-    DestinationAttribute
-)
-
-from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    FyleCredential
-)
 from apps.fyle.models import (
+    DependentFieldSetting,
     Expense,
-    ExpenseGroup,
-    Reimbursement,
     ExpenseAttribute,
+    ExpenseGroup,
     ExpenseGroupSettings,
-    DependentFieldSetting
+    Reimbursement,
 )
-
+from apps.mappings.models import GeneralMapping
+from apps.workspaces.models import Configuration, FyleCredential, Workspace
 
 allocation_mapping = {
     'LOCATIONID': 'location_id',
@@ -689,13 +677,13 @@ def get_memo_or_purpose(
             "expense_link": expense_link,
         }
 
-    purpose = ""
+    memo_parts = []
 
-    for index, field in enumerate(memo_structure):
-        if field in details:
-            purpose += details[field]
-            if index + 1 != len(memo_structure):
-                purpose = "{0} - ".format(purpose)
+    for field in memo_structure:
+        if field in details and details[field]:
+            memo_parts.append(details[field])
+
+    purpose = ' - '.join(memo_parts)
 
     if export_table:
         count = export_table.objects.filter(
