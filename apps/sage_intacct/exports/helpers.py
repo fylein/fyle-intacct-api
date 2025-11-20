@@ -1,7 +1,8 @@
+from typing import Optional
 from fyle_accounting_mappings.models import DestinationAttribute
 
-from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
+from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.models import (
     BillLineitem,
     JournalEntryLineitem,
@@ -59,3 +60,33 @@ def get_tax_solution_id_or_none(
             tax_solution_id = destination_attribute.detail['tax_solution_id']
 
         return tax_solution_id
+
+
+def get_location_id_for_journal_entry(workspace_id: int) -> Optional[str]:
+    """
+    Get location ID based on configuration.
+    :param workspace_id: Workspace ID
+    :return: Location ID or None if not found
+    """
+    general_mapping = (
+        GeneralMapping.objects
+        .filter(workspace_id=workspace_id, default_location_id__isnull=False)
+        .values('default_location_id')
+        .first()
+    )
+    if general_mapping:
+        return general_mapping['default_location_id']
+
+    location_mapping = (
+        LocationEntityMapping.objects
+        .filter(workspace_id=workspace_id)
+        .exclude(location_entity_name='Top Level')
+        .values('location_entity_name', 'destination_id')
+        .first()
+    )
+    if location_mapping:
+        return location_mapping['destination_id']
+
+    return None
+
+

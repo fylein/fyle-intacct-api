@@ -25,6 +25,7 @@ from apps.sage_intacct.enums import DestinationAttributeTypeEnum
 from apps.sage_intacct.exports.bills import construct_bill_payload
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.sage_intacct.exports.journal_entries import construct_journal_entry_payload
 from apps.sage_intacct.exports.expense_reports import construct_expense_report_payload
 from apps.sage_intacct.exports.charge_card_transactions import construct_charge_card_transaction_payload
 from apps.sage_intacct.models import (
@@ -35,7 +36,9 @@ from apps.sage_intacct.models import (
     CostType,
     BillLineitem,
     ExpenseReport,
-    ExpenseReportLineitem
+    ExpenseReportLineitem,
+    JournalEntry,
+    JournalEntryLineitem
 )
 from apps.workspaces.models import (
     Workspace,
@@ -1721,6 +1724,58 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                         is_exception_handled = True
 
                         return created_charge_card_transaction
+
+            if not is_exception_handled:
+                raise
+
+
+    def post_journal_entry(
+        self,
+        journal_entry: JournalEntry,
+        journal_entry_line_items: list[JournalEntryLineitem]
+    ) -> dict:
+        """
+        Post journal_entry  to Sage Intacct
+        :param journal_entry: JournalEntry object
+        :param journal_entry_lineitems: JournalEntryLineitem objects
+        :return: created journal_entry
+        """
+        configuration = Configuration.objects.get(workspace_id=self.workspace_id)
+        try:
+            journal_entry_payload = construct_journal_entry_payload(
+                workspace_id=self.workspace_id,
+                journal_entry=journal_entry,
+                journal_entry_line_items=journal_entry_line_items
+            )
+            created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+            return created_journal_entry
+
+        except BadRequestError as exception:
+            logger.info(exception.response)
+            is_exception_handled = False
+
+            try:
+                error_response = json.loads(exception.response) if isinstance(exception.response, str) else exception.response
+            except (json.JSONDecodeError, TypeError):
+                logger.error("Failed to parse error response for journal entry in workspace %s", self.workspace_id)
+
+            if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
+                sage_intacct_errors = error_response['ia::result']['ia::error']
+                error_words_list = ['period', 'closed', 'Date must be on or after']
+                
+                if any(word in str(sage_intacct_errors['details']) for word in error_words_list):
+                    if configuration.change_accounting_period:
+                        first_day_of_month = datetime.today().date().replace(day=1)
+                        journal_entry_payload = construct_journal_entry_payload(
+                            workspace_id=self.workspace_id,
+                            journal_entry=journal_entry,
+                            journal_entry_line_items=journal_entry_line_items
+                        )
+                        journal_entry_payload['postingDate'] = first_day_of_month.strftime('%Y-%m-%d')
+                        created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
+                        is_exception_handled = True
+
+                        return created_journal_entry
 
             if not is_exception_handled:
                 raise
