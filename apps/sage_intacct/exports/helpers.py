@@ -89,4 +89,3 @@ def get_location_id_for_journal_entry(workspace_id: int) -> Optional[str]:
         return location_mapping['destination_id']
 
     return None
-
