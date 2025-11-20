@@ -24,21 +24,24 @@ from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
 from apps.sage_intacct.exports.bills import construct_bill_payload
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
+from apps.sage_intacct.exports.ap_payments import construct_ap_payment_payload
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.sage_intacct.exports.journal_entries import construct_journal_entry_payload
 from apps.sage_intacct.exports.expense_reports import construct_expense_report_payload
 from apps.sage_intacct.exports.charge_card_transactions import construct_charge_card_transaction_payload
 from apps.sage_intacct.models import (
     Bill,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem,
     CostCode,
     CostType,
+    APPayment,
+    JournalEntry,
     BillLineitem,
     ExpenseReport,
+    APPaymentLineitem,
+    JournalEntryLineitem,
+    ChargeCardTransaction,
     ExpenseReportLineitem,
-    JournalEntry,
-    JournalEntryLineitem
+    ChargeCardTransactionLineitem,
 )
 from apps.workspaces.models import (
     Workspace,
@@ -1778,3 +1781,18 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
 
             if not is_exception_handled:
                 raise
+
+    def post_ap_payment(self, ap_payment: APPayment, ap_payment_lineitems: list[APPaymentLineitem]) -> dict:
+        """
+        Post AP Payment to Sage Intacct
+        :param ap_payment: APPayment object
+        :param ap_payment_lineitems: APPaymentLineItem objects
+        :return: created AP Payment
+        """
+        ap_payment_payload = construct_ap_payment_payload(
+            workspace_id=self.workspace_id,
+            ap_payment=ap_payment,
+            ap_payment_lineitems=ap_payment_lineitems
+        )
+        created_ap_payment = self.connection.ap_payments.post(ap_payment_payload)
+        return created_ap_payment
