@@ -1,4 +1,5 @@
 from typing import Optional
+
 from fyle_accounting_mappings.models import DestinationAttribute
 
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
@@ -88,5 +89,4 @@ def get_location_id_for_journal_entry(workspace_id: int) -> Optional[str]:
         return location_mapping['destination_id']
 
     return None
-
 

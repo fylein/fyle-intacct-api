@@ -82,7 +82,6 @@ def construct_debit_line_payload(
     :param general_mappings: GeneralMapping object
     :return: constructed debit line payload
     """
-
     debit_line_payloads = []
 
     for line_item in line_items:
@@ -150,7 +149,7 @@ def construct_debit_line_payload(
                         'taxDetail': {
                             'id': line_item.tax_code if (line_item.tax_code and line_item.tax_amount) else general_mappings.default_tax_code_id
                         }
-                    }] 
+                    }]
                 }
                 if line_item.amount >= 0 else {}
             )

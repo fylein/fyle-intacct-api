@@ -1728,7 +1728,6 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
             if not is_exception_handled:
                 raise
 
-
     def post_journal_entry(
         self,
         journal_entry: JournalEntry,
@@ -1762,7 +1761,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
             if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
                 sage_intacct_errors = error_response['ia::result']['ia::error']
                 error_words_list = ['period', 'closed', 'Date must be on or after']
-                
+
                 if any(word in str(sage_intacct_errors['details']) for word in error_words_list):
                     if configuration.change_accounting_period:
                         first_day_of_month = datetime.today().date().replace(day=1)
