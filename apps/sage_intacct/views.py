@@ -1,32 +1,28 @@
-import jwt
 import logging
-import requests
 
-from django.db.models import Q
+import jwt
+import requests
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import Q
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_mappings.models import DestinationAttribute
+from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
 from rest_framework import generics
-from rest_framework.views import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
-
-from rest_framework.exceptions import ValidationError
+from rest_framework.views import status
 from sageintacctsdk.exceptions import InvalidTokenError
-from fyle_accounting_mappings.models import DestinationAttribute
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 
-from apps.workspaces.enums import CacheKeyEnum
 from apps.sage_intacct.helpers import sync_dimensions
-from apps.sage_intacct.serializers import SageIntacctFieldSerializer
+from apps.sage_intacct.models import SageIntacctAttributesCount
+from apps.sage_intacct.serializers import SageIntacctAttributesCountSerializer, SageIntacctFieldSerializer
+from apps.workspaces.enums import CacheKeyEnum
+from apps.workspaces.models import Configuration, SageIntacctCredential, Workspace
 from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
-from apps.workspaces.models import (
-    Workspace,
-    Configuration,
-    SageIntacctCredential
-)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -335,3 +331,13 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
                     'message': 'Error decoding refresh token'
                 }
             )
+
+
+class SageIntacctAttributesCountView(generics.RetrieveAPIView):
+    """
+    Sage Intacct Attributes Count view
+    """
+    queryset = SageIntacctAttributesCount.objects.all()
+    serializer_class = SageIntacctAttributesCountSerializer
+    lookup_field = 'workspace_id'
+    lookup_url_kwarg = 'workspace_id'

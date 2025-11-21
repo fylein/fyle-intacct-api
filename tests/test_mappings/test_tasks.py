@@ -247,6 +247,11 @@ def test_auto_map_employees_with_no_privilege_error(mocker, db):
     workspace_id = 1
 
     mocker.patch(
+        'sageintacctsdk.apis.Employees.count',
+        side_effect=NoPrivilegeError('No privilege')
+    )
+
+    mocker.patch(
         'sageintacctsdk.apis.Employees.get_all_generator',
         side_effect=NoPrivilegeError('No privilege')
     )
@@ -318,6 +323,10 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
         'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=intacct_data['get_vendors']
     )
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.count',
+        return_value=1
+    )
 
     mocker.patch(
         'sageintacctsdk.apis.CostTypes.get_all_generator',
@@ -331,6 +340,10 @@ def test_sync_sage_intacct_attributes(mocker, db, create_dependent_field_setting
     mocker.patch(
         'sageintacctsdk.apis.Allocations.get_all_generator',
         return_value=[]
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Allocations.count',
+        return_value=0
     )
 
     mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')

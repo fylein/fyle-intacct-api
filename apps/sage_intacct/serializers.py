@@ -1,14 +1,14 @@
-from rest_framework import serializers
-
 from fyle_accounting_mappings.models import DestinationAttribute
+from rest_framework import serializers
 
 from apps.sage_intacct.models import (
     Bill,
     BillLineitem,
+    ChargeCardTransaction,
+    ChargeCardTransactionLineitem,
     ExpenseReport,
     ExpenseReportLineitem,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem
+    SageIntacctAttributesCount,
 )
 
 
@@ -73,3 +73,12 @@ class SageIntacctFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = DestinationAttribute
         fields = ['attribute_type', 'display_name']
+
+
+class SageIntacctAttributesCountSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Sage Intacct Attributes Count
+    """
+    class Meta:
+        model = SageIntacctAttributesCount
+        exclude = ['user_defined_dimensions_details']

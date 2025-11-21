@@ -1,49 +1,44 @@
 import logging
 from datetime import datetime
 
-from fyle_accounting_mappings.models import (
-    Mapping,
-    MappingSetting,
-    EmployeeMapping,
-    ExpenseAttribute,
-    DestinationAttribute
-)
+from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping, MappingSetting
 
-from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
-from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
-from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
+from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.models import (
-    Bill,
     APPayment,
-    CostType,
-    JournalEntry,
-    BillLineitem,
-    ExpenseReport,
     APPaymentLineitem,
-    JournalEntryLineitem,
-    ExpenseReportLineitem,
+    Bill,
+    BillLineitem,
     ChargeCardTransaction,
-    SageIntacctReimbursement,
     ChargeCardTransactionLineitem,
+    CostType,
+    ExpenseReport,
+    ExpenseReportLineitem,
+    JournalEntry,
+    JournalEntryLineitem,
+    SageIntacctAttributesCount,
+    SageIntacctReimbursement,
     SageIntacctReimbursementLineitem,
-    get_memo,
-    get_ccc_account_id,
-    get_item_id_or_none,
-    get_memo_or_purpose,
-    get_task_id_or_none,
-    get_transaction_date,
-    get_class_id_or_none,
-    get_project_id_or_none,
-    get_customer_id_or_none,
-    get_location_id_or_none,
-    get_tax_code_id_or_none,
-    get_cost_type_id_or_none,
-    get_department_id_or_none,
     get_allocation_id_or_none,
+    get_ccc_account_id,
+    get_class_id_or_none,
+    get_cost_type_id_or_none,
+    get_customer_id_or_none,
+    get_department_id_or_none,
     get_intacct_employee_object,
-    get_user_defined_dimension_object
+    get_item_id_or_none,
+    get_location_id_or_none,
+    get_memo,
+    get_memo_or_purpose,
+    get_project_id_or_none,
+    get_task_id_or_none,
+    get_tax_code_id_or_none,
+    get_transaction_date,
+    get_user_defined_dimension_object,
 )
+from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
+from apps.workspaces.models import Configuration, SageIntacctCredential, Workspace
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -1394,3 +1389,24 @@ def test_get_active_sage_intacct_credentials(mocker):
     result = SageIntacctCredential.get_active_sage_intacct_credentials(123)
     mock_get.assert_called_once_with(workspace_id=123, is_expired=False)
     assert result == mock_cred
+
+
+def test_sage_intacct_attributes_count_model(db):
+    """
+    Test sage intacct attributes count model
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+    SageIntacctAttributesCount.objects.filter(workspace_id=workspace_id).delete()
+    count_record = SageIntacctAttributesCount.objects.create(workspace=workspace)
+    assert count_record.accounts_count == 0
+    assert count_record.vendors_count == 0
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='accounts', count=2500)
+    count_record.refresh_from_db()
+    assert count_record.accounts_count == 2500
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='vendors', count=5000)
+    count_record.refresh_from_db()
+    assert count_record.vendors_count == 5000
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='accounts', count=3000)
+    count_record.refresh_from_db()
+    assert count_record.accounts_count == 3000
