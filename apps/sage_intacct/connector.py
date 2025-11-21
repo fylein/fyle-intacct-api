@@ -1821,3 +1821,99 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
         created_reimbursement = sdk_soap_connection.reimbursements.post(reimbursement_payload)
 
         return created_reimbursement
+
+    def get_or_create_attachments_folder(self) -> None:
+        """
+        Get or Create attachments folder in Sage Intacct
+        """
+        params = {
+            'fields': ['id', 'status'],
+            'filters': [
+                {
+                    '$eq': {
+                        'id': 'FyleAttachments'
+                    }
+                }
+            ]
+        }
+        attachment_folder_generator = self.connection.attachment_folders.get_all_generator(**params)
+
+        for attachment_folder in attachment_folder_generator:
+            if not attachment_folder:
+                return self.connection.attachment_folders.post({
+                    'id': 'FyleAttachments'
+                })
+
+    def post_attachments(self, attachments: list[dict], attachment_id: str, attachment_number: int) -> str | bool:
+        """
+        Post attachments to Sage Intacct
+        :param attachments: List of attachment dictionaries
+        :param attachment_id: Supporting document ID to be used in Sage Intacct
+        :param attachment_number: Number used to uniquely name attachments
+        :return: attachment_id if first attachment is successfully posted, else False
+        """
+        if not attachments:
+            return False
+
+        for attachment in attachments:
+            payload = {
+                'id': attachment_id,
+                'name': f'{attachment["id"]} - {attachment_number}',
+                'folder': {
+                    'id': 'FyleAttachments'
+                },
+                'files': [{
+                    'name': attachment['name'],
+                    'data': attachment['download_url'],
+                }]
+            }
+
+            if attachment_number == 1:
+                created_attachment = self.connection.attachments.post(payload)
+            else:
+                try:
+                    self.connection.attachments.update(payload)
+                except Exception:
+                    logger.info(f'Error updating attachment {attachment_number} for supdoc {attachment_id}')
+                    continue
+
+        if attachment_number == 1 and created_attachment['ia::result'] and created_attachment['ia::result'].get('key'):
+            return attachment_id
+
+        return False
+
+    def update_expense_report_attachments(self, object_key: str, attachment_id: str) -> dict:
+        """
+        Map posted attachment with Sage Intacct Object
+        :param object_key: expense report id
+        :param attachment_id: attachments id
+        :return: response from sage intacct
+        """
+        return self.connection.expense_reports.update_attachment(object_id=object_key, attachment_id=attachment_id)
+
+    def update_bill_attachments(self, object_key: str, attachment_id: str) -> dict:
+        """
+        Map posted attachment with Sage Intacct Object
+        :param object_key: bill id
+        :param attachment_id: attachments id
+        :return: response from sage intacct
+        """
+        return self.connection.bills.update_attachment(object_id=object_key, attachment_id=attachment_id)
+
+    def update_charge_card_transaction_attachments(self, object_key: str, attachment_id: str) -> dict:
+        """
+        Map posted attachment with Sage Intacct Object
+        :param object_key: charge card transaction id
+        :param attachment_id: attachments id
+        :return: response from sage intacct
+        """
+        return self.connection.charge_card_transactions.update_attachment(object_id=object_key, attachment_id=attachment_id)
+
+    def update_journal_entry_attachments(self, object_key: str, attachment_id: str) -> dict:
+        """
+        Map posted attachment with Sage Intacct Object
+        :param object_key: journal entry id
+        :param attachment_id: attachments id
+        :return: response from sage intacct
+        """
+        return self.connection.journal_entries.update_attachment(object_id=object_key, attachment_id=attachment_id)
