@@ -31,6 +31,7 @@ from apps.sage_intacct.models import (
     ExpenseReportLineitem,
     JournalEntry,
     JournalEntryLineitem,
+    SageIntacctAttributesCount,
     SageIntacctReimbursement,
     SageIntacctReimbursementLineitem,
 )
@@ -42,21 +43,8 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-SYNC_UPPER_LIMIT = {
-    'items': 5000,
-    'classes': 1000,
-    'accounts': 3000,
-    'vendors': 20000,
-    'locations': 1000,
-    'projects': 25000,
-    'tax_details': 200,
-    'customers': 10000,
-    'cost_codes': 10000,
-    'departments': 1000,
-    'cost_types': 500000,
-    'expense_types': 1000,
-    'user_defined_dimensions': 5000
-}
+SYNC_UPPER_LIMIT = 30000
+COST_TYPES_LIMIT = 500000
 
 ATTRIBUTE_DISABLE_CALLBACK_PATH = {
     'PROJECT': 'fyle_integrations_imports.modules.projects.disable_projects',
@@ -188,16 +176,18 @@ class SageIntacctConnector:
 
         return tax_exclusive_amount, tax_amount
 
-    def is_sync_allowed(self, attribute_type: str, attribute_count: int) -> bool:
+    def is_sync_allowed(self, attribute_count: int, attribute_type: str = None) -> bool:
         """
         Checks if the sync is allowed
-        :param attribute_type: Attribute Type
-        :param attribute_count: Attribute Count
-        :return: True if sync is allowed else False
+        :param attribute_count: Number of attributes to sync
+        :param attribute_type: Type of attribute (e.g., 'cost_types'). Optional, used for exceptions.
+        :return: True if sync allowed, False otherwise
         """
-        if attribute_count > SYNC_UPPER_LIMIT[attribute_type]:
-            workspace_created_at = Workspace.objects.get(id=self.workspace_id).created_at
-            if workspace_created_at > timezone.make_aware(datetime(2024, 10, 1), timezone.get_current_timezone()):
+        limit = COST_TYPES_LIMIT if attribute_type == 'cost_types' else SYNC_UPPER_LIMIT
+
+        if attribute_count > limit:
+            workspace = Workspace.objects.get(id=self.workspace_id)
+            if workspace.created_at > timezone.make_aware(datetime(2024, 10, 1), timezone.get_current_timezone()):
                 return False
             else:
                 return True
@@ -241,8 +231,15 @@ class SageIntacctConnector:
         """
         attribute_count = self.connection.accounts.count()
 
-        if not self.is_sync_allowed(attribute_type = 'accounts', attribute_count=attribute_count):
-            logger.info('Skipping sync of accounts for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='accounts',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of accounts for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['TITLE', 'ACCOUNTNO', 'ACCOUNTTYPE', 'STATUS']
@@ -290,8 +287,16 @@ class SageIntacctConnector:
         Get departments
         """
         attribute_count = self.connection.departments.count()
-        if not self.is_sync_allowed(attribute_type = 'departments', attribute_count = attribute_count):
-            logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='departments',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of department for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['TITLE', 'DEPARTMENTID', 'STATUS']
@@ -333,8 +338,16 @@ class SageIntacctConnector:
         Get expense types
         """
         attribute_count = self.connection.expense_types.count()
-        if not self.is_sync_allowed(attribute_type = 'expense_types', attribute_count = attribute_count):
-            logger.info('Skipping sync of expense_type for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='expense_types',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of expense_type for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['DESCRIPTION', 'ACCOUNTLABEL', 'GLACCOUNTNO', 'GLACCOUNTTITLE', 'STATUS']
@@ -388,6 +401,21 @@ class SageIntacctConnector:
         """
         Get charge card accounts
         """
+        attribute_count = self.connection.charge_card_accounts.count(
+            and_filter=[('equalto', 'LIABILITYTYPE', 'Credit'), ('equalto', 'STATUS', 'active')]
+        )
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='charge_card_accounts',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of charge_card_accounts for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
+            return
+
         charge_card_accounts = self.connection.charge_card_accounts.get_by_query(and_filter=[('equalto', 'LIABILITYTYPE', 'Credit'), ('equalto', 'STATUS', 'active')])
 
         charge_card_accounts_attributes = []
@@ -410,6 +438,19 @@ class SageIntacctConnector:
         """
         Get Payment accounts
         """
+        attribute_count = self.connection.checking_accounts.count(field='STATUS', value='active')
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='payment_accounts',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of payment_accounts for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
+            return
+
         fields = ['BANKNAME', 'BANKACCOUNTID']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PAYMENT_ACCOUNT')
         payment_account_generator = self.connection.checking_accounts.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
@@ -436,8 +477,16 @@ class SageIntacctConnector:
         Sync of Sage Intacct Cost Types
         """
         attribute_count = self.connection.cost_types.count()
-        if not self.is_sync_allowed(attribute_type = 'cost_types', attribute_count = attribute_count):
-            logger.info('Skipping sync of cost_types for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='cost_types',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count, attribute_type='cost_types'):
+            logger.info('Skipping sync of cost_types for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, COST_TYPES_LIMIT)
             return
 
         args = {
@@ -467,8 +516,15 @@ class SageIntacctConnector:
         attribute_count = self.connection.tasks.count(field=None, value=None)
         logger.info("Cost Code count for workspace %s: %s", self.workspace_id, attribute_count)
 
-        if not self.is_sync_allowed(attribute_type = 'cost_codes', attribute_count = attribute_count):
-            logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='cost_codes',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of tasks for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['RECORDNO', 'TASKID', 'NAME', 'PROJECTID', 'PROJECTNAME']
@@ -493,8 +549,16 @@ class SageIntacctConnector:
         Get projects
         """
         attribute_count = self.connection.projects.count()
-        if not self.is_sync_allowed(attribute_type = 'projects', attribute_count = attribute_count):
-            logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='projects',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
@@ -542,8 +606,16 @@ class SageIntacctConnector:
         Get items
         """
         attribute_count = self.connection.items.count()
-        if not self.is_sync_allowed(attribute_type = 'items', attribute_count = attribute_count):
-            logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='items',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of items for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['NAME', 'ITEMID', 'ITEMTYPE', 'STATUS']
@@ -586,8 +658,16 @@ class SageIntacctConnector:
         Get locations
         """
         attribute_count = self.connection.locations.count()
-        if not self.is_sync_allowed(attribute_type = 'locations', attribute_count = attribute_count):
-            logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='locations',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of locations for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
         fields = ['NAME', 'LOCATIONID', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='LOCATION')
@@ -674,6 +754,19 @@ class SageIntacctConnector:
         """
         Get Expense Payment Types
         """
+        attribute_count = self.connection.expense_payment_types.count(field='STATUS', value='active')
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='expense_payment_types',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of expense_payment_types for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
+            return
+
         fields = ['NAME', 'RECORDNO', 'NONREIMBURSABLE']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EXPENSE_PAYMENT_TYPE')
         expense_payment_type_generator = self.connection.expense_payment_types.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
@@ -702,6 +795,19 @@ class SageIntacctConnector:
         """
         Get employees
         """
+        attribute_count = self.connection.employees.count(field='STATUS', value='active')
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='employees',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of employees for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
+            return
+
         fields = ['CONTACT.EMAIL1', 'CONTACT.PRINTAS', 'DEPARTMENTID', 'CONTACT.CONTACTNAME', 'EMPLOYEEID', 'LOCATIONID']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='EMPLOYEE')
         employee_generator = self.connection.employees.get_all_generator(field='STATUS', value='active', fields=fields, updated_at=latest_updated_at if latest_updated_at else None)
@@ -735,8 +841,24 @@ class SageIntacctConnector:
         """
         Sync allocation entries from intacct
         """
-        allocation_attributes = []
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
+        if latest_updated_at:
+            attribute_count = self.connection.allocations.count(updated_at=latest_updated_at)
+        else:
+            attribute_count = self.connection.allocations.count(field='STATUS', value='active')
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='allocations',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of allocations for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
+            return
+
+        allocation_attributes = []
         params = {}
         if latest_updated_at:
             params['updated_at'] = latest_updated_at
@@ -783,6 +905,7 @@ class SageIntacctConnector:
         """
         dimensions = self.connection.dimensions.get_all()
         dimension_details = []
+        udd_counts = {}
 
         for dimension in dimensions:
             dimension_details.append({
@@ -798,10 +921,12 @@ class SageIntacctConnector:
                     dimension_name = dimension['objectName'].upper().replace(" ", "_")
                     dimension_count = self.connection.dimension_values.count(dimension_name=dimension['objectName'])
 
-                    is_sync_allowed = self.is_sync_allowed(attribute_type = 'user_defined_dimensions', attribute_count = dimension_count)
+                    udd_counts[dimension_name] = dimension_count
+                    is_sync_allowed = self.is_sync_allowed(attribute_count=dimension_count)
 
                     if not is_sync_allowed:
-                        logger.info('Skipping sync of UDD %s for workspace %s as it has %s counts which is over the limit', dimension_name, self.workspace_id, dimension_count)
+                        logger.info('Skipping sync of UDD %s for workspace %s as it has %s counts which is over the limit of %s',
+                                    dimension_name, self.workspace_id, dimension_count, SYNC_UPPER_LIMIT)
                         continue
 
                     dimension_values = self.connection.dimension_values.get_all(dimension['objectName'])
@@ -821,6 +946,12 @@ class SageIntacctConnector:
                 except Exception as e:
                     logger.error("Error while syncing user defined dimension %s for workspace %s: %s", dimension_name, self.workspace_id, e)
 
+        sage_intacct_count, _ = SageIntacctAttributesCount.objects.get_or_create(
+            workspace_id=self.workspace_id
+        )
+        sage_intacct_count.user_defined_dimensions_details = udd_counts
+        sage_intacct_count.save(update_fields=['user_defined_dimensions_details', 'updated_at'])
+
         DimensionDetail.bulk_create_or_update_dimension_details(
             dimensions=dimension_details,
             workspace_id=self.workspace_id,
@@ -834,8 +965,16 @@ class SageIntacctConnector:
         Get classes
         """
         attribute_count = self.connection.classes.count()
-        if not self.is_sync_allowed(attribute_type = 'classes', attribute_count = attribute_count):
-            logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='classes',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of classes for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['NAME', 'CLASSID', 'STATUS']
@@ -870,8 +1009,16 @@ class SageIntacctConnector:
         Get Customers
         """
         attribute_count = self.connection.customers.count()
-        if not self.is_sync_allowed(attribute_type = 'customers', attribute_count = attribute_count):
-            logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='customers',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of customers for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         fields = ['NAME', 'CUSTOMERID', 'STATUS']
@@ -907,8 +1054,16 @@ class SageIntacctConnector:
         Get and Sync Tax Details
         """
         attribute_count = self.connection.tax_details.count()
-        if not self.is_sync_allowed(attribute_type = 'tax_details', attribute_count = attribute_count):
-            logger.info('Skipping sync of tax_details for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='tax_details',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of tax_details for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
         attributes = []
@@ -1128,6 +1283,19 @@ class SageIntacctConnector:
         """
         Get vendors
         """
+        attribute_count = self.connection.vendors.count()
+
+        SageIntacctAttributesCount.update_attribute_count(
+            workspace_id=self.workspace_id,
+            attribute_type='vendors',
+            count=attribute_count
+        )
+
+        if not self.is_sync_allowed(attribute_count=attribute_count):
+            logger.info('Skipping sync of vendors for workspace %s as it has %s counts which is over the limit of %s',
+                        self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
+            return
+
         fields = ['DISPLAYCONTACT.EMAIL1', 'NAME', 'VENDORID', 'STATUS']
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
