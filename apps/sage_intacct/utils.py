@@ -841,11 +841,7 @@ class SageIntacctConnector:
         """
         Sync allocation entries from intacct
         """
-        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
-        if latest_updated_at:
-            attribute_count = self.connection.allocations.count(updated_at=latest_updated_at)
-        else:
-            attribute_count = self.connection.allocations.count(field='STATUS', value='active')
+        attribute_count = self.connection.allocations.count(field='STATUS', value='active')
 
         SageIntacctAttributesCount.update_attribute_count(
             workspace_id=self.workspace_id,
@@ -857,6 +853,10 @@ class SageIntacctConnector:
             logger.info('Skipping sync of allocations for workspace %s as it has %s counts which is over the limit of %s',
                         self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
+
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
+        if latest_updated_at:
+            attribute_count = self.connection.allocations.count(updated_at=latest_updated_at)
 
         allocation_attributes = []
         params = {}
