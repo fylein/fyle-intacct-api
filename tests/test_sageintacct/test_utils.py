@@ -2134,7 +2134,6 @@ def test_sync_methods_persist_count(mocker, db, create_dependent_field_setting):
     Test sync methods persist count
     """
     workspace_id = 1
-    SageIntacctAttributesCount.objects.filter(workspace_id=workspace_id).delete()
     mocker.patch('sageintacctsdk.apis.Accounts.count', return_value=2500)
     mocker.patch('sageintacctsdk.apis.Accounts.get_all_generator', return_value=data['get_accounts'])
     mock_platform = mocker.patch('fyle_integrations_imports.modules.categories.PlatformConnector')

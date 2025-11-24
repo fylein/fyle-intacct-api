@@ -10263,6 +10263,7 @@ COPY public.reimbursements (id, settlement_id, reimbursement_id, state, created_
 --
 
 COPY public.sage_intacct_attributes_count (id, accounts_count, items_count, vendors_count, employees_count, departments_count, classes_count, customers_count, projects_count, locations_count, expense_types_count, tax_details_count, cost_codes_count, cost_types_count, user_defined_dimensions_details, charge_card_accounts_count, payment_accounts_count, expense_payment_types_count, allocations_count, created_at, updated_at, workspace_id) FROM stdin;
+1	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1
 \.
 
 
@@ -10629,7 +10630,7 @@ SELECT pg_catalog.setval('public.reimbursements_id_seq', 260, true);
 -- Name: sage_intacct_attributes_count_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.sage_intacct_attributes_count_id_seq', 1, false);
+SELECT pg_catalog.setval('public.sage_intacct_attributes_count_id_seq', 2, false);
 
 
 --

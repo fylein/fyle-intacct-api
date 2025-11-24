@@ -2042,7 +2042,7 @@ class SageIntacctAttributesCount(models.Model):
         :param attribute_type: Type of attribute (e.g., 'accounts', 'vendors')
         :param count: Count value from Sage Intacct
         """
-        sage_intacct_count, _ = SageIntacctAttributesCount.objects.get(
+        sage_intacct_count = SageIntacctAttributesCount.objects.get(
             workspace_id=workspace_id
         )
         field_name = f'{attribute_type}_count'
