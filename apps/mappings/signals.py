@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
+from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
+from apps.sage_intacct.helpers import get_sage_intacct_connection
 from django.db.models import Q
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
@@ -15,7 +17,6 @@ from apps.mappings.constants import SYNC_METHODS
 from apps.mappings.helpers import patch_corporate_card_integration_settings
 from apps.mappings.models import LocationEntityMapping
 from apps.mappings.schedules import schedule_or_delete_fyle_import_tasks as new_schedule_or_delete_fyle_import_tasks
-from apps.sage_intacct.utils import SageIntacctConnector
 from apps.tasks.models import Error
 from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
@@ -143,8 +144,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
                     import_log.save()
 
             # Creating the expense_custom_field object with the correct last_successful_run_at value
-            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id=workspace_id)
-            sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+            sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value)
 
             expense_custom_field = ExpenseCustomField(
                 workspace_id=workspace_id,

@@ -1,26 +1,32 @@
 import logging
 from datetime import datetime, timezone
 
-from django.utils.module_loading import import_string
 from django_q.models import Schedule
+from django.utils.module_loading import import_string
 from fyle.platform.exceptions import InternalServerError
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
-from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
-from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, MappingSetting
 from fyle_integrations_platform_connector import PlatformConnector
+from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, MappingSetting
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
 
-from apps.fyle.models import DependentFieldSetting
-from apps.mappings.constants import SYNC_METHODS
-from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.utils import SageIntacctConnector
 from apps.tasks.models import Error
-from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, SageIntacctCredential
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from fyle_integrations_imports.dataclasses import TaskSetting
+from apps.mappings.models import GeneralMapping
+from apps.mappings.constants import SYNC_METHODS
+from apps.fyle.models import DependentFieldSetting
 from fyle_integrations_imports.models import ImportLog
+from fyle_integrations_imports.dataclasses import TaskSetting
+from apps.sage_intacct.helpers import get_sage_intacct_connection
+from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from fyle_integrations_imports.queues import chain_import_fields_to_fyle
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.workspaces.models import (
+    Configuration,
+    FeatureConfig,
+    FyleCredential,
+    SageIntacctCredential,
+)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -92,9 +98,10 @@ def auto_map_employees(workspace_id: int) -> None:
 
     try:
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
-        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-        sage_intacct_connection = SageIntacctConnector(
-            credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+        sage_intacct_connection = get_sage_intacct_connection(
+            workspace_id=workspace_id,
+            connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value
+        )
 
         platform.employees.sync()
         if destination_type == 'EMPLOYEE':
@@ -214,11 +221,9 @@ def sync_sage_intacct_attributes(sageintacct_attribute_type: str, workspace_id: 
     :param workspace_id: Workspace Id
     :return: None
     """
-    sage_intacct_credentials: SageIntacctCredential = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-
-    sage_intacct_connection = SageIntacctConnector(
-        credentials_object=sage_intacct_credentials,
-        workspace_id=workspace_id
+    sage_intacct_connection = get_sage_intacct_connection(
+        workspace_id=workspace_id,
+        connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value
     )
 
     if sageintacct_attribute_type == 'LOCATION':
@@ -318,7 +323,7 @@ def initiate_import_to_fyle(workspace_id: int, run_in_rabbitmq_worker: bool = Fa
         'import_items': None,
         'mapping_settings': [],
         'credentials': credentials,
-        'sdk_connection_string': 'apps.sage_intacct.utils.SageIntacctConnector',
+        'sdk_connection_string': 'apps.sage_intacct.helpers.get_sage_intacct_connection_from_imports_module',
         'custom_properties': None,
         'import_dependent_fields': None
     }
