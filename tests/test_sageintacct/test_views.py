@@ -1,6 +1,8 @@
 import json
 
 from django.core.cache import cache
+
+from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.workspaces.enums import CacheKeyEnum
 from apps.workspaces.models import SageIntacctCredential
 
@@ -188,3 +190,31 @@ def test_refresh_dimensions_invalid_token_error(mocker, api_client, test_connect
 
     # Verify invalidate_sage_intacct_credentials was called (covers line 231)
     mock_invalidate.assert_called_once_with(workspace_id)
+
+
+def test_sage_intacct_attributes_count_view(api_client, test_connection, db):
+    """
+    Test Sage Intacct Attributes Count View
+    """
+    workspace_id = 1
+    access_token = test_connection.access_token
+    url = '/api/workspaces/{}/sage_intacct/attributes_count/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+    SageIntacctAttributesCount.objects.filter(workspace_id=workspace_id).delete()
+    SageIntacctAttributesCount.objects.create(
+        workspace_id=workspace_id,
+        accounts_count=2500,
+        vendors_count=5000,
+        employees_count=300
+    )
+    response = api_client.get(url)
+    assert response.status_code == 200
+    response_data = json.loads(response.content)
+    assert response_data['accounts_count'] == 2500
+    assert response_data['vendors_count'] == 5000
+    assert response_data['employees_count'] == 300
+    assert 'user_defined_dimensions_details' not in response_data
+    assert 'workspace' in response_data
+    SageIntacctAttributesCount.objects.filter(workspace_id=workspace_id).delete()
+    response = api_client.get(url)
+    assert response.status_code == 404

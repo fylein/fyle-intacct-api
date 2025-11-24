@@ -23,6 +23,7 @@ from sageintacctsdk import exceptions as sage_intacct_exc
 
 from apps.fyle.helpers import get_cluster_domain
 from apps.fyle.models import ExpenseGroupSettings
+from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
@@ -126,6 +127,7 @@ class WorkspaceView(viewsets.ViewSet):
             FeatureConfig.objects.create(workspace_id=workspace.id)
             FyleSyncTimestamp.objects.create(workspace_id=workspace.id)
             IntacctSyncedTimestamp.objects.create(workspace_id=workspace.id)
+            SageIntacctAttributesCount.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 
