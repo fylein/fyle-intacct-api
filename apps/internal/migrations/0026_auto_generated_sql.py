@@ -3,27 +3,51 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    dependencies = [('sage_intacct', '0032_sageintacctattributescount'),('internal', '0025_auto_generated_sql')]
+    dependencies = [
+        ('sage_intacct', '0032_sageintacctattributescount'),
+        ('internal', '0025_auto_generated_sql'),
+    ]
 
     operations = [
         migrations.RunSQL(
             sql="""
-                INSERT INTO sage_intacct_attributes_count (workspace_id, created_at, updated_at)
-                SELECT id, now(), now()
-                FROM workspaces
+                INSERT INTO sage_intacct_attributes_count (
+                    workspace_id,
+                    accounts_count,
+                    items_count,
+                    vendors_count,
+                    employees_count,
+                    departments_count,
+                    classes_count,
+                    customers_count,
+                    projects_count,
+                    locations_count,
+                    expense_types_count,
+                    tax_details_count,
+                    cost_codes_count,
+                    cost_types_count,
+                    user_defined_dimensions_details,
+                    charge_card_accounts_count,
+                    payment_accounts_count,
+                    expense_payment_types_count,
+                    allocations_count,
+                    created_at,
+                    updated_at
+                )
+                SELECT
+                    w.id,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    '{}'::json,
+                    0, 0, 0, 0,
+                    now(),
+                    now()
+                FROM workspaces w
                 WHERE NOT EXISTS (
                     SELECT 1
-                    FROM sage_intacct_attributes_count
-                    WHERE workspace_id = workspaces.id
+                    FROM sage_intacct_attributes_count sic
+                    WHERE sic.workspace_id = w.id
                 );
             """,
-            reverse_sql="""
-                DELETE FROM sage_intacct_attributes_count
-                WHERE EXISTS (
-                    SELECT 1
-                    FROM sage_intacct_attributes_count
-                    WHERE workspace_id = sage_intacct_attributes_count.workspace_id
-                );
-            """
+            reverse_sql=""" DELETE FROM sage_intacct_attributes_count WHERE EXISTS ( SELECT 1 FROM sage_intacct_attributes_count WHERE workspace_id = sage_intacct_attributes_count.workspace_id ); """
         )
     ]
