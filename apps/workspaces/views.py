@@ -27,6 +27,7 @@ from fyle_accounting_mappings.models import ExpenseAttribute, FyleSyncTimestamp
 from apps.tasks.models import TaskLog
 from apps.fyle.helpers import get_cluster_domain
 from apps.fyle.models import ExpenseGroupSettings
+from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.tasks import patch_integration_settings
 from apps.sage_intacct.helpers import get_sage_intacct_connection
@@ -134,6 +135,7 @@ class WorkspaceView(viewsets.ViewSet):
             FeatureConfig.objects.create(workspace_id=workspace.id)
             FyleSyncTimestamp.objects.create(workspace_id=workspace.id)
             IntacctSyncedTimestamp.objects.create(workspace_id=workspace.id)
+            SageIntacctAttributesCount.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 

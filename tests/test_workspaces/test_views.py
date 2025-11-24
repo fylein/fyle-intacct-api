@@ -10,6 +10,7 @@ from fyle_accounting_mappings.models import MappingSetting
 from fyle_rest_auth.utils import AuthUtils
 from sageintacctsdk import exceptions as sage_intacct_exc
 
+from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import Configuration, FeatureConfig, LastExportDetail, SageIntacctCredential, Workspace
 from fyle_integrations_imports.models import ImportLog
@@ -207,6 +208,25 @@ def test_post_and_patch_of_workspace(api_client, test_connection, mocker):
 
     workspace = Workspace.objects.get(id=data['workspace']['id'])
     assert workspace.app_version == 'v2'
+
+
+def test_workspace_creation_creates_attributes_count(api_client, test_connection, mocker):
+    """
+    Test Workspace Creation Creates Attributes Count
+    """
+    url = '/api/workspaces/'
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+    mocker.patch('apps.workspaces.views.get_fyle_admin', return_value=fyle_data['get_my_profile'])
+    mocker.patch('apps.workspaces.views.get_cluster_domain', return_value={'cluster_domain': 'https://staging.fyle.tech/'})
+    response = api_client.post(url)
+    assert response.status_code == 200
+    response_data = json.loads(response.content)
+    workspace_id = response_data['id']
+    attributes_count = SageIntacctAttributesCount.objects.filter(workspace_id=workspace_id).first()
+    assert attributes_count is not None
+    assert attributes_count.accounts_count == 0
+    assert attributes_count.vendors_count == 0
+    assert attributes_count.employees_count == 0
 
 
 def test_connect_fyle_view(api_client, test_connection):
