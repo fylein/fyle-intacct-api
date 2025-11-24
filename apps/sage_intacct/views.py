@@ -212,7 +212,8 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
             is_cached = cache.get(cache_key)
 
             if not is_cached:
-                cache.set(cache_key, True, timeout=300)
+                if dimensions_to_sync != ['location_entities']:
+                    cache.set(cache_key, True, timeout=300)
                 # If only specified dimensions are to be synced, sync them synchronously
                 if dimensions_to_sync:
                     sync_dimensions(workspace.id, dimensions_to_sync)

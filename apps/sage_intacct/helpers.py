@@ -26,7 +26,7 @@ logger.level = logging.INFO
 
 def get_sage_intacct_connection(
     workspace_id: int,
-    connection_type: SageIntacctRestConnectionTypeEnum = None
+    connection_type: SageIntacctRestConnectionTypeEnum = SageIntacctRestConnectionTypeEnum.SYNC.value
 ) -> SageIntacctConnector | SageIntacctRestConnector:
     """
     Get Sage Intacct connection
