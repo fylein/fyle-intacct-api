@@ -677,13 +677,13 @@ def get_memo_or_purpose(
             "expense_link": expense_link,
         }
 
-    purpose = ""
+    memo_parts = []
 
-    for index, field in enumerate(memo_structure):
-        if field in details:
-            purpose += details[field]
-            if index + 1 != len(memo_structure):
-                purpose = "{0} - ".format(purpose)
+    for field in memo_structure:
+        if field in details and details[field]:
+            memo_parts.append(details[field])
+
+    purpose = ' - '.join(memo_parts)
 
     if export_table:
         count = export_table.objects.filter(
