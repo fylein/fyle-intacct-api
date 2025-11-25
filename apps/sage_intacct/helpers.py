@@ -1,8 +1,9 @@
 import logging
+import traceback
 from datetime import datetime, timezone
 
-from django_q.models import Schedule
 from django.utils.module_loading import import_string
+from django_q.models import Schedule
 
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.utils import SageIntacctConnector
@@ -93,6 +94,8 @@ def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> bool:
             workspace.save(update_fields=['destination_synced_at'])
     except SageIntacctCredential.DoesNotExist:
         logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
+    except Exception:
+        logger.error('Error while syncing dimensions workspace_id - %s, error - %s', workspace_id, traceback.format_exc())
 
 
 def is_dependent_field_import_enabled(workspace_id: int) -> bool:
