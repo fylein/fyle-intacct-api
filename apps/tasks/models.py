@@ -1,20 +1,19 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import JSONField
-from django.contrib.postgres.fields import ArrayField
-
-from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_accounting_library.fyle_platform.constants import IMPORTED_FROM_CHOICES
+from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.workspaces.models import Workspace
 from apps.fyle.models import ExpenseGroup
 from apps.sage_intacct.models import (
-    Bill,
     APPayment,
-    JournalEntry,
-    ExpenseReport,
+    Bill,
     ChargeCardTransaction,
-    SageIntacctReimbursement
+    ExpenseReport,
+    JournalEntry,
+    SageIntacctReimbursement,
 )
+from apps.workspaces.models import Workspace
 
 ERROR_TYPE_CHOICES = (
     ('EMPLOYEE_MAPPING', 'EMPLOYEE_MAPPING'),
@@ -74,6 +73,7 @@ class TaskLog(models.Model):
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
     triggered_by = models.CharField(max_length=255, help_text="Triggered by", null=True, choices=IMPORTED_FROM_CHOICES)
     re_attempt_export = models.BooleanField(default=False, help_text='Is re-attempt export')
+    is_attachment_upload_failed = models.BooleanField(default=False, help_text='Is attachment upload failed')
 
     class Meta:
         db_table = 'task_logs'

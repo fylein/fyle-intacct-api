@@ -6,7 +6,6 @@ from unittest import mock
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
-from apps.sage_intacct.helpers import schedule_payment_sync
 from django_q.models import Schedule
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
@@ -16,6 +15,7 @@ from apps.exceptions import ValueErrorWithResponse
 from apps.fyle.models import Expense, ExpenseGroup, Reimbursement
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.actions import update_last_export_details
+from apps.sage_intacct.helpers import schedule_payment_sync
 from apps.sage_intacct.models import (
     Bill,
     BillLineitem,
@@ -422,7 +422,7 @@ def test_post_bill_success(mocker, create_task_logs, db):
     )
     mocker.patch(
         'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
+        return_value=('sdfgh', False)
     )
     mocker.patch(
         'sageintacctsdk.apis.Bills.update_attachment',
@@ -458,6 +458,17 @@ def test_post_bill_success(mocker, create_task_logs, db):
     assert task_log.status == 'COMPLETE'
     assert bill.currency == 'USD'
     assert bill.vendor_id == 'Ashwin'
+    assert task_log.is_attachment_upload_failed is False
+
+    task_log.status = 'READY'
+    task_log.supdoc_id = None
+    task_log.save()
+
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=(None, True))
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    task_log = TaskLog.objects.get(pk=task_log.id)
+    assert task_log.is_attachment_upload_failed is True
 
     task_log.status = 'READY'
     task_log.save()
@@ -733,7 +744,7 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
     )
     mocker.patch(
         'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
+        return_value=('sdfgh', False)
     )
     workspace_id = 1
 
@@ -756,6 +767,20 @@ def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
 
     assert task_log.status == 'COMPLETE'
     assert charge_card_transaction.currency == 'USD'
+    assert task_log.is_attachment_upload_failed is False
+
+    task_log.status = 'READY'
+    task_log.supdoc_id = None
+    task_log.save()
+
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=(None, True))
+    create_charge_card_transaction(expense_group.id, task_log.id, True, False)
+
+    task_log = TaskLog.objects.get(pk=task_log.id)
+    assert task_log.is_attachment_upload_failed is True
+
+    task_log.status = 'READY'
+    task_log.save()
 
     with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.update_attachment') as mock_call:
         mock_call.side_effect = Exception()
@@ -880,7 +905,7 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
     )
     mocker.patch(
         'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
+        return_value=('sdfgh', False)
     )
 
     workspace_id = 1
@@ -917,6 +942,17 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
 
     assert task_log.status == 'COMPLETE'
     assert journal_entry.currency == 'GBP'
+    assert task_log.is_attachment_upload_failed is False
+
+    task_log.status = 'READY'
+    task_log.supdoc_id = None
+    task_log.save()
+
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=(None, True))
+    create_journal_entry(expense_group.id, task_log.id, True, False)
+
+    task_log = TaskLog.objects.get(id=task_log.id)
+    assert task_log.is_attachment_upload_failed is True
 
     task_log.status = 'READY'
     task_log.save()
@@ -1040,7 +1076,7 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
     )
     mocker.patch(
         'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
+        return_value=('sdfgh', False)
     )
 
     mocker.patch(
@@ -1061,6 +1097,17 @@ def test_post_expense_report_success(mocker, create_task_logs, db):
 
     assert task_log.status == 'COMPLETE'
     assert expense_report.currency == 'USD'
+    assert task_log.is_attachment_upload_failed is False
+
+    task_log.status = 'READY'
+    task_log.supdoc_id = None
+    task_log.save()
+
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=(None, True))
+    create_expense_report(expense_group.id, task_log.id, True, False)
+
+    task_log = TaskLog.objects.get(id=task_log.id)
+    assert task_log.is_attachment_upload_failed is True
 
     task_log.status = 'READY'
     task_log.save()
@@ -1173,7 +1220,7 @@ def test_create_ap_payment(mocker, db):
     )
     mocker.patch(
         'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
+        return_value=('sdfgh', False)
     )
     mocker.patch(
         'sageintacctsdk.apis.Reimbursements.post',
@@ -1223,7 +1270,7 @@ def test_create_ap_payment_exceptions(mocker, db):
     mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
     mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
     mocker.patch('sageintacctsdk.apis.APPayments.post', return_value=data['reimbursements'])
-    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=['sdfgh'])
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=('sdfgh', False))
     mocker.patch('sageintacctsdk.apis.Reimbursements.post', return_value=data['reimbursements'])
     mocker.patch('fyle_integrations_platform_connector.apis.Reimbursements.sync', return_value=None)
     mocker.patch('sageintacctsdk.apis.Bills.update_attachment', return_value=data['bill_response'])
@@ -1669,12 +1716,12 @@ def test_load_attachments(mocker, db):
     Test load_attachments
     """
     mocker.patch(
-        'sageintacctsdk.apis.Attachments.post',
-        return_value=['sdfghj']
+        'fyle_integrations_platform_connector.apis.Files.bulk_generate_file_urls',
+        return_value=[{'id': 'file123', 'name': 'test.pdf', 'download_url': 'https://example.com/file.pdf'}]
     )
     mocker.patch(
-        'fyle_integrations_platform_connector.apis.Files.bulk_generate_file_urls',
-        return_value=['sdfghj']
+        'apps.sage_intacct.utils.SageIntacctConnector.post_attachments',
+        return_value='2'
     )
 
     workspace_id = 1
@@ -1692,15 +1739,15 @@ def test_load_attachments(mocker, db):
     expense_group.expenses.set(expenses)
     expense_group.save()
 
-    post_attachments = load_attachments(sage_intacct_connection, expense_group)
-    assert post_attachments == None
+    supdoc_id, is_failed = load_attachments(sage_intacct_connection, expense_group)
+    assert supdoc_id == '2'
+    assert is_failed is False
 
-    try:
-        with mock.patch('fyle_integrations_platform_connector.apis.Files.bulk_generate_file_urls') as mock_call:
-            mock_call.side_effect = Exception()
-            post_attachments = load_attachments(sage_intacct_connection, expense_group)
-    except Exception:
-        logger.info('wrong parameters')
+    with mock.patch('fyle_integrations_platform_connector.apis.Files.bulk_generate_file_urls') as mock_call:
+        mock_call.side_effect = Exception()
+        supdoc_id, is_failed = load_attachments(sage_intacct_connection, expense_group)
+        assert supdoc_id is None
+        assert is_failed is True
 
 
 def test_update_last_export_details(mocker, db):
@@ -1834,7 +1881,7 @@ def test_skipping_create_ap_payment(mocker, db):
     )
     mocker.patch(
         'apps.sage_intacct.tasks.load_attachments',
-        return_value=['sdfgh']
+        return_value=('sdfgh', False)
     )
     mocker.patch(
         'sageintacctsdk.apis.Reimbursements.post',
