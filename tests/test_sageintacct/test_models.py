@@ -108,7 +108,7 @@ def test_expense_report(db):
 
     for expense_report_lineitem in expense_report_lineitems:
         assert expense_report_lineitem.amount == 11.0
-        assert expense_report_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert expense_report_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
         assert expense_report_lineitem.billable == True
 
     assert expense_report.currency == 'USD'
@@ -142,7 +142,7 @@ def test_create_journal_entry(db, mocker, create_expense_group_expense, create_c
 
     for journal_entry_lineitem in journal_entry_lineitems:
         assert journal_entry_lineitem.amount == 11.0
-        assert journal_entry_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert journal_entry_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
 
     assert journal_entry.currency == 'USD'
     assert journal_entry.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
@@ -614,7 +614,7 @@ def test_get_expense_purpose(db):
 
         expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
 
-        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
 
     workspace = Workspace.objects.get(id=workspace_id)
     workspace.cluster_domain = ''
@@ -625,7 +625,7 @@ def test_get_expense_purpose(db):
             lineitem.category, lineitem.sub_category)
 
         expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
-        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
 
 
 def test_get_memo_or_purpose_top_level(db):
@@ -652,7 +652,7 @@ def test_get_memo_or_purpose_top_level(db):
 
         # Expected format: employee_email - employee_name - group_by
         # Since expense_group_settings.description has claim_number, group_by should be claim_number
-        expected_memo = 'ashwin.t@fyle.in -  - C/2022/09/R/22'
+        expected_memo = 'ashwin.t@fyle.in - C/2022/09/R/22'
         assert top_level_memo == expected_memo
 
     # Test with different top_level_memo_structure
@@ -666,7 +666,7 @@ def test_get_memo_or_purpose_top_level(db):
         top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
 
         # Expected format: employee_name - group_by
-        expected_memo = ' - C/2022/09/R/22'
+        expected_memo = 'C/2022/09/R/22'
         assert top_level_memo == expected_memo
 
     # Test with empty top_level_memo_structure (should fall back to regular memo_structure)
@@ -680,7 +680,7 @@ def test_get_memo_or_purpose_top_level(db):
         top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=False, export_table=ExpenseReport)
 
         # Should fall back to regular memo structure
-        expected_memo = 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        expected_memo = 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
         assert top_level_memo == expected_memo
 
     # Test when expense_group_settings has expense_number instead of claim_number
