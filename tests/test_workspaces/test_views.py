@@ -79,7 +79,7 @@ def test_token_health_view(api_client, test_connection, mocker):
         is_expired=False
     )
 
-    mock_connector = mocker.patch('apps.workspaces.views.SageIntacctConnector')
+    mock_connector = mocker.patch('apps.workspaces.views.get_sage_intacct_connection')
     mock_instance = mocker.MagicMock()
     mock_connector.return_value = mock_instance
     mock_instance.connection.locations.count.side_effect = Exception("Invalid")
@@ -93,7 +93,7 @@ def test_token_health_view(api_client, test_connection, mocker):
     assert response.data["message"] == "Something went wrong"
 
     mocker.resetall()
-    mock_connector = mocker.patch('apps.workspaces.views.SageIntacctConnector')
+    mock_connector = mocker.patch('apps.workspaces.views.get_sage_intacct_connection')
     mock_instance = mocker.MagicMock()
     mock_connector.return_value = mock_instance
     mock_instance.connection.locations.count.side_effect = sage_intacct_exc.InvalidTokenError("Invalid token")
@@ -106,7 +106,7 @@ def test_token_health_view(api_client, test_connection, mocker):
 
     # Testing successful connection
     mocker.resetall()
-    mock_connector = mocker.patch('apps.workspaces.views.SageIntacctConnector')
+    mock_connector = mocker.patch('apps.workspaces.views.get_sage_intacct_connection')
     mock_instance = mocker.MagicMock()
     mock_connector.return_value = mock_instance
     mock_instance.connection.locations.count.return_value = 1

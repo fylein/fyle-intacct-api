@@ -7,7 +7,6 @@ from django.utils.module_loading import import_string
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
-from apps.workspaces.enums import CacheKeyEnum as WorkspaceCacheKeyEnum
 from apps.sage_intacct.connector import (
     SageIntacctRestConnector,
     SageIntacctDimensionSyncManager,
@@ -34,8 +33,8 @@ def get_sage_intacct_connection(
     :param connection_type: Connection Type (used for REST connections)
     :return: Sage Intacct connection
     """
-    feature_config = FeatureConfig.get_feature_config(workspace_id=workspace_id, key=WorkspaceCacheKeyEnum.FEATURE_CONFIG_MIGRATED_TO_REST_API)
-    if feature_config.migrated_to_rest_api:
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+    if migrated_to_rest_api:
         if connection_type == SageIntacctRestConnectionTypeEnum.SYNC.value:
             return SageIntacctDimensionSyncManager(workspace_id=workspace_id)
         elif connection_type == SageIntacctRestConnectionTypeEnum.POST.value:
