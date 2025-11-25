@@ -38,7 +38,7 @@ def get_sage_intacct_connection(
     if migrated_to_rest_api:
         if connection_type == SageIntacctRestConnectionTypeEnum.SYNC.value:
             return SageIntacctDimensionSyncManager(workspace_id=workspace_id)
-        elif connection_type == SageIntacctRestConnectionTypeEnum.POST.value:
+        elif connection_type == SageIntacctRestConnectionTypeEnum.UPSERT.value:
             return SageIntacctObjectCreationManager(workspace_id=workspace_id)
     else:
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)

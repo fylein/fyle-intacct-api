@@ -32,4 +32,4 @@ class SageIntacctRestConnectionTypeEnum(str, Enum):
     Sage Intacct Action Type Enum
     """
     SYNC = 'SYNC'
-    POST = 'POST'
+    UPSERT = 'UPSERT'
