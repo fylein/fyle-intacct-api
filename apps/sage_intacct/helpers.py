@@ -2,8 +2,8 @@ import logging
 import traceback
 from datetime import datetime, timezone
 
-from django.utils.module_loading import import_string
 from django_q.models import Schedule
+from django.utils.module_loading import import_string
 
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.utils import SageIntacctConnector
