@@ -1504,8 +1504,8 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     def get_or_create_vendor(
         self,
         vendor_name: str,
-        email: str = None,
-        create: bool = False
+        create: bool = False,
+        email: str = None
     ) -> Optional[DestinationAttribute]:
         """
         Get or create vendor

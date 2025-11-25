@@ -2,14 +2,61 @@ import logging
 import traceback
 from datetime import datetime, timezone
 
-from django.utils.module_loading import import_string
 from django_q.models import Schedule
+from django.utils.module_loading import import_string
 
 from apps.fyle.models import DependentFieldSetting
-from apps.workspaces.models import Configuration, SageIntacctCredential, Workspace
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
+from apps.sage_intacct.connector import (
+    SageIntacctRestConnector,
+    SageIntacctDimensionSyncManager,
+    SageIntacctObjectCreationManager
+)
+from apps.workspaces.models import (
+    Workspace,
+    FeatureConfig,
+    Configuration,
+    SageIntacctCredential
+)
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
+
+
+def get_sage_intacct_connection(
+    workspace_id: int,
+    connection_type: SageIntacctRestConnectionTypeEnum = SageIntacctRestConnectionTypeEnum.SYNC.value
+) -> SageIntacctConnector | SageIntacctRestConnector:
+    """
+    Get Sage Intacct connection
+    :param workspace_id: Workspace ID
+    :param connection_type: Connection Type (used for REST connections)
+    :return: Sage Intacct connection
+    """
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+    if migrated_to_rest_api:
+        if connection_type == SageIntacctRestConnectionTypeEnum.SYNC.value:
+            return SageIntacctDimensionSyncManager(workspace_id=workspace_id)
+        elif connection_type == SageIntacctRestConnectionTypeEnum.UPSERT.value:
+            return SageIntacctObjectCreationManager(workspace_id=workspace_id)
+    else:
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+        sage_intacct_connection = SageIntacctConnector(
+            credentials_object=sage_intacct_credentials,
+            workspace_id=workspace_id
+        )
+        return sage_intacct_connection
+
+
+def get_sage_intacct_connection_from_imports_module(_: SageIntacctCredential, workspace_id: int) -> SageIntacctConnector:
+    """
+    Get Sage Intacct connection (called from imports module)
+    :param sage_intacct_credentials: Sage Intacct Credentials
+    :param workspace_id: Workspace ID
+    :return: Sage Intacct connection
+    """
+    return get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value)
 
 
 def schedule_payment_sync(configuration: Configuration) -> None:
