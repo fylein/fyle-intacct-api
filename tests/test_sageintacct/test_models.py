@@ -17,6 +17,7 @@ from apps.sage_intacct.models import (
     ExpenseReportLineitem,
     JournalEntry,
     JournalEntryLineitem,
+    SageIntacctAttributesCount,
     SageIntacctReimbursement,
     SageIntacctReimbursementLineitem,
     get_allocation_id_or_none,
@@ -1388,3 +1389,24 @@ def test_get_active_sage_intacct_credentials(mocker):
     result = SageIntacctCredential.get_active_sage_intacct_credentials(123)
     mock_get.assert_called_once_with(workspace_id=123, is_expired=False)
     assert result == mock_cred
+
+
+def test_sage_intacct_attributes_count_model(db):
+    """
+    Test sage intacct attributes count model
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+    SageIntacctAttributesCount.objects.filter(workspace_id=workspace_id).delete()
+    count_record = SageIntacctAttributesCount.objects.create(workspace=workspace)
+    assert count_record.accounts_count == 0
+    assert count_record.vendors_count == 0
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='accounts', count=2500)
+    count_record.refresh_from_db()
+    assert count_record.accounts_count == 2500
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='vendors', count=5000)
+    count_record.refresh_from_db()
+    assert count_record.vendors_count == 5000
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='accounts', count=3000)
+    count_record.refresh_from_db()
+    assert count_record.accounts_count == 3000

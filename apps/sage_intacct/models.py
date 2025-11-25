@@ -1997,3 +1997,54 @@ class CostCode(models.Model):
 
         if cost_codes_to_be_created:
             CostCode.objects.bulk_create(cost_codes_to_be_created, batch_size=50)
+
+
+class SageIntacctAttributesCount(models.Model):
+    """
+    Store Sage Intacct attribute counts for each workspace
+    """
+    id = models.AutoField(primary_key=True)
+    workspace = models.OneToOneField(
+        Workspace,
+        on_delete=models.PROTECT,
+        help_text='Reference to workspace',
+        related_name='sage_intacct_attributes_count'
+    )
+    accounts_count = models.IntegerField(default=0, help_text='Number of accounts in Sage Intacct')
+    items_count = models.IntegerField(default=0, help_text='Number of items in Sage Intacct')
+    vendors_count = models.IntegerField(default=0, help_text='Number of vendors in Sage Intacct')
+    employees_count = models.IntegerField(default=0, help_text='Number of employees in Sage Intacct')
+    departments_count = models.IntegerField(default=0, help_text='Number of departments in Sage Intacct')
+    classes_count = models.IntegerField(default=0, help_text='Number of classes in Sage Intacct')
+    customers_count = models.IntegerField(default=0, help_text='Number of customers in Sage Intacct')
+    projects_count = models.IntegerField(default=0, help_text='Number of projects in Sage Intacct')
+    locations_count = models.IntegerField(default=0, help_text='Number of locations in Sage Intacct')
+    expense_types_count = models.IntegerField(default=0, help_text='Number of expense types in Sage Intacct')
+    tax_details_count = models.IntegerField(default=0, help_text='Number of tax details in Sage Intacct')
+    cost_codes_count = models.IntegerField(default=0, help_text='Number of cost codes (tasks) in Sage Intacct')
+    cost_types_count = models.IntegerField(default=0, help_text='Number of cost types in Sage Intacct')
+    user_defined_dimensions_details = JSONField(default=dict, help_text='Count breakdown per UDD dimension (e.g., {"DEPARTMENT": 150, "PROJECT": 500}). Not exposed via API.', null=True, blank=True)
+    charge_card_accounts_count = models.IntegerField(default=0, help_text='Number of charge card accounts in Sage Intacct')
+    payment_accounts_count = models.IntegerField(default=0, help_text='Number of payment accounts in Sage Intacct')
+    expense_payment_types_count = models.IntegerField(default=0, help_text='Number of expense payment types in Sage Intacct')
+    allocations_count = models.IntegerField(default=0, help_text='Number of allocations in Sage Intacct')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime', db_index=True)
+
+    class Meta:
+        db_table = 'sage_intacct_attributes_count'
+
+    @staticmethod
+    def update_attribute_count(workspace_id: int, attribute_type: str, count: int) -> None:
+        """
+        Update attribute count for a workspace
+        :param workspace_id: Workspace ID
+        :param attribute_type: Type of attribute (e.g., 'accounts', 'vendors')
+        :param count: Count value from Sage Intacct
+        """
+        sage_intacct_count = SageIntacctAttributesCount.objects.get(
+            workspace_id=workspace_id
+        )
+        field_name = f'{attribute_type}_count'
+        setattr(sage_intacct_count, field_name, count)
+        sage_intacct_count.save(update_fields=[field_name, 'updated_at'])

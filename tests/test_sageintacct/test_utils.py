@@ -3,11 +3,12 @@ from datetime import datetime
 from unittest import mock
 
 import pytest
+from django.utils import timezone
 from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute, Mapping
 from sageintacctsdk.exceptions import WrongParamsError
 
 from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.models import CostCode, CostType
+from apps.sage_intacct.models import CostCode, CostType, SageIntacctAttributesCount
 from apps.sage_intacct.utils import Configuration, SageIntacctConnector, SageIntacctCredential, Workspace
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from tests.helper import dict_compare_keys
@@ -23,6 +24,10 @@ def test_sync_employees(mocker, db):
     """
     workspace_id = 1
 
+    mocker.patch(
+        'sageintacctsdk.apis.Employees.count',
+        return_value=55
+    )
     mocker.patch(
         'sageintacctsdk.apis.Employees.get_all_generator',
         return_value=data['get_employees']
@@ -70,6 +75,10 @@ def test_sync_vendors(mocker, db):
     """
     workspace_id = 1
 
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.count',
+        return_value=68
+    )
     mocker.patch(
         'sageintacctsdk.apis.Vendors.get_all_generator',
         return_value=data['get_vendors']
@@ -150,6 +159,10 @@ def test_sync_charge_card_accounts(mocker, db):
     workspace_id = 1
 
     mocker.patch(
+        'sageintacctsdk.apis.ChargeCardAccounts.count',
+        return_value=5
+    )
+    mocker.patch(
         'sageintacctsdk.apis.ChargeCardAccounts.get_by_query',
         return_value=data['get_charge_card_accounts']
     )
@@ -171,6 +184,10 @@ def test_sync_payment_accounts(mocker, db):
     """
     workspace_id = 1
 
+    mocker.patch(
+        'sageintacctsdk.apis.CheckingAccounts.count',
+        return_value=7
+    )
     mocker.patch(
         'sageintacctsdk.apis.CheckingAccounts.get_all_generator',
         return_value=data['get_payment_accounts']
@@ -299,6 +316,10 @@ def test_sync_expense_payment_types(mocker, db):
     """
     workspace_id = 1
 
+    mocker.patch(
+        'sageintacctsdk.apis.ExpensePaymentTypes.count',
+        return_value=1
+    )
     mocker.patch(
         'sageintacctsdk.apis.ExpensePaymentTypes.get_all_generator',
         return_value=data['get_expense_payment_types']
@@ -1467,6 +1488,11 @@ def test_sync_allocations(mocker, db):
     )
 
     mocker.patch(
+        'sageintacctsdk.apis.Allocations.count',
+        return_value=2
+    )
+
+    mocker.patch(
         'sageintacctsdk.apis.Allocations.get_all_generator',
         side_effect = mock_allocations_generator
     )
@@ -1493,36 +1519,36 @@ def test_skip_sync_attributes(mocker, db):
     """
     mocker.patch(
         'sageintacctsdk.apis.Projects.count',
-        return_value=25001
+        return_value=30001
     )
     mocker.patch(
         'sageintacctsdk.apis.Classes.count',
-        return_value=1001
+        return_value=30001
     )
     mocker.patch(
         'sageintacctsdk.apis.Accounts.count',
-        return_value=3001
+        return_value=30001
     )
     mocker.patch(
         'sageintacctsdk.apis.Locations.count',
-        return_value=1001
+        return_value=30001
     )
     mocker.patch(
         'sageintacctsdk.apis.Departments.count',
-        return_value=1001
+        return_value=30001
     )
     mocker.patch(
         'sageintacctsdk.apis.Customers.count',
-        return_value=10001
+        return_value=30001
     )
     mocker.patch(
         'sageintacctsdk.apis.Vendors.count',
-        return_value=20001
+        return_value=30001
     )
 
     mocker.patch(
         'sageintacctsdk.apis.TaxDetails.count',
-        return_value=201
+        return_value=30001
     )
 
     mocker.patch(
@@ -1532,7 +1558,7 @@ def test_skip_sync_attributes(mocker, db):
 
     mocker.patch(
         'sageintacctsdk.apis.ExpenseTypes.count',
-        return_value=1001
+        return_value=30001
     )
 
     today = datetime.today()
@@ -1991,3 +2017,208 @@ def test_get_or_create_vendor_fallback_creation_error(mocker, db):
             assert calls[1][0][0] == 'Test Vendor-1'
         except Exception:
             assert False, "Exception should have been handled and None returned"
+
+
+def test_is_sync_allowed_standard_attributes(db):
+    """
+    Test is sync allowed for standard attributes
+    """
+    workspace_id = 1
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    is_allowed = sage_intacct_connection.is_sync_allowed(attribute_count=5000)
+    assert is_allowed is True
+    old_date = datetime(2024, 9, 1)
+    Workspace.objects.filter(id=workspace_id).update(created_at=old_date)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    is_allowed = sage_intacct_connection.is_sync_allowed(attribute_count=35000)
+    assert is_allowed is True
+    new_date = datetime(2024, 10, 15)
+    Workspace.objects.filter(id=workspace_id).update(created_at=new_date)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    is_allowed = sage_intacct_connection.is_sync_allowed(attribute_count=35000)
+    assert is_allowed is False
+
+
+def test_is_sync_allowed_cost_types(db):
+    """
+    Test is sync allowed for cost types
+    """
+    workspace_id = 1
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    is_allowed = sage_intacct_connection.is_sync_allowed(attribute_count=400000, attribute_type='cost_types')
+    assert is_allowed is True
+    old_date = datetime(2024, 9, 1)
+    Workspace.objects.filter(id=workspace_id).update(created_at=old_date)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    is_allowed = sage_intacct_connection.is_sync_allowed(attribute_count=600000, attribute_type='cost_types')
+    assert is_allowed is True
+    new_date = datetime(2024, 10, 15)
+    Workspace.objects.filter(id=workspace_id).update(created_at=new_date)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    is_allowed = sage_intacct_connection.is_sync_allowed(attribute_count=600000, attribute_type='cost_types')
+    assert is_allowed is False
+
+
+def test_sync_attributes_skipped_for_new_workspace_over_limit(mocker, db):
+    """
+    Test sync attributes skipped for new workspace over limit
+    """
+    workspace_id = 1
+    Workspace.objects.filter(id=workspace_id).update(created_at=datetime(2024, 10, 15))
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    from fyle_accounting_mappings.models import DestinationAttribute
+
+    from apps.sage_intacct.models import CostCode
+    sync_tests = [
+        ('Vendors', 'sageintacctsdk.apis.Vendors.count', sage_intacct_connection.sync_vendors, 'VENDOR', DestinationAttribute),
+        ('Employees', 'sageintacctsdk.apis.Employees.count', sage_intacct_connection.sync_employees, 'EMPLOYEE', DestinationAttribute),
+        ('Items', 'sageintacctsdk.apis.Items.count', sage_intacct_connection.sync_items, 'ITEM', DestinationAttribute),
+        ('ChargeCardAccounts', 'sageintacctsdk.apis.ChargeCardAccounts.count', sage_intacct_connection.sync_charge_card_accounts, 'CHARGE_CARD_NUMBER', DestinationAttribute),
+        ('CheckingAccounts', 'sageintacctsdk.apis.CheckingAccounts.count', sage_intacct_connection.sync_payment_accounts, 'PAYMENT_ACCOUNT', DestinationAttribute),
+        ('Tasks', 'sageintacctsdk.apis.Tasks.count', sage_intacct_connection.sync_cost_codes, None, CostCode),
+        ('ExpensePaymentTypes', 'sageintacctsdk.apis.ExpensePaymentTypes.count', sage_intacct_connection.sync_expense_payment_types, 'EXPENSE_PAYMENT_TYPE', DestinationAttribute),
+        ('Allocations', 'sageintacctsdk.apis.Allocations.count', sage_intacct_connection.sync_allocations, 'ALLOCATION', DestinationAttribute),
+    ]
+    for name, mock_path, sync_method, attr_type, model in sync_tests:
+        mocker.patch(mock_path, return_value=35000)
+        if model == CostCode:
+            count_before = model.objects.filter(workspace_id=workspace_id).count()
+        else:
+            count_before = model.objects.filter(workspace_id=workspace_id, attribute_type=attr_type).count()
+        sync_method()
+        if model == CostCode:
+            count_after = model.objects.filter(workspace_id=workspace_id).count()
+        else:
+            count_after = model.objects.filter(workspace_id=workspace_id, attribute_type=attr_type).count()
+        assert count_before == count_after
+    mocker.patch('sageintacctsdk.apis.Dimensions.get_all', return_value=[{'objectName': 'CUSTOM_DIM', 'termLabel': 'Custom Dimension', 'userDefinedDimension': 'true'}])
+    mocker.patch('sageintacctsdk.apis.DimensionValues.count', return_value=35000)
+    udd_before = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CUSTOM_DIM').count()
+    sage_intacct_connection.sync_user_defined_dimensions()
+    udd_after = DestinationAttribute.objects.filter(workspace_id=workspace_id, attribute_type='CUSTOM_DIM').count()
+    assert udd_before == udd_after
+
+
+def test_sync_allocations_with_latest_updated_at(mocker, db):
+    """
+    Test sync allocations with latest updated at
+    """
+    workspace_id = 1
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    from apps.workspaces.models import IntacctSyncedTimestamp
+    synced_timestamp, _ = IntacctSyncedTimestamp.objects.get_or_create(workspace_id=workspace_id)
+    synced_timestamp.allocation_synced_at = timezone.now()
+    synced_timestamp.save()
+    mocker.patch('sageintacctsdk.apis.Allocations.count', return_value=100)
+
+    def mock_allocations_generator(field=None, value=None, updated_at=None):
+        yield data['allocations']
+
+    def mock_allocation_entry_generator(field, value):
+        for allocation_entry_list in data['allocation_entries']:
+            if allocation_entry_list and allocation_entry_list[0]['ALLOCATIONID'] == value:
+                yield allocation_entry_list
+    mocker.patch('sageintacctsdk.apis.Allocations.get_all_generator', side_effect=mock_allocations_generator)
+    mocker.patch('sageintacctsdk.apis.AllocationEntry.get_all_generator', side_effect=mock_allocation_entry_generator)
+    sage_intacct_connection.sync_allocations()
+    count_record = SageIntacctAttributesCount.objects.get(workspace_id=workspace_id)
+    assert count_record.allocations_count == 100
+
+
+def test_sync_methods_persist_count(mocker, db, create_dependent_field_setting):
+    """
+    Test sync methods persist count
+    """
+    workspace_id = 1
+    mocker.patch('sageintacctsdk.apis.Accounts.count', return_value=2500)
+    mocker.patch('sageintacctsdk.apis.Accounts.get_all_generator', return_value=data['get_accounts'])
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.categories.PlatformConnector')
+    mocker.patch.object(mock_platform.return_value.categories, 'post_bulk')
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+    sage_intacct_connection.sync_accounts()
+    count_record = SageIntacctAttributesCount.objects.get(workspace_id=workspace_id)
+    assert count_record.accounts_count == 2500
+    mocker.patch('sageintacctsdk.apis.Items.count', return_value=4500)
+    mocker.patch('sageintacctsdk.apis.Items.get_all_generator', return_value=data['get_items'])
+    sage_intacct_connection.sync_items()
+    count_record.refresh_from_db()
+    assert count_record.items_count == 4500
+    mocker.patch('sageintacctsdk.apis.Vendors.count', return_value=8000)
+    mocker.patch('sageintacctsdk.apis.Vendors.get_all_generator', return_value=data['get_vendors'])
+    sage_intacct_connection.sync_vendors()
+    count_record.refresh_from_db()
+    assert count_record.vendors_count == 8000
+    mocker.patch('sageintacctsdk.apis.Employees.count', return_value=250)
+    mocker.patch('sageintacctsdk.apis.Employees.get_all_generator', return_value=data['get_employees'])
+    sage_intacct_connection.sync_employees()
+    count_record.refresh_from_db()
+    assert count_record.employees_count == 250
+    mocker.patch('sageintacctsdk.apis.Departments.count', return_value=45)
+    mocker.patch('sageintacctsdk.apis.Departments.get_all_generator', return_value=data['get_departments'])
+    sage_intacct_connection.sync_departments()
+    count_record.refresh_from_db()
+    assert count_record.departments_count == 45
+    mocker.patch('sageintacctsdk.apis.Classes.count', return_value=30)
+    mocker.patch('sageintacctsdk.apis.Classes.get_all_generator', return_value=data['get_classes'])
+    sage_intacct_connection.sync_classes()
+    count_record.refresh_from_db()
+    assert count_record.classes_count == 30
+    mocker.patch('sageintacctsdk.apis.Customers.count', return_value=750)
+    mocker.patch('sageintacctsdk.apis.Customers.get_all_generator', return_value=data['get_customers'])
+    sage_intacct_connection.sync_customers()
+    count_record.refresh_from_db()
+    assert count_record.customers_count == 750
+    mocker.patch('sageintacctsdk.apis.Projects.count', return_value=1100)
+    mocker.patch('sageintacctsdk.apis.Projects.get_all_generator', return_value=data['get_projects'])
+    mock_platform = mocker.patch('fyle_integrations_imports.modules.projects.PlatformConnector')
+    mocker.patch.object(mock_platform.return_value.projects, 'post_bulk')
+    mocker.patch.object(mock_platform.return_value.projects, 'sync')
+    sage_intacct_connection.sync_projects()
+    count_record.refresh_from_db()
+    assert count_record.projects_count == 1100
+    mocker.patch('sageintacctsdk.apis.Locations.count', return_value=90)
+    mocker.patch('sageintacctsdk.apis.Locations.get_all_generator', return_value=data['get_locations'])
+    sage_intacct_connection.sync_locations()
+    count_record.refresh_from_db()
+    assert count_record.locations_count == 90
+    mocker.patch('sageintacctsdk.apis.ExpenseTypes.count', return_value=180)
+    mocker.patch('sageintacctsdk.apis.ExpenseTypes.get_all_generator', return_value=data['get_expense_types'])
+    mocker.patch('fyle_integrations_imports.modules.categories.disable_categories')
+    sage_intacct_connection.sync_expense_types()
+    count_record.refresh_from_db()
+    assert count_record.expense_types_count == 180
+    mocker.patch('sageintacctsdk.apis.TaxDetails.count', return_value=18)
+    mocker.patch('sageintacctsdk.apis.TaxDetails.get_all_generator', return_value=data['get_tax_details'])
+    sage_intacct_connection.sync_tax_details()
+    count_record.refresh_from_db()
+    assert count_record.tax_details_count == 18
+    mocker.patch('sageintacctsdk.apis.Tasks.count', return_value=450)
+    mocker.patch('sageintacctsdk.apis.Tasks.get_all_generator', return_value=[[{'RECORDNO': '38', 'TASKID': '111', 'PARENTKEY': None, 'PARENTID': None, 'NAME': 'HrishabhCostCode', 'PARENTTASKNAME': None, 'PROJECTKEY': '172', 'PROJECTID': '1171', 'PROJECTNAME': 'Sage Project 10', 'ITEMKEY': None, 'ITEMID': None, 'ITEMNAME': None, 'DESCRIPTION': None, 'BILLABLE': 'false', 'TASKNO': None, 'TASKSTATUS': 'In Progress', 'CLASSID': None, 'CLASSNAME': None, 'CLASSKEY': None, 'ROOTPARENTKEY': '38', 'ROOTPARENTID': '111', 'ROOTPARENTNAME': 'HrishabhCostType_v3'}]])
+    sage_intacct_connection.sync_cost_codes()
+    count_record.refresh_from_db()
+    assert count_record.cost_codes_count == 450
+    mocker.patch('sageintacctsdk.apis.CostTypes.count', return_value=1400)
+    mocker.patch('sageintacctsdk.apis.CostTypes.get_all_generator', return_value=[[{'RECORDNO': '2342341', 'PROJECTKEY': 'pro1234', 'PROJECTID': 'pro1234', 'PROJECTNAME': 'pro1234', 'TASKKEY': 'task1234', 'TASKID': 'task1234', 'TASKNAME': 'task2341', 'COSTTYPEID': 'cost2341', 'NAME': 'cost12342', 'STATUS': 'Active'}]])
+    sage_intacct_connection.sync_cost_types()
+    count_record.refresh_from_db()
+    assert count_record.cost_types_count == 1400
+    mocker.patch('sageintacctsdk.apis.ExpensePaymentTypes.count', return_value=11)
+    mocker.patch('sageintacctsdk.apis.ExpensePaymentTypes.get_all_generator', return_value=data['get_expense_payment_types'])
+    sage_intacct_connection.sync_expense_payment_types()
+    count_record.refresh_from_db()
+    assert count_record.expense_payment_types_count == 11
+    mocker.patch('sageintacctsdk.apis.ChargeCardAccounts.count', return_value=14)
+    mocker.patch('sageintacctsdk.apis.ChargeCardAccounts.get_by_query', return_value=data['get_charge_card_accounts'])
+    sage_intacct_connection.sync_charge_card_accounts()
+    count_record.refresh_from_db()
+    assert count_record.charge_card_accounts_count == 14
+    mocker.patch('sageintacctsdk.apis.CheckingAccounts.count', return_value=7)
+    mocker.patch('sageintacctsdk.apis.CheckingAccounts.get_all_generator', return_value=data['get_payment_accounts'])
+    sage_intacct_connection.sync_payment_accounts()
+    count_record.refresh_from_db()
+    assert count_record.payment_accounts_count == 7

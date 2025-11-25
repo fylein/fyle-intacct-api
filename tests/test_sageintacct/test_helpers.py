@@ -32,6 +32,23 @@ def test_check_interval_and_sync_dimension(db):
     check_interval_and_sync_dimension(workspace_id)
 
 
+def test_check_interval_and_sync_dimension_exception(db, mocker):
+    """
+    Test check_interval_and_sync_dimension exception handling
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+    workspace.destination_synced_at = None
+    workspace.save()
+
+    mocker.patch('apps.sage_intacct.helpers.sync_dimensions', side_effect=Exception('Test exception'))
+    logger_mock = mocker.patch('apps.sage_intacct.helpers.logger')
+
+    check_interval_and_sync_dimension(workspace_id)
+
+    logger_mock.error.assert_called_once()
+
+
 def test_is_dependent_field_import_enabled(db, create_dependent_field_setting):
     """
     Test is_dependent_field_import_enabled
