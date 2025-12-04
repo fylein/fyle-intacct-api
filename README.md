@@ -1,7 +1,6 @@
 # Fyle Sage Intacct API
 Django Rest Framework API for Fyle Sage Intacct Integration
 
-
 ### Setup
 
 * ### Adding a New View, Function, or Trigger:
