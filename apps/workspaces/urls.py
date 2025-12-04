@@ -4,12 +4,13 @@ from apps.workspaces.views import (
     ReadyView,
     WorkspaceView,
     ConnectFyleView,
+    FeatureConfigView,
     ConfigurationsView,
     ExportToIntacctView,
     WorkspaceAdminsView,
     LastExportDetailView,
     ConnectSageIntacctView,
-    TokenHealthView
+    TokenHealthView,
 )
 
 workspace_app_paths = [
@@ -19,7 +20,8 @@ workspace_app_paths = [
     path('ready/', ReadyView.as_view({'get': 'get'})),
     path('<int:workspace_id>/exports/trigger/', ExportToIntacctView.as_view({'post': 'post'}), name='export-to-intacct'),
     path('<int:workspace_id>/admins/', WorkspaceAdminsView.as_view({'get': 'get'}), name='admin'),
-    path('<int:workspace_id>/export_detail/', LastExportDetailView.as_view(), name='export-detail')
+    path('<int:workspace_id>/export_detail/', LastExportDetailView.as_view(), name='export-detail'),
+    path('<int:workspace_id>/feature_configs/', FeatureConfigView.as_view(), name='feature-configs')
 ]
 
 fyle_connection_api_paths = [

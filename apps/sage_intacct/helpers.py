@@ -3,7 +3,6 @@ import traceback
 from datetime import datetime, timezone
 
 from django_q.models import Schedule
-from django.utils.module_loading import import_string
 
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.utils import SageIntacctConnector
@@ -115,11 +114,7 @@ def sync_dimensions(workspace_id: int, dimensions: list = []) -> None:
     :param dimensions: Dimensions List
     :return: None
     """
-    sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-    sage_intacct_connection = import_string(
-        'apps.sage_intacct.utils.SageIntacctConnector'
-    )(sage_intacct_credentials, workspace_id)
-
+    sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value)
     update_timestamp = False
     if not dimensions:
         dimensions = [

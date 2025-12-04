@@ -805,7 +805,7 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
                     'value': expense_payment_type['id'],
                     'destination_id': expense_payment_type['key'],
                     'detail': {
-                        'is_reimbursable': expense_payment_type['isNonReimbursable'] == 'false'
+                        'is_reimbursable': not bool(expense_payment_type['isNonReimbursable'])
                     },
                     'active': True
                 })
@@ -1177,6 +1177,53 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
 
             self.__update_intacct_synced_timestamp_object(key='location_entity_synced_at')
 
+    def get_bills(self, bill_ids: list[str], fields: list = None) -> list[dict]:
+        """
+        GET bills from Sage Intacct
+        :param bill_ids: Bill Ids
+        :param fields: Fields to be fetched
+        :return: Bills
+        """
+        fields = ['key', 'state']
+        filters = [
+            {
+                '$in': {
+                    'key': bill_ids
+                }
+            },
+            {
+                '$eq': {
+                    'state': 'paid'
+                }
+            }
+        ]
+        bill_generator = self.connection.bills.get_all_generator(fields=fields, filters=filters)
+        return bill_generator
+
+    def get_expense_reports(self, expense_report_ids: list[str], fields: list = None) -> dict:
+        """
+        GET expense reports from Sage Intacct
+        :param expense_report_ids: Expense Report Ids
+        :param fields: Fields to be fetched
+        :return: Expense Report
+        """
+        fields = ['key', 'state']
+        filters = [
+            {
+                '$in': {
+                    'key': expense_report_ids
+                }
+            },
+            {
+                '$eq': {
+                    'state': 'paid'
+                }
+            }
+        ]
+        expense_report = self.connection.expense_reports.get_all_generator(fields=fields, filters=filters)
+
+        return expense_report
+
 
 class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     """
@@ -1450,12 +1497,16 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
             return
 
         contact = self.create_contact(
-            contact_id=employee.value,
+            contact_id=sage_intacct_display_name,
             contact_name=sage_intacct_display_name,
             email=employee.value,
             first_name=name[0],
             last_name=name[-1] if len(name) == 2 else None
         )
+
+        if not contact:
+            logger.info("Error while creating contact for employee %s in workspace %s", employee.detail['full_name'], self.workspace_id)
+            return None
 
         employee_payload = {
             'id': sage_intacct_display_name,
@@ -1504,8 +1555,8 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     def get_or_create_vendor(
         self,
         vendor_name: str,
+        email: str = None,
         create: bool = False,
-        email: str = None
     ) -> Optional[DestinationAttribute]:
         """
         Get or create vendor
@@ -1577,6 +1628,58 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                             destination_id=vendor_from_intacct['id'],
                             email=email
                         )
+
+    def search_and_create_vendors(self, workspace_id: int, missing_vendors: list[str]) -> None:
+        """
+        Seach vendors in Intacct and Upsert Vendors in DB
+        :param workspace_id: Workspace ID
+        :param missing_vendors: Missing Vendors List
+        """
+        missing_vendors_batches = [missing_vendors[i:i + 50] for i in range(0, len(missing_vendors), 50)]
+        fields = ['id', 'name', 'status', 'contacts.default.email1']
+
+        for missing_vendors_batch in missing_vendors_batches:
+            vendors_list = [vendor.replace("'", "\\'") for vendor in missing_vendors_batch]
+
+            filters = [
+                {
+                    '$in': {
+                        'name': vendors_list
+                    }
+                },
+                {
+                    '$eq': {
+                        'status': 'active'
+                    }
+                }
+            ]
+
+            order_by = [
+                {
+                    'audit.modifiedDateTime': 'desc'
+                }
+            ]
+
+            vendors_generator = self.connection.vendors.get_all_generator(fields=fields, filters=filters, order_by=order_by)
+
+            # To Keep only most recently modified vendor for each name
+            unique_vendors = {}
+
+            for vendors in vendors_generator:
+                for vendor in vendors:
+                    name_key = vendor.get('name', '')
+
+                    if name_key not in unique_vendors:
+                        unique_vendors[name_key] = vendor
+
+            for vendor in unique_vendors.values():
+                logger.info("Upserting Vendor %s in Workspace %s", vendor['name'], workspace_id)
+                self.__create_destination_attribute(
+                    attribute_type=DestinationAttributeTypeEnum.VENDOR.value,
+                    value=vendor['name'],
+                    destination_id=vendor['id'],
+                    email=vendor.get('contacts.default.email1')
+                )
 
     def post_expense_report(
         self,
@@ -1785,36 +1888,36 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
             if not is_exception_handled:
                 raise
 
-    def post_ap_payment(self, ap_payment: APPayment, ap_payment_lineitems: list[APPaymentLineitem]) -> dict:
+    def post_ap_payment(self, ap_payment: APPayment, ap_payment_line_items: list[APPaymentLineitem]) -> dict:
         """
         Post AP Payment to Sage Intacct
         :param ap_payment: APPayment object
-        :param ap_payment_lineitems: APPaymentLineItem objects
+        :param ap_payment_line_items: APPaymentLineItem objects
         :return: created AP Payment
         """
         ap_payment_payload = construct_ap_payment_payload(
             workspace_id=self.workspace_id,
             ap_payment=ap_payment,
-            ap_payment_lineitems=ap_payment_lineitems
+            ap_payment_line_items=ap_payment_line_items
         )
         created_ap_payment = self.connection.ap_payments.post(ap_payment_payload)
         return created_ap_payment
 
-    def post_reimbursement(
+    def post_sage_intacct_reimbursement(
         self,
         reimbursement: SageIntacctReimbursement,
-        reimbursement_lineitems: list[SageIntacctReimbursementLineitem]
+        reimbursement_line_items: list[SageIntacctReimbursementLineitem]
     ) -> dict:
         """
         Post Reimbursement to Sage Intacct
         :param reimbursement: SageIntacctReimbursement object
-        :param reimbursement_lineitems: SageIntacctReimbursementLineItem objects
+        :param reimbursement_line_items: SageIntacctReimbursementLineItem objects
         :return: created Reimbursement
         """
         reimbursement_payload = construct_reimbursement_payload(
             workspace_id=self.workspace_id,
             reimbursement=reimbursement,
-            reimbursement_lineitems=reimbursement_lineitems
+            reimbursement_line_items=reimbursement_line_items
         )
 
         sdk_soap_connection = self.get_soap_connection()
@@ -1917,3 +2020,55 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
         :return: response from sage intacct
         """
         return self.connection.journal_entries.update_attachment(object_id=object_key, attachment_id=attachment_id)
+
+    def get_journal_entry(self, journal_entry_id: str, fields: list = None) -> dict:
+        """
+        Get journal entry from Sage Intacct
+        :param journal_entry_id: Journal Entry Id
+        :param fields: Fields to be fetched
+        :return: Journal Entry
+        """
+        soap_sdk_connection = self.get_soap_connection()
+        journal_entry = soap_sdk_connection.journal_entries.get(field='RECORDNO', value=journal_entry_id, fields=fields)
+
+        return journal_entry
+
+    def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None) -> dict:
+        """
+        GET charge card transaction from Sage Intacct
+        :param charge_card_transaction_id: Charge Card Transaction Id
+        :param fields: Fields to be fetched
+        :return: Charge Card Transaction
+        """
+        soap_sdk_connection = self.get_soap_connection()
+        charge_card_transaction = soap_sdk_connection.charge_card_transactions.get(
+            field='RECORDNO',
+            value=charge_card_transaction_id,
+            fields=fields
+        )
+
+        return charge_card_transaction
+
+    def get_bill(self, bill_id: str, fields: list = None) -> dict:
+        """
+        GET bill from Sage Intacct
+        :param bill_id: Bill Id
+        :param fields: Fields to be fetched
+        :return: Bill
+        """
+        soap_sdk_connection = self.get_soap_connection()
+        bill = soap_sdk_connection.bills.get(field='RECORDNO', value=bill_id, fields=fields)
+
+        return bill
+
+    def get_expense_report(self, expense_report_id: str, fields: list = None) -> dict:
+        """
+        GET expense reports from Sage Intacct
+        :param expense_report_id: Expense Report Id
+        :param fields: Fields to be fetched
+        :return: Expense Report
+        """
+        soap_sdk_connection = self.get_soap_connection()
+        expense_report = soap_sdk_connection.expense_reports.get(field='RECORDNO', value=expense_report_id, fields=fields)
+
+        return expense_report
