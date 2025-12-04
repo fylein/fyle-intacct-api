@@ -63,12 +63,12 @@ logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacctRestConnector, expense_group: ExpenseGroup) -> str:
+def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacctRestConnector, expense_group: ExpenseGroup) -> tuple:
     """
     Get attachments from Fyle and upload them to Sage Intacct
     :param sage_intacct_connection: Sage Intacct Connection
     :param expense_group: Expense group
-    :return: Final supdoc_id string if successful, else None
+    :return: Tuple of (Final supdoc_id string if successful else None, is_failed boolean)
     """
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
@@ -89,7 +89,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacct
 
                 attachment_number += 1
 
-        return final_supdoc_id
+        return final_supdoc_id, False
 
     except Exception:
         error = traceback.format_exc()
@@ -97,6 +97,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacct
             'Attachment failed for expense group id %s / workspace id %s. Error: %s',
             expense_group.id, expense_group.workspace_id, {'error': error}
         )
+        return None, True
 
 
 def create_or_update_employee_mapping(
@@ -606,9 +607,12 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         worker_logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            supdoc_id, is_attachment_failed = load_attachments(sage_intacct_connection, expense_group)
             if supdoc_id:
                 task_log.supdoc_id = supdoc_id
+                task_log.save()
+            if is_attachment_failed:
+                task_log.is_attachment_upload_failed = True
                 task_log.save()
 
         with transaction.atomic():
@@ -785,9 +789,12 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         worker_logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            supdoc_id, is_attachment_failed = load_attachments(sage_intacct_connection, expense_group)
             if supdoc_id:
                 task_log.supdoc_id = supdoc_id
+                task_log.save()
+            if is_attachment_failed:
+                task_log.is_attachment_upload_failed = True
                 task_log.save()
 
         with transaction.atomic():
@@ -965,9 +972,12 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
         worker_logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            supdoc_id, is_attachment_failed = load_attachments(sage_intacct_connection, expense_group)
             if supdoc_id:
                 task_log.supdoc_id = supdoc_id
+                task_log.save()
+            if is_attachment_failed:
+                task_log.is_attachment_upload_failed = True
                 task_log.save()
 
         with transaction.atomic():
@@ -1133,9 +1143,12 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         worker_logger.info('Validated Employee mapping %s successfully', expense_group.id)
 
         if not task_log.supdoc_id:
-            supdoc_id = load_attachments(sage_intacct_connection, expense_group)
+            supdoc_id, is_attachment_failed = load_attachments(sage_intacct_connection, expense_group)
             if supdoc_id:
                 task_log.supdoc_id = supdoc_id
+                task_log.save()
+            if is_attachment_failed:
+                task_log.is_attachment_upload_failed = True
                 task_log.save()
 
         with transaction.atomic():
