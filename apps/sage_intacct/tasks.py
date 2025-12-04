@@ -1743,13 +1743,18 @@ def check_sage_intacct_object_status_rest(workspace_id: int) -> None:
         logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
         return
 
-    bills = Bill.objects.filter(
-        expense_group__workspace_id=workspace_id,
-        paid_on_sage_intacct=False,
-        expense_group__fund_source='PERSONAL'
-    ).all()
+    check_sage_intacct_bill_status_rest(workspace_id=workspace_id, sage_intacct_connection=sage_intacct_connection)
+    check_sage_intacct_expense_report_status_rest(workspace_id=workspace_id, sage_intacct_connection=sage_intacct_connection)
 
-    expense_reports = ExpenseReport.objects.filter(
+
+def check_sage_intacct_bill_status_rest(workspace_id: int, sage_intacct_connection: SageIntacctRestConnector) -> None:
+    """
+    Check Sage Intacct Bill Status
+    :param workspace_id: Workspace Id
+    :param sage_intacct_connection: Sage Intacct Connection
+    :return: None
+    """
+    bills = Bill.objects.filter(
         expense_group__workspace_id=workspace_id,
         paid_on_sage_intacct=False,
         expense_group__fund_source='PERSONAL'
@@ -1782,6 +1787,20 @@ def check_sage_intacct_object_status_rest(workspace_id: int) -> None:
                     bill.paid_on_sage_intacct = True
                     bill.payment_synced = True
                     bill.save()
+
+
+def check_sage_intacct_expense_report_status_rest(workspace_id: int, sage_intacct_connection: SageIntacctRestConnector) -> None:
+    """
+    Check Sage Intacct Expense Report Status
+    :param workspace_id: Workspace Id
+    :param sage_intacct_connection: Sage Intacct Connection
+    :return: None
+    """
+    expense_reports = ExpenseReport.objects.filter(
+        expense_group__workspace_id=workspace_id,
+        paid_on_sage_intacct=False,
+        expense_group__fund_source='PERSONAL'
+    ).all()
 
     if expense_reports:
         expense_report_ids = get_all_sage_intacct_expense_report_ids(expense_reports)  # {'expense_report_id (sage side)': 'expense_group_id'}
