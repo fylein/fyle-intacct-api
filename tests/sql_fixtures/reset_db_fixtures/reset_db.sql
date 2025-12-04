@@ -1369,7 +1369,8 @@ CREATE TABLE public.task_logs (
     supdoc_id character varying(255),
     is_retired boolean NOT NULL,
     triggered_by character varying(255),
-    re_attempt_export boolean NOT NULL
+    re_attempt_export boolean NOT NULL,
+    is_attachment_upload_failed boolean NOT NULL
 );
 
 
@@ -6359,6 +6360,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 269	internal	0024_auto_generated_sql	2025-11-21 18:32:09.964181+00
 270	internal	0025_auto_generated_sql	2025-11-21 18:32:09.969995+00
 271	sage_intacct	0032_sageintacctattributescount	2025-11-21 18:32:10.00795+00
+272	internal	0026_auto_generated_sql	2025-11-25 07:37:50.264835+00
+273	tasks	0016_tasklog_is_attachment_upload_failed	2025-11-25 07:37:50.286441+00
 \.
 
 
@@ -10296,10 +10299,10 @@ COPY public.sage_intacct_reimbursements (id, account_id, employee_id, memo, paym
 -- Data for Name: task_logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id, is_retired, triggered_by, re_attempt_export) FROM stdin;
-2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N	f	\N	f
-4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N	f	\N	f
-3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N	f	\N	f
+COPY public.task_logs (id, type, task_id, status, detail, sage_intacct_errors, created_at, updated_at, bill_id, expense_report_id, expense_group_id, workspace_id, charge_card_transaction_id, ap_payment_id, sage_intacct_reimbursement_id, journal_entry_id, supdoc_id, is_retired, triggered_by, re_attempt_export, is_attachment_upload_failed) FROM stdin;
+2	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 1, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: Y@whFEB036~YzQ2cP0p2Zz-Iv9WTjEPDwAAABY]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 1, "long_description": "Currently, we can't create the transaction 'Reimbursable expense - C/2022/09/R/21'.", "short_description": "Bills error"}]	2022-09-20 08:48:35.694698+00	2022-09-28 11:56:34.693143+00	\N	\N	1	1	\N	\N	\N	\N	\N	f	\N	f	f
+4	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 3, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: R8nHGEB032~YzQ2dP0F2Qk-@XXWEOh26wAAAAs]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 3, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/23 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:57:02.308154+00	2022-09-28 11:56:37.749629+00	\N	\N	3	1	\N	\N	\N	\N	\N	f	\N	f	f
+3	CREATING_BILLS	\N	FAILED	\N	[{"correction": "Use tax details that belong to the tax solution.", "expense_group_id": 2, "long_description": "Tax detail Capital Goods Imported cannot be used in this transaction because it does not belong to tax solution Australia - GST. [Support ID: MLsapEB032~YzQ2cP0t2Y9-GgzWugr3IAAAAAU]", "short_description": "Bills error"}, {"correction": "Check the transaction for errors or inconsistencies, then try again.", "expense_group_id": 2, "long_description": "Currently, we can't create the transaction 'Corporate Credit Card expense - C/2022/09/R/22 - 28/09/2022'.", "short_description": "Bills error"}]	2022-09-20 08:51:33.345793+00	2022-09-28 11:56:33.933636+00	\N	\N	2	1	\N	\N	\N	\N	\N	f	\N	f	f
 \.
 
 
@@ -10434,7 +10437,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 57, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 271, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 273, true);
 
 
 --
