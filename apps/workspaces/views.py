@@ -46,6 +46,7 @@ from apps.workspaces.models import (
 from apps.workspaces.serializers import (
     WorkspaceSerializer,
     ConfigurationSerializer,
+    FeatureConfigSerializer,
     FyleCredentialSerializer,
     LastExportDetailSerializer,
     SageIntacctCredentialSerializer,
@@ -614,3 +615,14 @@ class ExportToIntacctView(viewsets.ViewSet):
         return Response(
             status=status.HTTP_200_OK
         )
+
+
+class FeatureConfigView(generics.RetrieveAPIView):
+    """
+    Get Feature Configs
+    """
+    lookup_field = 'workspace_id'
+    lookup_url_kwarg = 'workspace_id'
+
+    queryset = FeatureConfig.objects.all()
+    serializer_class = FeatureConfigSerializer

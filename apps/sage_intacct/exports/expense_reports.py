@@ -1,7 +1,7 @@
 import logging
 
 from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.exports.helpers import get_tax_exclusive_amount
+from apps.sage_intacct.exports.helpers import format_transaction_date, get_tax_exclusive_amount
 from apps.sage_intacct.models import ExpenseReport, ExpenseReportLineitem
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ def construct_expense_report_payload(
     :param expense_report_line_items: ExpenseReportLineitem objects
     :return: constructed expense report payload
     """
-    transaction_date = expense_report.transaction_date.strftime('%Y-%m-%d')
+    transaction_date = format_transaction_date(expense_report.transaction_date)
 
     expense_report_line_item_payload = construct_expense_report_line_item_payload(
         workspace_id=workspace_id,
@@ -64,7 +64,7 @@ def construct_expense_report_line_item_payload(
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
 
     for lineitem in expense_report_line_items:
-        transaction_date = lineitem.transaction_date.strftime('%Y-%m-%d')
+        transaction_date = format_transaction_date(lineitem.transaction_date)
         tax_exclusive_amount, _ = get_tax_exclusive_amount(
             workspace_id=workspace_id,
             amount=lineitem.amount,

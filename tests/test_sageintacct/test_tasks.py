@@ -907,6 +907,11 @@ def test_post_journal_entry_success(mocker, create_task_logs, db):
         'apps.sage_intacct.tasks.load_attachments',
         return_value=('sdfgh', False)
     )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_journal_entry_record_number',
+        return_value='6679'
+
+    )
 
     workspace_id = 1
 

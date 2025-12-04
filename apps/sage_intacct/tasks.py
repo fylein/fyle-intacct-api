@@ -1,59 +1,69 @@
 import logging
 import traceback
 from datetime import datetime
-
 from dateutil.relativedelta import relativedelta
+
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
-from django.db.models.functions import Lower
 from django.utils import timezone
-from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
+from django.core.cache import cache
+from django.db.models.functions import Lower
+
 from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
+from fyle_accounting_mappings.models import (
+    Mapping,
+    CategoryMapping,
+    EmployeeMapping,
+    ExpenseAttribute,
+    DestinationAttribute
+)
 
+from apps.tasks.models import Error, TaskLog
+from apps.mappings.models import GeneralMapping
+from fyle_intacct_api.exceptions import BulkError
+from apps.fyle.models import Expense, ExpenseGroup
 from apps.exceptions import ValueErrorWithResponse
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.sage_intacct.actions import update_last_export_details
+from apps.sage_intacct.connector import SageIntacctRestConnector
+from apps.sage_intacct.helpers import get_sage_intacct_connection
+from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
+from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, SageIntacctCredential
 from apps.fyle.actions import (
-    post_accounting_export_summary,
+    update_failed_expenses,
     update_complete_expenses,
     update_expenses_in_progress,
-    update_failed_expenses,
+    post_accounting_export_summary
 )
-from apps.fyle.models import Expense, ExpenseGroup
-from apps.mappings.models import GeneralMapping
-from apps.sage_intacct.actions import update_last_export_details
 from apps.sage_intacct.errors.helpers import (
     error_matcher,
     get_entity_values,
     remove_support_id,
-    replace_destination_id_with_values,
+    replace_destination_id_with_values
 )
 from apps.sage_intacct.models import (
-    APPayment,
-    APPaymentLineitem,
     Bill,
+    APPayment,
     BillLineitem,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem,
-    ExpenseReport,
-    ExpenseReportLineitem,
     JournalEntry,
+    ExpenseReport,
+    APPaymentLineitem,
     JournalEntryLineitem,
+    ExpenseReportLineitem,
+    ChargeCardTransaction,
     SageIntacctReimbursement,
-    SageIntacctReimbursementLineitem,
+    ChargeCardTransactionLineitem,
+    SageIntacctReimbursementLineitem
 )
-from apps.sage_intacct.utils import SageIntacctConnector
-from apps.tasks.models import Error, TaskLog
-from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential
-from fyle_intacct_api.exceptions import BulkError
-from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
 
 
-def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_group: ExpenseGroup) -> tuple:
+def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacctRestConnector, expense_group: ExpenseGroup) -> tuple:
     """
     Get attachments from Fyle and upload them to Sage Intacct
     :param sage_intacct_connection: Sage Intacct Connection
@@ -92,7 +102,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector, expense_grou
 
 def create_or_update_employee_mapping(
     expense_group: ExpenseGroup,
-    sage_intacct_connection: SageIntacctConnector,
+    sage_intacct_connection: SageIntacctConnector | SageIntacctRestConnector,
     auto_map_employees_preference: str,
     employee_field_mapping: str
 ) -> None:
@@ -218,7 +228,7 @@ def create_or_update_employee_mapping(
                     )
 
 
-def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configuration, merchant: str = None, sage_intacct_connection: SageIntacctConnector = None) -> DestinationAttribute:
+def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configuration, merchant: str = None, sage_intacct_connection: SageIntacctConnector | SageIntacctRestConnector = None) -> DestinationAttribute:
     """
     Get or create default vendor
     :param merchant: Fyle Expense Merchant
@@ -226,8 +236,7 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
     :return: Destination Attribute for Vendor
     """
     if not sage_intacct_connection:
-        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+        sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
     vendor = None
 
@@ -581,7 +590,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         __validate_expense_group(expense_group, configuration)
         logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
-        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
+        sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
         if settings.BRAND_ID == 'fyle':
             if configuration.auto_map_employees and configuration.auto_create_destination_entity \
@@ -625,7 +634,9 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
 
-            journal_entry = sage_intacct_connection.get_journal_entry(created_journal_entry['data']['glbatch']['RECORDNO'], ['RECORD_URL'])
+            record_number = get_journal_entry_record_number(journal_entry_response=created_journal_entry, workspace_id=task_log.workspace_id)
+
+            journal_entry = sage_intacct_connection.get_journal_entry(record_number, ['RECORD_URL'])
             url_id = journal_entry['glbatch']['RECORD_URL'].split('?.r=', 1)[1]
             created_journal_entry['url_id'] = url_id
 
@@ -765,7 +776,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         __validate_expense_group(expense_group, configuration)
         worker_logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
-        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
+        sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
         if configuration.auto_map_employees and configuration.auto_create_destination_entity \
             and configuration.auto_map_employees != 'EMPLOYEE_CODE':
@@ -794,20 +805,17 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
                 expense_group, configuration
             )
 
-            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
-
-            sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
-
             created_expense_report = sage_intacct_connection.post_expense_report(
                 expense_report_object, expense_report_lineitems_objects)
             worker_logger.info('Created Expense Report with Expense Group %s successfully', expense_group.id)
 
-            record_no = created_expense_report['key']
-            expense_report = sage_intacct_connection.get_expense_report(record_no, ['RECORD_URL'])
+            record_number = get_expense_report_record_number(expense_report_response=created_expense_report, workspace_id=task_log.workspace_id)
+
+            expense_report = sage_intacct_connection.get_expense_report(record_number, ['RECORD_URL'])
             url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
 
             details = {
-                'key': record_no,
+                'key': record_number,
                 'url_id': url_id
             }
             task_log.detail = details
@@ -950,7 +958,7 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
         __validate_expense_group(expense_group, configuration)
         worker_logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
-        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
+        sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
         if configuration.auto_map_employees and configuration.auto_create_destination_entity \
             and expense_group.fund_source == 'PERSONAL' and \
@@ -981,7 +989,9 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
                                                              bill_lineitems_objects)
             worker_logger.info('Created Bill with Expense Group %s successfully', expense_group.id)
 
-            bill = sage_intacct_connection.get_bill(created_bill['data']['apbill']['RECORDNO'], ['RECORD_URL'])
+            record_number = get_bill_record_number(bill_response=created_bill, workspace_id=task_log.workspace_id)
+
+            bill = sage_intacct_connection.get_bill(record_number, ['RECORD_URL'])
             url_id = bill['apbill']['RECORD_URL'].split('?.r=', 1)[1]
             created_bill['url_id'] = url_id
 
@@ -1123,7 +1133,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         __validate_expense_group(expense_group, configuration)
         worker_logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
-        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, expense_group.workspace_id)
+        sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
         merchant = expense_group.expenses.first().vendor
         vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
@@ -1152,8 +1162,10 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
             worker_logger.info('Created Charge Card Transaction with Expense Group %s successfully', expense_group.id)
 
-            charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(
-                created_charge_card_transaction['key'], ['RECORD_URL'])
+            record_number = get_charge_card_transaction_record_number(charge_card_transaction_response=created_charge_card_transaction, workspace_id=task_log.workspace_id)
+
+            charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(record_number, ['RECORD_URL'])
+
             url_id = charge_card_transaction['cctransaction']['RECORD_URL'].split('?.r=', 1)[1]
             created_charge_card_transaction['url_id'] = url_id
 
@@ -1358,14 +1370,21 @@ def create_ap_payment(workspace_id: int) -> None:
 
                         ap_payment_object = APPayment.create_ap_payment(bill.expense_group)
                         bill_task_log = TaskLog.objects.get(expense_group=bill.expense_group)
-                        record_key = bill_task_log.detail['data']['apbill']['RECORDNO']
+                        record_key = None
+
+                        migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
+                        if migrated_to_rest_api:
+                            record_key = bill_task_log.detail['ia::result']['key']
+                        else:
+                            record_key = bill_task_log.detail['data']['apbill']['RECORDNO']
 
                         ap_payment_lineitems_objects = APPaymentLineitem.create_ap_payment_lineitems(
                             ap_payment_object.expense_group, record_key
                         )
 
                         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-                        sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+                        sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
                         created_ap_payment = sage_intacct_connection.post_ap_payment(
                             ap_payment_object, ap_payment_lineitems_objects
                         )
@@ -1495,7 +1514,7 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                     )
 
                     sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-                    sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+                    sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
                     created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
                         sage_intacct_reimbursement_object,
                         sage_intacct_reimbursement_lineitems_objects
@@ -1594,8 +1613,14 @@ def get_all_sage_intacct_bill_ids(sage_objects: Bill) -> dict:
     expense_group_ids = [sage_object.expense_group_id for sage_object in sage_objects]
     task_logs = TaskLog.objects.filter(expense_group_id__in=expense_group_ids).all()
 
+    workspace_id = sage_objects.first().expense_group.workspace_id
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
     for task_log in task_logs:
-        sage_intacct_bill_details[task_log.detail['data']['apbill']['RECORDNO']] = task_log.expense_group.id
+        if migrated_to_rest_api:
+            sage_intacct_bill_details[task_log.detail['ia::result']['key']] = task_log.expense_group.id
+        else:
+            sage_intacct_bill_details[task_log.detail['data']['apbill']['RECORDNO']] = task_log.expense_group.id
 
     return sage_intacct_bill_details
 
@@ -1701,6 +1726,111 @@ def check_sage_intacct_object_status(workspace_id: int) -> None:
                     expense_report.save()
 
 
+def check_sage_intacct_object_status_rest(workspace_id: int) -> None:
+    """
+    Check Sage Intacct Object Status
+    :param workspace_id: Workspace Id
+    :return: None
+    """
+    try:
+        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+        sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value)
+    except (SageIntacctCredential.DoesNotExist, NoPrivilegeError):
+        logger.info('SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
+        return
+    except InvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
+        logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
+        return
+
+    check_sage_intacct_bill_status_rest(workspace_id=workspace_id, sage_intacct_connection=sage_intacct_connection)
+    check_sage_intacct_expense_report_status_rest(workspace_id=workspace_id, sage_intacct_connection=sage_intacct_connection)
+
+
+def check_sage_intacct_bill_status_rest(workspace_id: int, sage_intacct_connection: SageIntacctRestConnector) -> None:
+    """
+    Check Sage Intacct Bill Status
+    :param workspace_id: Workspace Id
+    :param sage_intacct_connection: Sage Intacct Connection
+    :return: None
+    """
+    bills = Bill.objects.filter(
+        expense_group__workspace_id=workspace_id,
+        paid_on_sage_intacct=False,
+        expense_group__fund_source='PERSONAL'
+    ).all()
+
+    if bills:
+        bill_ids = get_all_sage_intacct_bill_ids(bills)  # {'bill_id (sage side)': 'expense_group_id'}
+
+        bill_ids_batches = [list(bill_ids.keys())[i:i + 50] for i in range(0, len(bill_ids), 50)]
+
+        for batch in bill_ids_batches:
+            bills_detail_generator = sage_intacct_connection.get_bills(bill_ids=batch)
+
+            for bill_details in bills_detail_generator:
+                for bill_detail in bill_details:
+                    expense_group_id = bill_ids[bill_detail['key']]
+                    bill = bills.filter(expense_group_id=expense_group_id).first()
+                    line_items = BillLineitem.objects.filter(bill_id=bill.id)
+
+                    expenses_to_update = []
+                    for line_item in line_items:
+                        expense = line_item.expense
+                        expense.paid_on_sage_intacct = True
+                        expense.updated_at = datetime.now(timezone.utc)
+                        expenses_to_update.append(expense)
+
+                    if expenses_to_update:
+                        Expense.objects.bulk_update(expenses_to_update, ['paid_on_sage_intacct', 'updated_at'], batch_size=50)
+
+                    bill.paid_on_sage_intacct = True
+                    bill.payment_synced = True
+                    bill.save()
+
+
+def check_sage_intacct_expense_report_status_rest(workspace_id: int, sage_intacct_connection: SageIntacctRestConnector) -> None:
+    """
+    Check Sage Intacct Expense Report Status
+    :param workspace_id: Workspace Id
+    :param sage_intacct_connection: Sage Intacct Connection
+    :return: None
+    """
+    expense_reports = ExpenseReport.objects.filter(
+        expense_group__workspace_id=workspace_id,
+        paid_on_sage_intacct=False,
+        expense_group__fund_source='PERSONAL'
+    ).all()
+
+    if expense_reports:
+        expense_report_ids = get_all_sage_intacct_expense_report_ids(expense_reports)  # {'expense_report_id (sage side)': 'expense_group_id'}
+
+        expense_report_ids_batches = [list(expense_report_ids.keys())[i:i + 50] for i in range(0, len(expense_report_ids), 50)]
+
+        for batch in expense_report_ids_batches:
+            expense_reports_detail_generator = sage_intacct_connection.get_expense_reports(expense_report_ids=batch)
+
+            for expense_report_details in expense_reports_detail_generator:
+                for expense_report_detail in expense_report_details:
+                    expense_group_id = expense_report_ids[expense_report_detail['key']]
+                    expense_report = expense_reports.filter(expense_group_id=expense_group_id).first()
+                    line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
+
+                    expenses_to_update = []
+                    for line_item in line_items:
+                        expense = line_item.expense
+                        expense.paid_on_sage_intacct = True
+                        expense.updated_at = datetime.now(timezone.utc)
+                        expenses_to_update.append(expense)
+
+                    if expenses_to_update:
+                        Expense.objects.bulk_update(expenses_to_update, ['paid_on_sage_intacct', 'updated_at'], batch_size=50)
+
+                    expense_report.paid_on_sage_intacct = True
+                    expense_report.payment_synced = True
+                    expense_report.save()
+
+
 def process_fyle_reimbursements(workspace_id: int) -> None:
     """
     Process Fyle Reimbursements
@@ -1738,7 +1868,11 @@ def check_sage_intacct_object_status_and_process_fyle_reimbursements(workspace_i
     :param workspace_id: Workspace Id
     :return: None
     """
-    check_sage_intacct_object_status(workspace_id)
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+    if migrated_to_rest_api:
+        check_sage_intacct_object_status_rest(workspace_id)
+    else:
+        check_sage_intacct_object_status(workspace_id)
     process_fyle_reimbursements(workspace_id)
 
 
@@ -1876,8 +2010,8 @@ def search_and_upsert_vendors(workspace_id: int, configuration: Configuration, e
 
         if missing_vendors:
             try:
-                sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-                sage_intacct_connection = SageIntacctConnector(sage_intacct_credentials, workspace_id)
+                SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+                sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
                 sage_intacct_connection.search_and_create_vendors(workspace_id=workspace_id, missing_vendors=missing_vendors)
                 return True
             except SageIntacctCredential.DoesNotExist:
@@ -1973,3 +2107,63 @@ def check_cache_and_search_vendors(workspace_id: int, fund_source: str) -> None:
         cache.set(key=vendor_cache_key, value=datetime.now(timezone.utc), timeout=86400)
     elif vendor_cache_timestamp and not is_upserted:
         logger.info("Vendor Cache found for Workspace %s, last cached at %s", workspace_id, vendor_cache_timestamp)
+
+
+def get_journal_entry_record_number(journal_entry_response: dict, workspace_id: int) -> str:
+    """
+    Get journal entry record number
+    :param journal_entry_response: Journal Entry Response
+    :param workspace_id: Workspace ID
+    :return: Journal Entry Record Number
+    """
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
+    if migrated_to_rest_api:
+        return journal_entry_response['ia::result']['key']
+
+    return journal_entry_response['glbatch']['RECORDNO']
+
+
+def get_expense_report_record_number(expense_report_response: dict, workspace_id: int) -> str:
+    """
+    Get expense report record number
+    :param expense_report_response: Expense Report Response
+    :param workspace_id: Workspace ID
+    :return: Expense Report Record Number
+    """
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
+    if migrated_to_rest_api:
+        return expense_report_response['ia::result']['key']
+
+    return expense_report_response['key']
+
+
+def get_bill_record_number(bill_response: dict, workspace_id: int) -> str:
+    """
+    Get bill record number
+    :param bill_response: Bill Response
+    :param workspace_id: Workspace ID
+    :return: Bill Record Number
+    """
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
+    if migrated_to_rest_api:
+        return bill_response['ia::result']['key']
+
+    return bill_response['data']['apbill']['RECORDNO']
+
+
+def get_charge_card_transaction_record_number(charge_card_transaction_response: dict, workspace_id: int) -> str:
+    """
+    Get charge card transaction record number
+    :param charge_card_transaction_response: Charge Card Transaction Response
+    :param workspace_id: Workspace ID
+    :return: Charge Card Transaction Record Number
+    """
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
+    if migrated_to_rest_api:
+        return charge_card_transaction_response['ia::result']['key']
+
+    return charge_card_transaction_response['key']

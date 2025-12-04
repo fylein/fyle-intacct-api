@@ -4,7 +4,7 @@ from datetime import datetime
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import Configuration
 from apps.sage_intacct.models import Bill, BillLineitem
-from apps.sage_intacct.exports.helpers import get_tax_exclusive_amount, get_tax_solution_id_or_none
+from apps.sage_intacct.exports.helpers import format_transaction_date, get_tax_exclusive_amount, get_tax_solution_id_or_none
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -24,7 +24,7 @@ def construct_bill_payload(
     """
     configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-    transaction_date = bill.transaction_date.strftime('%Y-%m-%d')
+    transaction_date = format_transaction_date(bill.transaction_date)
     current_date = datetime.today().strftime('%Y-%m-%d')
 
     bill_line_item_payload = construct_bill_line_item_payload(
