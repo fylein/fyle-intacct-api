@@ -798,10 +798,6 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
                 expense_group, configuration
             )
 
-            sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
-
-            sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
-
             created_expense_report = sage_intacct_connection.post_expense_report(
                 expense_report_object, expense_report_lineitems_objects)
             worker_logger.info('Created Expense Report with Expense Group %s successfully', expense_group.id)
