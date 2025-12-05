@@ -370,7 +370,7 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
     post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
 
-def get_rest_error_message(response) -> str:
+def get_rest_error_message(response: str) -> str:
     """
     Extract error message from REST API response
     :param response: REST API response

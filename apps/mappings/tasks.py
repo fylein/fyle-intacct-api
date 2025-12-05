@@ -9,6 +9,11 @@ from fyle_accounting_mappings.helpers import EmployeesAutoMappingHelper
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.models import CategoryMapping, EmployeeMapping, MappingSetting
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
+from intacctsdk.exceptions import (
+    BadRequestError as IntacctRESTBadRequestError,
+    InvalidTokenError as IntacctRESTInvalidTokenError,
+    InternalServerError as IntacctRESTInternalServerError
+)
 
 from apps.tasks.models import Error
 from apps.mappings.models import GeneralMapping
@@ -131,6 +136,13 @@ def auto_map_employees(workspace_id: int) -> None:
 
     except NoPrivilegeError:
         logger.info('Insufficient permission to access the requested module')
+
+    except IntacctRESTInvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id)
+        logger.info('Invalid Sage Intacct REST Token Error for workspace_id - {0}'.format(workspace_id))
+
+    except (IntacctRESTBadRequestError, IntacctRESTInternalServerError) as e:
+        logger.info('REST API error while syncing employee/vendor from Sage Intacct in workspace - %s %s', workspace_id, e)
 
     except Exception:
         logger.exception('Error while auto mapping employees in workspace - %s', workspace_id)
