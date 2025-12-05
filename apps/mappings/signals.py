@@ -11,6 +11,7 @@ from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribut
 from fyle_integrations_platform_connector import PlatformConnector
 from rest_framework.exceptions import ValidationError
 from sageintacctsdk.exceptions import InternalServerError, InvalidTokenError
+from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 
 from apps.fyle.helpers import update_dimension_details
 from apps.mappings.constants import SYNC_METHODS
@@ -191,7 +192,7 @@ def run_pre_mapping_settings_triggers(sender: type[MappingSetting], instance: Ma
                 'field_name': instance.source_field
             })
 
-        except InvalidTokenError:
+        except (InvalidTokenError, IntacctRESTInvalidTokenError):
             invalidate_sage_intacct_credentials(workspace_id)
             logger.info('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
 

@@ -1367,7 +1367,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
             workspace_id=self.workspace_id,
             attribute={
                 'attribute_type': attribute_type.upper(),
-                'display_name': attribute_type,
+                'display_name': attribute_type.lower(),
                 'value': value,
                 'destination_id': destination_id,
                 'active': True,
