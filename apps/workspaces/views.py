@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
 from sageintacctsdk import exceptions as sage_intacct_exc
+from intacctsdk.exceptions import InvalidTokenError as SageIntacctRestInvalidTokenError
 
 from fyle_rest_auth.models import AuthToken
 from fyle_rest_auth.utils import AuthUtils
@@ -90,7 +91,7 @@ class TokenHealthView(viewsets.ViewSet):
                     sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value)
                     sage_intacct_connection.connection.locations.count()
                     cache.set(cache_key, True, timeout=timedelta(hours=24).total_seconds())
-            except sage_intacct_exc.InvalidTokenError:
+            except (sage_intacct_exc.InvalidTokenError, SageIntacctRestInvalidTokenError):
                 invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
                 status_code = status.HTTP_400_BAD_REQUEST
                 message = "Intacct connection expired"
