@@ -3,48 +3,56 @@ import traceback
 from datetime import timedelta
 
 from cryptography.fernet import Fernet
+
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db.models import Q, QuerySet
-from fyle.platform import exceptions as fyle_exc
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
-from fyle_accounting_mappings.models import ExpenseAttribute, FyleSyncTimestamp
-from fyle_rest_auth.helpers import get_fyle_admin
-from fyle_rest_auth.models import AuthToken
-from fyle_rest_auth.utils import AuthUtils
-from rest_framework import generics, viewsets
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.request import Request
-from rest_framework.response import Response
+from django.contrib.auth import get_user_model
+
 from rest_framework.views import status
 from sageintacctsdk import SageIntacctSDK
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework import generics, viewsets
+from rest_framework.permissions import IsAuthenticated
 from sageintacctsdk import exceptions as sage_intacct_exc
+from intacctsdk.exceptions import InvalidTokenError as SageIntacctRestInvalidTokenError
 
+from fyle_rest_auth.models import AuthToken
+from fyle_rest_auth.utils import AuthUtils
+from fyle.platform import exceptions as fyle_exc
+from fyle_rest_auth.helpers import get_fyle_admin
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_mappings.models import ExpenseAttribute, FyleSyncTimestamp
+
+from apps.tasks.models import TaskLog
 from apps.fyle.helpers import get_cluster_domain
 from apps.fyle.models import ExpenseGroupSettings
-from apps.sage_intacct.utils import SageIntacctConnector
-from apps.tasks.models import TaskLog
+from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.workspaces.actions import export_to_intacct
+from apps.workspaces.tasks import patch_integration_settings
+from apps.sage_intacct.helpers import get_sage_intacct_connection
+from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
+from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
 from apps.workspaces.models import (
+    Workspace,
     Configuration,
     FeatureConfig,
     FyleCredential,
-    IntacctSyncedTimestamp,
     LastExportDetail,
     SageIntacctCredential,
-    Workspace,
+    IntacctSyncedTimestamp,
 )
 from apps.workspaces.serializers import (
+    WorkspaceSerializer,
     ConfigurationSerializer,
+    FeatureConfigSerializer,
     FyleCredentialSerializer,
     LastExportDetailSerializer,
     SageIntacctCredentialSerializer,
-    WorkspaceSerializer,
 )
-from apps.workspaces.tasks import patch_integration_settings
-from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
-from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+
 
 User = get_user_model()
 auth_utils = AuthUtils()
@@ -59,6 +67,9 @@ class TokenHealthView(viewsets.ViewSet):
     """
 
     def get(self, request: Request, **kwargs) -> Response:
+        """
+        Get token health
+        """
         status_code = status.HTTP_200_OK
         message = "Intacct connection is active"
 
@@ -77,10 +88,10 @@ class TokenHealthView(viewsets.ViewSet):
                 is_healthy = cache.get(cache_key)
 
                 if is_healthy is None:
-                    sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+                    sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value)
                     sage_intacct_connection.connection.locations.count()
                     cache.set(cache_key, True, timeout=timedelta(hours=24).total_seconds())
-            except sage_intacct_exc.InvalidTokenError:
+            except (sage_intacct_exc.InvalidTokenError, SageIntacctRestInvalidTokenError):
                 invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
                 status_code = status.HTTP_400_BAD_REQUEST
                 message = "Intacct connection expired"
@@ -126,6 +137,7 @@ class WorkspaceView(viewsets.ViewSet):
             FeatureConfig.objects.create(workspace_id=workspace.id)
             FyleSyncTimestamp.objects.create(workspace_id=workspace.id)
             IntacctSyncedTimestamp.objects.create(workspace_id=workspace.id)
+            SageIntacctAttributesCount.objects.create(workspace_id=workspace.id)
 
             workspace.user.add(User.objects.get(user_id=request.user))
 
@@ -604,3 +616,14 @@ class ExportToIntacctView(viewsets.ViewSet):
         return Response(
             status=status.HTTP_200_OK
         )
+
+
+class FeatureConfigView(generics.RetrieveAPIView):
+    """
+    Get Feature Configs
+    """
+    lookup_field = 'workspace_id'
+    lookup_url_kwarg = 'workspace_id'
+
+    queryset = FeatureConfig.objects.all()
+    serializer_class = FeatureConfigSerializer

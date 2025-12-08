@@ -2,7 +2,7 @@ import logging
 
 from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import Configuration
-from apps.sage_intacct.exports.helpers import get_tax_exclusive_amount
+from apps.sage_intacct.exports.helpers import format_transaction_date, get_tax_exclusive_amount
 from apps.sage_intacct.models import ChargeCardTransaction, ChargeCardTransactionLineitem
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ def construct_charge_card_transaction_payload(
     """
     configuration = Configuration.objects.get(workspace_id=workspace_id)
 
-    transaction_date = charge_card_transaction.transaction_date.strftime('%Y-%m-%d')
+    transaction_date = format_transaction_date(charge_card_transaction.transaction_date)
 
     charge_card_transaction_lineitem_payload = construct_charge_card_transaction_line_item_payload(
         workspace_id=workspace_id,

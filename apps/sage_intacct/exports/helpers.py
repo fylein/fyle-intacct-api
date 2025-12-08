@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import datetime
+from typing import Optional, Union
 
 from fyle_accounting_mappings.models import DestinationAttribute
 
@@ -10,6 +11,19 @@ from apps.sage_intacct.models import (
     ExpenseReportLineitem,
     ChargeCardTransactionLineitem
 )
+
+
+def format_transaction_date(transaction_date: Union[str, datetime]) -> str:
+    """
+    Format transaction date to 'YYYY-MM-DD' string.
+    Handles both string and datetime inputs.
+    :param transaction_date: Transaction date as string or datetime
+    :return: Formatted date string
+    """
+    if isinstance(transaction_date, str):
+        # Parse the string and format it
+        return datetime.strptime(transaction_date, '%Y-%m-%dT%H:%M:%S').strftime('%Y-%m-%d')
+    return transaction_date.strftime('%Y-%m-%d')
 
 
 def get_tax_exclusive_amount(workspace_id: int, amount: float | int, default_tax_code_id: str) -> tuple:

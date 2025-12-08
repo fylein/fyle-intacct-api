@@ -25,3 +25,11 @@ class DestinationAttributeTypeEnum(str, Enum):
     CHARGE_CARD_NUMBER = 'CHARGE_CARD_NUMBER'
     EXPENSE_PAYMENT_TYPE = 'EXPENSE_PAYMENT_TYPE'
     USER_DEFINED_DIMENSION = 'USER_DEFINED_DIMENSION'
+
+
+class SageIntacctRestConnectionTypeEnum(str, Enum):
+    """
+    Sage Intacct Action Type Enum
+    """
+    SYNC = 'SYNC'
+    UPSERT = 'UPSERT'

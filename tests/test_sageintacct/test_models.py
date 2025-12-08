@@ -1,49 +1,44 @@
 import logging
 from datetime import datetime
 
-from fyle_accounting_mappings.models import (
-    Mapping,
-    MappingSetting,
-    EmployeeMapping,
-    ExpenseAttribute,
-    DestinationAttribute
-)
+from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping, MappingSetting
 
-from apps.mappings.models import GeneralMapping
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
-from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
-from apps.workspaces.models import Configuration, Workspace, SageIntacctCredential
+from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.models import (
-    Bill,
     APPayment,
-    CostType,
-    JournalEntry,
-    BillLineitem,
-    ExpenseReport,
     APPaymentLineitem,
-    JournalEntryLineitem,
-    ExpenseReportLineitem,
+    Bill,
+    BillLineitem,
     ChargeCardTransaction,
-    SageIntacctReimbursement,
     ChargeCardTransactionLineitem,
+    CostType,
+    ExpenseReport,
+    ExpenseReportLineitem,
+    JournalEntry,
+    JournalEntryLineitem,
+    SageIntacctAttributesCount,
+    SageIntacctReimbursement,
     SageIntacctReimbursementLineitem,
-    get_memo,
-    get_ccc_account_id,
-    get_item_id_or_none,
-    get_memo_or_purpose,
-    get_task_id_or_none,
-    get_transaction_date,
-    get_class_id_or_none,
-    get_project_id_or_none,
-    get_customer_id_or_none,
-    get_location_id_or_none,
-    get_tax_code_id_or_none,
-    get_cost_type_id_or_none,
-    get_department_id_or_none,
     get_allocation_id_or_none,
+    get_ccc_account_id,
+    get_class_id_or_none,
+    get_cost_type_id_or_none,
+    get_customer_id_or_none,
+    get_department_id_or_none,
     get_intacct_employee_object,
-    get_user_defined_dimension_object
+    get_item_id_or_none,
+    get_location_id_or_none,
+    get_memo,
+    get_memo_or_purpose,
+    get_project_id_or_none,
+    get_task_id_or_none,
+    get_tax_code_id_or_none,
+    get_transaction_date,
+    get_user_defined_dimension_object,
 )
+from apps.sage_intacct.tasks import get_or_create_credit_card_vendor
+from apps.workspaces.models import Configuration, SageIntacctCredential, Workspace
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -113,7 +108,7 @@ def test_expense_report(db):
 
     for expense_report_lineitem in expense_report_lineitems:
         assert expense_report_lineitem.amount == 11.0
-        assert expense_report_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert expense_report_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
         assert expense_report_lineitem.billable == True
 
     assert expense_report.currency == 'USD'
@@ -147,7 +142,7 @@ def test_create_journal_entry(db, mocker, create_expense_group_expense, create_c
 
     for journal_entry_lineitem in journal_entry_lineitems:
         assert journal_entry_lineitem.amount == 11.0
-        assert journal_entry_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert journal_entry_lineitem.memo == 'ashwin.t@fyle.in - Food - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
 
     assert journal_entry.currency == 'USD'
     assert journal_entry.transaction_date.split('T')[0] == datetime.now().strftime('%Y-%m-%d')
@@ -619,7 +614,7 @@ def test_get_expense_purpose(db):
 
         expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
 
-        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
 
     workspace = Workspace.objects.get(id=workspace_id)
     workspace.cluster_domain = ''
@@ -630,7 +625,7 @@ def test_get_expense_purpose(db):
             lineitem.category, lineitem.sub_category)
 
         expense_purpose = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, export_table=ExpenseReport)
-        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        assert expense_purpose == 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
 
 
 def test_get_memo_or_purpose_top_level(db):
@@ -657,7 +652,7 @@ def test_get_memo_or_purpose_top_level(db):
 
         # Expected format: employee_email - employee_name - group_by
         # Since expense_group_settings.description has claim_number, group_by should be claim_number
-        expected_memo = 'ashwin.t@fyle.in -  - C/2022/09/R/22'
+        expected_memo = 'ashwin.t@fyle.in - C/2022/09/R/22'
         assert top_level_memo == expected_memo
 
     # Test with different top_level_memo_structure
@@ -671,7 +666,7 @@ def test_get_memo_or_purpose_top_level(db):
         top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=True, export_table=ExpenseReport)
 
         # Expected format: employee_name - group_by
-        expected_memo = ' - C/2022/09/R/22'
+        expected_memo = 'C/2022/09/R/22'
         assert top_level_memo == expected_memo
 
     # Test with empty top_level_memo_structure (should fall back to regular memo_structure)
@@ -685,7 +680,7 @@ def test_get_memo_or_purpose_top_level(db):
         top_level_memo = get_memo_or_purpose(workspace_id, lineitem, category, workspace_general_settings, is_top_level=False, export_table=ExpenseReport)
 
         # Should fall back to regular memo structure
-        expected_memo = 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 -  - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
+        expected_memo = 'ashwin.t@fyle.in - Food / None - 2022-09-20 - C/2022/09/R/22 - https://staging.fyle.tech/app/admin/#/company_expenses?txnId=txCqLqsEnAjf&org_id=or79Cob97KSh'
         assert top_level_memo == expected_memo
 
     # Test when expense_group_settings has expense_number instead of claim_number
@@ -1394,3 +1389,24 @@ def test_get_active_sage_intacct_credentials(mocker):
     result = SageIntacctCredential.get_active_sage_intacct_credentials(123)
     mock_get.assert_called_once_with(workspace_id=123, is_expired=False)
     assert result == mock_cred
+
+
+def test_sage_intacct_attributes_count_model(db):
+    """
+    Test sage intacct attributes count model
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+    SageIntacctAttributesCount.objects.filter(workspace_id=workspace_id).delete()
+    count_record = SageIntacctAttributesCount.objects.create(workspace=workspace)
+    assert count_record.accounts_count == 0
+    assert count_record.vendors_count == 0
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='accounts', count=2500)
+    count_record.refresh_from_db()
+    assert count_record.accounts_count == 2500
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='vendors', count=5000)
+    count_record.refresh_from_db()
+    assert count_record.vendors_count == 5000
+    SageIntacctAttributesCount.update_attribute_count(workspace_id=workspace_id, attribute_type='accounts', count=3000)
+    count_record.refresh_from_db()
+    assert count_record.accounts_count == 3000
