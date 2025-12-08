@@ -1,3 +1,4 @@
+import json
 import logging
 import traceback
 from datetime import datetime
@@ -11,6 +12,11 @@ from django.db.models.functions import Lower
 
 from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
+from intacctsdk.exceptions import (
+    BadRequestError as IntacctRESTBadRequestError,
+    InvalidTokenError as IntacctRESTInvalidTokenError,
+    InternalServerError as IntacctRESTInternalServerError
+)
 from fyle_accounting_mappings.models import (
     Mapping,
     CategoryMapping,
@@ -358,6 +364,144 @@ def handle_sage_intacct_errors(exception: Exception, expense_group: ExpenseGroup
     task_log.detail = None
     task_log.sage_intacct_errors = errors
     task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
+    task_log.save()
+
+    update_failed_expenses(expense_group.expenses.all(), False)
+    post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
+
+
+def get_rest_error_message(response: str) -> str:
+    """
+    Extract error message from REST API response
+    :param response: REST API response
+    :return: Error message string
+    """
+    error_response = response
+    if isinstance(error_response, str):
+        try:
+            error_response = json.loads(error_response)
+        except json.JSONDecodeError:
+            return str(response)
+
+    if isinstance(error_response, dict) and 'ia::result' in error_response:
+        sage_intacct_error = error_response.get('ia::result', {}).get('ia::error', {})
+        details = sage_intacct_error.get('details', [])
+        if details:
+            return ' '.join([detail.get('message', '') for detail in details])
+        return sage_intacct_error.get('message', str(response))
+
+    return str(response)
+
+
+def handle_sage_intacct_rest_errors(exception: Exception, expense_group: ExpenseGroup, task_log: TaskLog, export_type: str) -> None:
+    """
+    Handle Sage Intacct REST API errors
+    :param exception: Exception
+    :param expense_group: Expense Group
+    :param task_log: Task Log
+    :param export_type: Export Type
+    :return: None
+    """
+    logger.info(exception.__dict__)
+
+    errors = []
+    is_parsed = False
+    article_link = None
+    attribute_type = None
+    error_title = 'Failed to create {0} in your Sage Intacct account.'.format(export_type)
+    error_msg = 'Something unexpected happened with the workspace'
+
+    try:
+        error_response = exception.response
+        if isinstance(error_response, str):
+            error_response = json.loads(error_response)
+
+        if 'ia::result' in error_response and 'ia::error' in error_response['ia::result']:
+            sage_intacct_error = error_response['ia::result']['ia::error']
+
+            details = sage_intacct_error.get('details', [])
+            if details:
+                for detail in details:
+                    errors.append({
+                        'expense_group_id': expense_group.id,
+                        'short_description': '{0} error'.format(export_type),
+                        'long_description': detail.get('message', error_msg),
+                        'correction': detail.get('correction') if detail.get('correction') else 'Not available'
+                    })
+
+                primary_error_index = 0
+                for i, detail in enumerate(details):
+                    detail_msg = detail.get('message', '')
+                    if error_matcher(detail_msg):
+                        primary_error_index = i
+                        break
+
+                if primary_error_index == 0 and len(details) > 1:
+                    first_msg = details[0].get('message', '').lower()
+                    if 'could not create' in first_msg or 'record' in first_msg:
+                        primary_error_index = len(details) - 1
+
+                primary_error = errors[primary_error_index]
+                error_title = primary_error['correction'] if (primary_error['correction'] and primary_error['correction'] != 'Not available') else primary_error['short_description']
+                error_msg = primary_error['long_description']
+            else:
+                error_msg = sage_intacct_error.get('message', error_msg)
+                errors.append({
+                    'expense_group_id': expense_group.id,
+                    'short_description': '{0} error'.format(export_type),
+                    'long_description': error_msg,
+                    'correction': 'Not available'
+                })
+                error_title = '{0} error'.format(export_type)
+        else:
+            errors.append({
+                'expense_group_id': expense_group.id,
+                'short_description': '{0} error'.format(export_type),
+                'long_description': str(exception.response) if exception.response else str(exception),
+                'correction': 'Not available'
+            })
+            error_msg = errors[0]['long_description']
+            error_title = '{0} error'.format(export_type)
+    except (json.JSONDecodeError, TypeError, KeyError):
+        errors.append({
+            'expense_group_id': expense_group.id,
+            'short_description': '{0} error'.format(export_type),
+            'long_description': str(exception.response) if exception.response else str(exception),
+            'correction': 'Not available'
+        })
+        error_msg = errors[0]['long_description']
+        error_title = '{0} error'.format(export_type)
+
+    error_msg = remove_support_id(error_msg)
+    error_dict = error_matcher(error_msg)
+    if error_dict:
+        error_entity_values = get_entity_values(error_dict, expense_group.workspace_id)
+        if error_entity_values:
+            error_msg = replace_destination_id_with_values(error_msg, error_entity_values)
+            is_parsed = True
+            article_link = error_dict['article_link']
+            attribute_type = error_dict['attribute_type']
+
+    error, created = Error.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        expense_group=expense_group,
+        defaults={
+            'type': 'INTACCT_ERROR',
+            'error_title': error_title,
+            'error_detail': error_msg,
+            'is_resolved': False,
+            'is_parsed': is_parsed,
+            'attribute_type': attribute_type,
+            'article_link': article_link
+        }
+    )
+
+    error.increase_repetition_count_by_one(created)
+
+    task_log.status = 'FAILED'
+    task_log.detail = None
+    task_log.sage_intacct_errors = errors
+    task_log.re_attempt_export = False
     task_log.save()
 
     update_failed_expenses(expense_group.expenses.all(), False)
@@ -716,6 +860,22 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         if last_export:
             last_export_failed = True
 
+    except IntacctRESTBadRequestError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Journal Entry')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Journal Entry')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInternalServerError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Journal Entry')
+        if last_export:
+            last_export_failed = True
+
     except Exception:
         error = traceback.format_exc()
         task_log.detail = {
@@ -895,6 +1055,22 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         if last_export:
             last_export_failed = True
 
+    except IntacctRESTBadRequestError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Expense Reports')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Expense Reports')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInternalServerError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Expense Reports')
+        if last_export:
+            last_export_failed = True
+
     except Exception:
         error = traceback.format_exc()
         task_log.detail = {
@@ -1067,6 +1243,22 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
         invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTBadRequestError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Bills')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Bills')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInternalServerError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Bills')
         if last_export:
             last_export_failed = True
 
@@ -1248,6 +1440,22 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
     except ValueErrorWithResponse as exception:
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTBadRequestError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInvalidTokenError as exception:
+        invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Charge Card Transactions')
+        if last_export:
+            last_export_failed = True
+
+    except IntacctRESTInternalServerError as exception:
+        handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Charge Card Transactions')
         if last_export:
             last_export_failed = True
 
@@ -1457,6 +1665,38 @@ def create_ap_payment(workspace_id: int) -> None:
 
                     task_log.save()
 
+                except IntacctRESTBadRequestError as exception:
+                    logger.info(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = exception.response
+
+                    error_msg = get_rest_error_message(exception.response)
+
+                    if (
+                        "Oops, we can't find this transaction; enter a valid" in error_msg
+                        or 'No line items found' in error_msg
+                        or 'There is no due on the bill' in error_msg
+                    ):
+                        bill.payment_synced = True
+                        bill.paid_on_sage_intacct = True
+                        bill.save()
+                        task_log.delete()
+                    else:
+                        task_log.save()
+
+                except IntacctRESTInvalidTokenError as exception:
+                    invalidate_sage_intacct_credentials(task_log.workspace_id, sage_intacct_credentials)
+                    logger.info(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = exception.response
+                    task_log.save()
+
+                except IntacctRESTInternalServerError as exception:
+                    logger.info(exception.response)
+                    task_log.status = 'FAILED'
+                    task_log.detail = exception.response
+                    task_log.save()
+
                 except Exception:
                     error = traceback.format_exc()
                     task_log.detail = {
@@ -1587,6 +1827,39 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                 task_log.status = 'FAILED'
                 task_log.detail = exception.response
 
+                task_log.save()
+
+            except IntacctRESTBadRequestError as exception:
+                logger.info(exception.response)
+                task_log.status = 'FAILED'
+                task_log.detail = exception.response
+
+                error_msg = get_rest_error_message(exception.response)
+
+                if (
+                    'exceeds total amount due ()' in error_msg
+                    or 'exceeds total amount due (0)' in error_msg
+                    or 'Payment cannot be processed because one or more bills are already paid' in error_msg
+                    or 'The payment cannot be processed because one or more bills were paid' in error_msg
+                ):
+                    expense_report.payment_synced = True
+                    expense_report.paid_on_sage_intacct = True
+                    expense_report.save()
+                    task_log.delete()
+                else:
+                    task_log.save()
+
+            except IntacctRESTInvalidTokenError as exception:
+                invalidate_sage_intacct_credentials(task_log.workspace_id, sage_intacct_credentials)
+                logger.info(exception.response)
+                task_log.status = 'FAILED'
+                task_log.detail = exception.response
+                task_log.save()
+
+            except IntacctRESTInternalServerError as exception:
+                logger.info(exception.response)
+                task_log.status = 'FAILED'
+                task_log.detail = exception.response
                 task_log.save()
 
             except Exception:
@@ -1732,6 +2005,7 @@ def check_sage_intacct_object_status_rest(workspace_id: int) -> None:
     :param workspace_id: Workspace Id
     :return: None
     """
+    sage_intacct_credentials = None
     try:
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
         sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.SYNC.value)
@@ -1741,6 +2015,13 @@ def check_sage_intacct_object_status_rest(workspace_id: int) -> None:
     except InvalidTokenError:
         invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
         logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
+        return
+    except IntacctRESTInvalidTokenError:
+        invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
+        logger.info('Invalid Sage Intacct REST Token for workspace_id - %s', workspace_id)
+        return
+    except (IntacctRESTBadRequestError, IntacctRESTInternalServerError) as exception:
+        logger.info('Sage Intacct REST API error for workspace_id - %s: %s', workspace_id, exception.response)
         return
 
     check_sage_intacct_bill_status_rest(workspace_id=workspace_id, sage_intacct_connection=sage_intacct_connection)
