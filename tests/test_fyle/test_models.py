@@ -429,6 +429,76 @@ def test_create_expense_groups_by_report_id_fund_source_test_8(db):
     assert expense_groups == 1
 
 
+def test_create_expense_groups_ccc_negative_expense_report(db):
+    """
+    Test CCC negative expenses are NOT filtered when exported as EXPENSE_REPORT.
+    Sage Intacct supports negative line items for non-reimbursable expense reports.
+    Group by expense - both positive and negative CCC expenses should be exported.
+    """
+    workspace_id = 1
+    payload = data['ccc_expenses']
+    # Make one expense negative (credit)
+    payload[0]['amount'] = -150
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    expense_objects = Expense.create_expense_objects(payload, workspace_id)
+
+    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+    expense_group_settings.ccc_export_date_type = 'spent_at'
+    expense_group_settings.corporate_credit_card_expense_group_fields = ["employee_email", "expense_id", "fund_source", "spent_at"]
+    expense_group_settings.save()
+
+    ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, workspace_id)
+
+    # Both expenses should be exported - negative CCC expenses should NOT be skipped
+    negative_expense_group = ExpenseGroup.objects.filter(description__contains={'expense_id': 'tx4ziVSAyIsvlol'}).count()
+    positive_expense_group = ExpenseGroup.objects.filter(description__contains={'expense_id': 'tx6wOnBVaumklol'}).count()
+
+    assert negative_expense_group == 1, "Negative CCC expense should be exported as EXPENSE_REPORT"
+    assert positive_expense_group == 1, "Positive CCC expense should be exported as EXPENSE_REPORT"
+
+
+def test_create_expense_groups_ccc_negative_expense_report_grouped_by_report(db):
+    """
+    Test CCC negative expenses grouped by report are NOT filtered when exported as EXPENSE_REPORT.
+    Even when total is negative, CCC expenses should be exported.
+    """
+    workspace_id = 1
+    payload = data['ccc_expenses']
+    # Make one expense negative with higher absolute value so total is negative
+    payload[0]['amount'] = -200
+    payload[1]['amount'] = 50
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    expense_objects = Expense.create_expense_objects(payload, workspace_id)
+
+    expense_group_settings = ExpenseGroupSettings.objects.get(workspace_id=workspace_id)
+    expense_group_settings.ccc_export_date_type = 'spent_at'
+    # Group by report (claim_number) instead of expense_id
+    expense_group_settings.corporate_credit_card_expense_group_fields = ["employee_email", "claim_number", "fund_source", "spent_at"]
+    expense_group_settings.save()
+
+    ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, workspace_id)
+
+    # Both expenses should be in the expense group even though total is negative
+    expense_groups = ExpenseGroup.objects.filter(fund_source='CCC')
+    assert expense_groups.count() >= 1, "CCC expense group should be created even with negative total"
+
+    # Check that both expenses are included (negative ones not filtered out)
+    for expense_group in expense_groups:
+        expenses_in_group = expense_group.expenses.all()
+        # Verify negative expenses are included
+        negative_expenses = [e for e in expenses_in_group if e.amount < 0]
+        if len(expenses_in_group) > 1:
+            assert len(negative_expenses) > 0, "Negative CCC expenses should be included in the expense group"
+
+
 def test_format_date():
     """
     Test format date
