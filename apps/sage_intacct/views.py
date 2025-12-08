@@ -15,6 +15,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import status
 from sageintacctsdk.exceptions import InvalidTokenError
+from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 
 from apps.sage_intacct.helpers import sync_dimensions
 from apps.sage_intacct.models import SageIntacctAttributesCount
@@ -181,7 +182,7 @@ class SyncSageIntacctDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except InvalidTokenError:
+        except (InvalidTokenError, IntacctRESTInvalidTokenError):
             invalidate_sage_intacct_credentials(workspace.id, sage_intacct_credentials)
             logger.info('Invalid Sage Intact Token for workspace_id - %s', kwargs['workspace_id'])
             return Response(
@@ -235,7 +236,7 @@ class RefreshSageIntacctDimensionView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except InvalidTokenError:
+        except (InvalidTokenError, IntacctRESTInvalidTokenError):
             invalidate_sage_intacct_credentials(workspace.id)
             logger.info('Invalid Sage Intact Token for workspace_id - %s', kwargs['workspace_id'])
             return Response(
