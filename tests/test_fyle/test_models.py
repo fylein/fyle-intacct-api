@@ -464,11 +464,11 @@ def test_create_expense_groups_ccc_negative_expense_report(db):
 def test_create_expense_groups_ccc_negative_expense_report_grouped_by_report(db):
     """
     Test CCC negative expenses grouped by report are NOT filtered when exported as EXPENSE_REPORT.
-    Even when total is negative, CCC expenses should be exported.
+    Even when total is negative, CCC expenses should be exported with both positive and negative line items.
     """
     workspace_id = 1
     payload = data['ccc_expenses']
-    # Make one expense negative with higher absolute value so total is negative
+    # Make first expense negative so total is negative (-200 + 50 = -150)
     payload[0]['amount'] = -200
     payload[1]['amount'] = 50
 
@@ -486,17 +486,21 @@ def test_create_expense_groups_ccc_negative_expense_report_grouped_by_report(db)
 
     ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, workspace_id)
 
-    # Both expenses should be in the expense group even though total is negative
-    expense_groups = ExpenseGroup.objects.filter(fund_source='CCC')
-    assert expense_groups.count() >= 1, "CCC expense group should be created even with negative total"
+    # Expense group with negative total should be created for CCC expenses
+    expense_group = ExpenseGroup.objects.filter(
+        fund_source='CCC',
+        description__contains={'claim_number': 'C/2021/12/R/21'}
+    ).first()
+    assert expense_group is not None, "CCC expense group should be created even with negative total"
 
-    # Check that both expenses are included (negative ones not filtered out)
-    for expense_group in expense_groups:
-        expenses_in_group = expense_group.expenses.all()
-        # Verify negative expenses are included
-        negative_expenses = [e for e in expenses_in_group if e.amount < 0]
-        if len(expenses_in_group) > 1:
-            assert len(negative_expenses) > 0, "Negative CCC expenses should be included in the expense group"
+    # Both expenses should be in the same group
+    expenses_in_group = list(expense_group.expenses.all())
+    assert len(expenses_in_group) == 2, "Both expenses should be in the same expense group"
+
+    # Verify the negative expense is included
+    negative_expense = expense_group.expenses.filter(amount__lt=0).first()
+    assert negative_expense is not None, "Negative CCC expense should be included in the expense group"
+    assert negative_expense.amount == -200, "Negative expense amount should be -200"
 
 
 def test_format_date():
