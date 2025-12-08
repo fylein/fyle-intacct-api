@@ -436,9 +436,7 @@ def test_create_expense_groups_ccc_negative_expense_report(db):
     Group by expense - both positive and negative CCC expenses should be exported.
     """
     workspace_id = 1
-    payload = data['ccc_expenses']
-    # Make one expense negative (credit)
-    payload[0]['amount'] = -150
+    payload = data['ccc_expenses_for_negative_test']
 
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
@@ -454,8 +452,8 @@ def test_create_expense_groups_ccc_negative_expense_report(db):
     ExpenseGroup.create_expense_groups_by_report_id_fund_source(expense_objects, configuration, workspace_id)
 
     # Both expenses should be exported - negative CCC expenses should NOT be skipped
-    negative_expense_group = ExpenseGroup.objects.filter(description__contains={'expense_id': 'tx4ziVSAyIsvlol'}).count()
-    positive_expense_group = ExpenseGroup.objects.filter(description__contains={'expense_id': 'tx6wOnBVaumklol'}).count()
+    negative_expense_group = ExpenseGroup.objects.filter(description__contains={'expense_id': 'txCCCNeg001'}).count()
+    positive_expense_group = ExpenseGroup.objects.filter(description__contains={'expense_id': 'txCCCPos001'}).count()
 
     assert negative_expense_group == 1, "Negative CCC expense should be exported as EXPENSE_REPORT"
     assert positive_expense_group == 1, "Positive CCC expense should be exported as EXPENSE_REPORT"
@@ -467,10 +465,7 @@ def test_create_expense_groups_ccc_negative_expense_report_grouped_by_report(db)
     Even when total is negative, CCC expenses should be exported with both positive and negative line items.
     """
     workspace_id = 1
-    payload = data['ccc_expenses']
-    # Make first expense negative so total is negative (-200 + 50 = -150)
-    payload[0]['amount'] = -200
-    payload[1]['amount'] = 50
+    payload = data['ccc_expenses_for_grouped_negative_test']
 
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
@@ -489,7 +484,7 @@ def test_create_expense_groups_ccc_negative_expense_report_grouped_by_report(db)
     # Expense group with negative total should be created for CCC expenses
     expense_group = ExpenseGroup.objects.filter(
         fund_source='CCC',
-        description__contains={'claim_number': 'C/2021/12/R/21'}
+        description__contains={'claim_number': 'C/2021/12/R/GRP'}
     ).first()
     assert expense_group is not None, "CCC expense group should be created even with negative total"
 
