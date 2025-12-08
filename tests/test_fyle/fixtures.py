@@ -1850,6 +1850,9 @@ data = {
                 'Vehicle Type': '',
                 'Fyle Categories': '',
             },
+            'posted_at': '2021-12-22T07:30:26.289842+00:00',
+            'is_posted_at_null': False,
+            'masked_corporate_card_number': '**** 4567'
         },
         {
             'id': 'tx6wOnBVaumklol',
@@ -1892,6 +1895,9 @@ data = {
                 'Vehicle Type': '',
                 'Fyle Categories': '',
             },
+            'posted_at': '2021-12-22T07:30:26.289842+00:00',
+            'is_posted_at_null': False,
+            'masked_corporate_card_number': '**** 4567'
         },
     ],
     'get_all_custom_fields':[
