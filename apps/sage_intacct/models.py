@@ -20,7 +20,7 @@ from apps.fyle.models import (
     Reimbursement,
 )
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import Configuration, FyleCredential, Workspace
+from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, Workspace
 
 allocation_mapping = {
     'LOCATIONID': 'location_id',
@@ -709,6 +709,8 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
     default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
                                       'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE', 'ALLOCATION']
 
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=expense_group.workspace_id, key='migrated_to_rest_api')
+
     for setting in mapping_settings:
         if setting.source_field not in default_expense_attributes and \
                 setting.destination_field not in default_destination_attributes:
@@ -737,7 +739,13 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
                 ).first()
 
                 display_name = dimension.display_name if dimension else mapping.destination.display_name
-                dimension_name = 'GLDIM{}'.format(display_name.replace(' ', '_').upper())
+                dimension_name = None
+
+                if migrated_to_rest_api:
+                    dimension_name = mapping.destination.detail.get('dimension_name')
+                    dimension_name = f'nsp::{dimension_name}'
+                else:
+                    dimension_name = 'GLDIM{}'.format(display_name.replace(' ', '_').upper())
 
                 value = mapping.destination.destination_id
 
