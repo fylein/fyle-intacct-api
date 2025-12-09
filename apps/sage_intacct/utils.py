@@ -842,6 +842,7 @@ class SageIntacctConnector:
         Sync allocation entries from intacct
         """
         attribute_count = self.connection.allocations.count(field='STATUS', value='active')
+        is_allocation_present = False
 
         SageIntacctAttributesCount.update_attribute_count(
             workspace_id=self.workspace_id,
@@ -897,6 +898,22 @@ class SageIntacctConnector:
 
             DestinationAttribute.bulk_create_or_update_destination_attributes(
                 allocation_attributes, 'ALLOCATION', self.workspace_id, update=True
+            )
+
+            is_allocation_present = True
+
+        if is_allocation_present:
+            dimension_details = [{
+                'attribute_type': 'ALLOCATION',
+                'display_name': 'Allocation',
+                'source_type': DimensionDetailSourceTypeEnum.ACCOUNTING.value,
+                'workspace_id': self.workspace_id
+            }]
+
+            DimensionDetail.bulk_create_or_update_dimension_details(
+                dimensions=dimension_details,
+                workspace_id=self.workspace_id,
+                source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value
             )
 
     def sync_user_defined_dimensions(self) -> list:
