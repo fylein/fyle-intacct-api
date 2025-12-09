@@ -137,7 +137,7 @@ def construct_debit_line_payload(
                     'id': line_item.cost_type_id
                 },
                 **{
-                    key: {'id': value}
+                    key: {'key': value}
                     for user_defined_dimensions in line_item.user_defined_dimensions
                     for key, value in user_defined_dimensions.items()
                 }
