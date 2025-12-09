@@ -6,6 +6,7 @@ from unittest import mock
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
+from django.utils import timezone as django_timezone
 from django_q.models import Schedule
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
@@ -1626,6 +1627,32 @@ def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
 
     schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queue.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
+
+
+def test_schedule_creation_with_no_expense_groups(db):
+    workspace_id = 1
+
+    expense_group_1 = ExpenseGroup.objects.get(id=1)
+    expense_group_1.exported_at = django_timezone.now()
+    expense_group_1.save()
+
+    expense_group_2 = ExpenseGroup.objects.get(id=2)
+    expense_group_2.exported_at = django_timezone.now()
+    expense_group_2.save()
+
+    initial_task_log_count = TaskLog.objects.filter(workspace_id=workspace_id).count()
+
+    schedule_journal_entries_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
+
+    schedule_expense_reports_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
+
+    schedule_bills_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
+
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
 
 
 def test__validate_expense_group(mocker, db):
