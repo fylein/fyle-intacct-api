@@ -419,7 +419,7 @@ def filter_negative_expenses(filtered_expenses: list[Expense]) -> list:
     return list(filter(lambda expense: expense.amount > 0, filtered_expenses))
 
 
-def filter_expense_groups(expense_groups: dict, expenses: Expense, expense_group_fields: dict) -> list:
+def filter_expense_groups(expense_groups: dict, expenses: Expense, expense_group_fields: dict) -> tuple[list, list]:
     """
     Filter negative expenses from reimbursable expense groups for EXPENSE_REPORT export type.
     :param expense_groups: Expense Groups
