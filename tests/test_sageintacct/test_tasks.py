@@ -1630,6 +1630,9 @@ def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
 
 
 def test_schedule_creation_with_no_expense_groups(db):
+    """
+    Test schedule_creation_with_no_expense_groups
+    """
     workspace_id = 1
 
     expense_group_1 = ExpenseGroup.objects.get(id=1)
