@@ -121,7 +121,7 @@ def construct_bill_line_item_payload(
                     'id': lineitem.class_id
                 },
                 **{
-                    key: {'id': value}
+                    key: {'key': value}
                     for user_defined_dimensions in lineitem.user_defined_dimensions
                     for key, value in user_defined_dimensions.items()
                 }
