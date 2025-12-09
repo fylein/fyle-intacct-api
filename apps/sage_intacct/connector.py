@@ -1190,6 +1190,7 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
             return
 
         allocation_attributes = []
+        is_allocation_present = False
         latest_synced_timestamp = self.intacct_synced_timestamp_object.allocation_synced_at
 
         fields = ['id', 'status', 'key']
@@ -1227,7 +1228,23 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
                 update=True
             )
 
+            is_allocation_present = True
+
         self.__update_intacct_synced_timestamp_object(key='allocation_synced_at')
+
+        if is_allocation_present:
+            dimension_details = [{
+                'attribute_type': DestinationAttributeTypeEnum.ALLOCATION.value,
+                'display_name': DestinationAttributeTypeEnum.ALLOCATION.value.title(),
+                'source_type': DimensionDetailSourceTypeEnum.ACCOUNTING.value,
+                'workspace_id': self.workspace_id
+            }]
+
+            DimensionDetail.bulk_create_or_update_dimension_details(
+                dimensions=dimension_details,
+                workspace_id=self.workspace_id,
+                source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value
+            )
 
     def __get_entity_slide_preference(self) -> bool:
         """
