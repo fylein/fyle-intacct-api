@@ -419,44 +419,32 @@ def filter_negative_expenses(filtered_expenses: list[Expense]) -> list:
     return list(filter(lambda expense: expense.amount > 0, filtered_expenses))
 
 
-def filter_expense_groups(expense_groups: dict, expenses: Expense, expenses_object: str, expense_group_fields: dict, fund_source: str = 'PERSONAL') -> list:
+def filter_expense_groups(expense_groups: dict, expenses: Expense, expense_group_fields: dict) -> list:
     """
-    Filter expense groups
+    Filter negative expenses from reimbursable expense groups for EXPENSE_REPORT export type.
     :param expense_groups: Expense Groups
     :param expenses: Expenses
-    :param expenses_object: Expenses Object
     :param expense_group_fields: Expense Group Fields
-    :param fund_source: Fund Source (PERSONAL or CCC) - defaults to PERSONAL for backward compatibility
-    :return: Filtered Expense Groups
+    :return: Filtered Expense Groups and Skipped Expense IDs
     """
     filtered_expense_groups = []
     skipped_expenses_ids = []
+    is_grouped_by_expense = 'expense_id' in expense_group_fields
 
     for expense_group in expense_groups:
         expense_group_expenses_ids = expense_group['expense_ids']
-
         filtered_expenses = [item for item in expenses if item.id in expense_group_expenses_ids]
 
-        # For CCC expenses exported as EXPENSE_REPORT, allow negative expenses (credits)
-        should_filter_negative_expenses = not (fund_source == 'CCC' and expenses_object == 'EXPENSE_REPORT')
+        total_amount = sum(expense.amount for expense in filtered_expenses)
 
-        if should_filter_negative_expenses and expenses_object == 'EXPENSE_REPORT':
-            # Export type => Expense Report and Group By => Report (for reimbursable expenses)
-            if 'expense_id' not in expense_group_fields:
-                total_amount = sum(expense.amount for expense in filtered_expenses)
-
-                if total_amount < 0:
-                    skipped_expenses_ids.extend([expense.id for expense in filtered_expenses if expense.amount < 0])
-                    filtered_expenses = filter_negative_expenses(filtered_expenses)
-
-            # Export type => Expense Report and Group By => Expense (for reimbursable expenses)
-            else:
-                skipped_expenses_ids.extend([expense.id for expense in filtered_expenses if expense.amount < 0])
-                filtered_expenses = filter_negative_expenses(filtered_expenses)
+        # Filter negative expenses if grouped by expense OR if grouped by report with negative total
+        if is_grouped_by_expense or total_amount < 0:
+            skipped_expenses_ids.extend([expense.id for expense in filtered_expenses if expense.amount < 0])
+            filtered_expenses = filter_negative_expenses(filtered_expenses)
 
         filtered_expense_ids = [item.id for item in filtered_expenses]
 
-        if len(filtered_expense_ids) != 0:
+        if filtered_expense_ids:
             expense_group['expense_ids'] = filtered_expense_ids
             filtered_expense_groups.append(expense_group)
 
@@ -503,12 +491,13 @@ class ExpenseGroup(models.Model):
 
         reimbursable_expense_groups = _group_expenses(reimbursable_expenses, reimbursable_expense_group_fields, workspace_id)
 
-        filtered_reimbursable_expense_groups, reimbursable_skipped_expense_ids = filter_expense_groups(
-            reimbursable_expense_groups, reimbursable_expenses, configuration.reimbursable_expenses_object, reimbursable_expense_group_fields, fund_source='PERSONAL'
-        )
-        skipped_expense_ids.extend(reimbursable_skipped_expense_ids)
+        if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
+            reimbursable_expense_groups, reimbursable_skipped_expense_ids = filter_expense_groups(
+                reimbursable_expense_groups, reimbursable_expenses, reimbursable_expense_group_fields
+            )
+            skipped_expense_ids.extend(reimbursable_skipped_expense_ids)
 
-        expense_groups.extend(filtered_reimbursable_expense_groups)
+        expense_groups.extend(reimbursable_expense_groups)
 
         corporate_credit_card_expense_group_field = expense_group_settings.corporate_credit_card_expense_group_fields
         corporate_credit_card_expenses = list(filter(lambda expense: expense.fund_source == 'CCC', expense_objects))
@@ -552,15 +541,6 @@ class ExpenseGroup(models.Model):
                     corporate_credit_card_expense_group_field,
                     workspace_id,
                 )
-
-        filtered_corporate_credit_card_expense_groups, corporate_credit_card_skipped_expense_ids = filter_expense_groups(
-            filtered_corporate_credit_card_expense_groups,
-            corporate_credit_card_expenses,
-            configuration.corporate_credit_card_expenses_object,
-            corporate_credit_card_expense_group_field,
-            fund_source='CCC'
-        )
-        skipped_expense_ids.extend(corporate_credit_card_skipped_expense_ids)
 
         expense_groups.extend(filtered_corporate_credit_card_expense_groups)
 
