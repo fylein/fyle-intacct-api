@@ -2402,7 +2402,7 @@ def get_journal_entry_record_number(journal_entry_response: dict, workspace_id: 
     if migrated_to_rest_api:
         return journal_entry_response['ia::result']['key']
 
-    return journal_entry_response['glbatch']['RECORDNO']
+    return journal_entry_response['data']['glbatch']['RECORDNO']
 
 
 def get_expense_report_record_number(expense_report_response: dict, workspace_id: int) -> str:
