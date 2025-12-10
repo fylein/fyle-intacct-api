@@ -77,7 +77,6 @@ def construct_charge_card_transaction_line_item_payload(
             default_tax_code_id=general_mappings.default_tax_code_id
         )
 
-
         charge_card_transaction_lineitem_payload = {
             'glAccount': {
                 'id': lineitem.gl_account_number
