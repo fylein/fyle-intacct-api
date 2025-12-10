@@ -1167,7 +1167,7 @@ class ExpenseReportLineitem(models.Model):
                     ).first()
                     if vendor:
                         vendor_id = vendor.destination_id
-            elif lineitem.fund_source == 'CCC' and sage_intacct_connection:
+            elif lineitem.fund_source == 'CCC':
                 # For CCC expenses: Get or create a Credit Card Vendor from the expense merchant
                 vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
                 if vendor:
@@ -1553,10 +1553,9 @@ class ChargeCardTransactionLineitem(models.Model):
 
             # Get or create a Credit Card Vendor from the expense merchant for CCT lineitems
             vendor_id = None
-            if sage_intacct_connection:
-                vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
-                if vendor:
-                    vendor_id = vendor.destination_id
+            vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
+            if vendor:
+                vendor_id = vendor.destination_id
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,

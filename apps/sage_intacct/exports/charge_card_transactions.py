@@ -77,8 +77,6 @@ def construct_charge_card_transaction_line_item_payload(
             default_tax_code_id=general_mappings.default_tax_code_id
         )
 
-        # Use lineitem vendor_id if available, otherwise fallback to header vendor_id
-        vendor_id = lineitem.vendor_id if lineitem.vendor_id else charge_card_transaction.vendor_id
 
         charge_card_transaction_lineitem_payload = {
             'glAccount': {
@@ -98,7 +96,7 @@ def construct_charge_card_transaction_line_item_payload(
                     'id': lineitem.customer_id
                 },
                 'vendor': {
-                    'id': vendor_id
+                    'id': lineitem.vendor_id
                 },
                 'project': {
                     'id': lineitem.project_id
