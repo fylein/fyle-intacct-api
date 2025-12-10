@@ -1089,6 +1089,7 @@ class ExpenseReportLineitem(models.Model):
     department_id = models.CharField(help_text='Sage Intacct department id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor Id', null=True)
     task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
     cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type', null=True)
     user_defined_dimensions = JSONField(null=True, help_text='Sage Intacct User Defined Dimensions')
@@ -1106,11 +1107,12 @@ class ExpenseReportLineitem(models.Model):
         db_table = 'expense_report_lineitems'
 
     @staticmethod
-    def create_expense_report_lineitems(expense_group: ExpenseGroup, configuration: Configuration) -> list['ExpenseReportLineitem']:
+    def create_expense_report_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any = None) -> list['ExpenseReportLineitem']:
         """
         Create expense report lineitems
         :param expense_group: expense group
         :param configuration: Workspace Configuration Settings
+        :param sage_intacct_connection: Sage Intacct connection object
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -1155,6 +1157,22 @@ class ExpenseReportLineitem(models.Model):
             else:
                 expense_payment_type = general_mappings.default_ccc_expense_payment_type_name
 
+            vendor_id = None
+            merchant = lineitem.vendor
+            if lineitem.fund_source == 'PERSONAL':
+                # For reimbursable expenses: check if merchant exists in DestinationAttribute, if not set to None
+                if merchant:
+                    vendor = DestinationAttribute.objects.filter(
+                        value__iexact=merchant, attribute_type='VENDOR', workspace_id=expense_group.workspace_id
+                    ).first()
+                    if vendor:
+                        vendor_id = vendor.destination_id
+            elif lineitem.fund_source == 'CCC' and sage_intacct_connection:
+                # For CCC expenses: Get or create a Credit Card Vendor from the expense merchant
+                vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
+                if vendor:
+                    vendor_id = vendor.destination_id
+
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
                 expense_id=lineitem.id,
@@ -1169,6 +1187,7 @@ class ExpenseReportLineitem(models.Model):
                     'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'vendor_id': vendor_id,
                     'task_id': task_id,
                     'cost_type_id': cost_type_id,
                     'user_defined_dimensions': user_defined_dimensions,
@@ -1470,6 +1489,7 @@ class ChargeCardTransactionLineitem(models.Model):
     class_id = models.CharField(help_text='Sage Intacct class id', max_length=255, null=True)
     customer_id = models.CharField(max_length=255, help_text='Sage Intacct customer id', null=True)
     item_id = models.CharField(max_length=255, help_text='Sage Intacct iten id', null=True)
+    vendor_id = models.CharField(max_length=255, help_text='Sage Intacct Vendor Id', null=True)
     task_id = models.CharField(max_length=255, help_text='Sage Intacct Task Id', null=True)
     cost_type_id = models.CharField(max_length=255, help_text='Sage Intacct Cost Type Id', null=True)
     memo = models.TextField(help_text='Sage Intacct lineitem description', null=True)
@@ -1485,11 +1505,12 @@ class ChargeCardTransactionLineitem(models.Model):
         db_table = 'charge_card_transaction_lineitems'
 
     @staticmethod
-    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup,  configuration: Configuration) -> list['ChargeCardTransactionLineitem']:
+    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any = None) -> list['ChargeCardTransactionLineitem']:
         """
-        Create expense report lineitems
+        Create charge card transaction lineitems
         :param expense_group: expense group
         :param configuration: Workspace Configuration Settings
+        :param sage_intacct_connection: Sage Intacct connection object
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -1530,6 +1551,13 @@ class ChargeCardTransactionLineitem(models.Model):
                 prepend_code_to_cost_type = True if 'COST_TYPE' in configuration.import_code_fields else False
                 cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id, prepend_code_to_cost_type)
 
+            # Get or create a Credit Card Vendor from the expense merchant for CCT lineitems
+            vendor_id = None
+            if sage_intacct_connection:
+                vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
+                if vendor:
+                    vendor_id = vendor.destination_id
+
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,
                 expense_id=lineitem.id,
@@ -1542,6 +1570,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'location_id': location_id,
                     'customer_id': customer_id,
                     'item_id': item_id,
+                    'vendor_id': vendor_id,
                     'task_id': task_id,
                     'cost_type_id': cost_type_id,
                     'amount': lineitem.amount,
