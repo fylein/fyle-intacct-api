@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone as django_timezone
 from django_q.models import Schedule
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
@@ -721,6 +722,16 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
 
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
+
+
+def test_create_sage_intacct_reimbursement_invalid_token(mocker, db):
+    """
+    Test create_sage_intacct_reimbursement invalid token
+    """
+    workspace_id = 1
+    with mock.patch('fyle_integrations_platform_connector.fyle_integrations_platform_connector.PlatformConnector.__init__') as mock_init:
+        mock_init.side_effect = FyleInvalidTokenError('Invalid refresh token')
+        create_sage_intacct_reimbursement(workspace_id)
 
 
 def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
@@ -1529,6 +1540,10 @@ def test_check_sage_intacct_object_status(mocker, db):
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         check_sage_intacct_object_status(workspace_id)
 
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.__init__') as mock_init:
+        mock_init.side_effect = WrongParamsError(msg="Some of the parameters are wrong", response="wrong params")
+        check_sage_intacct_object_status(workspace_id)
+
 
 def test_process_fyle_reimbursements(db, mocker):
     """
@@ -1558,6 +1573,10 @@ def test_process_fyle_reimbursements(db, mocker):
     reimbursement = Reimbursement.objects.filter(workspace_id=workspace_id).count()
 
     assert reimbursement == 258
+
+    with mock.patch('fyle_integrations_platform_connector.fyle_integrations_platform_connector.PlatformConnector.__init__') as mock_init:
+        mock_init.side_effect = FyleInvalidTokenError('Invalid refresh token')
+        process_fyle_reimbursements(workspace_id)
 
 
 def test_schedule_sage_intacct_objects_status_sync(db):
