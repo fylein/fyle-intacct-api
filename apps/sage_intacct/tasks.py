@@ -1574,6 +1574,10 @@ def create_ap_payment(workspace_id: int) -> None:
                 )
 
                 try:
+
+                    sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+                    sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
+
                     with transaction.atomic():
 
                         ap_payment_object = APPayment.create_ap_payment(bill.expense_group)
@@ -1591,8 +1595,6 @@ def create_ap_payment(workspace_id: int) -> None:
                             ap_payment_object.expense_group, record_key
                         )
 
-                        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-                        sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
                         created_ap_payment = sage_intacct_connection.post_ap_payment(
                             ap_payment_object, ap_payment_lineitems_objects
                         )
@@ -1743,6 +1745,9 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
             )
 
             try:
+                sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+                sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
+
                 with transaction.atomic():
                     sage_intacct_reimbursement_object = SageIntacctReimbursement.create_sage_intacct_reimbursement(expense_report.expense_group)
                     expense_report_task_log = TaskLog.objects.get(expense_group=expense_report.expense_group)
@@ -1753,8 +1758,6 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                         record_key
                     )
 
-                    sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-                    sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
                     created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
                         sage_intacct_reimbursement_object,
                         sage_intacct_reimbursement_lineitems_objects

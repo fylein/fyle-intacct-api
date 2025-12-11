@@ -1,13 +1,16 @@
+from typing import Optional
 from datetime import datetime, timezone
+
+from django.core.cache import cache
+from django_q.models import Schedule
+from django.db.models import JSONField
+from django.db import models, transaction
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
-from django.core.cache import cache
-from django.db import models
-from django.db.models import JSONField
-from django_q.models import Schedule
+
 from fyle_accounting_library.fyle_platform.enums import CacheKeyEnum
-from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
 from apps.workspaces.enums import CacheKeyEnum as WorkspaceCacheKeyEnum
+from fyle_accounting_mappings.mixins import AutoAddCreateUpdateInfoMixin
 
 User = get_user_model()
 
@@ -180,9 +183,14 @@ class SageIntacctCredential(models.Model):
     si_user_password = models.TextField(help_text='Stores Sage Intacct user password')
     is_expired = models.BooleanField(default=False, help_text='Sage Intacct Password expiry flag')
     workspace = models.OneToOneField(Workspace, on_delete=models.PROTECT, help_text='Reference to Workspace model')
-    refresh_token = models.TextField(help_text='Stores Sage Intacct refresh token', null=True, blank=True)
-    access_token = models.TextField(help_text='Stores Sage Intacct access token', null=True, blank=True)
-    access_token_expires_at = models.DateTimeField(help_text='Stores Sage Intacct access token expiration time', null=True, blank=True)
+    company_token = models.ForeignKey(
+        'IntacctCompanyToken',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text='Reference to IntacctCompanyToken model',
+        related_name='sage_intacct_credentials'
+    )
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
@@ -355,3 +363,70 @@ class IntacctSyncedTimestamp(models.Model):
                 'updated_at': timestamp
             }
         )
+
+
+class IntacctCompanyToken(models.Model):
+    """
+    Model to store the company token (shared across workspaces connecting to the same Intacct company)
+    """
+    id = models.AutoField(primary_key=True)
+    company_id = models.CharField(max_length=255, help_text='Company ID', unique=True)
+    refresh_token = models.TextField(help_text='Refresh Token')
+    access_token = models.TextField(help_text='Access Token', null=True, blank=True)
+    access_token_expires_at = models.DateTimeField(help_text='Access Token Expiration Time', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'intacct_company_tokens'
+
+    @classmethod
+    def get_company_token(cls, company_id: str) -> Optional['IntacctCompanyToken']:
+        """
+        Get the company token
+        :param company_id: Company ID
+        :return: IntacctCompanyToken
+        """
+        return cls.objects.filter(company_id=company_id).first()
+
+    @classmethod
+    def create_or_update_company_token(
+        cls,
+        company_id: str,
+        refresh_token: str,
+        access_token: Optional[str] = None,
+        access_token_expires_at: Optional[datetime] = None
+    ) -> 'IntacctCompanyToken':
+        """
+        Create or update the company token
+        :param company_id: Company ID
+        :param refresh_token: Refresh Token
+        :param access_token: Access Token (optional)
+        :param access_token_expires_at: Access Token Expiration Time (optional)
+        :return: IntacctCompanyToken
+        """
+        with transaction.atomic():
+            try:
+                company_token = cls.objects.select_for_update().get(company_id=company_id)
+                company_token.refresh_token = refresh_token
+                company_token.updated_at = datetime.now(timezone.utc)
+
+                if access_token is not None:
+                    company_token.access_token = access_token
+
+                if access_token_expires_at is not None:
+                    company_token.access_token_expires_at = access_token_expires_at
+
+                company_token.save()
+                company_token.sage_intacct_credentials.update(is_expired=False, updated_at=datetime.now(timezone.utc))
+
+            except cls.DoesNotExist:
+                company_token = cls.objects.create(
+                    company_id=company_id,
+                    refresh_token=refresh_token,
+                    access_token=access_token,
+                    access_token_expires_at=access_token_expires_at,
+                    updated_at=datetime.now(timezone.utc)
+                )
+
+        return company_token

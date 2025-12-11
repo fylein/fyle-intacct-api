@@ -4,7 +4,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.workspaces.models import SageIntacctCredential, Workspace
+from apps.workspaces.models import IntacctCompanyToken, SageIntacctCredential, Workspace
 from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
 from tests.test_internal.fixtures import data as internal_data
 from tests.test_sageintacct.fixtures import data
@@ -242,7 +242,15 @@ def test_get_integration_tests_view(db, api_client, mocker):
     url = reverse('integration-tests-refresh-token')
 
     workspace_id = 1
-    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(refresh_token='dummy.dummy.dummy')
+    cred = SageIntacctCredential.objects.filter(workspace_id=workspace_id).first()
+
+    # Create company token with the correct company_id matching the credential's si_company_id
+    company_token = IntacctCompanyToken.objects.create(
+        company_id=cred.si_company_id,
+        refresh_token='dummy.dummy.dummy'
+    )
+    cred.company_token = company_token
+    cred.save()
 
     response = api_client.get(url)
     assert response.status_code == 400
@@ -264,7 +272,9 @@ def test_post_integration_tests_view(db, api_client, mocker):
     url = reverse('integration-tests-refresh-token')
 
     workspace_id = 1
-    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(refresh_token=None)
+    cred = SageIntacctCredential.objects.filter(workspace_id=workspace_id).first()
+    cred.company_token = None
+    cred.save()
 
     response = api_client.post(url, {})
     assert response.status_code == 400
@@ -272,4 +282,6 @@ def test_post_integration_tests_view(db, api_client, mocker):
     response = api_client.post(url, data={'workspace_id': workspace_id, 'refresh_token': 'dummy.dummy.dummy'}, format='json')
     assert response.status_code == 200
 
-    assert SageIntacctCredential.objects.get(workspace_id=workspace_id).refresh_token == 'dummy.dummy.dummy'
+    # The refresh_token is stored in IntacctCompanyToken, not SageIntacctCredential
+    company_token = IntacctCompanyToken.get_company_token(company_id=cred.si_company_id)
+    assert company_token.refresh_token == 'dummy.dummy.dummy'

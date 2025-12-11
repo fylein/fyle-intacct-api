@@ -50,6 +50,7 @@ from apps.sage_intacct.models import (
 from apps.workspaces.models import (
     Workspace,
     Configuration,
+    IntacctCompanyToken,
     SageIntacctCredential,
     IntacctSyncedTimestamp
 )
@@ -74,14 +75,17 @@ class SageIntacctRestConnector:
     """
     Sage Intacct REST connector
     """
-    def __init__(self, workspace_id: int):
+    def __init__(self, workspace_id: int, company_id: str = None):
         """
         Initialize the Sage Intacct REST connector
         :param workspace_id: Workspace ID
+        :param company_id: Company ID
         """
         self.soap_sdk_connection = None
         self.workspace_id = workspace_id
+        self.company_id = company_id
         self.credential_object = self.__get_credential_object()
+        self.company_token = self.__get_company_token()
 
         self.access_token = self.__get_access_token()
         self.refresh_token = self.__get_refresh_token()
@@ -108,27 +112,47 @@ class SageIntacctRestConnector:
         """
         return SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id=self.workspace_id)
 
+    def __get_company_token(self) -> Optional[IntacctCompanyToken]:
+        """
+        Get company token from IntacctCompanyToken table
+        First tries to use the FK from credential, falls back to lookup by company_id
+        :return: Optional[IntacctCompanyToken]
+        """
+        if not (self.credential_object or self.company_id):
+            return None
+
+        # Try to use the FK first
+        if self.credential_object and self.credential_object.company_token:
+            return self.credential_object.company_token
+
+        # Fall back to lookup by company_id
+        if (self.credential_object and self.credential_object.si_company_id) or self.company_id:
+            return IntacctCompanyToken.get_company_token(company_id=self.credential_object.si_company_id if self.credential_object else self.company_id)
+
+        return None
+
     def __get_access_token(self) -> Optional[str]:
         """
-        Get access token
+        Get access token from company token
         :return: Optional[str]
         """
         if (
-            self.credential_object
-            and self.credential_object.access_token
-            and self.credential_object.access_token_expires_at > datetime.now(timezone.utc)
+            self.company_token
+            and self.company_token.access_token
+            and self.company_token.access_token_expires_at
+            and self.company_token.access_token_expires_at > datetime.now(timezone.utc)
         ):
-            return self.credential_object.access_token
+            return self.company_token.access_token
 
         return None
 
     def __get_refresh_token(self) -> Optional[str]:
         """
-        Get refresh token
+        Get refresh token from company token
         :return: Optional[str]
         """
-        if self.credential_object and self.credential_object.refresh_token:
-            return self.credential_object.refresh_token
+        if self.company_token and self.company_token.refresh_token:
+            return self.company_token.refresh_token
 
         return None
 
@@ -148,21 +172,20 @@ class SageIntacctRestConnector:
         refresh_token: str
     ) -> None:
         """
-        Update tokens
+        Update tokens in IntacctCompanyToken table (shared across workspaces)
         :param access_token: Access token
         :param refresh_token: Refresh token
         :return: None
         """
-        self.credential_object.refresh_from_db()
-        self.credential_object.access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=self.__get_access_token_expiry_time(access_token))
-        self.credential_object.access_token = access_token
-        self.credential_object.refresh_token = refresh_token
-        self.credential_object.save(update_fields=[
-            'access_token_expires_at',
-            'access_token',
-            'refresh_token',
-            'updated_at',
-        ])
+        if (self.credential_object and self.credential_object.si_company_id) or self.company_id:
+            access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=self.__get_access_token_expiry_time(access_token))
+            IntacctCompanyToken.create_or_update_company_token(
+                company_id=self.credential_object.si_company_id if self.credential_object else self.company_id,
+                refresh_token=refresh_token,
+                access_token=access_token,
+                access_token_expires_at=access_token_expires_at
+            )
+            self.company_token = self.__get_company_token()
 
     def __get_access_token_expiry_time(self, access_token: str) -> int:
         """
