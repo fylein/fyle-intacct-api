@@ -5,6 +5,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.template.loader import render_to_string
 from django_q.models import Schedule
+from fyle.platform.exceptions import InvalidTokenError
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
@@ -353,25 +354,32 @@ def create_admin_subscriptions(workspace_id: int) -> None:
     :param workspace_id: workspace id
     :return: None
     """
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-    platform = PlatformConnector(fyle_credentials)
-    payload = {
-        'is_enabled': True,
-        'webhook_url': '{}/workspaces/{}/fyle/exports/'.format(settings.API_URL, workspace_id),
-        'subscribed_resources': [
-            'EXPENSE',
-            'REPORT',
-            'CATEGORY',
-            'PROJECT',
-            'COST_CENTER',
-            'EXPENSE_FIELD',
-            'CORPORATE_CARD',
-            'EMPLOYEE',
-            'TAX_GROUP',
-            'ORG_SETTING'
-        ]
-    }
-    platform.subscriptions.post(payload)
+    try:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        platform = PlatformConnector(fyle_credentials)
+        payload = {
+            'is_enabled': True,
+            'webhook_url': '{}/workspaces/{}/fyle/exports/'.format(settings.API_URL, workspace_id),
+            'subscribed_resources': [
+                'EXPENSE',
+                'REPORT',
+                'CATEGORY',
+                'PROJECT',
+                'COST_CENTER',
+                'EXPENSE_FIELD',
+                'CORPORATE_CARD',
+                'EMPLOYEE',
+                'TAX_GROUP',
+                'ORG_SETTING'
+            ]
+        }
+        platform.subscriptions.post(payload)
+
+    except InvalidTokenError:
+        logger.info("Invalid Token for Fyle in workspace_id: %s", workspace_id)
+
+    except Exception as e:
+        logger.exception("Error creating admin subscriptions for workspace_id: %s | Error: %s", workspace_id, str(e))
 
 
 def update_workspace_name(workspace_id: int, access_token: str) -> None:
@@ -381,9 +389,16 @@ def update_workspace_name(workspace_id: int, access_token: str) -> None:
     :param access_token: Access Token
     :return: None
     """
-    fyle_user = get_fyle_admin(access_token.split(' ')[1], None)
-    org_name = fyle_user['data']['org']['name']
+    try:
+        fyle_user = get_fyle_admin(access_token.split(' ')[1], None)
+        org_name = fyle_user['data']['org']['name']
 
-    workspace = Workspace.objects.get(id=workspace_id)
-    workspace.name = org_name
-    workspace.save()
+        workspace = Workspace.objects.get(id=workspace_id)
+        workspace.name = org_name
+        workspace.save()
+
+    except InvalidTokenError:
+        logger.info("Invalid Token for Fyle in workspace_id: %s", workspace_id)
+
+    except Exception as e:
+        logger.exception("Error updating workspace name for workspace_id: %s | Error: %s", workspace_id, str(e))
