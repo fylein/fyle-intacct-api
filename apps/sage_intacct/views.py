@@ -1,29 +1,34 @@
-import logging
-
 import jwt
+import logging
 import requests
+from datetime import datetime, timezone
+
+from django.db.models import Q
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Q
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_mappings.models import DestinationAttribute
-from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
+
 from rest_framework import generics
-from rest_framework.exceptions import ValidationError
+from rest_framework.views import status
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.views import status
+from rest_framework.exceptions import ValidationError
+
+from fyle_accounting_mappings.models import DestinationAttribute
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_mappings.serializers import DestinationAttributeSerializer
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+
 from sageintacctsdk.exceptions import InvalidTokenError
 from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 
+from apps.workspaces.enums import CacheKeyEnum
 from apps.sage_intacct.helpers import sync_dimensions
 from apps.sage_intacct.models import SageIntacctAttributesCount
-from apps.sage_intacct.serializers import SageIntacctAttributesCountSerializer, SageIntacctFieldSerializer
-from apps.workspaces.enums import CacheKeyEnum
-from apps.workspaces.models import Configuration, SageIntacctCredential, Workspace
-from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
+from apps.sage_intacct.connector import SageIntacctRestConnector
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from fyle_intacct_api.utils import assert_valid, invalidate_sage_intacct_credentials
+from apps.workspaces.models import Configuration, IntacctCompanyToken, SageIntacctCredential, Workspace
+from apps.sage_intacct.serializers import SageIntacctAttributesCountSerializer, SageIntacctFieldSerializer
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -261,27 +266,49 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
         assert_valid(code is not None, 'Code is required')
         assert_valid(redirect_uri is not None, 'Redirect URI is required')
 
-        refresh_token = self.exchange_refresh_token_for_code(
-            code=code,
-            redirect_uri=redirect_uri,
-            workspace_id=kwargs['workspace_id']
-        )
+        workspace_id = self.kwargs['workspace_id']
+        company_token = None
 
-        sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=kwargs['workspace_id']).first()
-        company_id = self.decode_refresh_token(refresh_token=refresh_token, workspace_id=kwargs['workspace_id'])
+        company_id = self.decode_token(token=code, workspace_id=workspace_id)
 
-        if sage_intacct_credentials and sage_intacct_credentials.si_company_id != company_id:
+        sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace_id=workspace_id).first()
+
+        if sage_intacct_credentials and sage_intacct_credentials.si_company_id and sage_intacct_credentials.si_company_id != company_id:
             raise ValidationError(
                 detail={
-                    'message': f"Company ID mismatch for workspace_id - {kwargs['workspace_id']}"
+                    'message': f"Company ID mismatch for workspace_id - {workspace_id}"
                 }
             )
 
+        # Check if a healthy company token already exists for this company
+        existing_company_token = IntacctCompanyToken.get_company_token(company_id=company_id)
+
+        if existing_company_token and self.is_token_healthy(company_token=existing_company_token, workspace_id=workspace_id):
+            # Token already exists and is healthy, just link the workspace to this company
+            logger.info(f"Healthy token already exists for company_id - {company_id}, skipping token update for workspace_id - {workspace_id}")
+            company_token = existing_company_token
+        else:
+            # Exchange authorization code for refresh token and update company token
+            refresh_token = self.exchange_refresh_token_for_code(
+                code=code,
+                redirect_uri=redirect_uri,
+                workspace_id=workspace_id
+            )
+
+            # Store tokens in IntacctCompanyToken table (shared across workspaces for same company)
+            company_token = IntacctCompanyToken.create_or_update_company_token(
+                company_id=company_id,
+                refresh_token=refresh_token
+            )
+
+        # Update SageIntacctCredential with company_id and company_token FK
         SageIntacctCredential.objects.update_or_create(
-            workspace_id=kwargs['workspace_id'],
+            workspace_id=workspace_id,
             defaults={
-                'refresh_token': refresh_token,
-                'si_company_id': company_id
+                'si_company_id': company_id,
+                'company_token': company_token,
+                'is_expired': False,
+                'updated_at': datetime.now(timezone.utc)
             }
         )
 
@@ -291,6 +318,56 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
                 'message': 'Authorization code exchanged successfully'
             }
         )
+
+    def is_token_healthy(self, company_token: IntacctCompanyToken, workspace_id: int) -> bool:
+        """
+        Check if the company token is healthy by:
+        1. Verifying the refresh_token exists and can be decoded
+        2. Initiating a health check with IntacctRESTSDK to verify token validity
+        :param company_token: IntacctCompanyToken object
+        :param workspace_id: Workspace ID
+        :return: True if token is healthy, False otherwise
+        """
+        if not company_token or not company_token.refresh_token:
+            return False
+
+        try:
+            decoded_token = jwt.decode(company_token.refresh_token, options={"verify_signature": False})
+
+            expiry_time = decoded_token['exp']
+            if expiry_time < datetime.now(timezone.utc).timestamp():
+                return False
+
+            connection = SageIntacctRestConnector(
+                workspace_id=workspace_id,
+                company_id=company_token.company_id
+            )
+            connection.connection.locations.count()
+            return True
+
+        except IntacctRESTInvalidTokenError as e:
+            logger.info(f"Invalid token for company_id - {company_token.company_id}: {e.response}")
+            return False
+        except Exception as e:
+            logger.error(f"Error checking token health for company_id - {company_token.company_id}: {e.__str__()}")
+            return False
+
+    def decode_token(self, token: str, workspace_id: int) -> str:
+        """
+        Decode JWT token (authorization code or refresh token) to get company_id
+        :param token: JWT token (authorization code or refresh token)
+        :param workspace_id: Workspace ID
+        :return: Company ID
+        """
+        try:
+            return jwt.decode(token, options={"verify_signature": False})['cnyId']
+        except Exception as e:
+            logger.error(f"Error decoding token for workspace_id - {workspace_id}: {e.__str__()}")
+            raise ValidationError(
+                detail={
+                    'message': 'Error decoding token'
+                }
+            )
 
     def exchange_refresh_token_for_code(self, code: str, redirect_uri: str, workspace_id: int) -> str:
         """
@@ -314,23 +391,6 @@ class AuthorizationCodeView(generics.ListCreateAPIView):
             raise ValidationError(
                 detail={
                     'message': 'Error exchanging refresh token for authorization code'
-                }
-            )
-
-    def decode_refresh_token(self, refresh_token: str, workspace_id: int) -> str:
-        """
-        Decode refresh token
-        :param refresh_token: Refresh token
-        :param workspace_id: Workspace ID
-        :return: Company ID
-        """
-        try:
-            return jwt.decode(refresh_token, options={"verify_signature": False})['cnyId']
-        except Exception as e:
-            logger.error(f"Error decoding refresh token for workspace_id - {workspace_id}: {e.__str__()}")
-            raise ValidationError(
-                detail={
-                    'message': 'Error decoding refresh token'
                 }
             )
 

@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from apps.internal.actions import delete_integration_record, get_accounting_fields, get_exported_entry
 from apps.internal.serializers import E2EDestroySerializer, E2ESetupSerializer
 from apps.internal.services.e2e_setup import E2ESetupService
-from apps.workspaces.models import SageIntacctCredential, Workspace
+from apps.workspaces.models import IntacctCompanyToken, SageIntacctCredential, Workspace
 from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
 from fyle_intacct_api.utils import assert_valid
 
@@ -209,9 +209,10 @@ class IntegrationTestsRefreshTokenView(generics.GenericAPIView):
         assert_valid(params.get('workspace_id') is not None, 'Workspace ID is required')
 
         sage_intacct_credential = SageIntacctCredential.objects.get(workspace_id=params.get('workspace_id'))
+        company_token = IntacctCompanyToken.get_company_token(company_id=sage_intacct_credential.si_company_id)
 
         return Response(status=status.HTTP_200_OK, data={
-            'refresh_token': sage_intacct_credential.refresh_token
+            'refresh_token': company_token.refresh_token if company_token else None
         })
 
     def post(self, request: Request) -> Response:
@@ -223,10 +224,12 @@ class IntegrationTestsRefreshTokenView(generics.GenericAPIView):
         assert_valid(body.get('workspace_id') is not None, 'Workspace ID is required')
         assert_valid(body.get('refresh_token') is not None, 'Refresh Token is required')
 
-        SageIntacctCredential.objects.update_or_create(
-            workspace_id=body.get('workspace_id'),
-            defaults={
-                'refresh_token': body.get('refresh_token')
-            }
-        )
+        sage_intacct_credential = SageIntacctCredential.objects.filter(workspace_id=body.get('workspace_id')).first()
+
+        if sage_intacct_credential and sage_intacct_credential.si_company_id:
+            IntacctCompanyToken.create_or_update_company_token(
+                company_id=sage_intacct_credential.si_company_id,
+                refresh_token=body.get('refresh_token')
+            )
+
         return Response(status=status.HTTP_200_OK)
