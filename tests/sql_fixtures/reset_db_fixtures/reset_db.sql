@@ -3,7 +3,7 @@
 --
 
 
--- Dumped from database version 15.15 (Debian 15.15-1.pgdg13+1)
+-- Dumped from database version 15.14 (Debian 15.14-1.pgdg13+1)
 -- Dumped by pg_dump version 17.6 (Debian 17.6-0+deb13u1)
 
 SET statement_timeout = 0;
@@ -1824,7 +1824,8 @@ CREATE TABLE public.charge_card_transaction_lineitems (
     cost_type_id character varying(255),
     task_id character varying(255),
     user_defined_dimensions jsonb,
-    billable boolean
+    billable boolean,
+    vendor_id character varying(255)
 );
 
 
@@ -2674,7 +2675,8 @@ CREATE TABLE public.expense_report_lineitems (
     tax_amount double precision,
     tax_code character varying(255),
     cost_type_id character varying(255),
-    task_id character varying(255)
+    task_id character varying(255),
+    vendor_id character varying(255)
 );
 
 
@@ -5006,7 +5008,7 @@ COPY public.category_mappings (id, created_at, updated_at, destination_account_i
 -- Data for Name: charge_card_transaction_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.charge_card_transaction_lineitems (id, gl_account_number, project_id, location_id, department_id, amount, created_at, updated_at, charge_card_transaction_id, expense_id, memo, customer_id, item_id, class_id, tax_amount, tax_code, cost_type_id, task_id, user_defined_dimensions, billable) FROM stdin;
+COPY public.charge_card_transaction_lineitems (id, gl_account_number, project_id, location_id, department_id, amount, created_at, updated_at, charge_card_transaction_id, expense_id, memo, customer_id, item_id, class_id, tax_amount, tax_code, cost_type_id, task_id, user_defined_dimensions, billable, vendor_id) FROM stdin;
 \.
 
 
@@ -6362,6 +6364,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 271	sage_intacct	0032_sageintacctattributescount	2025-11-21 18:32:10.00795+00
 272	internal	0026_auto_generated_sql	2025-11-25 07:37:50.264835+00
 273	tasks	0016_tasklog_is_attachment_upload_failed	2025-11-25 07:37:50.286441+00
+274	sage_intacct	0033_chargecardtransactionlineitem_vendor_id_and_more	2025-12-11 08:21:17.98698+00
 \.
 
 
@@ -9784,7 +9787,7 @@ COPY public.expense_groups_expenses (id, expensegroup_id, expense_id) FROM stdin
 -- Data for Name: expense_report_lineitems; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.expense_report_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, expense_report_id, expense_id, transaction_date, billable, customer_id, item_id, user_defined_dimensions, expense_payment_type, class_id, tax_amount, tax_code, cost_type_id, task_id) FROM stdin;
+COPY public.expense_report_lineitems (id, expense_type_id, gl_account_number, project_id, location_id, department_id, memo, amount, created_at, updated_at, expense_report_id, expense_id, transaction_date, billable, customer_id, item_id, user_defined_dimensions, expense_payment_type, class_id, tax_amount, tax_code, cost_type_id, task_id, vendor_id) FROM stdin;
 \.
 
 
@@ -10437,7 +10440,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 57, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 273, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 274, true);
 
 
 --
