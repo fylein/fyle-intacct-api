@@ -50,6 +50,7 @@ data = {
                     'departmentid': '300',
                     'projectid': '10061',
                     'customerid': '10061',
+                    'vendorid': None,
                     'itemid': None,
                     'classid': '600',
                     'taskid': None,

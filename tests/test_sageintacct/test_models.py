@@ -89,7 +89,7 @@ def test_create_bill(db, create_expense_group_expense, create_cost_type, create_
         logger.info('General mapping not found')
 
 
-def test_expense_report(db):
+def test_expense_report(db, mocker):
     """
     Test create expense report
     """
@@ -104,6 +104,7 @@ def test_expense_report(db):
     general_mappings.save()
 
     expense_report = ExpenseReport.create_expense_report(expense_group)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
     expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
     for expense_report_lineitem in expense_report_lineitems:
