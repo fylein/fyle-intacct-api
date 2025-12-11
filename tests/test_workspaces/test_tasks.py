@@ -1,28 +1,30 @@
-import pytest
 from datetime import datetime
+
+import pytest
+from fyle.platform.exceptions import InvalidTokenError
 from fyle_accounting_mappings.models import ExpenseAttribute
 
-from apps.tasks.models import TaskLog
 from apps.fyle.models import ExpenseGroup
+from apps.tasks.models import TaskLog
 from apps.workspaces.models import (
     Configuration,
+    FeatureConfig,
     FyleCredential,
     LastExportDetail,
     SageIntacctCredential,
     Workspace,
     WorkspaceSchedule,
-    FeatureConfig
 )
 from apps.workspaces.tasks import (
-    create_admin_subscriptions,
     async_update_fyle_credentials,
-    trigger_email_notification,
-    update_workspace_name,
+    create_admin_subscriptions,
     patch_integration_settings,
     patch_integration_settings_for_unmapped_cards,
     post_to_integration_settings,
     run_sync_schedule,
     schedule_sync,
+    trigger_email_notification,
+    update_workspace_name,
 )
 from tests.test_workspaces.fixtures import data
 
@@ -788,3 +790,37 @@ def test_patch_integration_settings_for_unmapped_cards(db, mocker):
     patch_integration_settings_mock.assert_called_once()
     last_export_detail.refresh_from_db()
     assert last_export_detail.unmapped_card_count == 5
+
+
+def test_create_admin_subscriptions_invalid_token(db, mocker):
+    """
+    Test create admin subscriptions with invalid token
+    """
+    mocker.patch(
+        'fyle_integrations_platform_connector.PlatformConnector.__init__',
+        side_effect=InvalidTokenError('Invalid Token')
+    )
+    create_admin_subscriptions(3)
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.PlatformConnector.__init__',
+        side_effect=Exception('General error')
+    )
+    create_admin_subscriptions(3)
+
+
+def test_update_workspace_name_invalid_token(db, mocker):
+    """
+    Test update workspace name with invalid token
+    """
+    mocker.patch(
+        'apps.workspaces.tasks.get_fyle_admin',
+        side_effect=InvalidTokenError('Invalid Token')
+    )
+    update_workspace_name(1, 'Bearer access_token')
+
+    mocker.patch(
+        'apps.workspaces.tasks.get_fyle_admin',
+        side_effect=Exception('General error')
+    )
+    update_workspace_name(1, 'Bearer access_token')
