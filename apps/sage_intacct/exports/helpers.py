@@ -133,9 +133,6 @@ def __is_expenses_grouped_by_report(expense_group: ExpenseGroup) -> bool:
         workspace_id=expense_group.workspace_id
     ).first()
 
-    if not expense_group_settings:
-        return False
-
     if expense_group.fund_source == 'PERSONAL':
         return 'report_id' in expense_group_settings.reimbursable_expense_group_fields
     elif expense_group.fund_source == 'CCC':
