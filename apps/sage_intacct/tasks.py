@@ -251,6 +251,7 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
         and configuration.corporate_credit_card_expenses_object
         and (
             configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+            or configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'
             or (
                 configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY'
                 and configuration.use_merchant_in_journal_line
@@ -962,7 +963,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             expense_report_object = ExpenseReport.create_expense_report(expense_group, task_log.supdoc_id)
 
             expense_report_lineitems_objects = ExpenseReportLineitem.create_expense_report_lineitems(
-                expense_group, configuration
+                expense_group, configuration, sage_intacct_connection
             )
 
             created_expense_report = sage_intacct_connection.post_expense_report(
@@ -1348,7 +1349,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id, task_log.supdoc_id)
 
             charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
-                create_charge_card_transaction_lineitems(expense_group, configuration)
+                create_charge_card_transaction_lineitems(expense_group, configuration, sage_intacct_connection)
 
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
