@@ -1505,6 +1505,12 @@ def test_handle_category_changes_for_expense(db, add_category_test_expense, add_
     assert expense_group_2.id in existing_error.mapping_error_expense_group_ids
     assert 888 in existing_error.mapping_error_expense_group_ids
 
+    handle_category_changes_for_expense(expense=expense, new_category='Category With Existing Error')
+
+    existing_error.refresh_from_db()
+    assert existing_error.mapping_error_expense_group_ids.count(expense_group_2.id) == 1
+    assert len(existing_error.mapping_error_expense_group_ids) == 2
+
     expense_group_2.delete()
 
     expense_group_3 = ExpenseGroup.objects.create(
