@@ -17,6 +17,7 @@ from sageintacctsdk.exceptions import WrongParamsError
 
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
+from apps.sage_intacct.exports.helpers import get_source_entity_id
 from apps.sage_intacct.models import (
     APPayment,
     APPaymentLineitem,
@@ -1890,6 +1891,16 @@ class SageIntacctConnector:
                 'taximplications': 'Inbound',
                 'taxsolutionid': self.get_tax_solution_id_or_none(journal_entry_lineitems),
             })
+
+        # Add source entity for cross-entity journal entries with single credit line
+        source_entity_id = get_source_entity_id(
+            workspace_id=self.workspace_id,
+            configuration=configuration,
+            general_mappings=general_mappings,
+            expense_group=journal_entry.expense_group
+        )
+        if source_entity_id:
+            journal_entry_payload['BASELOCATION_NO'] = source_entity_id
 
         logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(
             self.workspace_id, journal_entry.expense_group.id, journal_entry_payload
