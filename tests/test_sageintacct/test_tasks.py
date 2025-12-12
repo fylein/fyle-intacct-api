@@ -1167,6 +1167,7 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
     mocker.patch(
         'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
     )
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
 
     with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()

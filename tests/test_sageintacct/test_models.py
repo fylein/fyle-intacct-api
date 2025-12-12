@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping, MappingSetting
 
-from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
+from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.models import (
     APPayment,
@@ -89,7 +89,7 @@ def test_create_bill(db, create_expense_group_expense, create_cost_type, create_
         logger.info('General mapping not found')
 
 
-def test_expense_report(db):
+def test_expense_report(db, mocker):
     """
     Test create expense report
     """
@@ -104,6 +104,7 @@ def test_expense_report(db):
     general_mappings.save()
 
     expense_report = ExpenseReport.create_expense_report(expense_group)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
     expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
     for expense_report_lineitem in expense_report_lineitems:
@@ -119,6 +120,100 @@ def test_expense_report(db):
         expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
     except Exception:
         logger.info('General mapping not found')
+
+
+def test_expense_report_lineitem_vendor_id_for_personal_expense(db, mocker):
+    """
+    Test that vendor_id is populated for PERSONAL expenses when vendor exists in DestinationAttribute
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=1)  # PERSONAL fund source
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Create a vendor in DestinationAttribute matching the expense merchant
+    expense = expense_group.expenses.first()
+    if expense.vendor:
+        DestinationAttribute.objects.get_or_create(
+            workspace_id=workspace_id,
+            attribute_type='VENDOR',
+            value=expense.vendor,
+            defaults={
+                'destination_id': 'TEST_VENDOR_ID',
+                'active': True
+            }
+        )
+
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    ExpenseReport.create_expense_report(expense_group)
+    expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
+
+    # For PERSONAL expenses with matching vendor, vendor_id should be set
+    for lineitem in expense_report_lineitems:
+        expense_obj = Expense.objects.get(id=lineitem.expense_id)
+        if expense_obj.vendor:
+            vendor = DestinationAttribute.objects.filter(
+                value__iexact=expense_obj.vendor,
+                attribute_type='VENDOR',
+                workspace_id=workspace_id
+            ).first()
+            if vendor:
+                assert lineitem.vendor_id == vendor.destination_id
+
+
+def test_expense_report_lineitem_vendor_id_none_when_vendor_not_exists(db, mocker):
+    """
+    Test that vendor_id is None for PERSONAL expenses when vendor doesn't exist in DestinationAttribute
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=1)  # PERSONAL fund source
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Update expense to have a vendor that doesn't exist in DestinationAttribute
+    expense = expense_group.expenses.first()
+    non_existent_vendor = 'NON_EXISTENT_VENDOR_12345'
+    expense.vendor = non_existent_vendor
+    expense.save()
+
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    ExpenseReport.create_expense_report(expense_group)
+    expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
+
+    # For PERSONAL expenses without matching vendor, vendor_id should be None
+    for lineitem in expense_report_lineitems:
+        expense_obj = Expense.objects.get(id=lineitem.expense_id)
+        if expense_obj.vendor == non_existent_vendor:
+            assert lineitem.vendor_id is None
+
+
+def test_charge_card_transaction_lineitem_vendor_id(db, mocker):
+    """
+    Test that vendor_id is populated for CCT lineitems via get_or_create_credit_card_vendor
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+    expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
+    expense_group.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.default_charge_card_id = 'sample'
+    general_mappings.save()
+
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Mock get_or_create_credit_card_vendor to return a vendor
+    mock_vendor = mocker.MagicMock()
+    mock_vendor.destination_id = 'MOCK_VENDOR_ID'
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: mock_vendor)
+
+    ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
+    charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+
+    # For CCT lineitems, vendor_id should be set from the mocked vendor
+    for lineitem in charge_card_transaction_lineitems:
+        assert lineitem.vendor_id == 'MOCK_VENDOR_ID'
 
 
 def test_create_journal_entry(db, mocker, create_expense_group_expense, create_cost_type, create_dependent_field_setting):

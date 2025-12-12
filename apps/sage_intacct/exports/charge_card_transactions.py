@@ -95,7 +95,7 @@ def construct_charge_card_transaction_line_item_payload(
                     'id': lineitem.customer_id
                 },
                 'vendor': {
-                    'id': charge_card_transaction.vendor_id
+                    'id': lineitem.vendor_id
                 },
                 'project': {
                     'id': lineitem.project_id
