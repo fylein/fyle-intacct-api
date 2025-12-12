@@ -2,68 +2,60 @@ import json
 import logging
 import traceback
 from datetime import datetime
+
 from dateutil.relativedelta import relativedelta
-
 from django.conf import settings
-from django.db import transaction
-from django.utils import timezone
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models.functions import Lower
-
+from django.utils import timezone
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
 from fyle_integrations_platform_connector import PlatformConnector
+from intacctsdk.exceptions import BadRequestError as IntacctRESTBadRequestError
+from intacctsdk.exceptions import InternalServerError as IntacctRESTInternalServerError
+from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
-from intacctsdk.exceptions import (
-    BadRequestError as IntacctRESTBadRequestError,
-    InvalidTokenError as IntacctRESTInvalidTokenError,
-    InternalServerError as IntacctRESTInternalServerError
-)
-from fyle_accounting_mappings.models import (
-    Mapping,
-    CategoryMapping,
-    EmployeeMapping,
-    ExpenseAttribute,
-    DestinationAttribute
-)
 
-from apps.tasks.models import Error, TaskLog
-from apps.mappings.models import GeneralMapping
-from fyle_intacct_api.exceptions import BulkError
-from apps.fyle.models import Expense, ExpenseGroup
 from apps.exceptions import ValueErrorWithResponse
-from apps.sage_intacct.utils import SageIntacctConnector
-from apps.sage_intacct.actions import update_last_export_details
-from apps.sage_intacct.connector import SageIntacctRestConnector
-from apps.sage_intacct.helpers import get_sage_intacct_connection
-from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
-from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, SageIntacctCredential
 from apps.fyle.actions import (
-    update_failed_expenses,
+    post_accounting_export_summary,
     update_complete_expenses,
     update_expenses_in_progress,
-    post_accounting_export_summary
+    update_failed_expenses,
 )
+from apps.fyle.models import Expense, ExpenseGroup
+from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.actions import update_last_export_details
+from apps.sage_intacct.connector import SageIntacctRestConnector
+from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
 from apps.sage_intacct.errors.helpers import (
     error_matcher,
     get_entity_values,
     remove_support_id,
-    replace_destination_id_with_values
+    replace_destination_id_with_values,
 )
+from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.models import (
-    Bill,
     APPayment,
-    BillLineitem,
-    JournalEntry,
-    ExpenseReport,
     APPaymentLineitem,
-    JournalEntryLineitem,
-    ExpenseReportLineitem,
+    Bill,
+    BillLineitem,
     ChargeCardTransaction,
-    SageIntacctReimbursement,
     ChargeCardTransactionLineitem,
-    SageIntacctReimbursementLineitem
+    ExpenseReport,
+    ExpenseReportLineitem,
+    JournalEntry,
+    JournalEntryLineitem,
+    SageIntacctReimbursement,
+    SageIntacctReimbursementLineitem,
 )
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, SageIntacctCredential
+from fyle_intacct_api.exceptions import BulkError
+from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -1715,9 +1707,13 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
     :param workspace_id: Workspace Id
     :return: None
     """
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+    try:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    except FyleInvalidTokenError:
+        logger.info('Invalid Fyle refresh token for workspace_id - %s', workspace_id)
+        return
 
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
     filter_credit_expenses = False
 
     expense_reports: list[ExpenseReport] = ExpenseReport.objects.filter(
@@ -1926,9 +1922,9 @@ def check_sage_intacct_object_status(workspace_id: int) -> None:
     except (SageIntacctCredential.DoesNotExist, NoPrivilegeError):
         logger.info('SageIntacct credentials does not exist - %s or Insufficient permission to access the requested module', workspace_id)
         return
-    except InvalidTokenError:
+    except (InvalidTokenError, WrongParamsError):
         invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
-        logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
+        logger.info('Invalid Sage Intact Token or Wrong Params for workspace_id - %s', workspace_id)
         return
 
     bills = Bill.objects.filter(
@@ -2119,9 +2115,12 @@ def process_fyle_reimbursements(workspace_id: int) -> None:
     :param workspace_id: Workspace Id
     :return: None
     """
-    fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
-
-    platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    try:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
+    except FyleInvalidTokenError:
+        logger.info('Invalid Fyle refresh token for workspace_id - %s', workspace_id)
+        return
 
     reports_to_be_marked = set()
     payloads = []

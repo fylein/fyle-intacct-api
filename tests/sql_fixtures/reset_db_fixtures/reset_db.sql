@@ -470,6 +470,12 @@ BEGIN
     RAISE NOTICE 'Deleted % fyle_sync_timestamps', rcount;
 
     DELETE
+    FROM sage_intacct_attributes_count sicac
+    WHERE sicac.workspace_id = _workspace_id;
+    GET DIAGNOSTICS rcount = ROW_COUNT;
+    RAISE NOTICE 'Deleted % sage_intacct_attributes_count', rcount;
+
+    DELETE
     FROM django_q_schedule dqs
     WHERE dqs.args = _workspace_id::varchar(255);
     GET DIAGNOSTICS rcount = ROW_COUNT;
@@ -6364,7 +6370,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 271	sage_intacct	0032_sageintacctattributescount	2025-11-21 18:32:10.00795+00
 272	internal	0026_auto_generated_sql	2025-11-25 07:37:50.264835+00
 273	tasks	0016_tasklog_is_attachment_upload_failed	2025-11-25 07:37:50.286441+00
-274	sage_intacct	0033_chargecardtransactionlineitem_vendor_id_and_more	2025-12-11 08:21:17.98698+00
+274	internal	0027_auto_generated_sql	2025-12-11 16:57:54.643117+00
+275	sage_intacct	0033_chargecardtransactionlineitem_vendor_id_and_more	2025-12-11 08:21:17.98698+00
 \.
 
 
@@ -10440,7 +10447,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 57, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 274, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 275, true);
 
 
 --
@@ -12774,5 +12781,3 @@ ALTER TABLE ONLY public.workspaces_user
 --
 -- PostgreSQL database dump complete
 --
-
-

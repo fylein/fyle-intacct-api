@@ -111,6 +111,9 @@ def schedule_journal_entries_creation(
             exported_at__isnull=True
         ).all()
 
+        if not expense_groups:
+            return
+
         chain_tasks = []
 
         fund_source = expense_groups.first().fund_source
@@ -190,6 +193,9 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
             exported_at__isnull=True
         ).all()
 
+        if not expense_groups:
+            return
+
         chain_tasks = []
 
         skip_export_count = 0
@@ -241,6 +247,9 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
             q_filter,
             workspace_id=workspace_id, id__in=expense_group_ids, bill__id__isnull=True, exported_at__isnull=True
         ).all()
+
+        if not expense_groups:
+            return
 
         chain_tasks = []
 
@@ -301,6 +310,9 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
             workspace_id=workspace_id, id__in=expense_group_ids, chargecardtransaction__id__isnull=True,
             exported_at__isnull=True
         ).all()
+
+        if not expense_groups:
+            return
 
         chain_tasks = []
 

@@ -6,7 +6,9 @@ from unittest import mock
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.cache import cache
+from django.utils import timezone as django_timezone
 from django_q.models import Schedule
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
@@ -720,6 +722,16 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
 
         assert expense_report.paid_on_sage_intacct == True
         assert expense_report.payment_synced == True
+
+
+def test_create_sage_intacct_reimbursement_invalid_token(mocker, db):
+    """
+    Test create_sage_intacct_reimbursement invalid token
+    """
+    workspace_id = 1
+    with mock.patch('fyle_integrations_platform_connector.fyle_integrations_platform_connector.PlatformConnector.__init__') as mock_init:
+        mock_init.side_effect = FyleInvalidTokenError('Invalid refresh token')
+        create_sage_intacct_reimbursement(workspace_id)
 
 
 def test_post_charge_card_transaction_success(mocker, create_task_logs, db):
@@ -1529,6 +1541,10 @@ def test_check_sage_intacct_object_status(mocker, db):
         mock_call.side_effect = NoPrivilegeError(msg="insufficient permission", response="insufficient permission")
         check_sage_intacct_object_status(workspace_id)
 
+    with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.__init__') as mock_init:
+        mock_init.side_effect = WrongParamsError(msg="Some of the parameters are wrong", response="wrong params")
+        check_sage_intacct_object_status(workspace_id)
+
 
 def test_process_fyle_reimbursements(db, mocker):
     """
@@ -1558,6 +1574,10 @@ def test_process_fyle_reimbursements(db, mocker):
     reimbursement = Reimbursement.objects.filter(workspace_id=workspace_id).count()
 
     assert reimbursement == 258
+
+    with mock.patch('fyle_integrations_platform_connector.fyle_integrations_platform_connector.PlatformConnector.__init__') as mock_init:
+        mock_init.side_effect = FyleInvalidTokenError('Invalid refresh token')
+        process_fyle_reimbursements(workspace_id)
 
 
 def test_schedule_sage_intacct_objects_status_sync(db):
@@ -1627,6 +1647,35 @@ def test_schedule_sage_intacct_reimbursement_creation(mocker, db):
 
     schedule_count = Schedule.objects.filter(func='apps.sage_intacct.queue.trigger_sync_payments', args=workspace_id).count()
     assert schedule_count == 1
+
+
+def test_schedule_creation_with_no_expense_groups(db):
+    """
+    Test schedule_creation_with_no_expense_groups
+    """
+    workspace_id = 1
+
+    expense_group_1 = ExpenseGroup.objects.get(id=1)
+    expense_group_1.exported_at = django_timezone.now()
+    expense_group_1.save()
+
+    expense_group_2 = ExpenseGroup.objects.get(id=2)
+    expense_group_2.exported_at = django_timezone.now()
+    expense_group_2.save()
+
+    initial_task_log_count = TaskLog.objects.filter(workspace_id=workspace_id).count()
+
+    schedule_journal_entries_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
+
+    schedule_expense_reports_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
+
+    schedule_bills_creation(workspace_id, [1], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
+
+    schedule_charge_card_transaction_creation(workspace_id, [2], False, 1, triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC, run_in_rabbitmq_worker=False)
+    assert TaskLog.objects.filter(workspace_id=workspace_id).count() == initial_task_log_count
 
 
 def test__validate_expense_group(mocker, db):
