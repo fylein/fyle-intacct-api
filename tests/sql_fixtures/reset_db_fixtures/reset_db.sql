@@ -3,7 +3,7 @@
 --
 
 
--- Dumped from database version 15.14 (Debian 15.14-1.pgdg13+1)
+-- Dumped from database version 15.15 (Debian 15.15-1.pgdg13+1)
 -- Dumped by pg_dump version 17.6 (Debian 17.6-0+deb13u1)
 
 SET statement_timeout = 0;
@@ -3951,12 +3951,11 @@ CREATE TABLE public.sage_intacct_credentials (
     si_user_id text NOT NULL,
     si_company_id text NOT NULL,
     si_company_name text,
-    si_user_password text NOT NULL,
+    si_user_password text,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     workspace_id integer NOT NULL,
     is_expired boolean NOT NULL,
-    refresh_token text,
     access_token text,
     access_token_expires_at timestamp with time zone
 );
@@ -6372,6 +6371,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 273	tasks	0016_tasklog_is_attachment_upload_failed	2025-11-25 07:37:50.286441+00
 274	internal	0027_auto_generated_sql	2025-12-11 16:57:54.643117+00
 275	sage_intacct	0033_chargecardtransactionlineitem_vendor_id_and_more	2025-12-11 08:21:17.98698+00
+276	workspaces	0058_remove_sageintacctcredential_refresh_token_and_more	2025-12-13 10:30:42.473527+00
 \.
 
 
@@ -10284,8 +10284,8 @@ COPY public.sage_intacct_attributes_count (id, accounts_count, items_count, vend
 -- Data for Name: sage_intacct_credentials; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired, refresh_token, access_token, access_token_expires_at) FROM stdin;
-1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f	\N	\N	\N
+COPY public.sage_intacct_credentials (id, si_user_id, si_company_id, si_company_name, si_user_password, created_at, updated_at, workspace_id, is_expired, access_token, access_token_expires_at) FROM stdin;
+1	team_cs	FyleMPP-DEV2	FyleMPP-DEV	gAAAAABjKXwVzRsxpid8IRVcaHGmjh-n8HoNrbe9PgWsXUEGdZ8WMcu9OaV_CFdVsKiyM714fc3hYCZPU4szITy-PZtQQxqU5Q==	2022-09-20 08:38:48.66191+00	2022-09-20 08:38:48.661952+00	1	f	\N	\N
 \.
 
 
@@ -10447,7 +10447,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 57, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 275, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 276, true);
 
 
 --
@@ -12781,3 +12781,5 @@ ALTER TABLE ONLY public.workspaces_user
 --
 -- PostgreSQL database dump complete
 --
+
+

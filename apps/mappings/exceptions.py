@@ -1,6 +1,11 @@
 import logging
 import traceback
 
+from intacctsdk.exceptions import (
+    BadRequestError as SageIntacctRESTBadRequestError,
+    InvalidTokenError as SageIntacctRestInvalidTokenError,
+    InternalServerError as SageIntacctRESTInternalServerError
+)
 from sageintacctsdk.exceptions import (
     InvalidTokenError,
     NoPrivilegeError,
@@ -54,9 +59,14 @@ def handle_import_exceptions_v2(func: callable) -> callable:
             error['alert'] = False
             import_log.status = 'FAILED'
 
-        except InvalidTokenError:
+        except (InvalidTokenError, SageIntacctRestInvalidTokenError):
             invalidate_sage_intacct_credentials(workspace_id)
             error['message'] = 'Invalid Sage Intacct Token Error for workspace_id - {0}'.format(workspace_id)
+            error['alert'] = False
+            import_log.status = 'FAILED'
+
+        except (SageIntacctRESTBadRequestError, SageIntacctRESTInternalServerError) as e:
+            error['message'] = 'Sage Intacct REST API error for workspace_id - {0}: {1}'.format(workspace_id, e.response)
             error['alert'] = False
             import_log.status = 'FAILED'
 

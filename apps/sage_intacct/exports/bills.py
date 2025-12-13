@@ -44,7 +44,7 @@ def construct_bill_payload(
             'txnCurrency': bill.currency,
         },
         'attachment': {
-            'id': bill.supdoc_id,
+            'id': str(bill.supdoc_id) if bill.supdoc_id else None,
         },
         'lines': bill_line_item_payload
     }

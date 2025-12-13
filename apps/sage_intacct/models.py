@@ -33,6 +33,17 @@ allocation_mapping = {
     'PROJECTID': 'project_id'
 }
 
+allocation_mapping_rest = {
+    'location': 'location_id',
+    'department': 'department_id',
+    'class': 'class_id',
+    'customer': 'customer_id',
+    'item': 'item_id',
+    'task': 'task_id',
+    'cost_type': 'cost_type_id',
+    'project': 'project_id'
+}
+
 
 def get_allocation_id_or_none(expense_group: ExpenseGroup, lineitem: Expense) -> Optional[tuple]:
     """
@@ -980,9 +991,13 @@ class BillLineitem(models.Model):
                 'cost_type_id': cost_type_id
             }
 
+            migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=expense_group.workspace_id, key='migrated_to_rest_api')
+
+            allocation_mapping_dict = allocation_mapping_rest if migrated_to_rest_api else allocation_mapping
+
             allocation_id, allocation_detail = get_allocation_id_or_none(expense_group, lineitem)
             if allocation_id and allocation_detail:
-                for allocation_dimension, dimension_variable_name in allocation_mapping.items():
+                for allocation_dimension, dimension_variable_name in allocation_mapping_dict.items():
                     if allocation_dimension in allocation_detail.keys():
                         dimensions_values[dimension_variable_name] = None
 

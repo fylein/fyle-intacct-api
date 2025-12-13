@@ -63,6 +63,7 @@ errors_ref = {
         "article_link": settings.HELP_ARTICLE_DOMAIN + '/en/articles/9317068-project-related-sage-intacct-errors',
         "patterns": [
             "The employee isn’t a resource of the project '([^']+)'.",
+            "The employee is not a resource of the project '([^']+)'.",
             "The Project '([^']+)' has a project status that prevents expense submittal.",
             "Project '([^']+)' specified is not valid.",
             "Invalid Project '([^']+)' specified.",

@@ -4,7 +4,7 @@ import pytest
 from django.urls import reverse
 from rest_framework import status
 
-from apps.workspaces.models import SageIntacctCredential, Workspace
+from apps.workspaces.models import Workspace
 from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
 from tests.test_internal.fixtures import data as internal_data
 from tests.test_sageintacct.fixtures import data
@@ -231,45 +231,3 @@ def test_e2e_destroy_view_failures(db, api_client, mocker):
 
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert 'Cleanup failed: Integration deletion failed' in response.data['error']
-
-
-@pytest.mark.django_db(databases=['default'])
-@patch.object(IsAuthenticatedForInternalAPI, 'has_permission', return_value=True)
-def test_get_integration_tests_view(db, api_client, mocker):
-    """
-    Test GET refresh token
-    """
-    url = reverse('integration-tests-refresh-token')
-
-    workspace_id = 1
-    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(refresh_token='dummy.dummy.dummy')
-
-    response = api_client.get(url)
-    assert response.status_code == 400
-
-    response = api_client.get(url, {'workspace_id': workspace_id})
-    assert response.status_code == 200
-
-    assert response.data == {
-        'refresh_token': 'dummy.dummy.dummy'
-    }
-
-
-@pytest.mark.django_db(databases=['default'])
-@patch.object(IsAuthenticatedForInternalAPI, 'has_permission', return_value=True)
-def test_post_integration_tests_view(db, api_client, mocker):
-    """
-    Test POST refresh token
-    """
-    url = reverse('integration-tests-refresh-token')
-
-    workspace_id = 1
-    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(refresh_token=None)
-
-    response = api_client.post(url, {})
-    assert response.status_code == 400
-
-    response = api_client.post(url, data={'workspace_id': workspace_id, 'refresh_token': 'dummy.dummy.dummy'}, format='json')
-    assert response.status_code == 200
-
-    assert SageIntacctCredential.objects.get(workspace_id=workspace_id).refresh_token == 'dummy.dummy.dummy'
