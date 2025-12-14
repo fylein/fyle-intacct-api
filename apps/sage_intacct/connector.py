@@ -143,15 +143,17 @@ class SageIntacctRestConnector:
 
     def __update_tokens(
         self,
-        access_token: str
+        access_token: str,
+        access_token_expires_in: int
     ) -> None:
         """
         Update tokens
         :param access_token: Access token
+        :param access_token_expires_in: Access token expires in
         :return: None
         """
         self.credential_object.refresh_from_db()
-        self.credential_object.access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=self.__get_access_token_expiry_time(access_token))
+        self.credential_object.access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=self.__get_access_token_expiry_time(access_token_expires_in))
         self.credential_object.access_token = access_token
         self.credential_object.save(update_fields=[
             'access_token_expires_at',
@@ -159,12 +161,13 @@ class SageIntacctRestConnector:
             'updated_at',
         ])
 
-    def __get_access_token_expiry_time(self) -> int:
+    def __get_access_token_expiry_time(self, access_token_expires_in: int) -> int:
         """
         Get access token expiry time
+        :param access_token_expires_in: Access token expires in
         :return: int
         """
-        hours_remaining = self.access_token_expires_in / 3600
+        hours_remaining = access_token_expires_in / 3600
 
         # If more than 5 hours remain, set to 5 hours
         if hours_remaining >= 5:
@@ -2069,26 +2072,27 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                     'id': 'FyleAttachments'
                 })
 
-    def post_attachments(self, attachments: list[dict], attachment_id: str, attachment_number: int) -> str | bool:
+    def post_attachments(self, attachments: list[dict], attachment_id: str, attachment_number: int, attachment_key: str = None) -> tuple[str, str] | tuple[bool, None]:
         """
         Post attachments to Sage Intacct
         :param attachments: List of attachment dictionaries
         :param attachment_id: Supporting document ID to be used in Sage Intacct
         :param attachment_number: Number used to uniquely name attachments
+        :param attachment_key: Attachment key
         :return: attachment_id if first attachment is successfully posted, else False
         """
         if not attachments:
-            return False
+            return False, None
 
         for attachment in attachments:
             payload = {
                 'id': str(attachment_id),
-                'name': f'{attachment["id"]} - {attachment_number}',
+                'name': str(attachment_id),
                 'folder': {
                     'id': 'FyleAttachments'
                 },
                 'files': [{
-                    'name': attachment['name'],
+                    'name': f'{attachment["id"]} - {attachment_number}',
                     'data': attachment['download_url'],
                 }]
             }
@@ -2097,15 +2101,16 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                 created_attachment = self.connection.attachments.post(payload)
             else:
                 try:
-                    self.connection.attachments.update(payload)
-                except Exception:
-                    logger.info(f'Error updating attachment {attachment_number} for supdoc {attachment_id}')
+                    payload.pop('id')
+                    self.connection.attachments.update(key=attachment_key, data=payload)
+                except Exception as e:
+                    logger.info(f'Error updating attachment {attachment_number} for supdoc {attachment_id} - {e.response}')
                     continue
 
         if attachment_number == 1 and created_attachment['ia::result'] and created_attachment['ia::result'].get('key'):
-            return attachment_id
+            return attachment_id, created_attachment['ia::result'].get('key')
 
-        return False
+        return False, None
 
     def update_expense_report_attachments(self, object_key: str, attachment_id: str) -> dict:
         """

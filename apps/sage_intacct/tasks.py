@@ -68,6 +68,8 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacct
     :param expense_group: Expense group
     :return: Tuple of (Final supdoc_id string if successful else None, is_failed boolean)
     """
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=expense_group.workspace_id, key='migrated_to_rest_api')
+
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
         file_ids_list = expense_group.expenses.values_list('file_ids', flat=True)
@@ -76,21 +78,32 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacct
         supdoc_base_id = expense_group.id
         attachment_number = 1
         final_supdoc_id = False
+        attachment_key = None
+        attachment_key_from_response = None
+        supdoc_id = None
 
         for file_ids in file_ids_list:
             for file_id in file_ids:
                 attachment = platform.files.bulk_generate_file_urls([{'id': file_id}])
-                supdoc_id = sage_intacct_connection.post_attachments(attachment, supdoc_base_id, attachment_number)
+
+                if migrated_to_rest_api:
+                    supdoc_id, attachment_key_from_response = sage_intacct_connection.post_attachments(attachments=attachment, attachment_id=supdoc_base_id, attachment_number=attachment_number, attachment_key=attachment_key)
+                else:
+                    supdoc_id = sage_intacct_connection.post_attachments(attachment, supdoc_base_id, attachment_number)
 
                 if supdoc_id and attachment_number == 1:
                     final_supdoc_id = supdoc_id
+                    attachment_key = attachment_key_from_response
 
                 attachment_number += 1
 
         return final_supdoc_id, False
 
-    except Exception:
-        logger.info(f"Error loading attachments for expense group {expense_group.id}")
+    except Exception as e:
+        if migrated_to_rest_api:
+            logger.info(f"Error loading attachments for expense group {expense_group.id} workspace {expense_group.workspace_id} - {e.response}")
+        else:
+            logger.info(f"Error loading attachments for expense group {expense_group.id}")
         error = traceback.format_exc()
         logger.info(
             'Attachment failed for expense group id %s / workspace id %s. Error: %s',
