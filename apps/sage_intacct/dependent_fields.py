@@ -9,6 +9,11 @@ from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
+from intacctsdk.exceptions import (
+    BadRequestError as IntacctRESTBadRequestError,
+    InvalidTokenError as IntacctRESTInvalidTokenError,
+    InternalServerError as IntacctRESTInternalServerError
+)
 
 from apps.fyle.helpers import connect_to_platform
 from apps.fyle.models import DependentFieldSetting
@@ -393,10 +398,13 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
     except SageIntacctCredential.DoesNotExist:
         exception = "Sage Intacct credentials does not exist workspace_id - {0}".format(workspace_id)
         logger.info('Sage Intacct credentials does not exist workspace_id - %s', workspace_id)
-    except InvalidTokenError:
+    except (InvalidTokenError, IntacctRESTInvalidTokenError):
         invalidate_sage_intacct_credentials(workspace_id)
         exception = "Invalid Sage Intacct Token Error for workspace_id - {0}".format(workspace_id)
         logger.info('Invalid Sage Intacct Token Error for workspace_id - %s', workspace_id)
+    except (IntacctRESTBadRequestError, IntacctRESTInternalServerError) as e:
+        exception = "Sage Intacct REST API error for workspace_id - %s: %s" % (workspace_id, e.response)
+        logger.info('Sage Intacct REST API error for workspace_id - %s: %s', workspace_id, e.response)
     except NoPrivilegeError:
         exception = "Insufficient permission to access the requested module"
         logger.info('Insufficient permission to access the requested module - %s', workspace_id)

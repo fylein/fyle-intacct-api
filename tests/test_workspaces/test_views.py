@@ -422,7 +422,11 @@ def test_connect_sageintacct_view_exceptions(api_client, test_connection):
         response = api_client.post(
             url,
             data={
-                'code': code
+                'code': code,
+                'si_user_password': 'sample',
+                'si_user_id': 'sdfghj',
+                'si_company_id': 'kjhgfz',
+                'si_company_name': 'fghjk'
             }
         )
         assert response.status_code == 404
@@ -432,7 +436,11 @@ def test_connect_sageintacct_view_exceptions(api_client, test_connection):
         response = api_client.post(
             url,
             data={
-                'code': code
+                'code': code,
+                'si_user_password': 'sample',
+                'si_user_id': 'sdfghj',
+                'si_company_id': 'kjhgfz',
+                'si_company_name': 'fghjk'
             }
         )
         assert response.status_code == 400
@@ -442,7 +450,11 @@ def test_connect_sageintacct_view_exceptions(api_client, test_connection):
         response = api_client.post(
             url,
             data={
-                'code': code
+                'code': code,
+                'si_user_password': 'sample',
+                'si_user_id': 'sdfghj',
+                'si_company_id': 'kjhgfz',
+                'si_company_name': 'fghjk'
             }
         )
         assert response.status_code == 401
@@ -452,7 +464,11 @@ def test_connect_sageintacct_view_exceptions(api_client, test_connection):
         response = api_client.post(
             url,
             data={
-                'code': code
+                'code': code,
+                'si_user_password': 'sample',
+                'si_user_id': 'sdfghj',
+                'si_company_id': 'kjhgfz',
+                'si_company_name': 'fghjk'
             }
         )
         assert response.status_code == 401
