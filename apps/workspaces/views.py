@@ -1,22 +1,27 @@
 import logging
 import traceback
-from datetime import timedelta
-
 from cryptography.fernet import Fernet
+from datetime import datetime, timedelta, timezone
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Q, QuerySet
 from django.contrib.auth import get_user_model
 
-from rest_framework.views import status
+from intacctsdk import IntacctRESTSDK
 from sageintacctsdk import SageIntacctSDK
+from sageintacctsdk import exceptions as sage_intacct_exc
+from intacctsdk.exceptions import (
+    BadRequestError as SageIntacctRESTBadRequestError,
+    InvalidTokenError as SageIntacctRestInvalidTokenError,
+    InternalServerError as SageIntacctRESTInternalServerError
+)
+
+from rest_framework.views import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
-from sageintacctsdk import exceptions as sage_intacct_exc
-from intacctsdk.exceptions import InvalidTokenError as SageIntacctRestInvalidTokenError
 
 from fyle_rest_auth.models import AuthToken
 from fyle_rest_auth.utils import AuthUtils
@@ -28,9 +33,9 @@ from fyle_accounting_mappings.models import ExpenseAttribute, FyleSyncTimestamp
 from apps.tasks.models import TaskLog
 from apps.fyle.helpers import get_cluster_domain
 from apps.fyle.models import ExpenseGroupSettings
-from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.workspaces.actions import export_to_intacct
 from apps.workspaces.tasks import patch_integration_settings
+from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
@@ -96,6 +101,10 @@ class TokenHealthView(viewsets.ViewSet):
                 status_code = status.HTTP_400_BAD_REQUEST
                 message = "Intacct connection expired"
                 logger.info('Invalid Sage Intact Token for workspace_id - %s', workspace_id)
+            except (SageIntacctRESTBadRequestError, SageIntacctRESTInternalServerError) as e:
+                status_code = status.HTTP_400_BAD_REQUEST
+                message = "Sage Intacct REST API error for workspace_id - %s: %s" % (workspace_id, e.response)
+                logger.info('Sage Intacct REST API error for workspace_id - %s: %s', workspace_id, e.response)
             except Exception:
                 status_code = status.HTTP_400_BAD_REQUEST
                 message = "Something went wrong"
@@ -331,25 +340,179 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             }
             sage_intacct_connection.attachments.create_attachments_folder(data)
 
+    def get_or_create_attachments_folder_rest_api(self, sage_intacct_connection: IntacctRESTSDK) -> None:
+        """
+        Get or Create attachments folder in Sage Intacct
+        """
+        params = {
+            'fields': ['id', 'status'],
+            'filters': [
+                {
+                    '$eq': {
+                        'id': 'FyleAttachments'
+                    }
+                }
+            ]
+        }
+        attachment_folder_generator = sage_intacct_connection.attachment_folders.get_all_generator(**params)
+
+        for attachment_folder in attachment_folder_generator:
+            if not attachment_folder:
+                return sage_intacct_connection.attachment_folders.post({
+                    'id': 'FyleAttachments'
+                })
+
     def post(self, request: Request, **kwargs) -> Response:
         """
         Post of Sage Intacct Credentials
         """
-        try:
-            si_user_id = request.data.get('si_user_id')
-            si_company_id = request.data.get('si_company_id')
-            si_company_name = request.data.get('si_company_name')
-            si_user_password = request.data.get('si_user_password')
-            workspace_id = kwargs['workspace_id']
-            workspace = Workspace.objects.get(pk=workspace_id)
+        si_user_id = request.data.get('si_user_id')
+        si_company_id = request.data.get('si_company_id')
+        si_company_name = request.data.get('si_company_name')
+        si_user_password = request.data.get('si_user_password')
+        workspace_id = kwargs['workspace_id']
+        workspace = Workspace.objects.get(pk=workspace_id)
 
+        migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
+        if migrated_to_rest_api:
+            return self.handle_sage_intacct_rest_api_connection(
+                workspace=workspace,
+                si_user_id=si_user_id,
+                si_company_id=si_company_id,
+                si_company_name=si_company_name,
+            )
+        else:
+            return self.handle_sage_intacct_soap_api_connection(
+                workspace=workspace,
+                si_user_id=si_user_id,
+                si_company_id=si_company_id,
+                si_company_name=si_company_name,
+                si_user_password=si_user_password
+            )
+
+    def handle_sage_intacct_rest_api_connection(
+        self,
+        workspace: Workspace,
+        si_user_id: str,
+        si_company_id: str,
+        si_company_name: str
+    ) -> Response:
+        """
+        Handle Sage Intacct REST API connection
+        :param workspace: Workspace
+        :param si_user_id: Sage Intacct user ID
+        :param si_company_id: Sage Intacct company ID
+        :param si_company_name: Sage Intacct company name
+        :param si_user_password: Sage Intacct user password
+        :return: None
+        """
+        try:
             sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
+
+            if not sage_intacct_credentials:
+                sage_intacct_connection = IntacctRESTSDK(
+                    username=f'{si_user_id}@{si_company_id}',
+                    client_id=settings.INTACCT_CLIENT_ID,
+                    client_secret=settings.INTACCT_CLIENT_SECRET,
+                )
+
+                self.get_or_create_attachments_folder_rest_api(sage_intacct_connection)
+
+                access_token_expires_in = sage_intacct_connection.access_token_expires_in if hasattr(sage_intacct_connection, 'access_token_expires_in') and sage_intacct_connection.access_token_expires_in else 21600
+                access_token_hours_remaining = access_token_expires_in / 3600
+
+                sage_intacct_credentials = SageIntacctCredential.objects.create(
+                    si_user_id=si_user_id,
+                    si_company_id=si_company_id,
+                    si_company_name=si_company_name,
+                    access_token=sage_intacct_connection.access_token,
+                    access_token_expires_at=datetime.now(timezone.utc) + timedelta(hours=access_token_hours_remaining - 1),
+                    workspace=workspace
+                )
+
+                workspace.onboarding_state = 'LOCATION_ENTITY_MAPPINGS'
+                workspace.save()
+
+            else:
+                sage_intacct_connection = IntacctRESTSDK(
+                    username=f'{si_user_id}@{si_company_id}',
+                    client_id=settings.INTACCT_CLIENT_ID,
+                    client_secret=settings.INTACCT_CLIENT_SECRET,
+                    access_token=sage_intacct_credentials.access_token
+                )
+
+                self.get_or_create_attachments_folder_rest_api(sage_intacct_connection)
+
+                access_token_expires_in = sage_intacct_connection.access_token_expires_in if hasattr(sage_intacct_connection, 'access_token_expires_in') and sage_intacct_connection.access_token_expires_in else 21600
+                access_token_hours_remaining = access_token_expires_in / 3600
+
+                sage_intacct_credentials.si_user_id = si_user_id
+                sage_intacct_credentials.si_company_id = si_company_id
+                sage_intacct_credentials.si_company_name = si_company_name
+                sage_intacct_credentials.is_expired = False
+                sage_intacct_credentials.access_token = sage_intacct_connection.access_token
+                sage_intacct_credentials.access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=access_token_hours_remaining - 1)
+                sage_intacct_credentials.save()
+
+                patch_integration_settings(workspace, is_token_expired=False)
+
+            return Response(
+                data=SageIntacctCredentialSerializer(sage_intacct_credentials).data,
+                status=status.HTTP_200_OK
+            )
+
+        except SageIntacctRestInvalidTokenError as e:
+            logger.info('Something went wrong while connecting to Sage Intacct - %s', e.response)
+            return Response(
+                {
+                    'message': e.response
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        except SageIntacctRESTBadRequestError as e:
+            logger.info('Something went wrong while connecting to Sage Intacct - %s', e.response)
+            return Response(
+                {
+                    'message': e.response
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except SageIntacctRESTInternalServerError as e:
+            logger.info('Something went wrong while connecting to Sage Intacct - %s', e.response)
+            return Response(
+                {
+                    'message': 'Something went wrong while connecting to Sage Intacct'
+                },
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+    def handle_sage_intacct_soap_api_connection(
+        self,
+        workspace: Workspace,
+        si_user_id: str,
+        si_company_id: str,
+        si_company_name: str,
+        si_user_password: str
+    ) -> Response:
+        """
+        Handle Sage Intacct SOAP API connection
+        :param workspace: Workspace
+        :param si_user_id: Sage Intacct user ID
+        :param si_company_id: Sage Intacct company ID
+        :param si_company_name: Sage Intacct company name
+        :param si_user_password: Sage Intacct user password
+        :return: None
+        """
+        try:
             sender_id = settings.SI_SENDER_ID
             sender_password = settings.SI_SENDER_PASSWORD
             encryption_key = settings.ENCRYPTION_KEY
 
             cipher_suite = Fernet(encryption_key)
             encrypted_password = cipher_suite.encrypt(str.encode(si_user_password)).decode('utf-8')
+            sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
 
             if not sage_intacct_credentials:
                 sage_intacct_connection = SageIntacctSDK(

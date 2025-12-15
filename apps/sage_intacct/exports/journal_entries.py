@@ -53,7 +53,7 @@ def construct_journal_entry_payload(
         'postingDate': today_date,
         'description': journal_entry.memo,
         'attachment': {
-            'id': journal_entry.supdoc_id,
+            'id': str(journal_entry.supdoc_id) if journal_entry.supdoc_id else None,
         },
         'lines': debit_line_payload + credit_line_payload
     }

@@ -701,6 +701,8 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(is_expired=False)
+
     with mock.patch('apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement') as mock_call:
         expense_report.expense_group.expenses.all().update(paid_on_fyle=True)
         assert expense_report.paid_on_sage_intacct == False
