@@ -34,7 +34,7 @@ def construct_expense_report_payload(
             'id': expense_report.employee_id
         },
         'attachment': {
-            'id': expense_report.supdoc_id
+            'id': str(expense_report.supdoc_id) if expense_report.supdoc_id else None,
         },
         "basePayment": {
             "baseCurrency": expense_report.currency
