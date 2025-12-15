@@ -101,7 +101,7 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacct
 
     except Exception as e:
         if migrated_to_rest_api:
-            logger.info(f"Error loading attachments for expense group {expense_group.id} workspace {expense_group.workspace_id} - {e.response}")
+            logger.info(f"Error loading attachments for expense group {expense_group.id} workspace {expense_group.workspace_id} - {e.response if hasattr(e, 'response') else str(e)}")
         else:
             logger.info(f"Error loading attachments for expense group {expense_group.id}")
         error = traceback.format_exc()
