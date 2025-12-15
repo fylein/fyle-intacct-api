@@ -730,7 +730,7 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
             logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
-        fields = ['id', 'name', 'status', 'customer.id', 'customer.name']
+        fields = ['id', 'name', 'status', 'customer.id', 'customer.name', 'isBillableEmployeeExpense', 'isBillablePurchasingAPExpense']
         latest_synced_timestamp = self.intacct_synced_timestamp_object.customer_synced_at
         is_project_import_enabled = self.__is_import_enabled(DestinationAttributeTypeEnum.PROJECT.value)
         params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp)
@@ -742,7 +742,9 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
             for project in projects:
                 detail = {
                     'customer_id': project['customer.id'],
-                    'customer_name': project['customer.name']
+                    'customer_name': project['customer.name'],
+                    'default_expense_report_billable': project['isBillableEmployeeExpense'],
+                    'default_bill_billable': project['isBillablePurchasingAPExpense']
                 }
 
                 project_attributes.append({
@@ -1043,8 +1045,7 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
 
         attributes = []
         fields = ['taxPercent', 'id', 'taxSolution.id', 'status', 'taxType']
-        latest_synced_timestamp = self.intacct_synced_timestamp_object.tax_detail_synced_at
-        params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp)
+        params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=None)
         tax_details_generator = self.connection.tax_details.get_all_generator(**params)
 
         for tax_details in tax_details_generator:
