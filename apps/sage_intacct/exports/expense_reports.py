@@ -34,7 +34,7 @@ def construct_expense_report_payload(
             'id': expense_report.employee_id
         },
         'attachment': {
-            'id': expense_report.supdoc_id
+            'id': str(expense_report.supdoc_id) if expense_report.supdoc_id else None,
         },
         "basePayment": {
             "baseCurrency": expense_report.currency
@@ -119,6 +119,9 @@ def construct_expense_report_line_item_payload(
                 },
                 'customer': {
                     'id': lineitem.customer_id
+                },
+                'vendor': {
+                    'id': lineitem.vendor_id
                 },
                 **{
                     key: {'key': value}

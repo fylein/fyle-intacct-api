@@ -68,6 +68,8 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacct
     :param expense_group: Expense group
     :return: Tuple of (Final supdoc_id string if successful else None, is_failed boolean)
     """
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=expense_group.workspace_id, key='migrated_to_rest_api')
+
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
         file_ids_list = expense_group.expenses.values_list('file_ids', flat=True)
@@ -76,20 +78,32 @@ def load_attachments(sage_intacct_connection: SageIntacctConnector | SageIntacct
         supdoc_base_id = expense_group.id
         attachment_number = 1
         final_supdoc_id = False
+        attachment_key = None
+        attachment_key_from_response = None
+        supdoc_id = None
 
         for file_ids in file_ids_list:
             for file_id in file_ids:
                 attachment = platform.files.bulk_generate_file_urls([{'id': file_id}])
-                supdoc_id = sage_intacct_connection.post_attachments(attachment, supdoc_base_id, attachment_number)
+
+                if migrated_to_rest_api:
+                    supdoc_id, attachment_key_from_response = sage_intacct_connection.post_attachments(attachments=attachment, attachment_id=supdoc_base_id, attachment_number=attachment_number, attachment_key=attachment_key)
+                else:
+                    supdoc_id = sage_intacct_connection.post_attachments(attachment, supdoc_base_id, attachment_number)
 
                 if supdoc_id and attachment_number == 1:
                     final_supdoc_id = supdoc_id
+                    attachment_key = attachment_key_from_response
 
                 attachment_number += 1
 
         return final_supdoc_id, False
 
-    except Exception:
+    except Exception as e:
+        if migrated_to_rest_api:
+            logger.info(f"Error loading attachments for expense group {expense_group.id} workspace {expense_group.workspace_id} - {e.response if hasattr(e, 'response') else str(e)}")
+        else:
+            logger.info(f"Error loading attachments for expense group {expense_group.id}")
         error = traceback.format_exc()
         logger.info(
             'Attachment failed for expense group id %s / workspace id %s. Error: %s',
@@ -243,6 +257,7 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
         and configuration.corporate_credit_card_expenses_object
         and (
             configuration.corporate_credit_card_expenses_object == 'CHARGE_CARD_TRANSACTION'
+            or configuration.corporate_credit_card_expenses_object == 'EXPENSE_REPORT'
             or (
                 configuration.corporate_credit_card_expenses_object == 'JOURNAL_ENTRY'
                 and configuration.use_merchant_in_journal_line
@@ -430,7 +445,7 @@ def handle_sage_intacct_rest_errors(exception: Exception, expense_group: Expense
 
                 if primary_error_index == 0 and len(details) > 1:
                     first_msg = details[0].get('message', '').lower()
-                    if 'could not create' in first_msg or 'record' in first_msg:
+                    if 'could not create' in first_msg or 'cannot create' in first_msg or 'record' in first_msg:
                         primary_error_index = len(details) - 1
 
                 primary_error = errors[primary_error_index]
@@ -954,7 +969,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             expense_report_object = ExpenseReport.create_expense_report(expense_group, task_log.supdoc_id)
 
             expense_report_lineitems_objects = ExpenseReportLineitem.create_expense_report_lineitems(
-                expense_group, configuration
+                expense_group, configuration, sage_intacct_connection
             )
 
             created_expense_report = sage_intacct_connection.post_expense_report(
@@ -1340,7 +1355,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id, task_log.supdoc_id)
 
             charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
-                create_charge_card_transaction_lineitems(expense_group, configuration)
+                create_charge_card_transaction_lineitems(expense_group, configuration, sage_intacct_connection)
 
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
@@ -1566,8 +1581,10 @@ def create_ap_payment(workspace_id: int) -> None:
                 )
 
                 try:
-                    with transaction.atomic():
+                    sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+                    sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
+                    with transaction.atomic():
                         ap_payment_object = APPayment.create_ap_payment(bill.expense_group)
                         bill_task_log = TaskLog.objects.get(expense_group=bill.expense_group)
                         record_key = None
@@ -1583,8 +1600,6 @@ def create_ap_payment(workspace_id: int) -> None:
                             ap_payment_object.expense_group, record_key
                         )
 
-                        sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-                        sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
                         created_ap_payment = sage_intacct_connection.post_ap_payment(
                             ap_payment_object, ap_payment_lineitems_objects
                         )
@@ -1739,6 +1754,9 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
             )
 
             try:
+                sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
+                sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
+
                 with transaction.atomic():
                     sage_intacct_reimbursement_object = SageIntacctReimbursement.create_sage_intacct_reimbursement(expense_report.expense_group)
                     expense_report_task_log = TaskLog.objects.get(expense_group=expense_report.expense_group)
@@ -1749,8 +1767,6 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                         record_key
                     )
 
-                    sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id)
-                    sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
                     created__sage_intacct_reimbursement = sage_intacct_connection.post_sage_intacct_reimbursement(
                         sage_intacct_reimbursement_object,
                         sage_intacct_reimbursement_lineitems_objects

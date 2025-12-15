@@ -40,7 +40,7 @@ def construct_charge_card_transaction_payload(
         'payee': charge_card_transaction.payee,
         'description': charge_card_transaction.memo,
         'attachment': {
-            'id': charge_card_transaction.supdoc_id
+            'id': str(charge_card_transaction.supdoc_id) if charge_card_transaction.supdoc_id else None,
         },
         "currency": {
             "baseCurrency": charge_card_transaction.currency,
@@ -95,7 +95,7 @@ def construct_charge_card_transaction_line_item_payload(
                     'id': lineitem.customer_id
                 },
                 'vendor': {
-                    'id': charge_card_transaction.vendor_id
+                    'id': lineitem.vendor_id
                 },
                 'project': {
                     'id': lineitem.project_id

@@ -701,6 +701,8 @@ def test_post_sage_intacct_reimbursements_exceptions(mocker, db, create_expense_
         task_log = TaskLog.objects.get(task_id='PAYMENT_{}'.format(expense_report.expense_group.id))
         assert task_log.status == 'FAILED'
 
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(is_expired=False)
+
     with mock.patch('apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement') as mock_call:
         expense_report.expense_group.expenses.all().update(paid_on_fyle=True)
         assert expense_report.paid_on_sage_intacct == False
@@ -1167,6 +1169,7 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
     mocker.patch(
         'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
     )
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
 
     with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
