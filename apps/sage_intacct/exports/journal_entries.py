@@ -9,7 +9,7 @@ from apps.mappings.models import GeneralMapping
 from apps.workspaces.models import Configuration
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
 from apps.sage_intacct.models import JournalEntry, JournalEntryLineitem
-from apps.sage_intacct.exports.helpers import get_location_id_for_journal_entry, get_tax_exclusive_amount
+from apps.sage_intacct.exports.helpers import get_location_id_for_journal_entry, get_source_entity_id, get_tax_exclusive_amount
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -62,6 +62,16 @@ def construct_journal_entry_payload(
         journal_entry_payload['tax'] = {
             'taxImplication': 'inbound'
         }
+
+    # Add source entity for cross-entity journal entries with single credit line
+    source_entity_id = get_source_entity_id(
+        workspace_id=workspace_id,
+        configuration=configuration,
+        general_mappings=general_mappings,
+        expense_group=journal_entry.expense_group
+    )
+    if source_entity_id:
+        journal_entry_payload['baselocation_no'] = source_entity_id
 
     logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(
         workspace_id, journal_entry.expense_group.id, journal_entry_payload

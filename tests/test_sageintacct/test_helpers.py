@@ -3,6 +3,10 @@ from apps.sage_intacct.helpers import (
     is_dependent_field_import_enabled,
     schedule_payment_sync,
 )
+from apps.sage_intacct.exports.helpers import get_source_entity_id
+from apps.sage_intacct.exports.journal_entries import construct_journal_entry_payload
+from apps.fyle.models import ExpenseGroup
+from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import Configuration, FyleCredential, Workspace
 from apps.workspaces.tasks import patch_integration_settings
 
@@ -127,3 +131,66 @@ def test_patch_integration_settings(db, mocker):
 
     # Verify logger.error was called
     logger_mock.assert_called_once()
+
+
+def test_get_source_entity_id_returns_location(db):
+    """
+    Test get_source_entity_id returns default_location_id when all conditions are met
+    """
+    workspace_id = 1
+
+    LocationEntityMapping.objects.filter(workspace_id=workspace_id).update(destination_id='top_level')
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.je_single_credit_line = True
+    configuration.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.default_location_id = 'LOC123'
+    general_mappings.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    result = get_source_entity_id(workspace_id, configuration, general_mappings, expense_group)
+
+    assert result == 'LOC123'
+
+
+def test_get_source_entity_id_returns_none(db):
+    """
+    Test get_source_entity_id returns None when conditions are not met
+    """
+    workspace_id = 1
+
+    LocationEntityMapping.objects.filter(workspace_id=workspace_id).update(destination_id='600')
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    result = get_source_entity_id(workspace_id, configuration, general_mappings, expense_group)
+
+    assert result is None
+
+
+def test_construct_journal_entry_payload_with_source_entity(db, mocker, create_journal_entry):
+    """
+    Test construct_journal_entry_payload includes baselocation_no when conditions are met
+    """
+    workspace_id = 1
+    journal_entry, journal_entry_lineitems = create_journal_entry
+
+    LocationEntityMapping.objects.filter(workspace_id=workspace_id).update(destination_id='top_level')
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.je_single_credit_line = True
+    configuration.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.default_location_id = 'LOC123'
+    general_mappings.save()
+
+    payload = construct_journal_entry_payload(workspace_id, journal_entry, journal_entry_lineitems)
+
+    assert 'baselocation_no' in payload
+    assert payload['baselocation_no'] == 'LOC123'
