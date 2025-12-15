@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from apps.internal.actions import delete_integration_record, get_accounting_fields, get_exported_entry
 from apps.internal.serializers import E2EDestroySerializer, E2ESetupSerializer
 from apps.internal.services.e2e_setup import E2ESetupService
-from apps.workspaces.models import SageIntacctCredential, Workspace
+from apps.workspaces.models import Workspace
 from apps.workspaces.permissions import IsAuthenticatedForInternalAPI
 from fyle_intacct_api.utils import assert_valid
 
@@ -191,42 +191,3 @@ class E2EDestroyView(generics.GenericAPIView):
                 {"error": f"Cleanup failed: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-class IntegrationTestsRefreshTokenView(generics.GenericAPIView):
-    """
-    ViewSet for Integration Tests Refresh Token
-    """
-    authentication_classes = []
-    permission_classes = [IsAuthenticatedForInternalAPI]
-
-    def get(self, request: Request) -> Response:
-        """
-        Get request for Integration Tests
-        """
-        params = request.query_params
-
-        assert_valid(params.get('workspace_id') is not None, 'Workspace ID is required')
-
-        sage_intacct_credential = SageIntacctCredential.objects.get(workspace_id=params.get('workspace_id'))
-
-        return Response(status=status.HTTP_200_OK, data={
-            'refresh_token': sage_intacct_credential.refresh_token
-        })
-
-    def post(self, request: Request) -> Response:
-        """
-        Post request Integration Tests
-        """
-        body = request.data
-
-        assert_valid(body.get('workspace_id') is not None, 'Workspace ID is required')
-        assert_valid(body.get('refresh_token') is not None, 'Refresh Token is required')
-
-        SageIntacctCredential.objects.update_or_create(
-            workspace_id=body.get('workspace_id'),
-            defaults={
-                'refresh_token': body.get('refresh_token')
-            }
-        )
-        return Response(status=status.HTTP_200_OK)
