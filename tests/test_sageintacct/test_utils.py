@@ -7,7 +7,7 @@ from django.utils import timezone
 from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, ExpenseAttribute, Mapping
 from sageintacctsdk.exceptions import WrongParamsError
 
-from apps.mappings.models import GeneralMapping
+from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.models import CostCode, CostType, SageIntacctAttributesCount
 from apps.sage_intacct.utils import Configuration, SageIntacctConnector, SageIntacctCredential, Workspace
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
@@ -483,6 +483,36 @@ def test_construct_journal_entry(create_journal_entry, db):
     journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(journal_entry=journal_entry, journal_entry_lineitems=journal_entry_lineitems)
 
     assert dict_compare_keys(journal_entry_object, data['journal_entry_re_payload']) == [], 'construct journal entry api return diffs in keys'
+
+
+def test_construct_journal_entry_with_baselocation(create_journal_entry, db):
+    """
+    Test construct journal entry includes BASELOCATION_NO when conditions are met
+    """
+    workspace_id = 1
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    LocationEntityMapping.objects.filter(workspace_id=workspace_id).update(destination_id='top_level')
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.je_single_credit_line = True
+    configuration.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.default_location_id = 'LOC123'
+    general_mappings.save()
+
+    journal_entry, journal_entry_lineitems = create_journal_entry
+
+    journal_entry_object = sage_intacct_connection._SageIntacctConnector__construct_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_lineitems=journal_entry_lineitems
+    )
+
+    assert 'BASELOCATION_NO' in journal_entry_object
+    assert journal_entry_object['BASELOCATION_NO'] == 'LOC123'
 
 
 def test_construct_sage_intacct_reimbursement(create_sage_intacct_reimbursement, db):
