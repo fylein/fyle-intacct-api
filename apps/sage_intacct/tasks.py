@@ -813,8 +813,8 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
     except SageIntacctCredential.DoesNotExist:
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
-            expense_group.id,
-            expense_group.workspace_id
+            expense_group.workspace_id,
+            expense_group.id
         )
         detail = {
             'expense_group_id': expense_group.id,
@@ -1010,8 +1010,8 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
     except SageIntacctCredential.DoesNotExist:
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
-            expense_group.id,
-            expense_group.workspace_id
+            expense_group.workspace_id,
+            expense_group.id
         )
         detail = {
             'expense_group_id': expense_group.id,
@@ -1201,8 +1201,8 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
     except SageIntacctCredential.DoesNotExist:
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
-            expense_group.id,
-            expense_group.workspace_id
+            expense_group.workspace_id,
+            expense_group.id
         )
         detail = {
             'expense_group_id': expense_group.id,
@@ -1392,8 +1392,8 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
     except SageIntacctCredential.DoesNotExist:
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
-            expense_group.id,
-            expense_group.workspace_id
+            expense_group.workspace_id,
+            expense_group.id
         )
         detail = {
             'expense_group_id': expense_group.id,

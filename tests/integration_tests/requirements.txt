@@ -1,6 +1,6 @@
 requests==2.32.4
 sageintacctsdk==1.27.2
-sageintacctrestsdk==1.1.0
+sageintacctrestsdk==1.4.3
 xmltodict>=0.14.2
 
 pytest==8.3.4
