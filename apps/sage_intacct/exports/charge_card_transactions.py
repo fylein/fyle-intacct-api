@@ -112,6 +112,9 @@ def construct_charge_card_transaction_line_item_payload(
                 'class': {
                     'id': lineitem.class_id
                 },
+                'employee': {
+                    'id': lineitem.employee_id
+                },
                 **{
                     key: {'key': value}
                     for user_defined_dimensions in lineitem.user_defined_dimensions
