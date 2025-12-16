@@ -89,7 +89,7 @@ def construct_bill_line_item_payload(
             'glAccount': {
                 'id': lineitem.gl_account_number
             },
-            'txnAmount': str(lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount),
+            'txnAmount': str(round((lineitem.amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount),
             'totalTxnAmount': str(lineitem.amount),
             'memo': lineitem.memo,
             'allocation': {
