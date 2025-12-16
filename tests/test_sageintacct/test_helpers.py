@@ -175,7 +175,7 @@ def test_get_source_entity_id_returns_none(db):
 
 def test_construct_journal_entry_payload_with_source_entity(db, mocker, create_journal_entry):
     """
-    Test construct_journal_entry_payload includes baselocation_no when conditions are met
+    Test construct_journal_entry_payload includes baseLocation when conditions are met
     """
     workspace_id = 1
     journal_entry, journal_entry_lineitems = create_journal_entry
@@ -192,5 +192,5 @@ def test_construct_journal_entry_payload_with_source_entity(db, mocker, create_j
 
     payload = construct_journal_entry_payload(workspace_id, journal_entry, journal_entry_lineitems)
 
-    assert 'baselocation_no' in payload
-    assert payload['baselocation_no'] == 'LOC123'
+    assert 'baseLocation' in payload
+    assert payload['baseLocation']['id'] == 'LOC123'
