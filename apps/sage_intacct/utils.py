@@ -1406,6 +1406,7 @@ class SageIntacctConnector:
                 'memo': lineitem.memo,
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
+                'employeeid': lineitem.employee_id,
                 'customfields': {
                     'customfield': [{
                         'customfieldname': 'FYLE_EXPENSE_URL',
@@ -1572,6 +1573,7 @@ class SageIntacctConnector:
                 'locationid': lineitem.location_id,
                 'customerid': lineitem.customer_id,
                 'vendorid': charge_card_transaction.vendor_id,
+                'employeeid': lineitem.employee_id,
                 'projectid': lineitem.project_id,
                 'taskid': lineitem.task_id,
                 'costtypeid': lineitem.cost_type_id,
