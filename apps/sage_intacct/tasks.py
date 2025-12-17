@@ -775,6 +775,8 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object, journal_entry_lineitem_object)
             worker_logger.info('Created Journal Entry with Expense Group %s successfully', expense_group.id)
 
+            worker_logger.info('Created Journal Entry with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_journal_entry)
+
             task_log.journal_entry = journal_entry_object
             task_log.sage_intacct_errors = None
             task_log.status = 'COMPLETE'
@@ -785,11 +787,17 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
 
+            worker_logger.info('Fetching Journal Entry Record Number with Expense Group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
+
             record_number = get_journal_entry_record_number(journal_entry_response=created_journal_entry, workspace_id=task_log.workspace_id)
+
+            worker_logger.info('Journal Entry Record Number with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, record_number)
 
             journal_entry = sage_intacct_connection.get_journal_entry(record_number, ['RECORD_URL'])
             url_id = journal_entry['glbatch']['RECORD_URL'].split('?.r=', 1)[1]
             created_journal_entry['url_id'] = url_id
+
+            worker_logger.info('Journal Entry URL ID with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, url_id)
 
             task_log.detail = created_journal_entry
 
@@ -799,8 +807,10 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             expense_group.response_logs = created_journal_entry
             expense_group.export_type = 'JOURNAL_ENTRY'
             expense_group.save()
-            resolve_errors_for_exported_expense_group(expense_group)
 
+            worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
+            resolve_errors_for_exported_expense_group(expense_group)
+            worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
         try:
             generate_export_url_and_update_expense(expense_group)
         except Exception as e:
@@ -885,6 +895,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
 
     except Exception:
         error = traceback.format_exc()
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
         task_log.detail = {
             'error': error
         }
@@ -892,7 +903,6 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
-        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
         update_last_export_details(expense_group.workspace_id)
@@ -976,10 +986,16 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
                 expense_report_object, expense_report_lineitems_objects)
             worker_logger.info('Created Expense Report with Expense Group %s successfully', expense_group.id)
 
+            worker_logger.info('Created Expense Report with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_expense_report)
+
             record_number = get_expense_report_record_number(expense_report_response=created_expense_report, workspace_id=task_log.workspace_id)
+
+            worker_logger.info('Expense Report Record Number with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, record_number)
 
             expense_report = sage_intacct_connection.get_expense_report(record_number, ['RECORD_URL'])
             url_id = expense_report['eexpenses']['RECORD_URL'].split('?.r=', 1)[1]
+
+            worker_logger.info('Expense Report URL ID with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, url_id)
 
             details = {
                 'key': record_number,
@@ -996,7 +1012,10 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             expense_group.response_logs = details
             expense_group.export_type = 'EXPENSE_REPORT'
             expense_group.save()
+
+            worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
             resolve_errors_for_exported_expense_group(expense_group)
+            worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
         try:
             generate_export_url_and_update_expense(expense_group)
@@ -1080,6 +1099,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
 
     except Exception:
         error = traceback.format_exc()
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
         task_log.detail = {
             'error': error
         }
@@ -1087,7 +1107,6 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
-        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
         if last_export_failed:
@@ -1172,11 +1191,17 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
                                                              bill_lineitems_objects)
             worker_logger.info('Created Bill with Expense Group %s successfully', expense_group.id)
 
+            worker_logger.info('Created Bill with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_bill)
+
             record_number = get_bill_record_number(bill_response=created_bill, workspace_id=task_log.workspace_id)
+
+            worker_logger.info('Bill Record Number with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, record_number)
 
             bill = sage_intacct_connection.get_bill(record_number, ['RECORD_URL'])
             url_id = bill['apbill']['RECORD_URL'].split('?.r=', 1)[1]
             created_bill['url_id'] = url_id
+
+            worker_logger.info('Bill URL ID with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, url_id)
 
             task_log.detail = created_bill
             task_log.bill = bill_object
@@ -1189,8 +1214,10 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             expense_group.response_logs = created_bill
             expense_group.export_type = 'BILL'
             expense_group.save()
-            resolve_errors_for_exported_expense_group(expense_group)
 
+            worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
+            resolve_errors_for_exported_expense_group(expense_group)
+            worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
         try:
             generate_export_url_and_update_expense(expense_group)
         except Exception as e:
@@ -1271,6 +1298,7 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
 
     except Exception:
         error = traceback.format_exc()
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
         task_log.detail = {
             'error': error
         }
@@ -1278,7 +1306,6 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
-        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export:
         if last_export_failed:
@@ -1361,12 +1388,18 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
                 charge_card_transaction_object, charge_card_transaction_lineitems_objects)
             worker_logger.info('Created Charge Card Transaction with Expense Group %s successfully', expense_group.id)
 
+            worker_logger.info('Created Charge Card Transaction with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_charge_card_transaction)
+
             record_number = get_charge_card_transaction_record_number(charge_card_transaction_response=created_charge_card_transaction, workspace_id=task_log.workspace_id)
+
+            worker_logger.info('Charge Card Transaction Record Number with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, record_number)
 
             charge_card_transaction = sage_intacct_connection.get_charge_card_transaction(record_number, ['RECORD_URL'])
 
             url_id = charge_card_transaction['cctransaction']['RECORD_URL'].split('?.r=', 1)[1]
             created_charge_card_transaction['url_id'] = url_id
+
+            worker_logger.info('Charge Card Transaction URL ID with Expense Group %s for workspace id %s is %s', expense_group.id, expense_group.workspace_id, url_id)
 
             task_log.detail = created_charge_card_transaction
             task_log.charge_card_transaction = charge_card_transaction_object
@@ -1379,7 +1412,10 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             expense_group.response_logs = created_charge_card_transaction
             expense_group.export_type = 'CHARGE_CARD_TRANSACTION'
             expense_group.save()
+
+            worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
             resolve_errors_for_exported_expense_group(expense_group)
+            worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
         try:
             generate_export_url_and_update_expense(expense_group)
@@ -1468,6 +1504,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
 
     except Exception:
         error = traceback.format_exc()
+        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
         task_log.detail = {
             'error': error
         }
@@ -1475,7 +1512,6 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
-        logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, task_log.detail)
 
     if last_export and last_export_failed:
         update_last_export_details(expense_group.workspace_id)
