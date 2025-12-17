@@ -123,6 +123,9 @@ def construct_expense_report_line_item_payload(
                 'vendor': {
                     'id': lineitem.vendor_id
                 },
+                'employee': {
+                    'id': lineitem.employee_id
+                },
                 **{
                     key: {'key': value}
                     for user_defined_dimensions in lineitem.user_defined_dimensions
