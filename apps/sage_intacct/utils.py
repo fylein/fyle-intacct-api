@@ -1417,6 +1417,7 @@ class SageIntacctConnector:
                 'costtypeid': lineitem.cost_type_id,
                 'customerid': lineitem.customer_id,
                 'vendorid': lineitem.vendor_id,
+                'employeeid': lineitem.employee_id,
                 'itemid': lineitem.item_id,
                 'classid': lineitem.class_id,
                 'billable': lineitem.billable,
