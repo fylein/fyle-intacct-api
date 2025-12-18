@@ -143,7 +143,7 @@ class WorkspaceView(viewsets.ViewSet):
             ExpenseGroupSettings.objects.create(workspace_id=workspace.id)
 
             LastExportDetail.objects.create(workspace_id=workspace.id)
-            FeatureConfig.objects.create(workspace_id=workspace.id)
+            FeatureConfig.objects.create(workspace_id=workspace.id, migrated_to_rest_api=settings.BRAND_ID == 'fyle')
             FyleSyncTimestamp.objects.create(workspace_id=workspace.id)
             IntacctSyncedTimestamp.objects.create(workspace_id=workspace.id)
             SageIntacctAttributesCount.objects.create(workspace_id=workspace.id)
