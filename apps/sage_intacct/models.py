@@ -1115,6 +1115,7 @@ class ExpenseReportLineitem(models.Model):
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
     expense_payment_type = models.CharField(max_length=255, help_text='Expense Payment Type', null=True)
     transaction_date = models.DateTimeField(help_text='Expense Report transaction date', null=True)
+    employee_id = models.CharField(max_length=255, help_text='Sage Intacct employee id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -1167,6 +1168,16 @@ class ExpenseReportLineitem(models.Model):
 
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            # Expense Reports always send employee info to line items
+            employee_id = None
+            description = expense_group.description
+            employee_mapping = EmployeeMapping.objects.filter(
+                source_employee__value=description.get('employee_email'),
+                workspace_id=expense_group.workspace_id
+            ).first()
+            if employee_mapping and employee_mapping.destination_employee:
+                employee_id = employee_mapping.destination_employee.destination_id
+
             if expense_group.fund_source == 'PERSONAL':
                 expense_payment_type = general_mappings.default_reimbursable_expense_payment_type_name
             else:
@@ -1212,7 +1223,8 @@ class ExpenseReportLineitem(models.Model):
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
-                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration)
+                    'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
+                    'employee_id': employee_id
                 }
             )
 
@@ -1513,6 +1525,7 @@ class ChargeCardTransactionLineitem(models.Model):
     tax_amount = models.FloatField(null=True, help_text='Tax amount')
     tax_code = models.CharField(max_length=255, help_text='Tax Group ID', null=True)
     billable = models.BooleanField(null=True, help_text='Expense Billable or not')
+    employee_id = models.CharField(max_length=255, help_text='Sage Intacct employee id', null=True)
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at')
 
@@ -1560,6 +1573,22 @@ class ChargeCardTransactionLineitem(models.Model):
 
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
+            # Get employee_id for line item - CCT doesn't send only when reimbursable is BILL or JE with VENDOR mapping
+            employee_id = None
+            reimbursable = configuration.reimbursable_expenses_object
+            skip_employee = (
+                reimbursable == 'BILL'
+                or (reimbursable == 'JOURNAL_ENTRY' and configuration.employee_field_mapping == 'VENDOR')
+            )
+            if not skip_employee:
+                description = expense_group.description
+                employee_mapping = EmployeeMapping.objects.filter(
+                    source_employee__value=description.get('employee_email'),
+                    workspace_id=expense_group.workspace_id
+                ).first()
+                if employee_mapping and employee_mapping.destination_employee:
+                    employee_id = employee_mapping.destination_employee.destination_id
+
             if dependent_field_setting:
                 prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
                 task_id = get_task_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, prepend_code_to_task)
@@ -1592,7 +1621,8 @@ class ChargeCardTransactionLineitem(models.Model):
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
-                    'user_defined_dimensions': user_defined_dimensions
+                    'user_defined_dimensions': user_defined_dimensions,
+                    'employee_id': employee_id
                 }
             )
 

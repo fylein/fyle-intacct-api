@@ -71,7 +71,9 @@ def construct_journal_entry_payload(
         expense_group=journal_entry.expense_group
     )
     if source_entity_id:
-        journal_entry_payload['baselocation_no'] = source_entity_id
+        journal_entry_payload['baseLocation'] = {
+            'id': source_entity_id
+        }
 
     logger.info("| Payload for the journal entry report creation | Content : {{WORKSPACE_ID = {}, EXPENSE_GROUP_ID = {}, JOURNAL_ENTRY_PAYLOAD = {}}}".format(
         workspace_id, journal_entry.expense_group.id, journal_entry_payload

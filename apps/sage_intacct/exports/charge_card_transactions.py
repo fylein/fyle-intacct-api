@@ -82,7 +82,7 @@ def construct_charge_card_transaction_line_item_payload(
                 'id': lineitem.gl_account_number
             },
             'description': lineitem.memo,
-            'txnAmount': str(lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount),
+            'txnAmount': str(round((lineitem.amount - lineitem.tax_amount), 2) if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount),
             'totalTxnAmount': str(lineitem.amount),
             'dimensions': {
                 'department': {
@@ -111,6 +111,9 @@ def construct_charge_card_transaction_line_item_payload(
                 },
                 'class': {
                     'id': lineitem.class_id
+                },
+                'employee': {
+                    'id': lineitem.employee_id
                 },
                 **{
                     key: {'key': value}

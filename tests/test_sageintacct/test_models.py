@@ -216,6 +216,146 @@ def test_charge_card_transaction_lineitem_vendor_id(db, mocker):
         assert lineitem.vendor_id == 'MOCK_VENDOR_ID'
 
 
+def test_expense_report_lineitem_employee_id(db, mocker):
+    """
+    Test that employee_id is always populated for Expense Report lineitems
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Ensure employee mapping exists
+    employee_mapping = EmployeeMapping.objects.filter(
+        source_employee__value=expense_group.description.get('employee_email'),
+        workspace_id=workspace_id
+    ).first()
+
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    ExpenseReport.create_expense_report(expense_group)
+    expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
+
+    # For Expense Reports, employee_id should always be set when employee mapping exists
+    for lineitem in expense_report_lineitems:
+        if employee_mapping and employee_mapping.destination_employee:
+            assert lineitem.employee_id == employee_mapping.destination_employee.destination_id
+        else:
+            assert lineitem.employee_id is None
+
+
+def test_charge_card_transaction_lineitem_employee_id(db, mocker):
+    """
+    Test that employee_id is populated for CCT lineitems based on configuration
+    CCT sends employee when reimbursable is not BILL and not (JE with VENDOR mapping)
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+    expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
+    expense_group.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.default_charge_card_id = 'sample'
+    general_mappings.save()
+
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Test case: reimbursable is EXPENSE_REPORT - should send employee_id
+    workspace_general_settings.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    workspace_general_settings.save()
+
+    employee_mapping = EmployeeMapping.objects.filter(
+        source_employee__value=expense_group.description.get('employee_email'),
+        workspace_id=workspace_id
+    ).first()
+
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
+    charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+
+    for lineitem in charge_card_transaction_lineitems:
+        if employee_mapping and employee_mapping.destination_employee:
+            assert lineitem.employee_id == employee_mapping.destination_employee.destination_id
+
+
+def test_charge_card_transaction_lineitem_employee_id_skipped_for_bill(db, mocker):
+    """
+    Test that employee_id is NOT populated for CCT lineitems when reimbursable is BILL
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+    expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
+    expense_group.save()
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.default_charge_card_id = 'sample'
+    general_mappings.save()
+
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Test case: reimbursable is BILL - should NOT send employee_id
+    workspace_general_settings.reimbursable_expenses_object = 'BILL'
+    workspace_general_settings.save()
+
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
+    charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
+
+    for lineitem in charge_card_transaction_lineitems:
+        assert lineitem.employee_id is None
+
+
+def test_journal_entry_lineitem_employee_id_with_employee_mapping(db, mocker):
+    """
+    Test that employee_id is populated for Journal Entry lineitems when employee_field_mapping is EMPLOYEE
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Set employee_field_mapping to EMPLOYEE
+    workspace_general_settings.employee_field_mapping = 'EMPLOYEE'
+    workspace_general_settings.save()
+
+    employee_mapping = EmployeeMapping.objects.filter(
+        source_employee__value=expense_group.description.get('employee_email'),
+        workspace_id=workspace_id
+    ).first()
+
+    JournalEntry.create_journal_entry(expense_group)
+    sage_intacct_connection = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector')
+    sage_intacct_connection.return_value = mocker.Mock()
+    journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
+
+    for lineitem in journal_entry_lineitems:
+        if employee_mapping and employee_mapping.destination_employee:
+            assert lineitem.employee_id == employee_mapping.destination_employee.destination_id
+
+
+def test_journal_entry_lineitem_employee_id_with_vendor_mapping(db, mocker):
+    """
+    Test that employee_id is NOT populated for Journal Entry lineitems when employee_field_mapping is VENDOR
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+
+    # Set employee_field_mapping to VENDOR
+    workspace_general_settings.employee_field_mapping = 'VENDOR'
+    workspace_general_settings.save()
+
+    JournalEntry.create_journal_entry(expense_group)
+    sage_intacct_connection = mocker.patch('apps.sage_intacct.utils.SageIntacctConnector')
+    sage_intacct_connection.return_value = mocker.Mock()
+    journal_entry_lineitems = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, workspace_general_settings, sage_intacct_connection)
+
+    for lineitem in journal_entry_lineitems:
+        assert lineitem.employee_id is None
+
+
 def test_create_journal_entry(db, mocker, create_expense_group_expense, create_cost_type, create_dependent_field_setting):
     """
     Test create journal entry
