@@ -7,6 +7,7 @@ from django.urls import reverse
 from django_q.models import Schedule
 from fyle.platform.exceptions import InternalServerError, InvalidTokenError
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_mappings.models import CategoryMapping, ExpenseAttribute
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
@@ -19,6 +20,7 @@ from apps.fyle.tasks import (
     create_expense_groups,
     delete_expense_group_and_related_data,
     get_task_log_and_fund_source,
+    handle_category_changes_for_expense,
     handle_expense_fund_source_change,
     handle_expense_report_change,
     handle_fund_source_changes_for_expense_ids,
@@ -1442,3 +1444,287 @@ def test_handle_expense_report_change_ejected_from_exported_group(db, add_expens
 
     expense_group.refresh_from_db()
     assert expense in expense_group.expenses.all()
+
+
+def test_handle_category_changes_for_expense(db, add_category_test_expense, add_category_test_expense_group, add_category_mapping_error, add_category_expense_attribute, add_destination_attributes_for_category):
+    """
+    Test handle_category_changes_for_expense
+    """
+    workspace = Workspace.objects.get(id=1)
+    expense = add_category_test_expense
+    expense_group = add_category_test_expense_group
+    error = add_category_mapping_error
+    destination_attrs = add_destination_attributes_for_category
+    configuration = Configuration.objects.get(workspace_id=workspace.id)
+
+    error.mapping_error_expense_group_ids = [expense_group.id, 999]
+    error.save()
+
+    handle_category_changes_for_expense(expense=expense, new_category='New Category')
+
+    error.refresh_from_db()
+    assert expense_group.id not in error.mapping_error_expense_group_ids
+    assert 999 in error.mapping_error_expense_group_ids
+
+    error.mapping_error_expense_group_ids = [expense_group.id]
+    error.save()
+
+    handle_category_changes_for_expense(expense=expense, new_category='Another Category')
+
+    assert not Error.objects.filter(id=error.id, workspace_id=workspace.id, type='CATEGORY_MAPPING').exists()
+
+    expense_group.delete()
+
+    expense_group_2 = ExpenseGroup.objects.create(
+        workspace_id=workspace.id,
+        fund_source='PERSONAL',
+        description={'employee_email': expense.employee_email},
+        employee_name=expense.employee_name
+    )
+    expense_group_2.expenses.add(expense)
+
+    category_with_existing_error = ExpenseAttribute.objects.create(
+        workspace_id=workspace.id,
+        attribute_type='CATEGORY',
+        value='Category With Existing Error',
+        display_name='Category',
+        source_id='catExistErr1'
+    )
+
+    existing_error = Error.objects.create(
+        workspace_id=workspace.id,
+        type='CATEGORY_MAPPING',
+        is_resolved=False,
+        expense_attribute=category_with_existing_error,
+        mapping_error_expense_group_ids=[888]
+    )
+
+    handle_category_changes_for_expense(expense=expense, new_category='Category With Existing Error')
+
+    existing_error.refresh_from_db()
+    assert expense_group_2.id in existing_error.mapping_error_expense_group_ids
+    assert 888 in existing_error.mapping_error_expense_group_ids
+
+    handle_category_changes_for_expense(expense=expense, new_category='Category With Existing Error')
+
+    existing_error.refresh_from_db()
+    assert existing_error.mapping_error_expense_group_ids.count(expense_group_2.id) == 1
+    assert len(existing_error.mapping_error_expense_group_ids) == 2
+
+    expense_group_2.delete()
+
+    expense_group_3 = ExpenseGroup.objects.create(
+        workspace_id=workspace.id,
+        fund_source='PERSONAL',
+        description={'employee_email': expense.employee_email},
+        employee_name=expense.employee_name
+    )
+    expense_group_3.expenses.add(expense)
+
+    mapped_category_personal_er = ExpenseAttribute.objects.create(
+        workspace_id=workspace.id,
+        attribute_type='CATEGORY',
+        value='Mapped Cat Personal ER',
+        display_name='Category',
+        source_id='catMapPer1'
+    )
+
+    CategoryMapping.objects.create(
+        source_category=mapped_category_personal_er,
+        workspace_id=workspace.id,
+        destination_expense_head=destination_attrs['expense_head']
+    )
+
+    original_config = configuration.reimbursable_expenses_object
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    handle_category_changes_for_expense(expense=expense, new_category='Mapped Cat Personal ER')
+
+    assert not Error.objects.filter(workspace_id=workspace.id, type='CATEGORY_MAPPING', expense_attribute=mapped_category_personal_er).exists()
+
+    expense_group_3.delete()
+
+    expense_group_4 = ExpenseGroup.objects.create(
+        workspace_id=workspace.id,
+        fund_source='PERSONAL',
+        description={'employee_email': expense.employee_email},
+        employee_name=expense.employee_name
+    )
+    expense_group_4.expenses.add(expense)
+
+    mapped_category_personal_bill = ExpenseAttribute.objects.create(
+        workspace_id=workspace.id,
+        attribute_type='CATEGORY',
+        value='Mapped Cat Personal Bill',
+        display_name='Category',
+        source_id='catMapPer2'
+    )
+
+    CategoryMapping.objects.create(
+        source_category=mapped_category_personal_bill,
+        workspace_id=workspace.id,
+        destination_account=destination_attrs['account']
+    )
+
+    configuration.reimbursable_expenses_object = 'BILL'
+    configuration.save()
+
+    handle_category_changes_for_expense(expense=expense, new_category='Mapped Cat Personal Bill')
+
+    assert not Error.objects.filter(workspace_id=workspace.id, type='CATEGORY_MAPPING', expense_attribute=mapped_category_personal_bill).exists()
+
+    expense_group_4.delete()
+
+    expense_group_5 = ExpenseGroup.objects.create(
+        workspace_id=workspace.id,
+        fund_source='CCC',
+        description={'employee_email': expense.employee_email},
+        employee_name=expense.employee_name
+    )
+    expense_group_5.expenses.add(expense)
+
+    mapped_category_ccc_er = ExpenseAttribute.objects.create(
+        workspace_id=workspace.id,
+        attribute_type='CATEGORY',
+        value='Mapped Cat CCC ER',
+        display_name='Category',
+        source_id='catMapCCC1'
+    )
+
+    CategoryMapping.objects.create(
+        source_category=mapped_category_ccc_er,
+        workspace_id=workspace.id,
+        destination_expense_head=destination_attrs['expense_head']
+    )
+
+    original_ccc_config = configuration.corporate_credit_card_expenses_object
+    configuration.corporate_credit_card_expenses_object = 'EXPENSE_REPORT'
+    configuration.save()
+
+    handle_category_changes_for_expense(expense=expense, new_category='Mapped Cat CCC ER')
+
+    assert not Error.objects.filter(workspace_id=workspace.id, type='CATEGORY_MAPPING', expense_attribute=mapped_category_ccc_er).exists()
+
+    expense_group_5.delete()
+
+    expense_group_6 = ExpenseGroup.objects.create(
+        workspace_id=workspace.id,
+        fund_source='CCC',
+        description={'employee_email': expense.employee_email},
+        employee_name=expense.employee_name
+    )
+    expense_group_6.expenses.add(expense)
+
+    mapped_category_ccc_je = ExpenseAttribute.objects.create(
+        workspace_id=workspace.id,
+        attribute_type='CATEGORY',
+        value='Mapped Cat CCC JE',
+        display_name='Category',
+        source_id='catMapCCC2'
+    )
+
+    CategoryMapping.objects.create(
+        source_category=mapped_category_ccc_je,
+        workspace_id=workspace.id,
+        destination_account=destination_attrs['account']
+    )
+
+    configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
+    configuration.save()
+
+    handle_category_changes_for_expense(expense=expense, new_category='Mapped Cat CCC JE')
+
+    assert not Error.objects.filter(workspace_id=workspace.id, type='CATEGORY_MAPPING', expense_attribute=mapped_category_ccc_je).exists()
+
+    configuration.reimbursable_expenses_object = original_config
+    configuration.corporate_credit_card_expenses_object = original_ccc_config
+    configuration.save()
+
+
+def test_update_non_exported_expenses_category_change(mocker, db):
+    """
+    Test update_non_exported_expenses_category_change
+    """
+    expense_data = data['raw_expense'].copy()
+    expense_data['category']['name'] = 'New Category'
+    expense_data['category']['sub_category'] = 'New Sub Category'
+    org_id = expense_data['org_id']
+
+    default_raw_expense = data['default_raw_expense'].copy()
+    default_raw_expense['category'] = 'Old Category'
+    default_raw_expense['sub_category'] = 'Old Sub Category'
+
+    expense_created, _ = Expense.objects.update_or_create(
+        org_id=org_id,
+        expense_id='txhJLOSKs1iN',
+        workspace_id=1,
+        defaults=default_raw_expense
+    )
+    expense_created.accounting_export_summary = {}
+    expense_created.save()
+
+    workspace = Workspace.objects.filter(id=1).first()
+    workspace.fyle_org_id = org_id
+    workspace.save()
+
+    mock_fyle_expenses = mocker.patch('apps.fyle.tasks.FyleExpenses')
+    constructed_expense = expense_data.copy()
+    constructed_expense['category'] = expense_data['category']['name']
+    constructed_expense['sub_category'] = expense_data['category']['sub_category']
+    constructed_expense['source_account_type'] = 'PERSONAL_CASH_ACCOUNT'
+    mock_fyle_expenses.return_value.construct_expense_object.return_value = [constructed_expense]
+
+    mocker.patch('apps.fyle.tasks.Expense.create_expense_objects', return_value=None)
+
+    mock_handle_category_changes = mocker.patch(
+        'apps.fyle.tasks.handle_category_changes_for_expense',
+        return_value=None
+    )
+
+    update_non_exported_expenses(expense_data)
+
+    assert mock_handle_category_changes.call_count == 1
+    _, kwargs = mock_handle_category_changes.call_args
+    assert kwargs['expense'] == expense_created
+    assert kwargs['new_category'] == 'New Category / New Sub Category'
+
+    expense_created.category = 'Same Category'
+    expense_created.sub_category = 'Same Category'
+    expense_created.save()
+
+    expense_data_2 = data['raw_expense'].copy()
+    expense_data_2['category']['name'] = 'Changed'
+    expense_data_2['category']['sub_category'] = 'Changed'
+
+    constructed_expense_2 = expense_data_2.copy()
+    constructed_expense_2['category'] = 'Changed'
+    constructed_expense_2['sub_category'] = 'Changed'
+    constructed_expense_2['source_account_type'] = 'PERSONAL_CASH_ACCOUNT'
+    mock_fyle_expenses.return_value.construct_expense_object.return_value = [constructed_expense_2]
+
+    update_non_exported_expenses(expense_data_2)
+
+    assert mock_handle_category_changes.call_count == 2
+    _, kwargs = mock_handle_category_changes.call_args
+    assert kwargs['new_category'] == 'Changed'
+
+    expense_created.category = 'Old Cat'
+    expense_created.sub_category = None
+    expense_created.save()
+
+    expense_data_3 = data['raw_expense'].copy()
+    expense_data_3['category']['name'] = 'New Cat'
+    expense_data_3['category']['sub_category'] = None
+
+    constructed_expense_3 = expense_data_3.copy()
+    constructed_expense_3['category'] = 'New Cat'
+    constructed_expense_3['sub_category'] = None
+    constructed_expense_3['source_account_type'] = 'PERSONAL_CASH_ACCOUNT'
+    mock_fyle_expenses.return_value.construct_expense_object.return_value = [constructed_expense_3]
+
+    update_non_exported_expenses(expense_data_3)
+
+    assert mock_handle_category_changes.call_count == 3
+    _, kwargs = mock_handle_category_changes.call_args
+    assert kwargs['new_category'] == 'New Cat'
