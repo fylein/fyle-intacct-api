@@ -19,6 +19,7 @@ from fyle_accounting_library.common_resources.enums import DimensionDetailSource
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 
 from apps.workspaces.helpers import get_app_name
+from apps.sage_intacct.errors.helpers import retry
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
 from apps.sage_intacct.exports.bills import construct_bill_payload
@@ -2149,6 +2150,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
         """
         return self.connection.journal_entries.update_attachment(object_id=object_key, attachment_id=str(attachment_id))
 
+    @retry()
     def get_journal_entry(self, journal_entry_id: str, fields: list = None) -> dict:
         """
         Get journal entry from Sage Intacct
@@ -2161,6 +2163,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
 
         return journal_entry
 
+    @retry()
     def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None) -> dict:
         """
         GET charge card transaction from Sage Intacct
@@ -2177,6 +2180,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
 
         return charge_card_transaction
 
+    @retry()
     def get_bill(self, bill_id: str, fields: list = None) -> dict:
         """
         GET bill from Sage Intacct
@@ -2189,6 +2193,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
 
         return bill
 
+    @retry()
     def get_expense_report(self, expense_report_id: str, fields: list = None) -> dict:
         """
         GET expense reports from Sage Intacct
