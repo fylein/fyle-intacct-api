@@ -155,10 +155,12 @@ class SageIntacctRestConnector:
         self.credential_object.refresh_from_db()
         self.credential_object.access_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=self.__get_access_token_expiry_time(access_token_expires_in))
         self.credential_object.access_token = access_token
+        self.credential_object.is_expired = False
         self.credential_object.save(update_fields=[
             'access_token_expires_at',
             'access_token',
-            'updated_at',
+            'is_expired',
+            'updated_at'
         ])
 
     def __get_access_token_expiry_time(self, access_token_expires_in: int) -> int:
