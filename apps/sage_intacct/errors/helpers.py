@@ -1,7 +1,14 @@
 import re
+import time
+import logging
+from functools import wraps
+
 from apps.sage_intacct.errors.errors import errors_ref
 
 from fyle_accounting_mappings.models import DestinationAttribute
+
+logger = logging.getLogger(__name__)
+logger.level = logging.INFO
 
 
 def remove_support_id(message: str) -> str:
@@ -92,3 +99,27 @@ def replace_destination_id_with_values(input_string: str, replacement: str) -> s
 
     # Return the modified input string
     return input_string
+
+
+def retry(max_retry: int = 3, backoff: int = 2) -> callable:
+    """
+    Retry Decorator
+    :param max_retry: Number of retries (default: 3)
+    :param backoff: Backoff time (default: 2)
+    :return: Decorator
+    """
+    def decorator(func: callable) -> callable:
+        @wraps(func)
+        def new_fn(*args, **kwargs) -> object:  # pylint: disable=missing-return-type
+            last_exception = None
+            for _ in range(max_retry):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    logger.exception('Error while executing function %s: %s', func.__name__, str(e))
+                    time.sleep(backoff)
+            logger.exception('Failed to execute function %s despite retrying: %s', func.__name__, last_exception)
+            raise last_exception
+        return new_fn
+    return decorator

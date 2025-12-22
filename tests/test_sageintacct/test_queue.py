@@ -1,6 +1,15 @@
 import pytest
 from unittest import mock
-from apps.sage_intacct.queue import trigger_sync_payments
+from apps.sage_intacct.queue import (
+    trigger_sync_payments,
+    schedule_journal_entries_creation,
+    schedule_expense_reports_creation,
+    schedule_bills_creation,
+    schedule_charge_card_transaction_creation,
+)
+from apps.tasks.models import TaskLog
+from apps.fyle.models import ExpenseGroup
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from workers.helpers import WorkerActionEnum
 
 
@@ -44,3 +53,155 @@ def test_trigger_sync_payments(
     payloads = [call[1]['payload'] if 'payload' in call[1] else None for call in mock_publish_to_rabbitmq.call_args_list]
     actions = [p['action'] for p in payloads if p]
     assert WorkerActionEnum.CREATE_SAGE_INTACCT_REIMBURSEMENT.value in actions
+
+
+@pytest.mark.django_db
+def test_schedule_journal_entries_creation_skips_exported_to_intacct(mocker):
+    """
+    Test that schedule_journal_entries_creation skips expense groups with EXPORTED_TO_INTACCT status
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id, fund_source='PERSONAL').first()
+
+    # Get existing task log for expense group and update its status
+    task_log = TaskLog.objects.filter(expense_group=expense_group).first()
+    if task_log:
+        task_log.status = 'EXPORTED_TO_INTACCT'
+        task_log.type = 'CREATING_JOURNAL_ENTRIES'
+        task_log.save()
+    else:
+        task_log = TaskLog.objects.create(
+            workspace_id=workspace_id,
+            expense_group=expense_group,
+            type='CREATING_JOURNAL_ENTRIES',
+            status='EXPORTED_TO_INTACCT'
+        )
+
+    # Try to schedule creation - should skip since status is EXPORTED_TO_INTACCT
+    schedule_journal_entries_creation(
+        workspace_id,
+        [expense_group.id],
+        False,
+        1,
+        triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC,
+        run_in_rabbitmq_worker=False
+    )
+
+    # Task log status should remain EXPORTED_TO_INTACCT (not changed to ENQUEUED)
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+
+
+@pytest.mark.django_db
+def test_schedule_expense_reports_creation_skips_exported_to_intacct(mocker):
+    """
+    Test that schedule_expense_reports_creation skips expense groups with EXPORTED_TO_INTACCT status
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id, fund_source='PERSONAL').first()
+
+    # Get existing task log for expense group and update its status
+    task_log = TaskLog.objects.filter(expense_group=expense_group).first()
+    if task_log:
+        task_log.status = 'EXPORTED_TO_INTACCT'
+        task_log.type = 'CREATING_EXPENSE_REPORTS'
+        task_log.save()
+    else:
+        task_log = TaskLog.objects.create(
+            workspace_id=workspace_id,
+            expense_group=expense_group,
+            type='CREATING_EXPENSE_REPORTS',
+            status='EXPORTED_TO_INTACCT'
+        )
+
+    # Try to schedule creation - should skip since status is EXPORTED_TO_INTACCT
+    schedule_expense_reports_creation(
+        workspace_id,
+        [expense_group.id],
+        False,
+        1,
+        triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC,
+        run_in_rabbitmq_worker=False
+    )
+
+    # Task log status should remain EXPORTED_TO_INTACCT (not changed to ENQUEUED)
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+
+
+@pytest.mark.django_db
+def test_schedule_bills_creation_skips_exported_to_intacct(mocker):
+    """
+    Test that schedule_bills_creation skips expense groups with EXPORTED_TO_INTACCT status
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id, fund_source='PERSONAL').first()
+
+    # Get existing task log for expense group and update its status
+    task_log = TaskLog.objects.filter(expense_group=expense_group).first()
+    if task_log:
+        task_log.status = 'EXPORTED_TO_INTACCT'
+        task_log.type = 'CREATING_BILLS'
+        task_log.save()
+    else:
+        task_log = TaskLog.objects.create(
+            workspace_id=workspace_id,
+            expense_group=expense_group,
+            type='CREATING_BILLS',
+            status='EXPORTED_TO_INTACCT'
+        )
+
+    # Try to schedule creation - should skip since status is EXPORTED_TO_INTACCT
+    schedule_bills_creation(
+        workspace_id,
+        [expense_group.id],
+        False,
+        1,
+        triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC,
+        run_in_rabbitmq_worker=False
+    )
+
+    # Task log status should remain EXPORTED_TO_INTACCT (not changed to ENQUEUED)
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+
+
+@pytest.mark.django_db
+def test_schedule_charge_card_transaction_creation_skips_exported_to_intacct(mocker):
+    """
+    Test that schedule_charge_card_transaction_creation skips expense groups with EXPORTED_TO_INTACCT status
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.filter(workspace_id=workspace_id, fund_source='CCC').first()
+
+    # Get existing task log for expense group and update its status
+    task_log = TaskLog.objects.filter(expense_group=expense_group).first()
+    if task_log:
+        task_log.status = 'EXPORTED_TO_INTACCT'
+        task_log.type = 'CREATING_CHARGE_CARD_TRANSACTIONS'
+        task_log.save()
+    else:
+        task_log = TaskLog.objects.create(
+            workspace_id=workspace_id,
+            expense_group=expense_group,
+            type='CREATING_CHARGE_CARD_TRANSACTIONS',
+            status='EXPORTED_TO_INTACCT'
+        )
+
+    # Try to schedule creation - should skip since status is EXPORTED_TO_INTACCT
+    schedule_charge_card_transaction_creation(
+        workspace_id,
+        [expense_group.id],
+        False,
+        1,
+        triggered_by=ExpenseImportSourceEnum.DASHBOARD_SYNC,
+        run_in_rabbitmq_worker=False
+    )
+
+    # Task log status should remain EXPORTED_TO_INTACCT (not changed to ENQUEUED)
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
