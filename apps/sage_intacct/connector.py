@@ -105,7 +105,7 @@ class SageIntacctRestConnector:
         Get credential object
         :return: Optional[SageIntacctCredential]
         """
-        return SageIntacctCredential.get_active_sage_intacct_credentials(workspace_id=self.workspace_id)
+        return SageIntacctCredential.objects.filter(workspace_id=self.workspace_id).first()
 
     def __get_access_token(self) -> Optional[str]:
         """
