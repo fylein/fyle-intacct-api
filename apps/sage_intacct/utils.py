@@ -1406,7 +1406,6 @@ class SageIntacctConnector:
                 'memo': lineitem.memo,
                 'locationid': lineitem.location_id,
                 'departmentid': lineitem.department_id,
-                'employeeid': lineitem.employee_id,
                 'customfields': {
                     'customfield': [{
                         'customfieldname': 'FYLE_EXPENSE_URL',
