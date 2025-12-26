@@ -345,10 +345,6 @@ def add_project_mappings(db):
         )
 
 
-# ---------------------
-# Connector Test Fixtures
-# ---------------------
-
 @pytest.fixture
 def mock_intacct_sdk():
     """Mock the IntacctRESTSDK"""
