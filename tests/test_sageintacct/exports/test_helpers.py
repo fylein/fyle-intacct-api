@@ -1,4 +1,3 @@
-import pytest
 from datetime import datetime
 from unittest.mock import Mock
 
@@ -17,8 +16,7 @@ from apps.sage_intacct.exports.helpers import (
 )
 
 
-@pytest.mark.django_db
-def test_format_transaction_date_with_string():
+def test_format_transaction_date_with_string(db):
     """
     Test format_transaction_date with string input
     """
@@ -28,8 +26,7 @@ def test_format_transaction_date_with_string():
     assert result == '2024-01-15'
 
 
-@pytest.mark.django_db
-def test_format_transaction_date_with_datetime():
+def test_format_transaction_date_with_datetime(db):
     """
     Test format_transaction_date with datetime input
     """
@@ -39,7 +36,6 @@ def test_format_transaction_date_with_datetime():
     assert result == '2024-01-15'
 
 
-@pytest.mark.django_db
 def test_get_tax_exclusive_amount_with_tax_attribute(db):
     """
     Test get_tax_exclusive_amount with tax attribute present
@@ -66,7 +62,6 @@ def test_get_tax_exclusive_amount_with_tax_attribute(db):
     assert tax_amount == 10.0
 
 
-@pytest.mark.django_db
 def test_get_tax_exclusive_amount_without_tax_attribute(db):
     """
     Test get_tax_exclusive_amount when tax attribute is not found
@@ -83,7 +78,6 @@ def test_get_tax_exclusive_amount_without_tax_attribute(db):
     assert tax_amount is None
 
 
-@pytest.mark.django_db
 def test_get_tax_solution_id_or_none_with_location_entity(db):
     """
     Test get_tax_solution_id_or_none when location entity is set
@@ -104,7 +98,6 @@ def test_get_tax_solution_id_or_none_with_location_entity(db):
         assert result is None
 
 
-@pytest.mark.django_db
 def test_get_tax_solution_id_or_none_with_tax_code(db):
     """
     Test get_tax_solution_id_or_none when tax code is present in line item
@@ -137,7 +130,6 @@ def test_get_tax_solution_id_or_none_with_tax_code(db):
     assert result == 'TAX_SOL_001'
 
 
-@pytest.mark.django_db
 def test_get_location_id_for_journal_entry_with_general_mapping(db):
     """
     Test get_location_id_for_journal_entry with default_location_id set
@@ -153,7 +145,6 @@ def test_get_location_id_for_journal_entry_with_general_mapping(db):
     assert result == 'DEFAULT_LOC_001'
 
 
-@pytest.mark.django_db
 def test_get_location_id_for_journal_entry_with_location_entity_mapping(db):
     """
     Test get_location_id_for_journal_entry with LocationEntityMapping
@@ -177,7 +168,6 @@ def test_get_location_id_for_journal_entry_with_location_entity_mapping(db):
     assert result == 'LOC_ENTITY_DEST_001'
 
 
-@pytest.mark.django_db
 def test_get_location_id_for_journal_entry_returns_none(db):
     """
     Test get_location_id_for_journal_entry returns None when no mapping found
@@ -195,7 +185,6 @@ def test_get_location_id_for_journal_entry_returns_none(db):
     assert result is None
 
 
-@pytest.mark.django_db
 def test_get_source_entity_id_returns_location_id(db):
     """
     Test get_source_entity_id returns location_id when all conditions are met
@@ -245,7 +234,6 @@ def test_get_source_entity_id_returns_location_id(db):
     assert result == 'DEFAULT_LOC_001'
 
 
-@pytest.mark.django_db
 def test_get_source_entity_id_returns_none_when_conditions_not_met(db):
     """
     Test get_source_entity_id returns None when conditions are not met

@@ -1,5 +1,3 @@
-import pytest
-
 from apps.workspaces.models import Configuration
 from apps.sage_intacct.exports.charge_card_transactions import (
     construct_charge_card_transaction_payload,
@@ -8,8 +6,7 @@ from apps.sage_intacct.exports.charge_card_transactions import (
 from tests.test_sageintacct.fixtures import data
 
 
-@pytest.mark.django_db
-def test_construct_charge_card_transaction_payload(create_charge_card_transaction):
+def test_construct_charge_card_transaction_payload(db, create_charge_card_transaction):
     """
     Test construct_charge_card_transaction_payload creates correct payload
     """
@@ -31,8 +28,7 @@ def test_construct_charge_card_transaction_payload(create_charge_card_transactio
     assert len(payload['lines']) == len(cct_lineitems)
 
 
-@pytest.mark.django_db
-def test_construct_charge_card_transaction_payload_with_tax_codes(create_charge_card_transaction):
+def test_construct_charge_card_transaction_payload_with_tax_codes(db, create_charge_card_transaction):
     """
     Test construct_charge_card_transaction_payload with import_tax_codes enabled
     """
@@ -52,8 +48,7 @@ def test_construct_charge_card_transaction_payload_with_tax_codes(create_charge_
     assert payload['isInclusiveTax'] is True
 
 
-@pytest.mark.django_db
-def test_construct_charge_card_transaction_payload_without_tax_codes(create_charge_card_transaction):
+def test_construct_charge_card_transaction_payload_without_tax_codes(db, create_charge_card_transaction):
     """
     Test construct_charge_card_transaction_payload without import_tax_codes
     """
@@ -73,8 +68,7 @@ def test_construct_charge_card_transaction_payload_without_tax_codes(create_char
     assert payload['isInclusiveTax'] is False
 
 
-@pytest.mark.django_db
-def test_construct_charge_card_transaction_payload_without_supdoc_id(create_charge_card_transaction):
+def test_construct_charge_card_transaction_payload_without_supdoc_id(db, create_charge_card_transaction):
     """
     Test construct_charge_card_transaction_payload when supdoc_id is None
     """
@@ -93,8 +87,7 @@ def test_construct_charge_card_transaction_payload_without_supdoc_id(create_char
     assert payload['attachment']['id'] is None
 
 
-@pytest.mark.django_db
-def test_construct_charge_card_transaction_line_item_payload(create_charge_card_transaction):
+def test_construct_charge_card_transaction_line_item_payload(db, create_charge_card_transaction):
     """
     Test construct_charge_card_transaction_line_item_payload creates correct payload
     """
@@ -117,8 +110,7 @@ def test_construct_charge_card_transaction_line_item_payload(create_charge_card_
             assert key in payload['dimensions']
 
 
-@pytest.mark.django_db
-def test_construct_charge_card_transaction_line_item_payload_with_tax(create_charge_card_transaction):
+def test_construct_charge_card_transaction_line_item_payload_with_tax(db, create_charge_card_transaction):
     """
     Test construct_charge_card_transaction_line_item_payload with tax code
     """

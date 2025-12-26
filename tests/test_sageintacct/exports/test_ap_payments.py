@@ -1,12 +1,10 @@
-import pytest
 from datetime import datetime
 
 from apps.sage_intacct.exports.ap_payments import construct_ap_payment_payload
 from tests.test_sageintacct.fixtures import data
 
 
-@pytest.mark.django_db
-def test_construct_ap_payment_payload(create_ap_payment):
+def test_construct_ap_payment_payload(db, create_ap_payment):
     """
     Test construct_ap_payment_payload creates correct payload
     """
@@ -32,8 +30,7 @@ def test_construct_ap_payment_payload(create_ap_payment):
         assert payload['vendor']['id'] == ap_payment.vendor_id
 
 
-@pytest.mark.django_db
-def test_construct_ap_payment_payload_details(create_ap_payment):
+def test_construct_ap_payment_payload_details(db, create_ap_payment):
     """
     Test construct_ap_payment_payload creates correct details structure
     """
@@ -57,8 +54,7 @@ def test_construct_ap_payment_payload_details(create_ap_payment):
         assert detail['bill']['key'] == ap_payment_lineitems[i].record_key
 
 
-@pytest.mark.django_db
-def test_construct_ap_payment_payload_payment_date(create_ap_payment):
+def test_construct_ap_payment_payload_payment_date(db, create_ap_payment):
     """
     Test construct_ap_payment_payload has today's date as payment date
     """
@@ -77,8 +73,7 @@ def test_construct_ap_payment_payload_payment_date(create_ap_payment):
         assert payload['paymentDate'] == today_date
 
 
-@pytest.mark.django_db
-def test_construct_ap_payment_payload_multiple_line_items(create_ap_payment):
+def test_construct_ap_payment_payload_multiple_line_items(db, create_ap_payment):
     """
     Test construct_ap_payment_payload with multiple line items
     """

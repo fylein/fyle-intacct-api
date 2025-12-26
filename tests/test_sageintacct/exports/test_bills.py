@@ -1,5 +1,3 @@
-import pytest
-
 from apps.workspaces.models import Configuration
 from apps.sage_intacct.exports.bills import (
     construct_bill_payload,
@@ -8,8 +6,7 @@ from apps.sage_intacct.exports.bills import (
 from tests.test_sageintacct.fixtures import data
 
 
-@pytest.mark.django_db
-def test_construct_bill_payload(create_bill):
+def test_construct_bill_payload(db, create_bill):
     """
     Test construct_bill_payload creates correct payload
     """
@@ -31,8 +28,7 @@ def test_construct_bill_payload(create_bill):
     assert len(payload['lines']) == len(bill_lineitems)
 
 
-@pytest.mark.django_db
-def test_construct_bill_payload_with_tax_codes(create_bill):
+def test_construct_bill_payload_with_tax_codes(db, create_bill):
     """
     Test construct_bill_payload with import_tax_codes enabled
     """
@@ -55,8 +51,7 @@ def test_construct_bill_payload_with_tax_codes(create_bill):
     assert 'taxSolution' in payload
 
 
-@pytest.mark.django_db
-def test_construct_bill_payload_without_supdoc_id(create_bill):
+def test_construct_bill_payload_without_supdoc_id(db, create_bill):
     """
     Test construct_bill_payload when supdoc_id is None
     """
@@ -75,8 +70,7 @@ def test_construct_bill_payload_without_supdoc_id(create_bill):
     assert payload['attachment']['id'] is None
 
 
-@pytest.mark.django_db
-def test_construct_bill_line_item_payload(create_bill):
+def test_construct_bill_line_item_payload(db, create_bill):
     """
     Test construct_bill_line_item_payload creates correct line item payload
     """
@@ -98,8 +92,7 @@ def test_construct_bill_line_item_payload(create_bill):
             assert key in payload['dimensions']
 
 
-@pytest.mark.django_db
-def test_construct_bill_line_item_payload_with_tax_code(create_bill):
+def test_construct_bill_line_item_payload_with_tax_code(db, create_bill):
     """
     Test construct_bill_line_item_payload with tax code in line item
     """
@@ -121,8 +114,7 @@ def test_construct_bill_line_item_payload_with_tax_code(create_bill):
         assert payload['taxEntries'][0]['purchasingTaxDetail']['id'] == 'TAX001'
 
 
-@pytest.mark.django_db
-def test_construct_bill_line_item_payload_refund_case(create_bill):
+def test_construct_bill_line_item_payload_refund_case(db, create_bill):
     """
     Test construct_bill_line_item_payload for refund (negative amount)
     """

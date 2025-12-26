@@ -1,4 +1,3 @@
-import pytest
 from unittest import mock
 
 from fyle_accounting_mappings.models import DestinationAttribute
@@ -15,8 +14,7 @@ from apps.sage_intacct.exports.journal_entries import (
 from tests.test_sageintacct.fixtures import data
 
 
-@pytest.mark.django_db
-def test_construct_journal_entry_payload(create_journal_entry):
+def test_construct_journal_entry_payload(db, create_journal_entry):
     """
     Test construct_journal_entry_payload creates correct payload
     """
@@ -39,8 +37,7 @@ def test_construct_journal_entry_payload(create_journal_entry):
     assert len(payload['lines']) > 0
 
 
-@pytest.mark.django_db
-def test_construct_journal_entry_payload_with_tax_codes(create_journal_entry):
+def test_construct_journal_entry_payload_with_tax_codes(db, create_journal_entry):
     """
     Test construct_journal_entry_payload with import_tax_codes enabled
     """
@@ -64,8 +61,7 @@ def test_construct_journal_entry_payload_with_tax_codes(create_journal_entry):
     assert payload['tax']['taxImplication'] == 'inbound'
 
 
-@pytest.mark.django_db
-def test_construct_journal_entry_payload_with_brand_id_em(create_journal_entry):
+def test_construct_journal_entry_payload_with_brand_id_em(db, create_journal_entry):
     """
     Test construct_journal_entry_payload with EM brand
     """
@@ -84,8 +80,7 @@ def test_construct_journal_entry_payload_with_brand_id_em(create_journal_entry):
     assert payload['glJournal']['id'] == 'EM_JOURNAL'
 
 
-@pytest.mark.django_db
-def test_construct_journal_entry_payload_without_supdoc_id(create_journal_entry):
+def test_construct_journal_entry_payload_without_supdoc_id(db, create_journal_entry):
     """
     Test construct_journal_entry_payload when supdoc_id is None
     """
@@ -107,8 +102,7 @@ def test_construct_journal_entry_payload_without_supdoc_id(create_journal_entry)
     assert payload['attachment']['id'] is None
 
 
-@pytest.mark.django_db
-def test_construct_debit_line_payload(create_journal_entry):
+def test_construct_debit_line_payload(db, create_journal_entry):
     """
     Test construct_debit_line_payload creates correct debit lines
     """
@@ -131,8 +125,7 @@ def test_construct_debit_line_payload(create_journal_entry):
             assert key in payload
 
 
-@pytest.mark.django_db
-def test_construct_debit_line_payload_with_negative_amount(create_journal_entry):
+def test_construct_debit_line_payload_with_negative_amount(db, create_journal_entry):
     """
     Test construct_debit_line_payload with negative amount (refund)
     """
@@ -155,8 +148,7 @@ def test_construct_debit_line_payload_with_negative_amount(create_journal_entry)
         assert payload['txnType'] == 'credit'
 
 
-@pytest.mark.django_db
-def test_construct_debit_line_payload_with_allocation(create_journal_entry):
+def test_construct_debit_line_payload_with_allocation(db, create_journal_entry):
     """
     Test construct_debit_line_payload with allocation
     """
@@ -185,8 +177,7 @@ def test_construct_debit_line_payload_with_allocation(create_journal_entry):
     assert len(debit_payloads) == len(journal_entry_lineitems)
 
 
-@pytest.mark.django_db
-def test_construct_credit_line_payload_single_line(create_journal_entry):
+def test_construct_credit_line_payload_single_line(db, create_journal_entry):
     """
     Test construct_credit_line_payload with single credit line configuration
     """
@@ -210,8 +201,7 @@ def test_construct_credit_line_payload_single_line(create_journal_entry):
     assert credit_payloads is not None
 
 
-@pytest.mark.django_db
-def test_construct_credit_line_payload_multiple_lines(create_journal_entry):
+def test_construct_credit_line_payload_multiple_lines(db, create_journal_entry):
     """
     Test construct_credit_line_payload with multiple credit lines configuration
     """
@@ -236,8 +226,7 @@ def test_construct_credit_line_payload_multiple_lines(create_journal_entry):
     assert len(credit_payloads) == len(journal_entry_lineitems)
 
 
-@pytest.mark.django_db
-def test_construct_single_itemized_credit_line(create_journal_entry):
+def test_construct_single_itemized_credit_line(db, create_journal_entry):
     """
     Test construct_single_itemized_credit_line creates correct payload
     """
@@ -261,8 +250,7 @@ def test_construct_single_itemized_credit_line(create_journal_entry):
         assert payload['description'] == 'Total Credit Line'
 
 
-@pytest.mark.django_db
-def test_construct_single_itemized_credit_line_skips_zero_amount(create_journal_entry):
+def test_construct_single_itemized_credit_line_skips_zero_amount(db, create_journal_entry):
     """
     Test construct_single_itemized_credit_line skips zero total amount
     """
@@ -285,8 +273,7 @@ def test_construct_single_itemized_credit_line_skips_zero_amount(create_journal_
     assert len(credit_payloads) == 0
 
 
-@pytest.mark.django_db
-def test_construct_single_itemized_credit_line_refund_case(create_journal_entry):
+def test_construct_single_itemized_credit_line_refund_case(db, create_journal_entry):
     """
     Test construct_single_itemized_credit_line with negative amount (refund)
     """
@@ -311,8 +298,7 @@ def test_construct_single_itemized_credit_line_refund_case(create_journal_entry)
         assert payload['txnType'] == 'debit'
 
 
-@pytest.mark.django_db
-def test_construct_multiple_itemized_credit_line(create_journal_entry):
+def test_construct_multiple_itemized_credit_line(db, create_journal_entry):
     """
     Test construct_multiple_itemized_credit_line creates correct payload
     """
@@ -338,8 +324,7 @@ def test_construct_multiple_itemized_credit_line(create_journal_entry):
             assert key in payload
 
 
-@pytest.mark.django_db
-def test_construct_multiple_itemized_credit_line_with_billable(create_journal_entry):
+def test_construct_multiple_itemized_credit_line_with_billable(db, create_journal_entry):
     """
     Test construct_multiple_itemized_credit_line with billable credit line
     """
@@ -364,8 +349,7 @@ def test_construct_multiple_itemized_credit_line_with_billable(create_journal_en
         assert 'isBillable' in payload
 
 
-@pytest.mark.django_db
-def test_construct_multiple_itemized_credit_line_ccc_fund_source(create_journal_entry):
+def test_construct_multiple_itemized_credit_line_ccc_fund_source(db, create_journal_entry):
     """
     Test construct_multiple_itemized_credit_line with CCC fund source
     """
@@ -392,8 +376,7 @@ def test_construct_multiple_itemized_credit_line_ccc_fund_source(create_journal_
         assert payload['glAccount']['id'] == 'CC_ACCOUNT_001'
 
 
-@pytest.mark.django_db
-def test_construct_multiple_itemized_credit_line_personal_fund_source(create_journal_entry):
+def test_construct_multiple_itemized_credit_line_personal_fund_source(db, create_journal_entry):
     """
     Test construct_multiple_itemized_credit_line with PERSONAL fund source
     """

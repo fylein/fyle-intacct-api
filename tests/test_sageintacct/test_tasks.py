@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 from datetime import datetime, timedelta, timezone
@@ -12,6 +13,11 @@ from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
+from intacctsdk.exceptions import (
+    BadRequestError as IntacctRESTBadRequestError,
+    InvalidTokenError as IntacctRESTInvalidTokenError,
+    InternalServerError as IntacctRESTInternalServerError
+)
 
 from apps.exceptions import ValueErrorWithResponse
 from apps.fyle.models import Expense, ExpenseGroup, Reimbursement
@@ -39,6 +45,9 @@ from apps.sage_intacct.tasks import (
     __validate_expense_group,
     check_cache_and_search_vendors,
     check_sage_intacct_object_status,
+    check_sage_intacct_object_status_rest,
+    check_sage_intacct_bill_status_rest,
+    check_sage_intacct_expense_report_status_rest,
     create_ap_payment,
     create_bill,
     create_charge_card_transaction,
@@ -49,6 +58,7 @@ from apps.sage_intacct.tasks import (
     get_employee_as_vendors_name,
     get_or_create_credit_card_vendor,
     handle_sage_intacct_errors,
+    handle_sage_intacct_rest_errors,
     load_attachments,
     mark_paid_on_fyle,
     process_fyle_reimbursements,
@@ -2281,3 +2291,910 @@ def test_create_charge_card_transaction_task_log_does_not_exist(mocker, db):
     mock_logger.return_value.info.assert_called_with(
         'Task log %s was deleted (likely due to export settings change), skipping charge card transaction creation', 99999
     )
+
+
+def test_handle_sage_intacct_rest_errors_with_details(db, mocker):
+    """
+    Test handle_sage_intacct_rest_errors with details in error response
+    """
+    task_log = TaskLog.objects.filter(workspace_id=1).first()
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mocker.patch('apps.sage_intacct.tasks.post_accounting_export_summary')
+    mocker.patch('apps.sage_intacct.tasks.update_failed_expenses')
+
+    error_response = data['sage_intacct_rest_error_response']
+
+    exception = IntacctRESTBadRequestError(
+        msg='POST request failed',
+        response=json.dumps(error_response)
+    )
+
+    handle_sage_intacct_rest_errors(
+        exception=exception,
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Journal Entry'
+    )
+
+    assert task_log.status == 'FAILED'
+    assert len(task_log.sage_intacct_errors) == 2
+    assert task_log.sage_intacct_errors[0]['short_description'] == 'Journal Entry error'
+    assert task_log.sage_intacct_errors[0]['long_description'] == 'Could not create GLBatch record.'
+    assert task_log.sage_intacct_errors[1]['long_description'] == 'Transactions do not balance for Place ,'
+
+    error = Error.objects.filter(workspace_id=1, expense_group=expense_group).first()
+    assert error is not None
+    assert error.type == 'INTACCT_ERROR'
+    assert error.is_resolved is False
+
+
+def test_handle_sage_intacct_rest_errors_without_details(db, mocker):
+    """
+    Test handle_sage_intacct_rest_errors when no details in error response
+    """
+    task_log = TaskLog.objects.filter(workspace_id=1).first()
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mocker.patch('apps.sage_intacct.tasks.post_accounting_export_summary')
+    mocker.patch('apps.sage_intacct.tasks.update_failed_expenses')
+
+    error_response = data['sage_intacct_rest_error_response_no_details']
+
+    exception = IntacctRESTBadRequestError(
+        msg='POST request failed',
+        response=json.dumps(error_response)
+    )
+
+    handle_sage_intacct_rest_errors(
+        exception=exception,
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Bill'
+    )
+
+    assert task_log.status == 'FAILED'
+    assert len(task_log.sage_intacct_errors) == 1
+    assert task_log.sage_intacct_errors[0]['short_description'] == 'Bill error'
+    assert task_log.sage_intacct_errors[0]['long_description'] == 'Something went wrong with the export'
+
+
+def test_handle_sage_intacct_rest_errors_with_string_response(db, mocker):
+    """
+    Test handle_sage_intacct_rest_errors when response is already a dict
+    """
+    task_log = TaskLog.objects.filter(workspace_id=1).first()
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mocker.patch('apps.sage_intacct.tasks.post_accounting_export_summary')
+    mocker.patch('apps.sage_intacct.tasks.update_failed_expenses')
+
+    error_response = data['sage_intacct_rest_error_response']
+
+    exception = IntacctRESTBadRequestError(
+        msg='POST request failed',
+        response=error_response
+    )
+
+    handle_sage_intacct_rest_errors(
+        exception=exception,
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Expense Report'
+    )
+
+    assert task_log.status == 'FAILED'
+    assert len(task_log.sage_intacct_errors) == 2
+
+
+def test_handle_sage_intacct_rest_errors_invalid_json(db, mocker):
+    """
+    Test handle_sage_intacct_rest_errors when response is invalid JSON
+    """
+    task_log = TaskLog.objects.filter(workspace_id=1).first()
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mocker.patch('apps.sage_intacct.tasks.post_accounting_export_summary')
+    mocker.patch('apps.sage_intacct.tasks.update_failed_expenses')
+
+    exception = IntacctRESTBadRequestError(
+        msg='POST request failed',
+        response='Invalid JSON response'
+    )
+
+    handle_sage_intacct_rest_errors(
+        exception=exception,
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Charge Card Transaction'
+    )
+
+    assert task_log.status == 'FAILED'
+    assert len(task_log.sage_intacct_errors) == 1
+    assert task_log.sage_intacct_errors[0]['long_description'] == 'Invalid JSON response'
+
+
+def test_handle_sage_intacct_rest_errors_no_ia_result(db, mocker):
+    """
+    Test handle_sage_intacct_rest_errors when ia::result key is missing
+    """
+    task_log = TaskLog.objects.filter(workspace_id=1).first()
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mocker.patch('apps.sage_intacct.tasks.post_accounting_export_summary')
+    mocker.patch('apps.sage_intacct.tasks.update_failed_expenses')
+
+    error_response = {'error': 'Some error occurred'}
+
+    exception = IntacctRESTBadRequestError(
+        msg='POST request failed',
+        response=json.dumps(error_response)
+    )
+
+    handle_sage_intacct_rest_errors(
+        exception=exception,
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Journal Entry'
+    )
+
+    assert task_log.status == 'FAILED'
+    assert len(task_log.sage_intacct_errors) == 1
+    assert 'error' in task_log.sage_intacct_errors[0]['long_description']
+
+
+def test_handle_sage_intacct_rest_errors_primary_error_selection(db, mocker):
+    """
+    Test handle_sage_intacct_rest_errors selects correct primary error from details
+    """
+    task_log = TaskLog.objects.filter(workspace_id=1).first()
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mocker.patch('apps.sage_intacct.tasks.post_accounting_export_summary')
+    mocker.patch('apps.sage_intacct.tasks.update_failed_expenses')
+
+    error_response = {
+        "ia::result": {
+            "ia::error": {
+                "code": "operationFailed",
+                "message": "POST request failed",
+                "details": [
+                    {
+                        "message": "Could not create record.",
+                        "correction": None
+                    },
+                    {
+                        "message": "Transactions do not balance",
+                        "correction": "Please check your journal entry lines"
+                    }
+                ]
+            }
+        }
+    }
+
+    exception = IntacctRESTBadRequestError(
+        msg='POST request failed',
+        response=json.dumps(error_response)
+    )
+
+    handle_sage_intacct_rest_errors(
+        exception=exception,
+        expense_group=expense_group,
+        task_log=task_log,
+        export_type='Journal Entry'
+    )
+
+    assert task_log.status == 'FAILED'
+
+    error = Error.objects.filter(workspace_id=1, expense_group=expense_group).first()
+    assert error is not None
+    assert 'Transactions do not balance' in error.error_detail
+
+
+def test_create_ap_payment_rest_bad_request_error_skips_payment(mocker, db):
+    """
+    Test create_ap_payment with IntacctRESTBadRequestError that triggers payment skip
+    """
+    mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
+    mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=('sdfgh', False))
+    mocker.patch('sageintacctsdk.apis.Bills.update_attachment', return_value=data['bill_response'])
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    bill = Bill.objects.get(expense_group=expense_group)
+    bill.payment_synced = False
+    bill.paid_on_sage_intacct = False
+    bill.save()
+
+    for expense in bill.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'apps.workspaces.models.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+
+    error_response = json.dumps({
+        "ia::result": {
+            "ia::error": {
+                "message": "Oops, we can't find this transaction; enter a valid transaction"
+            }
+        }
+    })
+
+    mocker.patch(
+        'apps.sage_intacct.models.APPayment.create_ap_payment',
+        side_effect=IntacctRESTBadRequestError('Bad request', error_response)
+    )
+
+    create_ap_payment(workspace_id)
+
+    bill.refresh_from_db()
+    assert bill.payment_synced is True
+    assert bill.paid_on_sage_intacct is True
+
+
+def test_create_ap_payment_rest_bad_request_error_saves_task_log(mocker, db):
+    """
+    Test create_ap_payment with IntacctRESTBadRequestError that saves task_log
+    """
+    mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
+    mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=('sdfgh', False))
+    mocker.patch('sageintacctsdk.apis.Bills.update_attachment', return_value=data['bill_response'])
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    bill = Bill.objects.get(expense_group=expense_group)
+    bill.payment_synced = False
+    bill.paid_on_sage_intacct = False
+    bill.save()
+
+    for expense in bill.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'apps.workspaces.models.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+
+    error_response = json.dumps({
+        "ia::result": {
+            "ia::error": {
+                "message": "Some other error occurred"
+            }
+        }
+    })
+
+    mocker.patch(
+        'apps.sage_intacct.models.APPayment.create_ap_payment',
+        side_effect=IntacctRESTBadRequestError('Bad request', error_response)
+    )
+
+    create_ap_payment(workspace_id)
+
+    payment_task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(bill.expense_group.id)
+    ).first()
+    assert payment_task_log.status == 'FAILED'
+
+    bill.refresh_from_db()
+    assert bill.payment_synced is False
+
+
+def test_create_ap_payment_rest_invalid_token_error(mocker, db):
+    """
+    Test create_ap_payment with IntacctRESTInvalidTokenError
+    """
+    mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
+    mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=('sdfgh', False))
+    mocker.patch('sageintacctsdk.apis.Bills.update_attachment', return_value=data['bill_response'])
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    bill = Bill.objects.get(expense_group=expense_group)
+    bill.payment_synced = False
+    bill.save()
+
+    for expense in bill.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'apps.workspaces.models.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+    mocker.patch('apps.sage_intacct.tasks.invalidate_sage_intacct_credentials')
+
+    mocker.patch(
+        'apps.sage_intacct.models.APPayment.create_ap_payment',
+        side_effect=IntacctRESTInvalidTokenError('Invalid token', 'Token expired')
+    )
+
+    create_ap_payment(workspace_id)
+
+    payment_task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(bill.expense_group.id)
+    ).first()
+    assert payment_task_log.status == 'FAILED'
+    assert payment_task_log.detail == 'Token expired'
+
+
+def test_create_ap_payment_rest_internal_server_error(mocker, db):
+    """
+    Test create_ap_payment with IntacctRESTInternalServerError
+    """
+    mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
+    mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=('sdfgh', False))
+    mocker.patch('sageintacctsdk.apis.Bills.update_attachment', return_value=data['bill_response'])
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    bill = Bill.objects.get(expense_group=expense_group)
+    bill.payment_synced = False
+    bill.save()
+
+    for expense in bill.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'apps.workspaces.models.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+
+    mocker.patch(
+        'apps.sage_intacct.models.APPayment.create_ap_payment',
+        side_effect=IntacctRESTInternalServerError('Internal server error', 'Server error response')
+    )
+
+    create_ap_payment(workspace_id)
+
+    payment_task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(bill.expense_group.id)
+    ).first()
+    assert payment_task_log.status == 'FAILED'
+    assert payment_task_log.detail == 'Server error response'
+
+
+def test_create_ap_payment_generic_exception(mocker, db):
+    """
+    Test create_ap_payment with generic Exception (FATAL status)
+    """
+    mocker.patch('sageintacctsdk.apis.Bills.post', return_value=data['bill_response'])
+    mocker.patch('sageintacctsdk.apis.Bills.get', return_value=data['bill_response']['data'])
+    mocker.patch('apps.sage_intacct.tasks.load_attachments', return_value=('sdfgh', False))
+    mocker.patch('sageintacctsdk.apis.Bills.update_attachment', return_value=data['bill_response'])
+    mocker.patch('fyle_integrations_platform_connector.apis.Expenses.get', return_value=[])
+
+    workspace_id = 1
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'READY'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    bill = Bill.objects.get(expense_group=expense_group)
+    bill.payment_synced = False
+    bill.save()
+
+    for expense in bill.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'apps.workspaces.models.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+
+    mocker.patch(
+        'apps.sage_intacct.models.APPayment.create_ap_payment',
+        side_effect=Exception('Unexpected error occurred')
+    )
+
+    create_ap_payment(workspace_id)
+
+    payment_task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(bill.expense_group.id)
+    ).first()
+    assert payment_task_log.status == 'FATAL'
+    assert 'error' in payment_task_log.detail
+
+
+def test_check_sage_intacct_bill_status_rest(mocker, db):
+    """
+    Test check_sage_intacct_bill_status_rest with bills
+    """
+    workspace_id = 1
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    bill = Bill.create_bill(expense_group)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    Configuration.objects.filter(workspace_id=workspace_id).update(
+        corporate_credit_card_expenses_object='BILL'
+    )
+    workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
+    BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
+
+    bill.paid_on_sage_intacct = False
+    bill.payment_synced = False
+    bill.save()
+
+    task_log, _ = TaskLog.objects.update_or_create(
+        expense_group=expense_group,
+        defaults={
+            'workspace_id': workspace_id,
+            'type': 'CREATING_BILL',
+            'status': 'COMPLETE',
+            'detail': {
+                'ia::result': {
+                    'key': 'BILL123'
+                }
+            }
+        }
+    )
+
+    mocker.patch(
+        'apps.workspaces.models.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+
+    mock_sage_intacct_connection = mocker.MagicMock()
+    mock_sage_intacct_connection.get_bills.return_value = iter([[
+        {'key': 'BILL123', 'state': 'paid'}
+    ]])
+
+    check_sage_intacct_bill_status_rest(workspace_id, mock_sage_intacct_connection)
+
+    bill.refresh_from_db()
+    assert bill.paid_on_sage_intacct is True
+    assert bill.payment_synced is True
+
+    line_items = BillLineitem.objects.filter(bill_id=bill.id)
+    for line_item in line_items:
+        line_item.expense.refresh_from_db()
+        assert line_item.expense.paid_on_sage_intacct is True
+
+
+def test_check_sage_intacct_bill_status_rest_no_bills(mocker, db):
+    """
+    Test check_sage_intacct_bill_status_rest when no bills exist
+    """
+    workspace_id = 1
+
+    Bill.objects.filter(expense_group__workspace_id=workspace_id).delete()
+
+    mock_sage_intacct_connection = mocker.MagicMock()
+
+    check_sage_intacct_bill_status_rest(workspace_id, mock_sage_intacct_connection)
+
+    mock_sage_intacct_connection.get_bills.assert_not_called()
+
+
+def test_check_sage_intacct_expense_report_status_rest(mocker, db, create_expense_report):
+    """
+    Test check_sage_intacct_expense_report_status_rest with expense reports
+    """
+    workspace_id = 1
+
+    expense_report, expense_report_lineitems = create_expense_report
+
+    expense_report.paid_on_sage_intacct = False
+    expense_report.payment_synced = False
+    expense_report.save()
+
+    task_log = TaskLog.objects.get(expense_group=expense_report.expense_group)
+    task_log.detail = {
+        'key': 'ER123'
+    }
+    task_log.save()
+
+    mock_sage_intacct_connection = mocker.MagicMock()
+    mock_sage_intacct_connection.get_expense_reports.return_value = iter([[
+        {'key': 'ER123', 'state': 'paid'}
+    ]])
+
+    check_sage_intacct_expense_report_status_rest(workspace_id, mock_sage_intacct_connection)
+
+    expense_report.refresh_from_db()
+    assert expense_report.paid_on_sage_intacct is True
+    assert expense_report.payment_synced is True
+
+    line_items = ExpenseReportLineitem.objects.filter(expense_report_id=expense_report.id)
+    for line_item in line_items:
+        assert line_item.expense.paid_on_sage_intacct is True
+
+
+def test_check_sage_intacct_expense_report_status_rest_no_reports(mocker, db):
+    """
+    Test check_sage_intacct_expense_report_status_rest when no expense reports exist
+    """
+    workspace_id = 1
+
+    ExpenseReport.objects.filter(expense_group__workspace_id=workspace_id).delete()
+
+    mock_sage_intacct_connection = mocker.MagicMock()
+
+    check_sage_intacct_expense_report_status_rest(workspace_id, mock_sage_intacct_connection)
+
+    mock_sage_intacct_connection.get_expense_reports.assert_not_called()
+
+
+def test_create_sage_intacct_reimbursement_rest_bad_request_error_skips(mocker, db, create_expense_report):
+    """
+    Test create_sage_intacct_reimbursement with IntacctRESTBadRequestError that skips payment
+    """
+    workspace_id = 1
+
+    expense_report, _ = create_expense_report
+    expense_report.payment_synced = False
+    expense_report.paid_on_sage_intacct = False
+    expense_report.save()
+
+    for expense in expense_report.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=[]
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+
+    error_response = json.dumps({
+        "ia::result": {
+            "ia::error": {
+                "message": "Payment cannot be processed because one or more bills are already paid"
+            }
+        }
+    })
+
+    mocker.patch(
+        'apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement',
+        side_effect=IntacctRESTBadRequestError('Bad request', error_response)
+    )
+
+    create_sage_intacct_reimbursement(workspace_id)
+
+    expense_report.refresh_from_db()
+    assert expense_report.payment_synced is True
+    assert expense_report.paid_on_sage_intacct is True
+
+
+def test_create_sage_intacct_reimbursement_rest_bad_request_error_saves(mocker, db, create_expense_report):
+    """
+    Test create_sage_intacct_reimbursement with IntacctRESTBadRequestError that saves task_log
+    """
+    workspace_id = 1
+
+    expense_report, _ = create_expense_report
+    expense_report.payment_synced = False
+    expense_report.paid_on_sage_intacct = False
+    expense_report.save()
+
+    for expense in expense_report.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=[]
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+
+    error_response = json.dumps({
+        "ia::result": {
+            "ia::error": {
+                "message": "Some other error occurred"
+            }
+        }
+    })
+
+    mocker.patch(
+        'apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement',
+        side_effect=IntacctRESTBadRequestError('Bad request', error_response)
+    )
+
+    create_sage_intacct_reimbursement(workspace_id)
+
+    payment_task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(expense_report.expense_group.id)
+    ).first()
+    assert payment_task_log.status == 'FAILED'
+
+    expense_report.refresh_from_db()
+    assert expense_report.payment_synced is False
+
+
+def test_create_sage_intacct_reimbursement_rest_invalid_token_error(mocker, db, create_expense_report):
+    """
+    Test create_sage_intacct_reimbursement with IntacctRESTInvalidTokenError
+    """
+    workspace_id = 1
+
+    expense_report, _ = create_expense_report
+    expense_report.payment_synced = False
+    expense_report.save()
+
+    for expense in expense_report.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=[]
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+    mocker.patch('apps.sage_intacct.tasks.invalidate_sage_intacct_credentials')
+
+    mocker.patch(
+        'apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement',
+        side_effect=IntacctRESTInvalidTokenError('Invalid token', 'Token expired')
+    )
+
+    create_sage_intacct_reimbursement(workspace_id)
+
+    payment_task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(expense_report.expense_group.id)
+    ).first()
+    assert payment_task_log.status == 'FAILED'
+    assert payment_task_log.detail == 'Token expired'
+
+
+def test_create_sage_intacct_reimbursement_rest_internal_server_error(mocker, db, create_expense_report):
+    """
+    Test create_sage_intacct_reimbursement with IntacctRESTInternalServerError
+    """
+    workspace_id = 1
+
+    expense_report, _ = create_expense_report
+    expense_report.payment_synced = False
+    expense_report.save()
+
+    for expense in expense_report.expense_group.expenses.all():
+        expense.paid_on_fyle = True
+        expense.save()
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=[]
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection'
+    )
+
+    mocker.patch(
+        'apps.sage_intacct.models.SageIntacctReimbursement.create_sage_intacct_reimbursement',
+        side_effect=IntacctRESTInternalServerError('Internal server error', 'Server error response')
+    )
+
+    create_sage_intacct_reimbursement(workspace_id)
+
+    payment_task_log = TaskLog.objects.filter(
+        workspace_id=workspace_id,
+        task_id='PAYMENT_{}'.format(expense_report.expense_group.id)
+    ).first()
+    assert payment_task_log.status == 'FAILED'
+    assert payment_task_log.detail == 'Server error response'
+
+
+def test_check_sage_intacct_object_status_rest_success(mocker, db):
+    """
+    Test check_sage_intacct_object_status_rest success case
+    """
+    workspace_id = 1
+
+    mock_connection = mocker.MagicMock()
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection',
+        return_value=mock_connection
+    )
+
+    mock_check_bill_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_bill_status_rest'
+    )
+    mock_check_expense_report_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_expense_report_status_rest'
+    )
+
+    check_sage_intacct_object_status_rest(workspace_id)
+
+    mock_check_bill_status.assert_called_once_with(
+        workspace_id=workspace_id,
+        sage_intacct_connection=mock_connection
+    )
+    mock_check_expense_report_status.assert_called_once_with(
+        workspace_id=workspace_id,
+        sage_intacct_connection=mock_connection
+    )
+
+
+def test_check_sage_intacct_object_status_rest_credentials_not_exist(mocker, db):
+    """
+    Test check_sage_intacct_object_status_rest when credentials do not exist
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.workspaces.models.SageIntacctCredential.get_active_sage_intacct_credentials',
+        side_effect=SageIntacctCredential.DoesNotExist()
+    )
+
+    mock_check_bill_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_bill_status_rest'
+    )
+
+    check_sage_intacct_object_status_rest(workspace_id)
+
+    mock_check_bill_status.assert_not_called()
+
+
+def test_check_sage_intacct_object_status_rest_no_privilege_error(mocker, db):
+    """
+    Test check_sage_intacct_object_status_rest with NoPrivilegeError
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection',
+        side_effect=NoPrivilegeError(msg='Insufficient permission', response='Insufficient permission')
+    )
+
+    mock_check_bill_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_bill_status_rest'
+    )
+
+    check_sage_intacct_object_status_rest(workspace_id)
+
+    mock_check_bill_status.assert_not_called()
+
+
+def test_check_sage_intacct_object_status_rest_invalid_token_error(mocker, db):
+    """
+    Test check_sage_intacct_object_status_rest with InvalidTokenError
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection',
+        side_effect=InvalidTokenError(msg='Invalid token', response='Token expired')
+    )
+
+    mock_invalidate = mocker.patch(
+        'apps.sage_intacct.tasks.invalidate_sage_intacct_credentials'
+    )
+
+    mock_check_bill_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_bill_status_rest'
+    )
+
+    check_sage_intacct_object_status_rest(workspace_id)
+
+    mock_invalidate.assert_called_once()
+    mock_check_bill_status.assert_not_called()
+
+
+def test_check_sage_intacct_object_status_rest_intacct_rest_invalid_token_error(mocker, db):
+    """
+    Test check_sage_intacct_object_status_rest with IntacctRESTInvalidTokenError
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection',
+        side_effect=IntacctRESTInvalidTokenError('Invalid token', 'Token expired')
+    )
+
+    mock_invalidate = mocker.patch(
+        'apps.sage_intacct.tasks.invalidate_sage_intacct_credentials'
+    )
+
+    mock_check_bill_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_bill_status_rest'
+    )
+
+    check_sage_intacct_object_status_rest(workspace_id)
+
+    mock_invalidate.assert_called_once()
+    mock_check_bill_status.assert_not_called()
+
+
+def test_check_sage_intacct_object_status_rest_bad_request_error(mocker, db):
+    """
+    Test check_sage_intacct_object_status_rest with IntacctRESTBadRequestError
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection',
+        side_effect=IntacctRESTBadRequestError('Bad request', 'Bad request error')
+    )
+
+    mock_check_bill_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_bill_status_rest'
+    )
+
+    check_sage_intacct_object_status_rest(workspace_id)
+
+    mock_check_bill_status.assert_not_called()
+
+
+def test_check_sage_intacct_object_status_rest_internal_server_error(mocker, db):
+    """
+    Test check_sage_intacct_object_status_rest with IntacctRESTInternalServerError
+    """
+    workspace_id = 1
+
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_sage_intacct_connection',
+        side_effect=IntacctRESTInternalServerError('Internal server error', 'Server error')
+    )
+
+    mock_check_bill_status = mocker.patch(
+        'apps.sage_intacct.tasks.check_sage_intacct_bill_status_rest'
+    )
+
+    check_sage_intacct_object_status_rest(workspace_id)
+
+    mock_check_bill_status.assert_not_called()

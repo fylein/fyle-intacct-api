@@ -1,5 +1,3 @@
-import pytest
-
 from apps.sage_intacct.exports.expense_reports import (
     construct_expense_report_payload,
     construct_expense_report_line_item_payload,
@@ -7,8 +5,7 @@ from apps.sage_intacct.exports.expense_reports import (
 from tests.test_sageintacct.fixtures import data
 
 
-@pytest.mark.django_db
-def test_construct_expense_report_payload(create_expense_report):
+def test_construct_expense_report_payload(db, create_expense_report):
     """
     Test construct_expense_report_payload creates correct payload
     """
@@ -30,8 +27,7 @@ def test_construct_expense_report_payload(create_expense_report):
     assert len(payload['lines']) == len(expense_report_lineitems)
 
 
-@pytest.mark.django_db
-def test_construct_expense_report_payload_without_supdoc_id(create_expense_report):
+def test_construct_expense_report_payload_without_supdoc_id(db, create_expense_report):
     """
     Test construct_expense_report_payload when supdoc_id is None
     """
@@ -50,8 +46,7 @@ def test_construct_expense_report_payload_without_supdoc_id(create_expense_repor
     assert payload['attachment']['id'] is None
 
 
-@pytest.mark.django_db
-def test_construct_expense_report_line_item_payload(create_expense_report):
+def test_construct_expense_report_line_item_payload(db, create_expense_report):
     """
     Test construct_expense_report_line_item_payload creates correct line item payload
     """
@@ -73,8 +68,7 @@ def test_construct_expense_report_line_item_payload(create_expense_report):
             assert key in payload['dimensions']
 
 
-@pytest.mark.django_db
-def test_construct_expense_report_line_item_payload_with_expense_type(create_expense_report):
+def test_construct_expense_report_line_item_payload_with_expense_type(db, create_expense_report):
     """
     Test construct_expense_report_line_item_payload with expense_type_id
     """
@@ -96,8 +90,7 @@ def test_construct_expense_report_line_item_payload_with_expense_type(create_exp
         assert payload['glAccount']['id'] is None
 
 
-@pytest.mark.django_db
-def test_construct_expense_report_line_item_payload_with_gl_account(create_expense_report):
+def test_construct_expense_report_line_item_payload_with_gl_account(db, create_expense_report):
     """
     Test construct_expense_report_line_item_payload with gl_account_number
     """
@@ -119,8 +112,7 @@ def test_construct_expense_report_line_item_payload_with_gl_account(create_expen
         assert payload['glAccount']['id'] == 'GL_ACC_001'
 
 
-@pytest.mark.django_db
-def test_construct_expense_report_line_item_payload_with_tax(create_expense_report):
+def test_construct_expense_report_line_item_payload_with_tax(db, create_expense_report):
     """
     Test construct_expense_report_line_item_payload with tax code and amount
     """

@@ -888,4 +888,66 @@ data = {
     'reimbursement_line_item_expected_keys': ['key', 'paymentamount'],
     'ap_payment_payload_expected_keys': ['financialEntity', 'paymentDate', 'description', 'baseCurrency', 'txnCurrency', 'paymentMethod', 'vendor', 'details'],
     'ap_payment_detail_expected_keys': ['txnCurrency', 'bill'],
+    'sage_intacct_rest_error_response': {
+        "ia::result": {
+            "ia::error": {
+                "code": "operationFailed",
+                "message": "POST request on objects/general-ledger/journal-entry object was unsuccessful",
+                "errorId": "REST-7001",
+                "additionalInfo": {
+                    "messageId": "IA.REQUEST_ON_OBJECT_FAILED",
+                    "placeholders": {
+                        "OPERATION": "POST",
+                        "RESOURCE_NAME": "objects/general-ledger/journal-entry"
+                    },
+                    "propertySet": {}
+                },
+                "supportId": "VXx2JWEB353%7EaTwyuP5M0Zo47mG-oN5_4wAAACg",
+                "details": [
+                    {
+                        "errorId": "GL-0951",
+                        "code": "unableToCreateRecordError",
+                        "message": "Could not create GLBatch record.",
+                        "additionalInfo": {
+                            "messageId": "IA.COULD_NOT_CREATE_GLBATCH_RECORD",
+                            "placeholders": {},
+                            "propertySet": {}
+                        }
+                    },
+                    {
+                        "errorId": "GL-1009",
+                        "code": "invalidConfiguration",
+                        "message": "Transactions do not balance for Place ,",
+                        "additionalInfo": {
+                            "messageId": "IA.TRANSACTIONS_DO_NOT_BALANCE_FOR",
+                            "placeholders": {
+                                "RENAMED_TEXT": "Place",
+                                "ERR_STR": ", "
+                            },
+                            "propertySet": {}
+                        }
+                    }
+                ]
+            }
+        },
+        "ia::meta": {
+            "totalCount": 1,
+            "totalSuccess": 0,
+            "totalError": 1
+        }
+    },
+    'sage_intacct_rest_error_response_no_details': {
+        "ia::result": {
+            "ia::error": {
+                "code": "operationFailed",
+                "message": "Something went wrong with the export",
+                "errorId": "REST-7001"
+            }
+        },
+        "ia::meta": {
+            "totalCount": 1,
+            "totalSuccess": 0,
+            "totalError": 1
+        }
+    },
 }

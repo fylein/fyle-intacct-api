@@ -1,12 +1,10 @@
-import pytest
 from datetime import datetime
 
 from apps.sage_intacct.exports.reimbursements import construct_reimbursement_payload
 from tests.test_sageintacct.fixtures import data
 
 
-@pytest.mark.django_db
-def test_construct_reimbursement_payload(create_sage_intacct_reimbursement):
+def test_construct_reimbursement_payload(db, create_sage_intacct_reimbursement):
     """
     Test construct_reimbursement_payload creates correct payload
     """
@@ -31,8 +29,7 @@ def test_construct_reimbursement_payload(create_sage_intacct_reimbursement):
     assert 'eppaymentrequestitem' in payload['eppaymentrequestitems']
 
 
-@pytest.mark.django_db
-def test_construct_reimbursement_payload_line_items(create_sage_intacct_reimbursement):
+def test_construct_reimbursement_payload_line_items(db, create_sage_intacct_reimbursement):
     """
     Test construct_reimbursement_payload creates correct line item structure
     """
@@ -56,8 +53,7 @@ def test_construct_reimbursement_payload_line_items(create_sage_intacct_reimburs
         assert line_item['paymentamount'] == reimbursement_lineitems[i].amount
 
 
-@pytest.mark.django_db
-def test_construct_reimbursement_payload_payment_date(create_sage_intacct_reimbursement):
+def test_construct_reimbursement_payload_payment_date(db, create_sage_intacct_reimbursement):
     """
     Test construct_reimbursement_payload has correct payment date format
     """
