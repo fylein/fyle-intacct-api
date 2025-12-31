@@ -100,7 +100,7 @@ def schedule_journal_entries_creation(
     :param workspace_id: workspace id
     :return: None
     """
-    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT'])
     if is_auto_export:
         q_filter = q_filter | Q(tasklog__is_retired=False)
 
@@ -141,7 +141,7 @@ def schedule_journal_entries_creation(
                     'triggered_by': triggered_by
                 }
             )
-            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'ENQUEUED'
                 if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by
@@ -182,7 +182,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
     :param workspace_id: workspace id
     :return: None
     """
-    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT'])
     if is_auto_export:
         q_filter = q_filter | Q(tasklog__is_retired=False)
 
@@ -216,7 +216,7 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
                     'triggered_by': triggered_by
                 }
             )
-            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'ENQUEUED'
                 if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by
@@ -238,7 +238,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
     :param workspace_id: workspace id
     :return: None
     """
-    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT'])
     if is_auto_export:
         q_filter = q_filter | Q(tasklog__is_retired=False)
 
@@ -278,7 +278,7 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
                     'triggered_by': triggered_by
                 }
             )
-            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'ENQUEUED'
                 if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by
@@ -300,7 +300,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
     :param workspace_id: workspace id
     :return: None
     """
-    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE'])
+    q_filter = Q(tasklog__id__isnull=True) | ~Q(tasklog__status__in=['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT'])
     if is_auto_export:
         q_filter = q_filter | Q(tasklog__is_retired=False)
 
@@ -341,7 +341,7 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
                     'triggered_by': triggered_by
                 }
             )
-            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'ENQUEUED', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'ENQUEUED'
                 if triggered_by and task_log.triggered_by != triggered_by:
                     task_log.triggered_by = triggered_by

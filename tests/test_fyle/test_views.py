@@ -27,6 +27,37 @@ def test_exportable_expense_group_view(api_client, test_connection):
     assert response['exportable_expense_group_ids'] == [1, 2, 3]
 
 
+def test_exportable_expense_group_view_excludes_exported_to_intacct(api_client, test_connection, db):
+    """
+    Test that exportable expense group view excludes expense groups with tasklog status EXPORTED_TO_INTACCT
+    """
+    access_token = test_connection.access_token
+    url = '/api/workspaces/1/fyle/exportable_expense_groups/'
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(access_token))
+
+    # Get existing task log for expense group 1 and update its status
+    from apps.fyle.models import ExpenseGroup
+    expense_group = ExpenseGroup.objects.get(id=1)
+    task_log = TaskLog.objects.filter(expense_group=expense_group).first()
+    if task_log:
+        task_log.status = 'EXPORTED_TO_INTACCT'
+        task_log.save()
+    else:
+        task_log = TaskLog.objects.create(
+            workspace_id=1,
+            expense_group=expense_group,
+            type='CREATING_BILL',
+            status='EXPORTED_TO_INTACCT'
+        )
+
+    response = api_client.get(url)
+    assert response.status_code == 200
+
+    response = json.loads(response.content)
+    # Expense group 1 should be excluded due to EXPORTED_TO_INTACCT status
+    assert 1 not in response['exportable_expense_group_ids']
+
+
 def test_expense_group_view(api_client, test_connection):
     """
     Test expense group view

@@ -394,7 +394,7 @@ class ExportableExpenseGroupsView(generics.RetrieveAPIView):
             workspace_id=self.kwargs['workspace_id'],
             exported_at__isnull=True,
             fund_source__in=fund_source
-        ).values_list('id', flat=True)
+        ).exclude(tasklog__status='EXPORTED_TO_INTACCT').values_list('id', flat=True)
 
         return Response(
             data={'exportable_expense_group_ids': expense_group_ids},

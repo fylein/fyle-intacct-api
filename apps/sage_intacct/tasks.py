@@ -714,7 +714,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
             worker_logger.info('Creating Journal Entry for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'IN_PROGRESS'
                 task_log.save()
             else:
@@ -766,6 +766,9 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
 
+        is_exported_to_intacct = False
+        created_journal_entry = None
+
         with transaction.atomic():
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group, task_log.supdoc_id)
@@ -773,6 +776,9 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration, sage_intacct_connection)
 
             created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object, journal_entry_lineitem_object)
+
+            is_exported_to_intacct = True
+
             worker_logger.info('Created Journal Entry with Expense Group %s successfully', expense_group.id)
 
             worker_logger.info('Created Journal Entry with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_journal_entry)
@@ -782,10 +788,6 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             task_log.status = 'COMPLETE'
 
             task_log.save()
-
-            expense_group.exported_at = datetime.now()
-            expense_group.export_type = 'JOURNAL_ENTRY'
-            expense_group.save()
 
             worker_logger.info('Fetching Journal Entry Record Number with Expense Group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
@@ -896,10 +898,16 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
     except Exception:
         error = traceback.format_exc()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
-        task_log.detail = {
+        detail = {
             'error': error
         }
-        task_log.status = 'FATAL'
+
+        if is_exported_to_intacct and created_journal_entry:
+            detail['created_journal_entry'] = created_journal_entry
+
+        task_log.detail = detail
+        task_log.status = 'FATAL' if not is_exported_to_intacct else 'EXPORTED_TO_INTACCT'
+        task_log.journal_entry = None
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
@@ -926,7 +934,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
             worker_logger.info('Creating Expense Report for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'IN_PROGRESS'
                 task_log.save()
             else:
@@ -974,6 +982,9 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
 
+        is_exported_to_intacct = False
+        created_expense_report = None
+
         with transaction.atomic():
 
             expense_report_object = ExpenseReport.create_expense_report(expense_group, task_log.supdoc_id)
@@ -983,7 +994,12 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             )
 
             created_expense_report = sage_intacct_connection.post_expense_report(
-                expense_report_object, expense_report_lineitems_objects)
+                expense_report_object,
+                expense_report_lineitems_objects
+            )
+
+            is_exported_to_intacct = True
+
             worker_logger.info('Created Expense Report with Expense Group %s successfully', expense_group.id)
 
             worker_logger.info('Created Expense Report with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_expense_report)
@@ -1100,10 +1116,15 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
     except Exception:
         error = traceback.format_exc()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
-        task_log.detail = {
+        detail = {
             'error': error
         }
-        task_log.status = 'FATAL'
+        if is_exported_to_intacct and created_expense_report:
+            detail['created_expense_report'] = created_expense_report
+
+        task_log.detail = detail
+        task_log.status = 'FATAL' if not is_exported_to_intacct else 'EXPORTED_TO_INTACCT'
+        task_log.expense_report = None
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
@@ -1134,7 +1155,7 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
             worker_logger.info('Creating Bill for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'IN_PROGRESS'
                 task_log.save()
             else:
@@ -1182,13 +1203,21 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
 
+        is_exported_to_intacct = False
+        created_bill = None
+
         with transaction.atomic():
             bill_object = Bill.create_bill(expense_group, task_log.supdoc_id)
 
             bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group, configuration)
 
-            created_bill = sage_intacct_connection.post_bill(bill_object, \
-                                                             bill_lineitems_objects)
+            created_bill = sage_intacct_connection.post_bill(
+                bill_object,
+                bill_lineitems_objects
+            )
+
+            is_exported_to_intacct = True
+
             worker_logger.info('Created Bill with Expense Group %s successfully', expense_group.id)
 
             worker_logger.info('Created Bill with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_bill)
@@ -1299,10 +1328,16 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
     except Exception:
         error = traceback.format_exc()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
-        task_log.detail = {
+        detail = {
             'error': error
         }
-        task_log.status = 'FATAL'
+
+        if is_exported_to_intacct and created_bill:
+            detail['created_bill'] = created_bill
+
+        task_log.detail = detail
+        task_log.status = 'FATAL' if not is_exported_to_intacct else 'EXPORTED_TO_INTACCT'
+        task_log.bill = None
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
@@ -1332,7 +1367,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             expense_group = ExpenseGroup.objects.get(id=expense_group_id, workspace_id=task_log.workspace_id)
             worker_logger.info('Creating Charge Card Transaction for Expense Group %s, current state is %s, triggered by %s, called from %s', expense_group.id, task_log.status, task_log.triggered_by, called_from)
 
-            if task_log.status not in ['IN_PROGRESS', 'COMPLETE']:
+            if task_log.status not in ['IN_PROGRESS', 'COMPLETE', 'EXPORTED_TO_INTACCT']:
                 task_log.status = 'IN_PROGRESS'
                 task_log.save()
             else:
@@ -1377,6 +1412,9 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
 
+        is_exported_to_intacct = False
+        created_charge_card_transaction = None
+
         with transaction.atomic():
 
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id, task_log.supdoc_id)
@@ -1385,7 +1423,12 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
                 create_charge_card_transaction_lineitems(expense_group, configuration, sage_intacct_connection)
 
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
-                charge_card_transaction_object, charge_card_transaction_lineitems_objects)
+                charge_card_transaction_object,
+                charge_card_transaction_lineitems_objects
+            )
+
+            is_exported_to_intacct = True
+
             worker_logger.info('Created Charge Card Transaction with Expense Group %s successfully', expense_group.id)
 
             worker_logger.info('Created Charge Card Transaction with Expense Group %s for workspace id %s with response %s', expense_group.id, expense_group.workspace_id, created_charge_card_transaction)
@@ -1505,10 +1548,15 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
     except Exception:
         error = traceback.format_exc()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
-        task_log.detail = {
+        detail = {
             'error': error
         }
-        task_log.status = 'FATAL'
+        if is_exported_to_intacct and created_charge_card_transaction:
+            detail['created_charge_card_transaction'] = created_charge_card_transaction
+
+        task_log.detail = detail
+        task_log.status = 'FATAL' if not is_exported_to_intacct else 'EXPORTED_TO_INTACCT'
+        task_log.charge_card_transaction = None
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
