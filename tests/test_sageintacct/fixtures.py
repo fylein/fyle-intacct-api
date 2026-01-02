@@ -871,5 +871,83 @@ data = {
         {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
         {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Bond', 'is_enabled': True},
         {'parent_expense_field_id': 379240, 'parent_expense_field_value': 'Administrative', 'expense_field_id': 379241, 'expense_field_value': 'Contingency Costs', 'is_enabled': True},
-    ]
+    ],
+    'bill_payload_expected_keys': ['createdDate', 'vendor', 'billNumber', 'dueDate', 'currency', 'attachment', 'lines'],
+    'bill_line_item_expected_keys': ['glAccount', 'txnAmount', 'totalTxnAmount', 'memo', 'dimensions', 'taxEntries'],
+    'bill_dimensions_expected_keys': ['location', 'department', 'project', 'customer'],
+    'expense_report_payload_expected_keys': ['state', 'createdDate', 'description', 'employee', 'attachment', 'basePayment', 'reimbursement', 'lines'],
+    'expense_report_line_item_expected_keys': ['txnAmount', 'entryDate', 'paidTo', 'dimensions'],
+    'expense_report_dimensions_expected_keys': ['location', 'department', 'project'],
+    'charge_card_transaction_payload_expected_keys': ['creditCardAccount', 'txnDate', 'referenceNumber', 'payee', 'description', 'currency', 'lines'],
+    'charge_card_transaction_line_item_expected_keys': ['glAccount', 'description', 'txnAmount', 'totalTxnAmount', 'dimensions', 'taxEntries', 'isBillable'],
+    'charge_card_transaction_dimensions_expected_keys': ['department', 'location', 'customer', 'project'],
+    'journal_entry_payload_expected_keys': ['glJournal', 'postingDate', 'description', 'attachment', 'lines'],
+    'journal_entry_debit_line_expected_keys': ['txnType', 'txnAmount', 'isBillable', 'description', 'glAccount', 'allocation', 'dimensions'],
+    'journal_entry_credit_line_expected_keys': ['txnType', 'txnAmount', 'glAccount', 'description', 'dimensions'],
+    'reimbursement_payload_expected_keys': ['bankaccountid', 'employeeid', 'memo', 'paymentmethod', 'paymentdate', 'eppaymentrequestitems', 'paymentdescription'],
+    'reimbursement_line_item_expected_keys': ['key', 'paymentamount'],
+    'ap_payment_payload_expected_keys': ['financialEntity', 'paymentDate', 'description', 'baseCurrency', 'txnCurrency', 'paymentMethod', 'vendor', 'details'],
+    'ap_payment_detail_expected_keys': ['txnCurrency', 'bill'],
+    'sage_intacct_rest_error_response': {
+        "ia::result": {
+            "ia::error": {
+                "code": "operationFailed",
+                "message": "POST request on objects/general-ledger/journal-entry object was unsuccessful",
+                "errorId": "REST-7001",
+                "additionalInfo": {
+                    "messageId": "IA.REQUEST_ON_OBJECT_FAILED",
+                    "placeholders": {
+                        "OPERATION": "POST",
+                        "RESOURCE_NAME": "objects/general-ledger/journal-entry"
+                    },
+                    "propertySet": {}
+                },
+                "supportId": "VXx2JWEB353%7EaTwyuP5M0Zo47mG-oN5_4wAAACg",
+                "details": [
+                    {
+                        "errorId": "GL-0951",
+                        "code": "unableToCreateRecordError",
+                        "message": "Could not create GLBatch record.",
+                        "additionalInfo": {
+                            "messageId": "IA.COULD_NOT_CREATE_GLBATCH_RECORD",
+                            "placeholders": {},
+                            "propertySet": {}
+                        }
+                    },
+                    {
+                        "errorId": "GL-1009",
+                        "code": "invalidConfiguration",
+                        "message": "Transactions do not balance for Place ,",
+                        "additionalInfo": {
+                            "messageId": "IA.TRANSACTIONS_DO_NOT_BALANCE_FOR",
+                            "placeholders": {
+                                "RENAMED_TEXT": "Place",
+                                "ERR_STR": ", "
+                            },
+                            "propertySet": {}
+                        }
+                    }
+                ]
+            }
+        },
+        "ia::meta": {
+            "totalCount": 1,
+            "totalSuccess": 0,
+            "totalError": 1
+        }
+    },
+    'sage_intacct_rest_error_response_no_details': {
+        "ia::result": {
+            "ia::error": {
+                "code": "operationFailed",
+                "message": "Something went wrong with the export",
+                "errorId": "REST-7001"
+            }
+        },
+        "ia::meta": {
+            "totalCount": 1,
+            "totalSuccess": 0,
+            "totalError": 1
+        }
+    },
 }
