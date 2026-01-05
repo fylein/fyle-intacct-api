@@ -858,8 +858,6 @@ class SageIntacctConnector:
             return
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
-        if latest_updated_at:
-            attribute_count = self.connection.allocations.count(updated_at=latest_updated_at)
 
         allocation_attributes = []
         params = {}
