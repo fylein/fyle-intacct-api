@@ -1955,7 +1955,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                         charge_card_transaction_payload = construct_charge_card_transaction_payload(
                             workspace_id=self.workspace_id,
                             charge_card_transaction=charge_card_transaction,
-                            charge_card_transaction_lineitems=charge_card_transaction_line_items
+                            charge_card_transaction_line_items=charge_card_transaction_line_items
                         )
                         charge_card_transaction_payload['txnDate'] = first_day_of_month.strftime('%Y-%m-%d')
                         created_charge_card_transaction = self.connection.charge_card_transactions.post(charge_card_transaction_payload)

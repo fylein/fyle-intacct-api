@@ -1,4 +1,5 @@
 import pytest
+from unittest import mock
 
 from datetime import datetime
 
@@ -6,7 +7,7 @@ from fyle_accounting_mappings.models import ExpenseAttribute, DestinationAttribu
 
 from apps.tasks.models import TaskLog
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import Configuration
+from apps.workspaces.models import Configuration, Workspace, IntacctSyncedTimestamp
 from apps.fyle.models import (
     Expense,
     ExpenseGroup,
@@ -25,7 +26,8 @@ from apps.sage_intacct.models import (
     ChargeCardTransactionLineitem,
     APPayment,
     APPaymentLineitem,
-    CostType
+    CostType,
+    SageIntacctAttributesCount,
 )
 
 
@@ -341,3 +343,136 @@ def add_project_mappings(db):
             active=True,
             code='10064'
         )
+
+
+@pytest.fixture
+def mock_intacct_sdk():
+    """Mock the IntacctRESTSDK"""
+    with mock.patch('apps.sage_intacct.connector.IntacctRESTSDK') as mock_sdk:
+        mock_instance = mock.Mock()
+        mock_instance.access_token = 'mock_access_token'
+        mock_instance.access_token_expires_in = 21600
+        mock_sdk.return_value = mock_instance
+        yield mock_sdk, mock_instance
+
+
+@pytest.fixture
+def mock_sage_intacct_sdk():
+    """Mock the SageIntacctSDK"""
+    with mock.patch('apps.sage_intacct.connector.SageIntacctSDK') as mock_sdk:
+        mock_instance = mock.Mock()
+        mock_sdk.return_value = mock_instance
+        yield mock_sdk, mock_instance
+
+
+@pytest.fixture
+def create_intacct_synced_timestamp(db):
+    """Create IntacctSyncedTimestamp for workspace_id=1"""
+    timestamp, _ = IntacctSyncedTimestamp.objects.get_or_create(
+        workspace_id=1,
+        defaults={
+            'account_synced_at': None,
+            'vendor_synced_at': None,
+            'customer_synced_at': None,
+            'class_synced_at': None,
+            'employee_synced_at': None,
+            'item_synced_at': None,
+            'location_synced_at': None,
+            'department_synced_at': None,
+            'project_synced_at': None,
+            'expense_type_synced_at': None,
+            'location_entity_synced_at': None,
+            'payment_account_synced_at': None,
+            'expense_payment_type_synced_at': None,
+            'allocation_synced_at': None,
+            'tax_detail_synced_at': None,
+        }
+    )
+    return timestamp
+
+
+@pytest.fixture
+def create_sage_intacct_attributes_count(db):
+    """Create SageIntacctAttributesCount for workspace_id=1"""
+    workspace = Workspace.objects.get(id=1)
+    count, _ = SageIntacctAttributesCount.objects.get_or_create(
+        workspace=workspace,
+        defaults={
+            'accounts_count': 0,
+            'vendors_count': 0,
+        }
+    )
+    return count
+
+
+@pytest.fixture
+def create_existing_vendor_attribute(db):
+    """Create an existing VENDOR DestinationAttribute for testing"""
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=1,
+        attribute_type='VENDOR',
+        value='Existing Vendor',
+        destination_id='VND_EXISTING',
+        active=True
+    )
+    return attribute
+
+
+@pytest.fixture
+def create_tax_detail_attribute(db):
+    """
+    Create TAX_DETAIL DestinationAttribute for tax calculations
+    """
+    workspace_id = 1
+
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='TAX_DETAIL',
+        display_name='Tax Detail',
+        value='GST 10%',
+        destination_id='TAX001',
+        detail={'tax_rate': 10},
+        active=True
+    )
+
+    return attribute
+
+
+@pytest.fixture
+def create_tax_detail_with_solution_id(db):
+    """
+    Create TAX_DETAIL DestinationAttribute with tax_solution_id
+    """
+    workspace_id = 1
+
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='TAX_DETAIL',
+        display_name='Tax Detail',
+        value='TestTaxCode',
+        destination_id='TAX_TEST',
+        detail={'tax_solution_id': 'TAX_SOL_001'},
+        active=True
+    )
+
+    return attribute
+
+
+@pytest.fixture
+def create_allocation_attribute(db):
+    """
+    Create ALLOCATION DestinationAttribute for allocation tests
+    """
+    workspace_id = 1
+
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='ALLOCATION',
+        display_name='Allocation',
+        value='ALLOC001',
+        destination_id='ALLOC001',
+        detail={'location': 'LOC001', 'department': 'DEPT001'},
+        active=True
+    )
+
+    return attribute

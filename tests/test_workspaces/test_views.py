@@ -9,6 +9,11 @@ from fyle.platform import exceptions as fyle_exc
 from fyle_accounting_mappings.models import MappingSetting
 from fyle_rest_auth.utils import AuthUtils
 from sageintacctsdk import exceptions as sage_intacct_exc
+from intacctsdk.exceptions import (
+    BadRequestError as SageIntacctRESTBadRequestError,
+    InvalidTokenError as SageIntacctRestInvalidTokenError,
+    InternalServerError as SageIntacctRESTInternalServerError
+)
 
 from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.tasks.models import TaskLog
@@ -755,3 +760,228 @@ def test_import_code_field_view(db, mocker, api_client, test_connection):
         'ACCOUNT': True,
         'DEPARTMENT': True
     }
+
+
+def test_handle_sage_intacct_rest_api_connection_new_credentials(mocker, api_client, test_connection):
+    """
+    Test handle_sage_intacct_rest_api_connection creates new credentials
+    """
+    workspace_id = 1
+
+    # Enable migrated_to_rest_api feature
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.migrated_to_rest_api = True
+    feature_config.save()
+
+    # Delete existing credentials
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    # Mock IntacctRESTSDK
+    mock_sdk_instance = mocker.MagicMock()
+    mock_sdk_instance.access_token = 'test_access_token'
+    mock_sdk_instance.access_token_expires_in = 21600
+    mock_sdk_instance.attachment_folders.get_all_generator.return_value = iter([[]])
+
+    mocker.patch('apps.workspaces.views.IntacctRESTSDK', return_value=mock_sdk_instance)
+
+    url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.post(
+        url,
+        data={
+            'si_user_id': 'test_user',
+            'si_company_id': 'test_company',
+            'si_company_name': 'Test Company'
+        }
+    )
+
+    assert response.status_code == 200
+
+    # Verify credentials were created
+    credentials = SageIntacctCredential.objects.filter(workspace_id=workspace_id).first()
+    assert credentials is not None
+    assert credentials.si_user_id == 'test_user'
+    assert credentials.si_company_id == 'test_company'
+    assert credentials.access_token == 'test_access_token'
+
+    # Reset feature config
+    feature_config.migrated_to_rest_api = False
+    feature_config.save()
+
+
+def test_handle_sage_intacct_rest_api_connection_existing_credentials(mocker, api_client, test_connection):
+    """
+    Test handle_sage_intacct_rest_api_connection updates existing credentials
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+
+    # Enable migrated_to_rest_api feature
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.migrated_to_rest_api = True
+    feature_config.save()
+
+    # Create existing credentials
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+    SageIntacctCredential.objects.create(
+        workspace=workspace,
+        si_user_id='old_user',
+        si_company_id='old_company',
+        si_company_name='Old Company',
+        access_token='old_token',
+        is_expired=True
+    )
+
+    # Mock IntacctRESTSDK
+    mock_sdk_instance = mocker.MagicMock()
+    mock_sdk_instance.access_token = 'new_access_token'
+    mock_sdk_instance.access_token_expires_in = 21600
+    mock_sdk_instance.attachment_folders.get_all_generator.return_value = iter([[]])
+
+    mocker.patch('apps.workspaces.views.IntacctRESTSDK', return_value=mock_sdk_instance)
+    mocker.patch('apps.workspaces.views.patch_integration_settings')
+
+    url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.post(
+        url,
+        data={
+            'si_user_id': 'new_user',
+            'si_company_id': 'new_company',
+            'si_company_name': 'New Company'
+        }
+    )
+
+    assert response.status_code == 200
+
+    # Verify credentials were updated
+    credentials = SageIntacctCredential.objects.filter(workspace_id=workspace_id).first()
+    assert credentials.si_user_id == 'new_user'
+    assert credentials.si_company_id == 'new_company'
+    assert credentials.si_company_name == 'New Company'
+    assert credentials.access_token == 'new_access_token'
+    assert credentials.is_expired is False
+
+    # Reset feature config
+    feature_config.migrated_to_rest_api = False
+    feature_config.save()
+
+
+def test_handle_sage_intacct_rest_api_connection_invalid_token_error(mocker, api_client, test_connection):
+    """
+    Test handle_sage_intacct_rest_api_connection handles invalid token error
+    """
+    workspace_id = 1
+
+    # Enable migrated_to_rest_api feature
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.migrated_to_rest_api = True
+    feature_config.save()
+
+    # Delete existing credentials to trigger new connection path
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    # Mock IntacctRESTSDK to raise InvalidTokenError
+    mocker.patch(
+        'apps.workspaces.views.IntacctRESTSDK',
+        side_effect=SageIntacctRestInvalidTokenError('Invalid credentials', 'Invalid token response')
+    )
+
+    url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.post(
+        url,
+        data={
+            'si_user_id': 'test_user',
+            'si_company_id': 'test_company',
+            'si_company_name': 'Test Company'
+        }
+    )
+
+    assert response.status_code == 401
+
+    # Reset feature config
+    feature_config.migrated_to_rest_api = False
+    feature_config.save()
+
+
+def test_handle_sage_intacct_rest_api_connection_bad_request_error(mocker, api_client, test_connection):
+    """
+    Test handle_sage_intacct_rest_api_connection handles bad request error
+    """
+    workspace_id = 1
+
+    # Enable migrated_to_rest_api feature
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.migrated_to_rest_api = True
+    feature_config.save()
+
+    # Delete existing credentials to trigger new connection path
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    # Mock IntacctRESTSDK to raise BadRequestError
+    mocker.patch(
+        'apps.workspaces.views.IntacctRESTSDK',
+        side_effect=SageIntacctRESTBadRequestError('Bad request', 'Invalid request data')
+    )
+
+    url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.post(
+        url,
+        data={
+            'si_user_id': 'test_user',
+            'si_company_id': 'test_company',
+            'si_company_name': 'Test Company'
+        }
+    )
+
+    assert response.status_code == 400
+
+    # Reset feature config
+    feature_config.migrated_to_rest_api = False
+    feature_config.save()
+
+
+def test_handle_sage_intacct_rest_api_connection_internal_server_error(mocker, api_client, test_connection):
+    """
+    Test handle_sage_intacct_rest_api_connection handles internal server error
+    """
+    workspace_id = 1
+
+    # Enable migrated_to_rest_api feature
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.migrated_to_rest_api = True
+    feature_config.save()
+
+    # Delete existing credentials to trigger new connection path
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    # Mock IntacctRESTSDK to raise InternalServerError
+    mocker.patch(
+        'apps.workspaces.views.IntacctRESTSDK',
+        side_effect=SageIntacctRESTInternalServerError('Internal server error', 'Server error response')
+    )
+
+    url = '/api/workspaces/{}/credentials/sage_intacct/'.format(workspace_id)
+    api_client.credentials(HTTP_AUTHORIZATION='Bearer {}'.format(test_connection.access_token))
+
+    response = api_client.post(
+        url,
+        data={
+            'si_user_id': 'test_user',
+            'si_company_id': 'test_company',
+            'si_company_name': 'Test Company'
+        }
+    )
+
+    assert response.status_code == 401
+    assert response.data['message'] == 'Something went wrong while connecting to Sage Intacct'
+
+    # Reset feature config
+    feature_config.migrated_to_rest_api = False
+    feature_config.save()
