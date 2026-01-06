@@ -403,3 +403,76 @@ def create_sage_intacct_attributes_count(db):
         }
     )
     return count
+
+
+@pytest.fixture
+def create_existing_vendor_attribute(db):
+    """Create an existing VENDOR DestinationAttribute for testing"""
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=1,
+        attribute_type='VENDOR',
+        value='Existing Vendor',
+        destination_id='VND_EXISTING',
+        active=True
+    )
+    return attribute
+
+
+@pytest.fixture
+def create_tax_detail_attribute(db):
+    """
+    Create TAX_DETAIL DestinationAttribute for tax calculations
+    """
+    workspace_id = 1
+
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='TAX_DETAIL',
+        display_name='Tax Detail',
+        value='GST 10%',
+        destination_id='TAX001',
+        detail={'tax_rate': 10},
+        active=True
+    )
+
+    return attribute
+
+
+@pytest.fixture
+def create_tax_detail_with_solution_id(db):
+    """
+    Create TAX_DETAIL DestinationAttribute with tax_solution_id
+    """
+    workspace_id = 1
+
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='TAX_DETAIL',
+        display_name='Tax Detail',
+        value='TestTaxCode',
+        destination_id='TAX_TEST',
+        detail={'tax_solution_id': 'TAX_SOL_001'},
+        active=True
+    )
+
+    return attribute
+
+
+@pytest.fixture
+def create_allocation_attribute(db):
+    """
+    Create ALLOCATION DestinationAttribute for allocation tests
+    """
+    workspace_id = 1
+
+    attribute = DestinationAttribute.objects.create(
+        workspace_id=workspace_id,
+        attribute_type='ALLOCATION',
+        display_name='Allocation',
+        value='ALLOC001',
+        destination_id='ALLOC001',
+        detail={'location': 'LOC001', 'department': 'DEPT001'},
+        active=True
+    )
+
+    return attribute

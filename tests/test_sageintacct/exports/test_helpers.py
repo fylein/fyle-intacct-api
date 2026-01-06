@@ -1,8 +1,6 @@
 from datetime import datetime
 from unittest.mock import Mock
 
-from fyle_accounting_mappings.models import DestinationAttribute
-
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.workspaces.models import Configuration
@@ -36,21 +34,11 @@ def test_format_transaction_date_with_datetime(db):
     assert result == '2024-01-15'
 
 
-def test_get_tax_exclusive_amount_with_tax_attribute(db):
+def test_get_tax_exclusive_amount_with_tax_attribute(db, create_tax_detail_attribute):
     """
     Test get_tax_exclusive_amount with tax attribute present
     """
     workspace_id = 1
-
-    DestinationAttribute.objects.create(
-        workspace_id=workspace_id,
-        attribute_type='TAX_DETAIL',
-        display_name='Tax Detail',
-        value='GST 10%',
-        destination_id='TAX001',
-        detail={'tax_rate': 10},
-        active=True
-    )
 
     tax_exclusive_amount, tax_amount = get_tax_exclusive_amount(
         workspace_id=workspace_id,
@@ -98,7 +86,7 @@ def test_get_tax_solution_id_or_none_with_location_entity(db):
         assert result is None
 
 
-def test_get_tax_solution_id_or_none_with_tax_code(db):
+def test_get_tax_solution_id_or_none_with_tax_code(db, create_tax_detail_with_solution_id):
     """
     Test get_tax_solution_id_or_none when tax code is present in line item
     """
@@ -108,16 +96,6 @@ def test_get_tax_solution_id_or_none_with_tax_code(db):
     general_mappings.location_entity_id = None
     general_mappings.default_tax_code_name = 'Default Tax'
     general_mappings.save()
-
-    DestinationAttribute.objects.create(
-        workspace_id=workspace_id,
-        attribute_type='TAX_DETAIL',
-        display_name='Tax Detail',
-        value='TestTaxCode',
-        destination_id='TAX_TEST',
-        detail={'tax_solution_id': 'TAX_SOL_001'},
-        active=True
-    )
 
     mock_line_item = Mock()
     mock_line_item.tax_code = 'TestTaxCode'

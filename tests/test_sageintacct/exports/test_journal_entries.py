@@ -1,7 +1,5 @@
 from unittest import mock
 
-from fyle_accounting_mappings.models import DestinationAttribute
-
 from apps.workspaces.models import Configuration
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.exports.journal_entries import (
@@ -34,7 +32,7 @@ def test_construct_journal_entry_payload(db, create_journal_entry):
     for key in data['journal_entry_payload_expected_keys']:
         assert key in payload
     assert payload['glJournal']['id'] == 'FYLE_JE'
-    assert len(payload['lines']) > 0
+    assert len(payload['lines']) == len(journal_entry_lineitems) * 2
 
 
 def test_construct_journal_entry_payload_with_tax_codes(db, create_journal_entry):
@@ -148,22 +146,12 @@ def test_construct_debit_line_payload_with_negative_amount(db, create_journal_en
         assert payload['txnType'] == 'credit'
 
 
-def test_construct_debit_line_payload_with_allocation(db, create_journal_entry):
+def test_construct_debit_line_payload_with_allocation(db, create_journal_entry, create_allocation_attribute):
     """
     Test construct_debit_line_payload with allocation
     """
     workspace_id = 1
     _, journal_entry_lineitems = create_journal_entry
-
-    DestinationAttribute.objects.create(
-        workspace_id=workspace_id,
-        attribute_type='ALLOCATION',
-        display_name='Allocation',
-        value='ALLOC001',
-        destination_id='ALLOC001',
-        detail={'location': 'LOC001', 'department': 'DEPT001'},
-        active=True
-    )
 
     general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
 

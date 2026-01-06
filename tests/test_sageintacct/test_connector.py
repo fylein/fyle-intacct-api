@@ -206,6 +206,7 @@ def test_sync_employees(db, mock_intacct_sdk, create_intacct_synced_timestamp, c
     sync_manager.sync_employees()
 
     mock_instance.employees.count.assert_called_once()
+    mock_instance.employees.get_all_generator.assert_called_once()
 
 
 def test_sync_projects(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -231,6 +232,7 @@ def test_sync_projects(db, mock_intacct_sdk, create_intacct_synced_timestamp, cr
     sync_manager.sync_projects()
 
     mock_instance.projects.count.assert_called_once()
+    mock_instance.projects.get_all_generator.assert_called_once()
 
 
 def test_sync_customers(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -248,6 +250,7 @@ def test_sync_customers(db, mock_intacct_sdk, create_intacct_synced_timestamp, c
     sync_manager.sync_customers()
 
     mock_instance.customers.count.assert_called_once()
+    mock_instance.customers.get_all_generator.assert_called_once()
 
 
 def test_sync_classes(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -265,6 +268,7 @@ def test_sync_classes(db, mock_intacct_sdk, create_intacct_synced_timestamp, cre
     sync_manager.sync_classes()
 
     mock_instance.classes.count.assert_called_once()
+    mock_instance.classes.get_all_generator.assert_called_once()
 
 
 def test_sync_locations(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -282,6 +286,7 @@ def test_sync_locations(db, mock_intacct_sdk, create_intacct_synced_timestamp, c
     sync_manager.sync_locations()
 
     mock_instance.locations.count.assert_called_once()
+    mock_instance.locations.get_all_generator.assert_called_once()
 
 
 def test_sync_items(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -299,6 +304,7 @@ def test_sync_items(db, mock_intacct_sdk, create_intacct_synced_timestamp, creat
     sync_manager.sync_items()
 
     mock_instance.items.count.assert_called_once()
+    mock_instance.items.get_all_generator.assert_called_once()
 
 
 def test_sync_tax_details(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -316,6 +322,7 @@ def test_sync_tax_details(db, mock_intacct_sdk, create_intacct_synced_timestamp,
     sync_manager.sync_tax_details()
 
     mock_instance.tax_details.count.assert_called_once()
+    mock_instance.tax_details.get_all_generator.assert_called_once()
 
 
 def test_sync_payment_accounts(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -333,6 +340,7 @@ def test_sync_payment_accounts(db, mock_intacct_sdk, create_intacct_synced_times
     sync_manager.sync_payment_accounts()
 
     mock_instance.checking_accounts.count.assert_called_once()
+    mock_instance.checking_accounts.get_all_generator.assert_called_once()
 
 
 def test_sync_charge_card_accounts(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -350,6 +358,7 @@ def test_sync_charge_card_accounts(db, mock_intacct_sdk, create_intacct_synced_t
     sync_manager.sync_charge_card_accounts()
 
     mock_instance.charge_card_accounts.count.assert_called_once()
+    mock_instance.charge_card_accounts.get_all_generator.assert_called_once()
 
 
 def test_sync_expense_payment_types(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -367,6 +376,7 @@ def test_sync_expense_payment_types(db, mock_intacct_sdk, create_intacct_synced_
     sync_manager.sync_expense_payment_types()
 
     mock_instance.expense_payment_types.count.assert_called_once()
+    mock_instance.expense_payment_types.get_all_generator.assert_called_once()
 
 
 def test_sync_user_defined_dimensions(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -388,6 +398,7 @@ def test_sync_user_defined_dimensions(db, mock_intacct_sdk, create_intacct_synce
     sync_manager.sync_user_defined_dimensions()
 
     mock_instance.dimensions.list.assert_called_once()
+    mock_instance.dimensions.count.assert_not_called()
 
 
 def test_sync_allocations(db, mock_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
@@ -412,6 +423,7 @@ def test_sync_allocations(db, mock_intacct_sdk, create_intacct_synced_timestamp,
     sync_manager.sync_allocations()
 
     mock_instance.allocations.count.assert_called_once()
+    mock_instance.allocations.get_all_generator.assert_called_once()
 
 
 def test_get_bills(db, mock_intacct_sdk):
@@ -517,20 +529,11 @@ def test_create_contact(db, mock_intacct_sdk):
     assert contact['id'] == 'CT123'
 
 
-def test_get_or_create_vendor_existing(db, mock_intacct_sdk):
+def test_get_or_create_vendor_existing(db, mock_intacct_sdk, create_existing_vendor_attribute):
     """
     Test get_or_create_vendor returns existing vendor from database
     """
     _, _ = mock_intacct_sdk
-
-    # Create a vendor in database
-    DestinationAttribute.objects.create(
-        workspace_id=1,
-        attribute_type='VENDOR',
-        value='Existing Vendor',
-        destination_id='VND_EXISTING',
-        active=True
-    )
 
     manager = SageIntacctObjectCreationManager(workspace_id=1)
     vendor = manager.get_or_create_vendor(vendor_name='Existing Vendor')
@@ -700,6 +703,7 @@ def test_get_or_create_attachments_folder(db, mock_intacct_sdk):
     manager.get_or_create_attachments_folder()
 
     mock_instance.attachment_folders.get_all_generator.assert_called_once()
+    mock_instance.attachment_folders.post.assert_called_once()
 
 
 def test_post_attachments(db, mock_intacct_sdk):
@@ -1349,7 +1353,7 @@ def test_sync_location_entities_skipped_when_entity_slide_disabled(db, mock_inta
     mock_rest_instance.location_entities.get_all_generator.assert_not_called()
 
 
-def test_sync_location_entities_handles_exception(db, mock_intacct_sdk, mock_sage_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count):
+def test_sync_location_entities_handles_exception(db, mock_intacct_sdk, mock_sage_intacct_sdk, create_intacct_synced_timestamp, create_sage_intacct_attributes_count, mocker):
     """
     Test syncing location entities handles exception in get_entity_slide_preference
     """
@@ -1360,11 +1364,13 @@ def test_sync_location_entities_handles_exception(db, mock_intacct_sdk, mock_sag
     mock_soap_instance.api_base.format_and_send_request.side_effect = Exception('API Error')
     mock_rest_instance.location_entities.get_all_generator.return_value = iter([[]])
 
+    mock_logger = mocker.patch('apps.sage_intacct.connector.logger')
+
     sync_manager = SageIntacctDimensionSyncManager(workspace_id=1)
     sync_manager.sync_location_entities()
 
-    # Exception is caught and logged, but sync may still proceed
-    assert True
+    # Exception is caught and logged
+    assert mock_logger.exception.called or mock_logger.error.called or mock_logger.info.called
 
 
 def test_get_or_create_vendor_long_name(db, mock_intacct_sdk):
