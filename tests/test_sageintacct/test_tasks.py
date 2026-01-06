@@ -3198,3 +3198,282 @@ def test_check_sage_intacct_object_status_rest_internal_server_error(mocker, db)
     check_sage_intacct_object_status_rest(workspace_id)
 
     mock_check_bill_status.assert_not_called()
+
+
+def test_create_journal_entry_exported_to_intacct_status_on_post_export_failure(mocker, create_task_logs, db):
+    """
+    Test that create_journal_entry sets status to EXPORTED_TO_INTACCT when export succeeds but post-export fails
+    """
+    mocker.patch(
+        'sageintacctsdk.apis.JournalEntries.post',
+        return_value=data['journal_entry_response']
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.load_attachments',
+        return_value=('sdfgh', False)
+    )
+    # Mock get_journal_entry_record_number to raise an exception after export succeeds
+    mocker.patch(
+        'apps.sage_intacct.tasks.get_journal_entry_record_number',
+        side_effect=Exception('Failed to get record number')
+    )
+
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'ENQUEUED'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=3)
+    expenses = expense_group.expenses.all()
+
+    expense_group.id = random.randint(100, 1500000)
+    expense_group.save()
+
+    for expense in expenses:
+        expense.expense_group_id = expense_group.id
+        expense.save()
+
+    expense_group.expenses.set(expenses)
+    expense_group.save()
+
+    create_journal_entry(expense_group.id, task_log.id, True, False)
+
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+    assert 'created_journal_entry' in task_log.detail
+    assert task_log.journal_entry is None
+
+
+def test_create_bill_exported_to_intacct_status_on_post_export_failure(mocker, create_task_logs, db):
+    """
+    Test that create_bill sets status to EXPORTED_TO_INTACCT when export succeeds but post-export fails
+    """
+    mocker.patch(
+        'sageintacctsdk.apis.Bills.post',
+        return_value=data['bill_response']
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.load_attachments',
+        return_value=('sdfgh', False)
+    )
+    # Mock get_bill to raise an exception after export succeeds
+    mocker.patch(
+        'apps.sage_intacct.utils.SageIntacctConnector.get_bill',
+        side_effect=Exception('Failed to get bill')
+    )
+
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'ENQUEUED'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expenses = expense_group.expenses.all()
+
+    expense_group.id = random.randint(100, 1500000)
+    expense_group.save()
+
+    for expense in expenses:
+        expense.expense_group_id = expense_group.id
+        expense.save()
+
+    expense_group.expenses.set(expenses)
+
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+    assert 'created_bill' in task_log.detail
+    assert task_log.bill is None
+
+
+def test_create_expense_report_exported_to_intacct_status_on_post_export_failure(mocker, create_task_logs, db):
+    """
+    Test that create_expense_report sets status to EXPORTED_TO_INTACCT when export succeeds but post-export fails
+    """
+    mocker.patch(
+        'sageintacctsdk.apis.ExpenseReports.post',
+        return_value=data['expense_report_post_response']
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.load_attachments',
+        return_value=('sdfgh', False)
+    )
+    # Mock get_expense_report to raise an exception after export succeeds
+    mocker.patch(
+        'apps.sage_intacct.utils.SageIntacctConnector.get_expense_report',
+        side_effect=Exception('Failed to get expense report')
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
+    )
+
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'ENQUEUED'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expenses = expense_group.expenses.all()
+
+    expense_group.id = random.randint(100, 1500000)
+    expense_group.save()
+
+    for expense in expenses:
+        expense.expense_group_id = expense_group.id
+        expense.save()
+
+    expense_group.expenses.set(expenses)
+
+    create_expense_report(expense_group.id, task_log.id, True, False)
+
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+    assert 'created_expense_report' in task_log.detail
+    assert task_log.expense_report is None
+
+
+def test_create_charge_card_transaction_exported_to_intacct_status_on_post_export_failure(mocker, create_task_logs, db):
+    """
+    Test that create_charge_card_transaction sets status to EXPORTED_TO_INTACCT when export succeeds but post-export fails
+    """
+    mocker.patch(
+        'sageintacctsdk.apis.ChargeCardTransactions.post',
+        return_value=data['credit_card_response']
+    )
+    mocker.patch(
+        'apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor',
+        return_value=DestinationAttribute.objects.get(id=633)
+    )
+    mocker.patch(
+        'apps.sage_intacct.tasks.load_attachments',
+        return_value=('sdfgh', False)
+    )
+    # Mock get_charge_card_transaction to raise an exception after export succeeds
+    mocker.patch(
+        'apps.sage_intacct.utils.SageIntacctConnector.get_charge_card_transaction',
+        side_effect=Exception('Failed to get charge card transaction')
+    )
+
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'ENQUEUED'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+    expense_group.description.update({'employee_email': 'user4444@fyleforgotham.in'})
+    expense_group.save()
+
+    expenses = expense_group.expenses.all()
+
+    expense_group.id = random.randint(100, 1500000)
+    expense_group.save()
+
+    for expense in expenses:
+        expense.expense_group_id = expense_group.id
+        expense.save()
+
+    expense_group.expenses.set(expenses)
+
+    general_mappings = GeneralMapping.objects.get(workspace_id=workspace_id)
+    general_mappings.default_charge_card_id = 'sample'
+    general_mappings.save()
+
+    create_charge_card_transaction(expense_group.id, task_log.id, True, False)
+
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+    assert 'created_charge_card_transaction' in task_log.detail
+    assert task_log.charge_card_transaction is None
+
+
+def test_create_journal_entry_skips_exported_to_intacct_status(mocker, create_task_logs, db):
+    """
+    Test that create_journal_entry skips processing when task log status is EXPORTED_TO_INTACCT
+    """
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'EXPORTED_TO_INTACCT'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=3)
+
+    mock_post = mocker.patch('sageintacctsdk.apis.JournalEntries.post')
+
+    create_journal_entry(expense_group.id, task_log.id, True, False)
+
+    # Should not call post since status is EXPORTED_TO_INTACCT
+    mock_post.assert_not_called()
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+
+
+def test_create_bill_skips_exported_to_intacct_status(mocker, create_task_logs, db):
+    """
+    Test that create_bill skips processing when task log status is EXPORTED_TO_INTACCT
+    """
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'EXPORTED_TO_INTACCT'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mock_post = mocker.patch('sageintacctsdk.apis.Bills.post')
+
+    create_bill(expense_group.id, task_log.id, True, False)
+
+    # Should not call post since status is EXPORTED_TO_INTACCT
+    mock_post.assert_not_called()
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+
+
+def test_create_expense_report_skips_exported_to_intacct_status(mocker, create_task_logs, db):
+    """
+    Test that create_expense_report skips processing when task log status is EXPORTED_TO_INTACCT
+    """
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'EXPORTED_TO_INTACCT'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=1)
+
+    mock_post = mocker.patch('sageintacctsdk.apis.ExpenseReports.post')
+
+    create_expense_report(expense_group.id, task_log.id, True, False)
+
+    # Should not call post since status is EXPORTED_TO_INTACCT
+    mock_post.assert_not_called()
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'
+
+
+def test_create_charge_card_transaction_skips_exported_to_intacct_status(mocker, create_task_logs, db):
+    """
+    Test that create_charge_card_transaction skips processing when task log status is EXPORTED_TO_INTACCT
+    """
+    workspace_id = 1
+
+    task_log = TaskLog.objects.filter(workspace_id=workspace_id).first()
+    task_log.status = 'EXPORTED_TO_INTACCT'
+    task_log.save()
+
+    expense_group = ExpenseGroup.objects.get(id=2)
+
+    mock_post = mocker.patch('sageintacctsdk.apis.ChargeCardTransactions.post')
+
+    create_charge_card_transaction(expense_group.id, task_log.id, True, False)
+
+    # Should not call post since status is EXPORTED_TO_INTACCT
+    mock_post.assert_not_called()
+    task_log.refresh_from_db()
+    assert task_log.status == 'EXPORTED_TO_INTACCT'

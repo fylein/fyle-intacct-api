@@ -15,6 +15,7 @@ from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribu
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
 
+from apps.sage_intacct.errors.helpers import retry
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.exports.helpers import get_source_entity_id
@@ -857,8 +858,6 @@ class SageIntacctConnector:
             return
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ALLOCATION')
-        if latest_updated_at:
-            attribute_count = self.connection.allocations.count(updated_at=latest_updated_at)
 
         allocation_attributes = []
         params = {}
@@ -2008,6 +2007,7 @@ class SageIntacctConnector:
             else:
                 raise
 
+    @retry()
     def get_bill(self, bill_id: str, fields: list = None) -> dict:
         """
         GET bill from SAGE Intacct
@@ -2031,6 +2031,7 @@ class SageIntacctConnector:
         bills = self.connection.bills.get_by_query(and_filter=and_filter, fields=fields)
         return bills
 
+    @retry()
     def get_expense_report(self, expense_report_id: str, fields: list = None) -> dict:
         """
         GET expense reports from SAGE
@@ -2054,6 +2055,7 @@ class SageIntacctConnector:
         expense_reports = self.connection.expense_reports.get_by_query(and_filter=and_filter, fields=fields)
         return expense_reports
 
+    @retry()
     def get_journal_entry(self, journal_entry_id: str, fields: list = None) -> dict:
         """
         GET journal_entry from SAGE Intacct
@@ -2111,6 +2113,7 @@ class SageIntacctConnector:
             else:
                 raise
 
+    @retry()
     def get_charge_card_transaction(self, charge_card_transaction_id: str, fields: list = None) -> dict:
         """
         GET charge card transaction from SAGE Intacct
