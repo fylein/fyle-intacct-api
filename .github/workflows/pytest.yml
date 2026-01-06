@@ -17,7 +17,7 @@ jobs:
         run: |
           docker compose -f docker-compose-pipeline.yml build
           docker compose -f docker-compose-pipeline.yml up -d
-          docker compose -f docker-compose-pipeline.yml exec -T api pytest tests/ --cov --junit-xml=test-reports/report.xml --cov-report=xml --cov-report=term-missing --cov-fail-under=80 | tee pytest-coverage.txt
+          docker compose -f docker-compose-pipeline.yml exec -T api pytest tests/ --cov --junit-xml=test-reports/report.xml --cov-report=xml --cov-report=term-missing --cov-fail-under=91 | tee pytest-coverage.txt
           echo "STATUS=$(cat pytest-coverage.txt | grep 'Required test' | awk '{ print $1 }')" >> $GITHUB_ENV
           echo "FAILED=$(cat test-reports/report.xml | awk -F'=' '{print $5}' | awk -F' ' '{gsub(/"/, "", $1); print $1}')" >> $GITHUB_ENV
         env:
@@ -38,7 +38,7 @@ jobs:
           python -m pip install diff-cover
 
           git fetch origin master --depth=1
-          diff-cover coverage.xml --compare-branch=origin/master --diff-range-notation .. --fail-under=0 > result.txt 2>&1
+          diff-cover coverage.xml --compare-branch=origin/master --diff-range-notation .. --fail-under=90 > result.txt 2>&1
 
       - name: Comment coverage check
         if: ${{ always() && github.actor != 'dependabot[bot]' }}
