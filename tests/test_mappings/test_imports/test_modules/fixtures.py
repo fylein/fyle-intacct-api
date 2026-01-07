@@ -21,7 +21,9 @@ data = {
             'LOCATIONNAME':'Australia',
             'BUDGETID':'None',
             'MEGAENTITYID':'600',
-            'MEGAENTITYNAME':'Australia'
+            'MEGAENTITYNAME':'Australia',
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'112',
@@ -44,7 +46,9 @@ data = {
             'LOCATIONNAME':'Australia',
             'BUDGETID':'None',
             'MEGAENTITYID':'600',
-            'MEGAENTITYNAME':'Australia'
+            'MEGAENTITYNAME':'Australia',
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         }
     ]],
     'create_new_auto_create_projects_expense_attributes_0': [
@@ -357,7 +361,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'1550',
@@ -380,7 +386,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
     ]],
     "create_new_auto_create_projects_destination_attributes_active": [[
@@ -405,7 +413,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'130',
@@ -428,7 +438,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'127',
@@ -451,7 +463,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'126',
@@ -474,7 +488,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'131',
@@ -497,7 +513,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'13',
@@ -520,7 +538,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'14',
@@ -543,7 +563,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'82',
@@ -566,7 +588,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'81',
@@ -589,7 +613,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'134',
@@ -612,7 +638,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'125',
@@ -635,7 +663,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'138',
@@ -658,7 +688,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'137',
@@ -681,7 +713,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
     ]],
     "create_new_auto_create_projects_destination_attributes": [[
@@ -706,7 +740,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'129',
@@ -729,7 +765,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'130',
@@ -752,7 +790,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'127',
@@ -775,7 +815,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'126',
@@ -798,7 +840,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'131',
@@ -821,7 +865,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'13',
@@ -844,7 +890,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'14',
@@ -867,7 +915,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'82',
@@ -890,7 +940,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'81',
@@ -913,7 +965,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'134',
@@ -936,7 +990,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'125',
@@ -959,7 +1015,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'138',
@@ -982,7 +1040,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'137',
@@ -1005,7 +1065,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
     ]],
     "create_new_auto_create_projects_destination_attributes_disable_case": [[
@@ -1030,7 +1092,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'129',
@@ -1053,7 +1117,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'130',
@@ -1076,7 +1142,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'127',
@@ -1099,7 +1167,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'126',
@@ -1122,7 +1192,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'131',
@@ -1145,7 +1217,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'13',
@@ -1168,7 +1242,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'14',
@@ -1191,7 +1267,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'82',
@@ -1214,7 +1292,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'81',
@@ -1237,7 +1317,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'135',
@@ -1260,7 +1342,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'134',
@@ -1283,7 +1367,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'133',
@@ -1306,7 +1392,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'128',
@@ -1329,7 +1417,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'125',
@@ -1352,7 +1442,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'138',
@@ -1375,7 +1467,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'137',
@@ -1398,7 +1492,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'136',
@@ -1421,7 +1517,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         }
     ]],
     "create_new_auto_create_projects_destination_attributes_re_enable_case": [[
@@ -1446,7 +1544,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'129',
@@ -1469,7 +1569,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'130',
@@ -1492,7 +1594,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'127',
@@ -1515,7 +1619,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'126',
@@ -1538,7 +1644,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'131',
@@ -1561,7 +1669,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'13',
@@ -1584,7 +1694,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'14',
@@ -1607,7 +1719,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'82',
@@ -1630,7 +1744,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'81',
@@ -1653,7 +1769,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'135',
@@ -1676,7 +1794,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'134',
@@ -1699,7 +1819,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'133',
@@ -1722,7 +1844,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'128',
@@ -1745,7 +1869,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'125',
@@ -1768,7 +1894,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'138',
@@ -1791,7 +1919,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'137',
@@ -1814,7 +1944,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'136',
@@ -1837,7 +1969,9 @@ data = {
             'LOCATIONNAME':None,
             'BUDGETID':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         }
     ]],
     "create_fyle_project_payload_create_new_case":
@@ -5118,7 +5252,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'79',
@@ -5140,7 +5276,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'80',
@@ -5162,7 +5300,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'81',
@@ -5184,7 +5324,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'82',
@@ -5206,7 +5348,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'83',
@@ -5228,7 +5372,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'84',
@@ -5250,7 +5396,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'86',
@@ -5272,7 +5420,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'88',
@@ -5294,7 +5444,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'89',
@@ -5316,7 +5468,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'91',
@@ -5338,7 +5492,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'93',
@@ -5360,7 +5516,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'94',
@@ -5382,7 +5540,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'95',
@@ -5404,7 +5564,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'96',
@@ -5426,7 +5588,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'44',
@@ -5448,7 +5612,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'45',
@@ -5470,7 +5636,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'47',
@@ -5492,7 +5660,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'49',
@@ -5514,7 +5684,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'50',
@@ -5536,7 +5708,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'51',
@@ -5558,7 +5732,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'53',
@@ -5580,7 +5756,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'55',
@@ -5602,7 +5780,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'69',
@@ -5624,7 +5804,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'70',
@@ -5646,7 +5828,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'71',
@@ -5668,7 +5852,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'72',
@@ -5690,7 +5876,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'73',
@@ -5712,7 +5900,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'74',
@@ -5734,7 +5924,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'76',
@@ -5756,7 +5948,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'2',
@@ -5778,7 +5972,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'3',
@@ -5800,7 +5996,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'4',
@@ -5822,7 +6020,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'5',
@@ -5844,7 +6044,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'6',
@@ -5866,7 +6068,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'7',
@@ -5888,7 +6092,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'8',
@@ -5910,7 +6116,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'9',
@@ -5932,7 +6140,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'10',
@@ -5954,7 +6164,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'11',
@@ -5976,7 +6188,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'12',
@@ -5998,7 +6212,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'13',
@@ -6020,7 +6236,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'14',
@@ -6042,7 +6260,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'15',
@@ -6064,7 +6284,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'16',
@@ -6086,7 +6308,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'17',
@@ -6108,7 +6332,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'18',
@@ -6130,7 +6356,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'112',
@@ -6152,7 +6380,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'113',
@@ -6174,7 +6404,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'114',
@@ -6196,7 +6428,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'115',
@@ -6218,7 +6452,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'35',
@@ -6240,7 +6476,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'36',
@@ -6262,7 +6500,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'37',
@@ -6284,7 +6524,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'38',
@@ -6306,7 +6548,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'39',
@@ -6328,7 +6572,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'41',
@@ -6350,7 +6596,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'42',
@@ -6372,7 +6620,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'85',
@@ -6394,7 +6644,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'87',
@@ -6416,7 +6668,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'90',
@@ -6438,7 +6692,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'92',
@@ -6460,7 +6716,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'97',
@@ -6482,7 +6740,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'98',
@@ -6504,7 +6764,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'99',
@@ -6526,7 +6788,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'100',
@@ -6548,7 +6812,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'101',
@@ -6570,7 +6836,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'102',
@@ -6592,7 +6860,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'103',
@@ -6614,7 +6884,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'104',
@@ -6636,7 +6908,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'105',
@@ -6658,7 +6932,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'106',
@@ -6680,7 +6956,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'46',
@@ -6702,7 +6980,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'48',
@@ -6724,7 +7004,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'52',
@@ -6746,7 +7028,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'54',
@@ -6768,7 +7052,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'56',
@@ -6790,7 +7076,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'57',
@@ -6812,7 +7100,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'58',
@@ -6834,7 +7124,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'59',
@@ -6856,7 +7148,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'60',
@@ -6878,7 +7172,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'61',
@@ -6900,7 +7196,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'62',
@@ -6922,7 +7220,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'63',
@@ -6944,7 +7244,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'64',
@@ -6966,7 +7268,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'65',
@@ -6988,7 +7292,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'66',
@@ -7010,7 +7316,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'67',
@@ -7032,7 +7340,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'68',
@@ -7054,7 +7364,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'75',
@@ -7076,7 +7388,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'77',
@@ -7098,7 +7412,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'19',
@@ -7120,7 +7436,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'20',
@@ -7142,7 +7460,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'21',
@@ -7164,7 +7484,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'22',
@@ -7186,7 +7508,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'23',
@@ -7208,7 +7532,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'24',
@@ -7230,7 +7556,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'25',
@@ -7252,7 +7580,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'26',
@@ -7274,7 +7604,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'27',
@@ -7296,7 +7628,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'28',
@@ -7318,7 +7652,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'29',
@@ -7340,7 +7676,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'30',
@@ -7362,7 +7700,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'31',
@@ -7384,7 +7724,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'32',
@@ -7406,7 +7748,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'33',
@@ -7428,7 +7772,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'34',
@@ -7450,7 +7796,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'40',
@@ -7472,7 +7820,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'43',
@@ -7494,7 +7844,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'1',
@@ -7516,7 +7868,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':None,
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'1127',
@@ -7538,7 +7892,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
     ]],
     'get_tax_details_destination_attributes_subsequent_run': [[
@@ -7562,7 +7918,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'79',
@@ -7584,7 +7942,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'80',
@@ -7606,7 +7966,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'81',
@@ -7628,7 +7990,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'82',
@@ -7650,7 +8014,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'83',
@@ -7672,7 +8038,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'84',
@@ -7694,7 +8062,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'86',
@@ -7716,7 +8086,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'88',
@@ -7738,7 +8110,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'89',
@@ -7760,7 +8134,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'91',
@@ -7782,7 +8158,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'93',
@@ -7804,7 +8182,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'94',
@@ -7826,7 +8206,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'95',
@@ -7848,7 +8230,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'96',
@@ -7870,7 +8254,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'44',
@@ -7892,7 +8278,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'45',
@@ -7914,7 +8302,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'47',
@@ -7936,7 +8326,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'49',
@@ -7958,7 +8350,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'50',
@@ -7980,7 +8374,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'51',
@@ -8002,7 +8398,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'53',
@@ -8024,7 +8422,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'55',
@@ -8046,7 +8446,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'69',
@@ -8068,7 +8470,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'70',
@@ -8090,7 +8494,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'71',
@@ -8112,7 +8518,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'72',
@@ -8134,7 +8542,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'73',
@@ -8156,7 +8566,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'74',
@@ -8178,7 +8590,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'76',
@@ -8200,7 +8614,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'2',
@@ -8222,7 +8638,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'3',
@@ -8244,7 +8662,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'4',
@@ -8266,7 +8686,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'5',
@@ -8288,7 +8710,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'6',
@@ -8310,7 +8734,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'7',
@@ -8332,7 +8758,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'8',
@@ -8354,7 +8782,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'9',
@@ -8376,7 +8806,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'10',
@@ -8398,7 +8830,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'11',
@@ -8420,7 +8854,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'12',
@@ -8442,7 +8878,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'13',
@@ -8464,7 +8902,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'14',
@@ -8486,7 +8926,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'15',
@@ -8508,7 +8950,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'16',
@@ -8530,7 +8974,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'17',
@@ -8552,7 +8998,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'18',
@@ -8574,7 +9022,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'112',
@@ -8596,7 +9046,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'113',
@@ -8618,7 +9070,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'114',
@@ -8640,7 +9094,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'115',
@@ -8662,7 +9118,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'35',
@@ -8684,7 +9142,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'36',
@@ -8706,7 +9166,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'37',
@@ -8728,7 +9190,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'38',
@@ -8750,7 +9214,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'39',
@@ -8772,7 +9238,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'41',
@@ -8794,7 +9262,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'42',
@@ -8816,7 +9286,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'85',
@@ -8838,7 +9310,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'87',
@@ -8860,7 +9334,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'90',
@@ -8882,7 +9358,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'92',
@@ -8904,7 +9382,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'97',
@@ -8926,7 +9406,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'98',
@@ -8948,7 +9430,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'99',
@@ -8970,7 +9454,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'100',
@@ -8992,7 +9478,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'101',
@@ -9014,7 +9502,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'102',
@@ -9036,7 +9526,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'103',
@@ -9058,7 +9550,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'104',
@@ -9080,7 +9574,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'105',
@@ -9102,7 +9598,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'106',
@@ -9124,7 +9622,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'46',
@@ -9146,7 +9646,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'48',
@@ -9168,7 +9670,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'52',
@@ -9190,7 +9694,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'54',
@@ -9212,7 +9718,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'56',
@@ -9234,7 +9742,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'57',
@@ -9256,7 +9766,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'58',
@@ -9278,7 +9790,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'59',
@@ -9300,7 +9814,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'60',
@@ -9322,7 +9838,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'61',
@@ -9344,7 +9862,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'62',
@@ -9366,7 +9886,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'63',
@@ -9388,7 +9910,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'64',
@@ -9410,7 +9934,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'65',
@@ -9432,7 +9958,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'66',
@@ -9454,7 +9982,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'67',
@@ -9476,7 +10006,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'68',
@@ -9498,7 +10030,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'75',
@@ -9520,7 +10054,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'77',
@@ -9542,7 +10078,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'United Kingdom - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'19',
@@ -9564,7 +10102,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'20',
@@ -9586,7 +10126,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'21',
@@ -9608,7 +10150,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'22',
@@ -9630,7 +10174,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'23',
@@ -9652,7 +10198,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'24',
@@ -9674,7 +10222,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'25',
@@ -9696,7 +10246,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'26',
@@ -9718,7 +10270,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'27',
@@ -9740,7 +10294,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'28',
@@ -9762,7 +10318,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'29',
@@ -9784,7 +10342,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'30',
@@ -9806,7 +10366,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'31',
@@ -9828,7 +10390,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'32',
@@ -9850,7 +10414,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'33',
@@ -9872,7 +10438,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'34',
@@ -9894,7 +10462,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'40',
@@ -9916,7 +10486,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'43',
@@ -9938,7 +10510,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'South Africa - VAT',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'1',
@@ -9960,7 +10534,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':None,
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'1127',
@@ -9982,7 +10558,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
 
         {
@@ -10005,7 +10583,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
         {
             'RECORDNO':'11276',
@@ -10027,7 +10607,9 @@ tax_groups_data = {
             'TAXSOLUTIONID':'Australia - GST',
             'MEGAENTITYKEY':None,
             'MEGAENTITYID':None,
-            'MEGAENTITYNAME':None
+            'MEGAENTITYNAME':None,
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         },
     ]],
     'create_new_auto_create_tax_groups_expense_attributes_0': [
