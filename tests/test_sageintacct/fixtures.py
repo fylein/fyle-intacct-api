@@ -339,7 +339,9 @@ data = {
             'LOCATIONNAME':'Australia',
             'BUDGETID':'None',
             'MEGAENTITYID':'600',
-            'MEGAENTITYNAME':'Australia'
+            'MEGAENTITYNAME':'Australia',
+            'BILLABLEEXPDEFAULT':'true',
+            'BILLABLEAPPODEFAULT':'true'
         }
     ]],
     'get_departments':[[
