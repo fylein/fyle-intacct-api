@@ -563,7 +563,7 @@ class SageIntacctConnector:
                         self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
-        fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS']
+        fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS', 'BILLABLEEXPDEFAULT', 'BILLABLEAPPODEFAULT']
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
         is_project_import_enabled = self.is_import_enabled('PROJECT')
@@ -577,7 +577,9 @@ class SageIntacctConnector:
             for project in projects:
                 detail = {
                     'customer_id': project['CUSTOMERID'],
-                    'customer_name': project['CUSTOMERNAME']
+                    'customer_name': project['CUSTOMERNAME'],
+                    'default_expense_report_billable': project['BILLABLEEXPDEFAULT'] == 'true',
+                    'default_bill_billable': project['BILLABLEAPPODEFAULT'] == 'true'
                 }
 
                 project_attributes.append({
