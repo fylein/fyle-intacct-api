@@ -6,11 +6,8 @@ from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum,
 
 from apps.fyle.models import ExpenseGroupSettings
 from apps.sage_intacct.actions import update_last_export_details
-from apps.mappings.helpers import get_project_billable_field_detail_key
-from apps.workspaces.apis.export_settings.helpers import (
-    is_project_billable_sync_allowed,
-    clear_workspace_errors_on_export_type_change
-)
+from apps.mappings.helpers import get_project_billable_field_detail_key, is_project_billable_sync_allowed
+from apps.workspaces.apis.export_settings.helpers import clear_workspace_errors_on_export_type_change
 from fyle_integrations_imports.models import ImportLog
 from apps.workspaces.models import Configuration, LastExportDetail
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
@@ -62,7 +59,7 @@ class ExportSettingsTrigger:
         Check if we need to sync billable status to Fyle.
         """
         # Must have project import enabled and a valid billable field
-        if not is_project_billable_sync_allowed(self.__workspace_id):
+        if not is_project_billable_sync_allowed(workspace_id=self.__workspace_id):
             return False
 
         # If old config exists, only sync if export types changed
@@ -72,8 +69,8 @@ class ExportSettingsTrigger:
             new_reimb = self.__configuration.reimbursable_expenses_object
             new_ccc = self.__configuration.corporate_credit_card_expenses_object
 
-            if old_reimb == new_reimb and old_ccc == new_ccc:
-                return False
+            if old_reimb != new_reimb or old_ccc != new_ccc:
+                return True
 
         return False
 

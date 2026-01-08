@@ -2,55 +2,12 @@ import logging
 from typing import List
 
 from django.db import transaction
-from fyle_accounting_mappings.models import MappingSetting
 
 from apps.fyle.models import ExpenseGroup
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.models import Configuration
-from fyle_integrations_imports.modules.projects import Project
-from apps.mappings.helpers import get_project_billable_field_detail_key
 
 logger = logging.getLogger(__name__)
-
-
-def is_project_billable_sync_allowed(workspace_id: int) -> bool:
-    """
-    Check if project billable sync is allowed for the workspace.
-    """
-    billable_field = get_project_billable_field_detail_key(workspace_id)
-    if not billable_field:
-        return False
-
-    return MappingSetting.objects.filter(
-        workspace_id=workspace_id,
-        source_field='PROJECT',
-        destination_field='PROJECT',
-        import_to_fyle=True
-    ).exists()
-
-
-def sync_project_billable_to_fyle(workspace_id: int, billable_field: str) -> None:
-    """
-    Bulk sync billable status for all active projects.
-    Called by import worker on export settings change.
-    """
-    if not billable_field:
-        logger.info(f'No billable field to sync for workspace {workspace_id}')
-        return
-
-    logger.info(f'Syncing project billable to Fyle for workspace {workspace_id} with field {billable_field}')
-
-    project = Project(
-        workspace_id=workspace_id,
-        destination_field='PROJECT',
-        sync_after=None,
-        sdk_connection=None,
-        destination_sync_methods=[],
-        is_auto_sync_enabled=True,
-        project_billable_field_detail_key=billable_field
-    )
-
-    project.sync_project_billable_to_fyle()
 
 
 def clear_workspace_errors_on_export_type_change(
