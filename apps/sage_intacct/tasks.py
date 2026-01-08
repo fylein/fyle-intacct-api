@@ -707,6 +707,8 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
     """
     worker_logger = get_logger()
     called_from = get_caller_info()
+    is_exported_to_intacct = False
+    created_journal_entry = None
 
     try:
         with transaction.atomic():
@@ -765,9 +767,6 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             if is_attachment_failed:
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
-
-        is_exported_to_intacct = False
-        created_journal_entry = None
 
         with transaction.atomic():
 
@@ -928,6 +927,9 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
     worker_logger = get_logger()
     called_from = get_caller_info()
 
+    is_exported_to_intacct = False
+    created_expense_report = None
+
     try:
         with transaction.atomic():
             task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
@@ -981,9 +983,6 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             if is_attachment_failed:
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
-
-        is_exported_to_intacct = False
-        created_expense_report = None
 
         with transaction.atomic():
 
@@ -1149,6 +1148,9 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
     worker_logger = get_logger()
     called_from = get_caller_info()
 
+    is_exported_to_intacct = False
+    created_bill = None
+
     try:
         with transaction.atomic():
             task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
@@ -1202,9 +1204,6 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             if is_attachment_failed:
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
-
-        is_exported_to_intacct = False
-        created_bill = None
 
         with transaction.atomic():
             bill_object = Bill.create_bill(expense_group, task_log.supdoc_id)
@@ -1361,6 +1360,9 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
     """
     worker_logger = get_logger()
     called_from = get_caller_info()
+    is_exported_to_intacct = False
+    created_charge_card_transaction = None
+
     try:
         with transaction.atomic():
             task_log = TaskLog.objects.select_for_update().get(id=task_log_id)
@@ -1411,9 +1413,6 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             if is_attachment_failed:
                 task_log.is_attachment_upload_failed = True
                 task_log.save()
-
-        is_exported_to_intacct = False
-        created_charge_card_transaction = None
 
         with transaction.atomic():
 
