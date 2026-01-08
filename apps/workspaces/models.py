@@ -266,6 +266,7 @@ class FeatureConfig(models.Model):
     import_via_rabbitmq = models.BooleanField(default=True, help_text='Enable import via rabbitmq')
     fyle_webhook_sync_enabled = models.BooleanField(default=True, help_text='Enable fyle attribute webhook sync')
     migrated_to_rest_api = models.BooleanField(default=False, help_text='Migrated to using rest api')
+    import_billable_field_for_projects = models.BooleanField(default=False, help_text='Import billable field for projects')
     created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
     updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
 
@@ -281,7 +282,8 @@ class FeatureConfig(models.Model):
         cache_key_map = {
             'export_via_rabbitmq': CacheKeyEnum.FEATURE_CONFIG_EXPORT_VIA_RABBITMQ,
             'fyle_webhook_sync_enabled': CacheKeyEnum.FEATURE_CONFIG_FYLE_WEBHOOK_SYNC_ENABLED,
-            'migrated_to_rest_api': WorkspaceCacheKeyEnum.FEATURE_CONFIG_MIGRATED_TO_REST_API
+            'migrated_to_rest_api': WorkspaceCacheKeyEnum.FEATURE_CONFIG_MIGRATED_TO_REST_API,
+            'import_billable_field_for_projects': WorkspaceCacheKeyEnum.FEATURE_CONFIG_IMPORT_BILLABLE_FIELD_FOR_PROJECTS
         }
 
         cache_key_enum = cache_key_map.get(key)
