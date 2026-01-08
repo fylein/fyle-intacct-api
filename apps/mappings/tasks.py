@@ -24,6 +24,7 @@ from fyle_integrations_imports.dataclasses import TaskSetting
 from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from apps.mappings.helpers import get_project_billable_field_detail_key
 from fyle_integrations_imports.queues import chain_import_fields_to_fyle
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.workspaces.models import (
@@ -385,7 +386,7 @@ def initiate_import_to_fyle(workspace_id: int, run_in_rabbitmq_worker: bool = Fa
             setting.source_field in ['PROJECT', 'COST_CENTER']
             or setting.is_custom
         ):
-            task_settings['mapping_settings'].append({
+            task_setting = {
                 'source_field': setting.source_field,
                 'destination_field': setting.destination_field,
                 'destination_sync_methods': [SYNC_METHODS.get(setting.destination_field, 'user_defined_dimensions')],
@@ -393,7 +394,16 @@ def initiate_import_to_fyle(workspace_id: int, run_in_rabbitmq_worker: bool = Fa
                 'is_custom': setting.is_custom,
                 'import_without_destination_id': False,
                 'prepend_code_to_name': True if setting.destination_field in configuration.import_code_fields else False
-            })
+            }
+
+            if setting.destination_field == 'PROJECT' and setting.source_field == 'PROJECT':
+                import_billable_field_for_projects = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='import_billable_field_for_projects')
+
+                if import_billable_field_for_projects:
+                    project_billable_field_detail_key = get_project_billable_field_detail_key(workspace_id=workspace_id)
+                    task_setting['project_billable_field_detail_key'] = project_billable_field_detail_key  # this can be none as well (export settings is not BILL/ER)
+
+            task_settings['mapping_settings'].append(task_setting)
 
     if project_mapping and is_sync_allowed and dependent_fields and dependent_fields.is_import_enabled:
         task_settings['import_dependent_fields'] = {

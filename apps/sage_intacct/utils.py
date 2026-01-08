@@ -39,6 +39,7 @@ from apps.sage_intacct.models import (
 )
 from apps.workspaces.helpers import get_app_name
 from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
+from apps.mappings.helpers import get_project_billable_map, sync_changed_project_billable_to_fyle
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 logger = logging.getLogger(__name__)
@@ -563,10 +564,16 @@ class SageIntacctConnector:
                         self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
+        is_project_import_enabled = self.is_import_enabled('PROJECT')
+
+        # Capture existing billable values before sync
+        existing_billable_map = {}
+        if is_project_import_enabled:
+            existing_billable_map = get_project_billable_map(self.workspace_id)
+
         fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS', 'BILLABLEEXPDEFAULT', 'BILLABLEAPPODEFAULT']
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-        is_project_import_enabled = self.is_import_enabled('PROJECT')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         project_generator = self.connection.projects.get_all_generator(**params)
@@ -602,6 +609,10 @@ class SageIntacctConnector:
                 is_import_to_fyle_enabled=is_project_import_enabled,
                 skip_deletion=self.is_duplicate_deletion_skipped('PROJECT')
             )
+
+        # Detect and sync billable changes to Fyle
+        if is_project_import_enabled and existing_billable_map:
+            sync_changed_project_billable_to_fyle(self.workspace_id, project_attributes, existing_billable_map)
 
         return []
 

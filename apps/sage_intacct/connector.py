@@ -22,6 +22,7 @@ from apps.workspaces.helpers import get_app_name
 from apps.sage_intacct.errors.helpers import retry
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
+from apps.mappings.helpers import get_project_billable_map, sync_changed_project_billable_to_fyle
 from apps.sage_intacct.exports.bills import construct_bill_payload
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.exports.ap_payments import construct_ap_payment_payload
@@ -729,9 +730,15 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
             logger.info('Skipping sync of projects for workspace %s as it has %s counts which is over the limit', self.workspace_id, attribute_count)
             return
 
+        is_project_import_enabled = self.__is_import_enabled(DestinationAttributeTypeEnum.PROJECT.value)
+
+        # Capture existing billable values before sync
+        existing_billable_map = {}
+        if is_project_import_enabled:
+            existing_billable_map = get_project_billable_map(self.workspace_id)
+
         fields = ['id', 'name', 'status', 'customer.id', 'customer.name', 'isBillableEmployeeExpense', 'isBillablePurchasingAPExpense']
         latest_synced_timestamp = self.intacct_synced_timestamp_object.customer_synced_at
-        is_project_import_enabled = self.__is_import_enabled(DestinationAttributeTypeEnum.PROJECT.value)
         params = self.__get_all_generator_params(fields=fields, latest_synced_timestamp=latest_synced_timestamp)
         project_generator = self.connection.projects.get_all_generator(**params)
 
@@ -766,6 +773,10 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
                 is_import_to_fyle_enabled=is_project_import_enabled,
                 skip_deletion=self.__is_duplicate_deletion_skipped(DestinationAttributeTypeEnum.PROJECT.value)
             )
+
+        # Detect and sync billable changes to Fyle
+        if is_project_import_enabled and existing_billable_map:
+            sync_changed_project_billable_to_fyle(self.workspace_id, project_attributes, existing_billable_map)
 
         self.__update_intacct_synced_timestamp_object(key='project_synced_at')
 
