@@ -81,10 +81,12 @@ class TokenHealthView(viewsets.ViewSet):
         workspace_id = kwargs['workspace_id']
         sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace_id).first()
 
+        migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+
         if not sage_intacct_credentials:
             status_code = status.HTTP_400_BAD_REQUEST
             message = "Intacct credentials not found"
-        elif sage_intacct_credentials.is_expired:
+        elif not migrated_to_rest_api and sage_intacct_credentials.is_expired:
             status_code = status.HTTP_400_BAD_REQUEST
             message = "Intacct connection expired"
         else:
