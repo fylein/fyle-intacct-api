@@ -3,7 +3,7 @@
 --
 
 
--- Dumped from database version 15.14 (Debian 15.14-1.pgdg13+1)
+-- Dumped from database version 15.15 (Debian 15.15-1.pgdg13+1)
 -- Dumped by pg_dump version 17.6 (Debian 17.6-0+deb13u1)
 
 SET statement_timeout = 0;
@@ -16,6 +16,65 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
+
+--
+-- Name: add_tables_to_publication(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.add_tables_to_publication() RETURNS event_trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    obj record;
+    schema_name text;
+    table_name text;
+BEGIN
+    FOR obj IN 
+        SELECT * FROM pg_event_trigger_ddl_commands()
+        WHERE command_tag = 'CREATE TABLE'
+    LOOP
+        RAISE NOTICE 'Processing new table: %', obj.object_identity;
+        --- The format of the object_identity is schema.table
+        schema_name := split_part(obj.object_identity, '.', 1);
+        table_name := split_part(obj.object_identity, '.', 2);
+
+        -- Skip if not in public schema
+        IF schema_name <> 'public' THEN
+            CONTINUE;
+        END IF;
+
+        -- Skip excluded system tables
+        IF table_name IN (
+            'django_admin_log', 
+            'django_content_type', 
+            'django_migrations',
+            'django_q_ormq', 
+            'django_q_schedule', 
+            'django_q_task', 
+            'django_session',
+            'expense_attributes_deletion_cache'
+        ) THEN
+            RAISE NOTICE 'Skipping excluded table: %.%', schema_name, table_name;
+            CONTINUE;
+        END IF;
+
+        RAISE NOTICE 'Processing new table: %.%', schema_name, table_name;
+
+        -- Set REPLICA IDENTITY FULL
+        EXECUTE format('ALTER TABLE %I.%I REPLICA IDENTITY FULL', schema_name, table_name);
+
+        -- Add to publication (ignore duplicates)
+        BEGIN
+            EXECUTE format('ALTER PUBLICATION events ADD TABLE %I.%I', schema_name, table_name);
+        EXCEPTION WHEN duplicate_object THEN
+            RAISE NOTICE 'Table %.% already in publication.', schema_name, table_name;
+        END;
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION public.add_tables_to_publication() OWNER TO postgres;
 
 --
 -- Name: delete_failed_expenses(integer, boolean, integer[]); Type: FUNCTION; Schema: public; Owner: postgres
@@ -3082,7 +3141,8 @@ CREATE TABLE public.feature_configs (
     workspace_id integer NOT NULL,
     import_via_rabbitmq boolean NOT NULL,
     fyle_webhook_sync_enabled boolean NOT NULL,
-    migrated_to_rest_api boolean NOT NULL
+    migrated_to_rest_api boolean NOT NULL,
+    import_billable_field_for_projects boolean NOT NULL
 );
 
 
@@ -6375,6 +6435,8 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 275	internal	0027_auto_generated_sql	2025-12-16 11:22:37.989849+00
 276	sage_intacct	0034_chargecardtransactionlineitem_employee_id_and_more	2025-12-16 11:22:38.004807+00
 277	workspaces	0058_remove_sageintacctcredential_refresh_token_and_more	2025-12-16 11:22:38.025898+00
+278	internal	0028_auto_generated_sql	2026-01-08 06:56:29.613764+00
+279	workspaces	0059_featureconfig_import_billable_field_for_projects	2026-01-08 06:56:29.634426+00
 \.
 
 
@@ -9832,8 +9894,8 @@ COPY public.failed_events (id, routing_key, payload, created_at, updated_at, err
 -- Data for Name: feature_configs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.feature_configs (id, export_via_rabbitmq, created_at, updated_at, workspace_id, import_via_rabbitmq, fyle_webhook_sync_enabled, migrated_to_rest_api) FROM stdin;
-1	f	2025-10-10 09:38:10.289737+00	2025-10-10 09:38:10.289737+00	1	f	t	f
+COPY public.feature_configs (id, export_via_rabbitmq, created_at, updated_at, workspace_id, import_via_rabbitmq, fyle_webhook_sync_enabled, migrated_to_rest_api, import_billable_field_for_projects) FROM stdin;
+1	f	2025-10-10 09:38:10.289737+00	2025-10-10 09:38:10.289737+00	1	f	t	f	f
 \.
 
 
@@ -10450,7 +10512,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 57, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 277, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 279, true);
 
 
 --
