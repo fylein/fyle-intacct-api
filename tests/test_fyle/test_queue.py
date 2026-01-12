@@ -200,3 +200,36 @@ def test_handle_webhook_callback_attribute_exception(db, add_webhook_attribute_d
     handle_webhook_callback(webhook_body, workspace.id)
     mock_processor.assert_called_once()
     mock_logger.error.assert_called_once_with(f'Error processing attribute webhook for workspace {workspace.id}: Test exception')
+
+
+def test_handle_webhook_callback_org_setting_updated(db, mocker):
+    """
+    Test handle_webhook_callback for ORG_SETTING UPDATED action
+    """
+    workspace = Workspace.objects.get(id=1)
+
+    mock_publish = mocker.patch('apps.fyle.queue.publish_to_rabbitmq')
+
+    webhook_body = {
+        'action': 'UPDATED',
+        'resource': 'ORG_SETTING',
+        'data': {
+            'regional_settings': {
+                'locale': {
+                    'date_format': 'DD/MM/YYYY',
+                    'timezone': 'Asia/Kolkata'
+                }
+            }
+        }
+    }
+
+    handle_webhook_callback(webhook_body, workspace.id)
+
+    mock_publish.assert_called_once()
+    call_args = mock_publish.call_args
+    payload = call_args[1]['payload']
+
+    assert payload['workspace_id'] == workspace.id
+    assert payload['action'] == 'UTILITY.ORG_SETTING_UPDATED'
+    assert payload['data']['workspace_id'] == workspace.id
+    assert payload['data']['org_settings'] == webhook_body['data']
