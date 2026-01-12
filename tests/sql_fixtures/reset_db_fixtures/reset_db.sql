@@ -4,7 +4,7 @@
 
 
 -- Dumped from database version 15.15 (Debian 15.15-1.pgdg13+1)
--- Dumped by pg_dump version 17.6 (Debian 17.6-0+deb13u1)
+-- Dumped by pg_dump version 17.7 (Debian 17.7-0+deb13u1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -3069,7 +3069,8 @@ CREATE TABLE public.workspaces (
     cluster_domain character varying(255),
     ccc_last_synced_at timestamp with time zone,
     onboarding_state character varying(50),
-    app_version character varying(2) NOT NULL
+    app_version character varying(2) NOT NULL,
+    org_settings jsonb NOT NULL
 );
 
 
@@ -6437,6 +6438,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 277	workspaces	0058_remove_sageintacctcredential_refresh_token_and_more	2025-12-16 11:22:38.025898+00
 278	internal	0028_auto_generated_sql	2026-01-08 06:56:29.613764+00
 279	workspaces	0059_featureconfig_import_billable_field_for_projects	2026-01-08 06:56:29.634426+00
+280	workspaces	0060_workspace_org_settings	2026-01-12 12:21:09.648554+00
 \.
 
 
@@ -10410,8 +10412,8 @@ COPY public.workspace_schedules (id, enabled, start_datetime, interval_hours, sc
 -- Data for Name: workspaces; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at, onboarding_state, app_version) FROM stdin;
-1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	IMPORT_SETTINGS	v1
+COPY public.workspaces (id, name, fyle_org_id, last_synced_at, created_at, updated_at, destination_synced_at, source_synced_at, cluster_domain, ccc_last_synced_at, onboarding_state, app_version, org_settings) FROM stdin;
+1	Fyle For Arkham Asylum	or79Cob97KSh	2022-09-20 08:56:50.098426+00	2022-09-20 08:38:03.352044+00	2022-09-20 08:56:50.098865+00	2022-09-28 11:56:39.11276+00	2022-09-28 11:55:42.90121+00	https://staging.fyle.tech	\N	IMPORT_SETTINGS	v1	{}
 \.
 
 
@@ -10512,7 +10514,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 57, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 279, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 280, true);
 
 
 --
