@@ -51,6 +51,7 @@ data = {
         "user": [1],
         "onboarding_state": "COMPLETE",
         "app_version": "v1",
+        "org_settings": {},
     },
     "expenses": [
         {
