@@ -86,6 +86,20 @@ def handle_webhook_callback(body: dict, workspace_id: int) -> None:
         }
         publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.UTILITY.value)
 
+    elif (
+        action == WebhookCallbackActionEnum.UPDATED.value
+        and resource == 'ORG_SETTING'
+    ):
+        payload = {
+            'workspace_id': workspace_id,
+            'action': WorkerActionEnum.ORG_SETTING_UPDATED.value,
+            'data': {
+                'workspace_id': workspace_id,
+                'org_settings': data
+            }
+        }
+        publish_to_rabbitmq(payload=payload, routing_key=RoutingKeyEnum.UTILITY.value)
+
     elif action in (WebhookCallbackActionEnum.CREATED, WebhookCallbackActionEnum.UPDATED, WebhookCallbackActionEnum.DELETED):
         try:
             fyle_webhook_sync_enabled = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='fyle_webhook_sync_enabled')
