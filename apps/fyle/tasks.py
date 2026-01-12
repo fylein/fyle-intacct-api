@@ -1031,5 +1031,5 @@ def handle_org_setting_updated(workspace_id: int, org_settings: dict) -> None:
     workspace.org_settings = {
         'regional_settings': org_settings.get('regional_settings', {})
     }
-    workspace.save(update_fields=['org_settings'])
+    workspace.save(update_fields=['org_settings', 'updated_at'])
     worker_logger.info("Updated org settings for workspace %s", workspace.id)
