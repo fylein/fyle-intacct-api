@@ -69,7 +69,8 @@ data = {
                     "org_id":"orqjgyJ21uge",
                     "restricted_spender_user_ids":"None",
                     "sub_project": None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                    "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                    "default_billable": None
                 },{
                     "approver_user_ids": [],
                     "approver_users": [],
@@ -84,7 +85,8 @@ data = {
                     "org_id":"orqjgyJ21uge",
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                    "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                    "default_billable": True
                 },{
                     "approver_user_ids": [],
                     "approver_users": [],
@@ -99,7 +101,8 @@ data = {
                     "org_id":"orqjgyJ21uge",
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
-                    "updated_at":"2023-08-01T12:38:20.406828+00:00"
+                    "updated_at":"2023-08-01T12:38:20.406828+00:00",
+                    "default_billable": False
                 }
             ],
             "offset":0
@@ -122,7 +125,8 @@ data = {
                 "org_id":"orqjgyJ21uge",
                 "restricted_spender_user_ids":"None",
                 "sub_project":None,
-                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                "default_billable": None
             },{
                 "approver_user_ids": [],
                 "approver_users": [],
@@ -137,7 +141,8 @@ data = {
                 "org_id":"orqjgyJ21uge",
                 "restricted_spender_user_ids":"None",
                 "sub_project":None,
-                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                "default_billable": True
             },{
                 "approver_user_ids": [],
                 "approver_users": [],
@@ -152,7 +157,8 @@ data = {
                 "org_id":"orqjgyJ21uge",
                 "restricted_spender_user_ids":"None",
                 "sub_project":None,
-                "updated_at":"2023-08-01T12:38:20.406828+00:00"
+                "updated_at":"2023-08-01T12:38:20.406828+00:00",
+                "default_billable": False
             },{
                 'approver_user_ids': [],
                 'approver_users': [],
@@ -167,7 +173,8 @@ data = {
                 'org_id':'orqjgyJ21uge',
                 'restricted_spender_user_ids':None,
                 'sub_project':None,
-                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+                'updated_at':'2023-08-08T11:01:16.347801+00:00',
+                'default_billable': True
             },{
                 'approver_user_ids': [],
                 'approver_users': [],
@@ -182,7 +189,8 @@ data = {
                 'org_id':'orqjgyJ21uge',
                 'restricted_spender_user_ids':None,
                 'sub_project':None,
-                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+                'updated_at':'2023-08-08T11:01:16.347801+00:00',
+                'default_billable': None
             }
             ],
             'offset':0
@@ -205,7 +213,8 @@ data = {
                 "org_id":"orqjgyJ21uge",
                 "restricted_spender_user_ids":"None",
                 "sub_project":None,
-                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                "default_billable": None
             },{
                 "approver_user_ids": [],
                 "approver_users": [],
@@ -220,7 +229,8 @@ data = {
                 "org_id":"orqjgyJ21uge",
                 "restricted_spender_user_ids":"None",
                 "sub_project":None,
-                "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                "default_billable": True
             },{
                 "approver_user_ids": [],
                 "approver_users": [],
@@ -235,7 +245,8 @@ data = {
                 "org_id":"orqjgyJ21uge",
                 "restricted_spender_user_ids":"None",
                 "sub_project":None,
-                "updated_at":"2023-08-01T12:38:20.406828+00:00"
+                "updated_at":"2023-08-01T12:38:20.406828+00:00",
+                "default_billable": False
             },{
                 'approver_user_ids': [],
                 'approver_users': [],
@@ -250,7 +261,8 @@ data = {
                 'org_id':'orqjgyJ21uge',
                 'restricted_spender_user_ids':None,
                 'sub_project':None,
-                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+                'updated_at':'2023-08-08T11:01:16.347801+00:00',
+                'default_billable': True
             },{
                 'approver_user_ids': [],
                 'approver_users': [],
@@ -265,7 +277,8 @@ data = {
                 'org_id':'orqjgyJ21uge',
                 'restricted_spender_user_ids':None,
                 'sub_project':None,
-                'updated_at':'2023-08-08T11:01:16.347801+00:00'
+                'updated_at':'2023-08-08T11:01:16.347801+00:00',
+                'default_billable': None
             }],
             'offset':0
         }
@@ -288,7 +301,8 @@ data = {
                     "org_id":"orqjgyJ21uge",
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                    "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                    "default_billable": None
                 },{
                     "approver_user_ids": [],
                     "approver_users": [],
@@ -303,7 +317,8 @@ data = {
                     "org_id":"orqjgyJ21uge",
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
-                    "updated_at":"2023-08-01T12:47:24.128675+00:00"
+                    "updated_at":"2023-08-01T12:47:24.128675+00:00",
+                    "default_billable": True
                 },{
                     "approver_user_ids": [],
                     "approver_users": [],
@@ -318,7 +333,8 @@ data = {
                     "org_id":"orqjgyJ21uge",
                     "restricted_spender_user_ids":"None",
                     "sub_project":None,
-                    "updated_at":"2023-08-01T12:38:20.406828+00:00"
+                    "updated_at":"2023-08-01T12:38:20.406828+00:00",
+                    "default_billable": False
                 },{
                     'approver_user_ids': [],
                     'approver_users':[],
@@ -333,7 +349,8 @@ data = {
                     'org_id':'orqjgyJ21uge',
                     'restricted_spender_user_ids':None,
                     'sub_project':None,
-                    'updated_at':'2023-08-08T11:01:16.347801+00:00'
+                    'updated_at':'2023-08-08T11:01:16.347801+00:00',
+                    'default_billable': None
                 }
             ],
             'offset':0

@@ -1015,3 +1015,21 @@ def _handle_expense_ejected_from_report(expense: Expense, expense_data: dict, wo
             delete_expense_group_and_related_data(expense_group, workspace.id)
         else:
             worker_logger.info("Expense group %s still has expenses after removing %s", expense_group.id, expense.expense_id)
+
+
+def handle_org_setting_updated(workspace_id: int, org_settings: dict) -> None:
+    """
+    Update regional date setting on org setting updated
+    :param workspace_id: Workspace id
+    :param org_settings: Org settings
+    :return: None
+    """
+    worker_logger = get_logger()
+    worker_logger.info("Handling org settings update for workspace %s", workspace_id)
+
+    workspace = Workspace.objects.get(id=workspace_id)
+    workspace.org_settings = {
+        'regional_settings': org_settings.get('regional_settings', {})
+    }
+    workspace.save(update_fields=['org_settings', 'updated_at'])
+    worker_logger.info("Updated org settings for workspace %s", workspace.id)
