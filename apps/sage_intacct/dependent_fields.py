@@ -147,6 +147,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                     distinct=True
                 )
             )
+            .order_by('project_id')
         )
     else:
         projects_queryset = (
@@ -163,6 +164,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                     distinct=True
                 )
             )
+            .order_by('project_id')
         )
 
     # Process projects in batches to avoid memory issues and statement timeouts
