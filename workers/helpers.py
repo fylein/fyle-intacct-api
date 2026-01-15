@@ -42,6 +42,7 @@ class WorkerActionEnum(str, Enum):
     CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION = 'IMPORT.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION'
     CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS = 'EXPORT.P1.CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS'
     EXPENSE_ADDED_EJECTED_FROM_REPORT = 'UTILITY.EXPENSE_ADDED_EJECTED_FROM_REPORT'
+    SYNC_PROJECT_BILLABLE_TO_FYLE = 'IMPORT.SYNC_PROJECT_BILLABLE_TO_FYLE'
     ORG_SETTING_UPDATED = 'UTILITY.ORG_SETTING_UPDATED'
 
 
@@ -77,6 +78,7 @@ ACTION_METHOD_MAP = {
     WorkerActionEnum.CHECK_INTERVAL_AND_SYNC_SAGE_INTACCT_DIMENSION: 'apps.sage_intacct.helpers.check_interval_and_sync_dimension',
     WorkerActionEnum.CHECK_SAGE_INTACCT_OBJECT_STATUS_AND_PROCESS_FYLE_REIMBURSEMENTS: 'apps.sage_intacct.tasks.check_sage_intacct_object_status_and_process_fyle_reimbursements',
     WorkerActionEnum.EXPENSE_ADDED_EJECTED_FROM_REPORT: 'apps.fyle.tasks.handle_expense_report_change',
+    WorkerActionEnum.SYNC_PROJECT_BILLABLE_TO_FYLE: 'apps.mappings.helpers.sync_project_billable_to_fyle_on_export_settings_change',
     WorkerActionEnum.ORG_SETTING_UPDATED: 'apps.fyle.tasks.handle_org_setting_updated',
 }
 

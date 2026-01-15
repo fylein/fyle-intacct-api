@@ -1,4 +1,4 @@
-from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
+from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping, MappingSetting
 
 from apps.fyle.models import ExpenseGroup
 from apps.mappings.tasks import (
@@ -558,3 +558,133 @@ def test_auto_map_accounting_fields_with_charge_card_transaction(mocker, db):
     }
     assert second_call.kwargs['payload'] == expected_second_payload
     assert second_call.kwargs['routing_key'] == RoutingKeyEnum.IMPORT.value
+
+
+def test_initiate_import_to_fyle_with_project_billable_field(mocker, db):
+    """
+    Test initiate_import_to_fyle includes project_billable_field_detail_key when sync is allowed
+    """
+    workspace_id = 1
+
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(is_expired=False)
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = True
+    feature_config.save()
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.import_categories = False
+    configuration.reimbursable_expenses_object = 'BILL'
+    configuration.save()
+
+    MappingSetting.objects.update_or_create(
+        workspace_id=workspace_id,
+        source_field='PROJECT',
+        destination_field='PROJECT',
+        defaults={'import_to_fyle': True, 'is_custom': False}
+    )
+
+    mock_chain_import = mocker.patch('apps.mappings.tasks.chain_import_fields_to_fyle', return_value=None)
+
+    initiate_import_to_fyle(workspace_id)
+
+    mock_chain_import.assert_called_once()
+
+    call_args = mock_chain_import.call_args
+    task_settings = call_args.kwargs.get('task_settings', {})
+
+    mapping_settings = task_settings.get('mapping_settings', [])
+    project_setting = next(
+        (s for s in mapping_settings if s.get('source_field') == 'PROJECT'),
+        None
+    )
+
+    assert project_setting is not None
+    assert project_setting['project_billable_field_detail_key'] == 'default_bill_billable'
+
+
+def test_initiate_import_to_fyle_without_project_billable_field_when_disabled(mocker, db):
+    """
+    Test initiate_import_to_fyle does NOT include project_billable_field_detail_key when feature is disabled
+    """
+    workspace_id = 1
+
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(is_expired=False)
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = False
+    feature_config.save()
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.import_categories = False
+    configuration.reimbursable_expenses_object = 'BILL'
+    configuration.save()
+
+    MappingSetting.objects.update_or_create(
+        workspace_id=workspace_id,
+        source_field='PROJECT',
+        destination_field='PROJECT',
+        defaults={'import_to_fyle': True, 'is_custom': False}
+    )
+
+    mock_chain_import = mocker.patch('apps.mappings.tasks.chain_import_fields_to_fyle', return_value=None)
+
+    initiate_import_to_fyle(workspace_id)
+
+    mock_chain_import.assert_called_once()
+
+    call_args = mock_chain_import.call_args
+    task_settings = call_args.kwargs.get('task_settings', {})
+
+    mapping_settings = task_settings.get('mapping_settings', [])
+    project_setting = next(
+        (s for s in mapping_settings if s.get('source_field') == 'PROJECT'),
+        None
+    )
+
+    assert project_setting is not None
+    assert 'project_billable_field_detail_key' not in project_setting
+
+
+def test_initiate_import_to_fyle_with_expense_report_billable_field(mocker, db):
+    """
+    Test initiate_import_to_fyle includes correct billable field for EXPENSE_REPORT
+    """
+    workspace_id = 1
+
+    SageIntacctCredential.objects.filter(workspace_id=workspace_id).update(is_expired=False)
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = True
+    feature_config.save()
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.import_categories = False
+    configuration.reimbursable_expenses_object = 'EXPENSE_REPORT'
+    configuration.corporate_credit_card_expenses_object = None
+    configuration.save()
+
+    MappingSetting.objects.update_or_create(
+        workspace_id=workspace_id,
+        source_field='PROJECT',
+        destination_field='PROJECT',
+        defaults={'import_to_fyle': True, 'is_custom': False}
+    )
+
+    mock_chain_import = mocker.patch('apps.mappings.tasks.chain_import_fields_to_fyle', return_value=None)
+
+    initiate_import_to_fyle(workspace_id)
+
+    mock_chain_import.assert_called_once()
+
+    call_args = mock_chain_import.call_args
+    task_settings = call_args.kwargs.get('task_settings', {})
+
+    mapping_settings = task_settings.get('mapping_settings', [])
+    project_setting = next(
+        (s for s in mapping_settings if s.get('source_field') == 'PROJECT'),
+        None
+    )
+
+    assert project_setting is not None
+    assert project_setting['project_billable_field_detail_key'] == 'default_expense_report_billable'
