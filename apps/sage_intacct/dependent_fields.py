@@ -8,12 +8,10 @@ from django.db.models.functions import JSONObject
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from fyle_accounting_mappings.models import ExpenseAttribute
 from fyle_integrations_platform_connector import PlatformConnector
+from intacctsdk.exceptions import BadRequestError as IntacctRESTBadRequestError
+from intacctsdk.exceptions import InternalServerError as IntacctRESTInternalServerError
+from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, SageIntacctSDKError
-from intacctsdk.exceptions import (
-    BadRequestError as IntacctRESTBadRequestError,
-    InvalidTokenError as IntacctRESTInvalidTokenError,
-    InternalServerError as IntacctRESTInternalServerError
-)
 
 from apps.fyle.helpers import connect_to_platform
 from apps.fyle.models import DependentFieldSetting
@@ -97,7 +95,6 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
     total_batches = 0
     processed_batches = 0
     is_errored = False
-    projects_batch = []
 
     """
         Structure of the query output:
@@ -137,7 +134,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
             project_id;
     """
     if not dependent_field_setting.is_cost_type_import_enabled:
-        projects_batch = (
+        projects_queryset = (
             CostCode.objects.filter(**filters)
             .values('project_name', 'project_id')
             .annotate(
@@ -152,7 +149,7 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
             )
         )
     else:
-        projects_batch = (
+        projects_queryset = (
             CostType.objects.filter(**filters)
             .values('project_name', 'project_id')
             .annotate(
@@ -168,48 +165,62 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
             )
         )
 
-    existing_projects_in_fyle = set(
-        ExpenseAttribute.objects.filter(
-            workspace_id=dependent_field_setting.workspace_id,
-            attribute_type='PROJECT',
-            value__in=[
-                prepend_code_to_name(use_job_code_in_naming, project['project_name'], project['project_id'])
-                for project in projects_batch
-            ],
-            active=True
-        ).values_list('value', flat=True)
-    )
+    # Process projects in batches to avoid memory issues and statement timeouts
+    BATCH_SIZE = 5000
+    offset = 0
 
-    logger.info(f'Posting Cost Codes | WORKSPACE_ID: {dependent_field_setting.workspace_id} | Existing Projects in Fyle COUNT: {len(existing_projects_in_fyle)}')
+    while True:
+        projects_batch = list(projects_queryset[offset:offset + BATCH_SIZE])
 
-    for project in projects_batch:
-        payload = []
-        cost_code_names = set()
-        project_name = prepend_code_to_name(use_job_code_in_naming, project['project_name'], project['project_id'])
+        if not projects_batch:
+            break
 
-        if project_name in existing_projects_in_fyle:
-            for cost_code in project['cost_codes']:
-                cost_code_name = prepend_code_to_name(prepend_code_in_name=use_cost_code_in_naming, value=cost_code['cost_code_name'], code=cost_code['cost_code_code'])
-                payload.append({
-                    'parent_expense_field_id': dependent_field_setting.project_field_id,
-                    'parent_expense_field_value': project_name,
-                    'expense_field_id': dependent_field_setting.cost_code_field_id,
-                    'expense_field_value': cost_code_name,
-                    'is_enabled': is_enabled
-                })
-                cost_code_names.add(cost_code['cost_code_name'])
+        project_names_batch = [
+            prepend_code_to_name(use_job_code_in_naming, project['project_name'], project['project_id'])
+            for project in projects_batch
+        ]
 
-            if payload:
-                sleep(0.2)
-                try:
-                    total_batches += 1
-                    payload_set = remove_duplicate_payload_entries(payload)
-                    platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
-                    posted_cost_codes.update(cost_code_names)
-                    processed_batches += 1
-                except Exception as exception:
-                    is_errored = True
-                    logger.error(f'Exception while posting dependent cost code | Error: {exception} | Payload: {payload}')
+        existing_projects_in_fyle = set(
+            ExpenseAttribute.objects.filter(
+                workspace_id=dependent_field_setting.workspace_id,
+                attribute_type='PROJECT',
+                value__in=project_names_batch,
+                active=True
+            ).values_list('value', flat=True)
+        )
+
+        logger.info(f'Posting Cost Codes | WORKSPACE_ID: {dependent_field_setting.workspace_id} | Batch offset: {offset} | Existing Projects in Fyle COUNT: {len(existing_projects_in_fyle)}')
+
+        for project in projects_batch:
+            payload = []
+            cost_code_names = set()
+            project_name = prepend_code_to_name(use_job_code_in_naming, project['project_name'], project['project_id'])
+
+            if project_name in existing_projects_in_fyle:
+                for cost_code in project['cost_codes']:
+                    cost_code_name = prepend_code_to_name(prepend_code_in_name=use_cost_code_in_naming, value=cost_code['cost_code_name'], code=cost_code['cost_code_code'])
+                    payload.append({
+                        'parent_expense_field_id': dependent_field_setting.project_field_id,
+                        'parent_expense_field_value': project_name,
+                        'expense_field_id': dependent_field_setting.cost_code_field_id,
+                        'expense_field_value': cost_code_name,
+                        'is_enabled': is_enabled
+                    })
+                    cost_code_names.add(cost_code['cost_code_name'])
+
+                if payload:
+                    sleep(0.2)
+                    try:
+                        total_batches += 1
+                        payload_set = remove_duplicate_payload_entries(payload)
+                        platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
+                        posted_cost_codes.update(cost_code_names)
+                        processed_batches += 1
+                    except Exception as exception:
+                        is_errored = True
+                        logger.error(f'Exception while posting dependent cost code | Error: {exception} | Payload: {payload}')
+
+        offset += BATCH_SIZE
 
     if is_errored or import_log.status != 'IN_PROGRESS':
         import_log.status = 'PARTIALLY_FAILED'
