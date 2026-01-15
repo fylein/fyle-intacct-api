@@ -258,7 +258,7 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
     processed_batches = 0
     is_errored = False
 
-    cost_types_batch = (
+    cost_types_queryset = (
         CostType.objects.filter(**filters)
         .values('task_name', 'task_id')
         .annotate(
@@ -272,35 +272,47 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
                 distinct=True
             )
         )
+        .order_by('task_id')
     )
 
-    logger.info(f'Posting Cost Types | WORKSPACE_ID: {dependent_field_setting.workspace_id} | Existing Cost Code in Fyle COUNT: {len(cost_types_batch)}')
+    BATCH_SIZE = 5000
+    offset = 0
 
-    for cost_types in cost_types_batch:
-        payload = []
-        cost_code_name = prepend_code_to_name(use_cost_code_in_naming, cost_types['task_name'], cost_types['task_id'])
+    while True:
+        cost_types_batch = list(cost_types_queryset[offset:offset + BATCH_SIZE])
 
-        for cost_type in cost_types['cost_types']:
-            cost_type_name = prepend_code_to_name(use_cost_type_code_in_naming, cost_type['cost_type_name'], cost_type['cost_type_code'])
-            payload.append({
-                'parent_expense_field_id': dependent_field_setting.cost_code_field_id,
-                'parent_expense_field_value': cost_code_name,
-                'expense_field_id': dependent_field_setting.cost_type_field_id,
-                'expense_field_value': cost_type_name,
-                'is_enabled': True
-            })
+        if not cost_types_batch:
+            break
 
-        if payload:
-            sleep(0.2)
-            try:
-                total_batches += 1
-                payload_set = remove_duplicate_payload_entries(payload)
-                platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
-                CostType.objects.filter(task_name=cost_types['task_name'], task_id=cost_types['task_id'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True, updated_at=datetime.now(timezone.utc))
-                processed_batches += 1
-            except Exception as exception:
-                is_errored = True
-                logger.error(f'Exception while posting dependent cost type | Error: {exception} | Payload: {payload}')
+        logger.info(f'Posting Cost Types | WORKSPACE_ID: {dependent_field_setting.workspace_id} | Batch offset: {offset} | Batch size: {len(cost_types_batch)}')
+
+        for cost_types in cost_types_batch:
+            payload = []
+            cost_code_name = prepend_code_to_name(use_cost_code_in_naming, cost_types['task_name'], cost_types['task_id'])
+
+            for cost_type in cost_types['cost_types']:
+                cost_type_name = prepend_code_to_name(use_cost_type_code_in_naming, cost_type['cost_type_name'], cost_type['cost_type_code'])
+                payload.append({
+                    'parent_expense_field_id': dependent_field_setting.cost_code_field_id,
+                    'parent_expense_field_value': cost_code_name,
+                    'expense_field_id': dependent_field_setting.cost_type_field_id,
+                    'expense_field_value': cost_type_name,
+                    'is_enabled': True
+                })
+
+            if payload:
+                sleep(0.2)
+                try:
+                    total_batches += 1
+                    payload_set = remove_duplicate_payload_entries(payload)
+                    platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
+                    CostType.objects.filter(task_name=cost_types['task_name'], task_id=cost_types['task_id'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True, updated_at=datetime.now(timezone.utc))
+                    processed_batches += 1
+                except Exception as exception:
+                    is_errored = True
+                    logger.error(f'Exception while posting dependent cost type | Error: {exception} | Payload: {payload}')
+
+        offset += BATCH_SIZE
 
     if is_errored or import_log.status != 'IN_PROGRESS':
         import_log.status = 'PARTIALLY_FAILED'
