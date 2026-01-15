@@ -396,7 +396,7 @@ def initiate_import_to_fyle(workspace_id: int, run_in_rabbitmq_worker: bool = Fa
                 'prepend_code_to_name': True if setting.destination_field in configuration.import_code_fields else False
             }
 
-            if is_project_billable_sync_allowed(workspace_id=workspace_id):
+            if setting.source_field == 'PROJECT' and is_project_billable_sync_allowed(workspace_id=workspace_id):
                 billable_field_detail_key = get_project_billable_field_detail_key(workspace_id=workspace_id)
                 task_setting['project_billable_field_detail_key'] = billable_field_detail_key
 
