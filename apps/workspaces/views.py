@@ -34,7 +34,7 @@ from apps.tasks.models import TaskLog
 from apps.fyle.helpers import get_cluster_domain
 from apps.fyle.models import ExpenseGroupSettings
 from apps.workspaces.actions import export_to_intacct
-from apps.workspaces.tasks import patch_integration_settings
+from apps.workspaces.tasks import patch_integration_settings, sync_org_settings
 from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
@@ -161,6 +161,8 @@ class WorkspaceView(viewsets.ViewSet):
                 workspace_id=workspace.id,
                 cluster_domain=cluster_domain
             )
+
+            sync_org_settings(workspace_id=workspace.id)
 
         return Response(
             data=WorkspaceSerializer(workspace).data,
