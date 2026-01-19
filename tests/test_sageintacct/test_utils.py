@@ -1398,6 +1398,23 @@ def test_get_or_create_vendor(mocker, db):
     assert vendor.destination_id == 'non exiSting VENDOR iN intacct UsE aLl CaSeS'
 
 
+def test_get_or_create_vendor_with_none_sanitized_name(db):
+    """
+    Test get or create vendor returns None when sanitize_vendor_name returns None
+    """
+    workspace_id = 1
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    # Test with None vendor name - should return None
+    vendor = sage_intacct_connection.get_or_create_vendor(None, create=True)
+    assert vendor is None
+
+    # Test with vendor name that becomes empty after sanitization (only special chars)
+    vendor = sage_intacct_connection.get_or_create_vendor('!@#$%^&*()', create=True)
+    assert vendor is None
+
+
 def test_get_or_create_employee(mocker, db):
     """
     Test get or create employee
