@@ -23,6 +23,7 @@ from apps.workspaces.tasks import (
     post_to_integration_settings,
     run_sync_schedule,
     schedule_sync,
+    sync_org_settings,
     trigger_email_notification,
     update_workspace_name,
 )
@@ -824,3 +825,35 @@ def test_update_workspace_name_invalid_token(db, mocker):
         side_effect=Exception('General error')
     )
     update_workspace_name(1, 'Bearer access_token')
+
+
+def test_sync_org_settings(db, mocker):
+    """
+    Test sync org settings
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+    workspace.org_settings = {}
+    workspace.save()
+
+    mock_platform = mocker.patch('apps.workspaces.tasks.PlatformConnector')
+    mock_platform.return_value.org_settings.get.return_value = {
+        'regional_settings': {
+            'locale': {
+                'date_format': 'DD/MM/YYYY',
+                'timezone': 'Asia/Kolkata'
+            }
+        }
+    }
+
+    sync_org_settings(workspace_id=workspace_id)
+
+    workspace.refresh_from_db()
+    assert workspace.org_settings == {
+        'regional_settings': {
+            'locale': {
+                'date_format': 'DD/MM/YYYY',
+                'timezone': 'Asia/Kolkata'
+            }
+        }
+    }
