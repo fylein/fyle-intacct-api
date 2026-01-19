@@ -1180,6 +1180,8 @@ class SageIntacctConnector:
         try:
             if create:
                 vendor_id = self.sanitize_vendor_name(vendor_name)
+                if not vendor_id:
+                    return None
                 if len(vendor_id) > 20:
                     vendor_id = vendor_id[:17] + str(random.randint(100, 999))
                 created_vendor = self.post_vendor(vendor_id, vendor_name, email)
