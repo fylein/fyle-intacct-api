@@ -3,59 +3,73 @@ import logging
 import traceback
 from datetime import datetime
 
-from dateutil.relativedelta import relativedelta
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
-from django.db.models.functions import Lower
 from django.utils import timezone
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
-from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
+from django.core.cache import cache
+from django.db.models.functions import Lower
+from dateutil.relativedelta import relativedelta
+
 from fyle_integrations_platform_connector import PlatformConnector
 from intacctsdk.exceptions import BadRequestError as IntacctRESTBadRequestError
-from intacctsdk.exceptions import InternalServerError as IntacctRESTInternalServerError
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
 from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
+from intacctsdk.exceptions import InternalServerError as IntacctRESTInternalServerError
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
-
-from apps.exceptions import ValueErrorWithResponse
-from apps.fyle.actions import (
-    post_accounting_export_summary,
-    update_complete_expenses,
-    update_expenses_in_progress,
-    update_failed_expenses,
+from fyle_accounting_mappings.models import (
+    Mapping,
+    CategoryMapping,
+    EmployeeMapping,
+    ExpenseAttribute,
+    DestinationAttribute
 )
-from apps.fyle.models import Expense, ExpenseGroup
+
+from apps.tasks.models import Error, TaskLog
 from apps.mappings.models import GeneralMapping
+from fyle_intacct_api.exceptions import BulkError
+from apps.exceptions import ValueErrorWithResponse
+from apps.fyle.models import Expense, ExpenseGroup
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.workspaces.enums import SystemCommentExportTypeEnum
 from apps.sage_intacct.actions import update_last_export_details
 from apps.sage_intacct.connector import SageIntacctRestConnector
+from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
+from fyle_accounting_library.system_comments.models import SystemComment
+from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
+from apps.workspaces.models import (
+    Configuration,
+    FeatureConfig,
+    FyleCredential,
+    SageIntacctCredential
+)
+from apps.fyle.actions import (
+    update_failed_expenses,
+    update_complete_expenses,
+    update_expenses_in_progress,
+    post_accounting_export_summary
+)
 from apps.sage_intacct.errors.helpers import (
     error_matcher,
     get_entity_values,
     remove_support_id,
-    replace_destination_id_with_values,
+    replace_destination_id_with_values
 )
-from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.models import (
-    APPayment,
-    APPaymentLineitem,
     Bill,
+    APPayment,
     BillLineitem,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem,
-    ExpenseReport,
-    ExpenseReportLineitem,
     JournalEntry,
+    ExpenseReport,
+    APPaymentLineitem,
     JournalEntryLineitem,
+    ChargeCardTransaction,
+    ExpenseReportLineitem,
     SageIntacctReimbursement,
-    SageIntacctReimbursementLineitem,
+    ChargeCardTransactionLineitem,
+    SageIntacctReimbursementLineitem
 )
-from apps.sage_intacct.utils import SageIntacctConnector
-from apps.tasks.models import Error, TaskLog
-from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, SageIntacctCredential
-from fyle_intacct_api.exceptions import BulkError
-from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -769,10 +783,11 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
                 task_log.save()
 
         with transaction.atomic():
+            system_comments = []
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group, task_log.supdoc_id)
 
-            journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration, sage_intacct_connection)
+            journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration, sage_intacct_connection, system_comments)
 
             created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object, journal_entry_lineitem_object)
 
@@ -812,6 +827,15 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
+
+            if system_comments:
+                batch_id = SystemComment.generate_batch_id()
+                for comment in system_comments:
+                    comment['workspace_id'] = expense_group.workspace_id
+                    comment['export_type'] = SystemCommentExportTypeEnum.JOURNAL_ENTRY
+                    comment['batch_id'] = batch_id
+                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
+
         try:
             generate_export_url_and_update_expense(expense_group)
         except Exception as e:
@@ -985,11 +1009,12 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
                 task_log.save()
 
         with transaction.atomic():
+            system_comments = []
 
             expense_report_object = ExpenseReport.create_expense_report(expense_group, task_log.supdoc_id)
 
             expense_report_lineitems_objects = ExpenseReportLineitem.create_expense_report_lineitems(
-                expense_group, configuration, sage_intacct_connection
+                expense_group, configuration, sage_intacct_connection, system_comments
             )
 
             created_expense_report = sage_intacct_connection.post_expense_report(
@@ -1031,6 +1056,14 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
+
+            if system_comments:
+                batch_id = SystemComment.generate_batch_id()
+                for comment in system_comments:
+                    comment['workspace_id'] = expense_group.workspace_id
+                    comment['export_type'] = SystemCommentExportTypeEnum.EXPENSE_REPORT
+                    comment['batch_id'] = batch_id
+                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
 
         try:
             generate_export_url_and_update_expense(expense_group)
@@ -1206,9 +1239,11 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
                 task_log.save()
 
         with transaction.atomic():
-            bill_object = Bill.create_bill(expense_group, task_log.supdoc_id)
+            system_comments = []
 
-            bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group, configuration)
+            bill_object = Bill.create_bill(expense_group, task_log.supdoc_id, system_comments)
+
+            bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group, configuration, system_comments)
 
             created_bill = sage_intacct_connection.post_bill(
                 bill_object,
@@ -1246,6 +1281,15 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
+
+            if system_comments:
+                batch_id = SystemComment.generate_batch_id()
+                for comment in system_comments:
+                    comment['workspace_id'] = expense_group.workspace_id
+                    comment['export_type'] = SystemCommentExportTypeEnum.BILL
+                    comment['batch_id'] = batch_id
+                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
+
         try:
             generate_export_url_and_update_expense(expense_group)
         except Exception as e:
@@ -1416,10 +1460,12 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
 
         with transaction.atomic():
 
+            system_comments = []
+
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id, task_log.supdoc_id)
 
             charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
-                create_charge_card_transaction_lineitems(expense_group, configuration, sage_intacct_connection)
+                create_charge_card_transaction_lineitems(expense_group, configuration, sage_intacct_connection, system_comments)
 
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
                 charge_card_transaction_object,
@@ -1458,6 +1504,14 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             worker_logger.info('Resolving errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
+
+            if system_comments:
+                batch_id = SystemComment.generate_batch_id()
+                for comment in system_comments:
+                    comment['workspace_id'] = expense_group.workspace_id
+                    comment['export_type'] = SystemCommentExportTypeEnum.CHARGE_CARD_TRANSACTION
+                    comment['batch_id'] = batch_id
+                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
 
         try:
             generate_export_url_and_update_expense(expense_group)

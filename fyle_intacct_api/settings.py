@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'fyle_accounting_library.common_resources',
     'fyle_accounting_library.fyle_platform',
     'fyle_accounting_library.rabbitmq',
+    'fyle_accounting_library.system_comments'
 ]
 
 MIDDLEWARE = [
