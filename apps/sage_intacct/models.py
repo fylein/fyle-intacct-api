@@ -28,8 +28,8 @@ from apps.fyle.models import (
     ExpenseAttribute,
     ExpenseGroupSettings
 )
-from apps.workspaces.enums import SystemCommentSourceEnum
-from apps.workspaces.system_comments import SystemCommentHelper
+from apps.workspaces.enums import SystemCommentEntityTypeEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentSourceEnum
+from apps.workspaces.system_comments import add_system_comment
 
 allocation_mapping = {
     'LOCATIONID': 'location_id',
@@ -140,12 +140,15 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
 
     # 2. Check Default Project from mappings
     if general_mappings and general_mappings.default_project_id:
-        SystemCommentHelper.add_default_project_applied(
-            system_comments,
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_PROJECT_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
             workspace_id=expense_group.workspace_id,
-            expense_id=lineitem.id,
-            default_project_id=general_mappings.default_project_id,
-            default_project_name=general_mappings.default_project_name
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_PROJECT_APPLIED,
+            info={'default_project_id': general_mappings.default_project_id, 'default_project_name': general_mappings.default_project_name}
         )
         return general_mappings.default_project_id
 
@@ -189,23 +192,29 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
     if general_mappings and general_mappings.use_intacct_employee_departments:
         employee_department = get_intacct_employee_object('department_id', expense_group)
         if employee_department:
-            SystemCommentHelper.add_employee_department_applied(
-                system_comments,
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.GET_DEPARTMENT_ID,
+                intent=SystemCommentIntentEnum.EMPLOYEE_DEFAULT_VALUE_APPLIED,
+                entity_type=SystemCommentEntityTypeEnum.EXPENSE,
                 workspace_id=expense_group.workspace_id,
-                expense_id=lineitem.id,
-                employee_department_id=employee_department,
-                employee_department_name=employee_department
+                entity_id=lineitem.id,
+                reason=SystemCommentReasonEnum.EMPLOYEE_DEPARTMENT_APPLIED,
+                info={'employee_department_id': employee_department, 'employee_department_name': employee_department}
             )
             return employee_department
 
     # 3. Check Default Department from mappings
     if general_mappings and general_mappings.default_department_id:
-        SystemCommentHelper.add_default_department_applied(
-            system_comments,
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_DEPARTMENT_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
             workspace_id=expense_group.workspace_id,
-            expense_id=lineitem.id,
-            default_department_id=general_mappings.default_department_id,
-            default_department_name=general_mappings.default_department_name
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_DEPARTMENT_APPLIED,
+            info={'default_department_id': general_mappings.default_department_id, 'default_department_name': general_mappings.default_department_name}
         )
         return general_mappings.default_department_id
 
@@ -249,23 +258,29 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     if general_mappings and general_mappings.use_intacct_employee_locations:
         employee_location = get_intacct_employee_object('location_id', expense_group)
         if employee_location:
-            SystemCommentHelper.add_employee_location_applied(
-                system_comments,
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.GET_LOCATION_ID,
+                intent=SystemCommentIntentEnum.EMPLOYEE_DEFAULT_VALUE_APPLIED,
+                entity_type=SystemCommentEntityTypeEnum.EXPENSE,
                 workspace_id=expense_group.workspace_id,
-                expense_id=lineitem.id,
-                employee_location_id=employee_location,
-                employee_location_name=employee_location
+                entity_id=lineitem.id,
+                reason=SystemCommentReasonEnum.EMPLOYEE_LOCATION_APPLIED,
+                info={'employee_location_id': employee_location, 'employee_location_name': employee_location}
             )
             return employee_location
 
     # 3. Check Default Location from mappings
     if general_mappings and general_mappings.default_location_id:
-        SystemCommentHelper.add_default_location_applied(
-            system_comments,
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_LOCATION_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
             workspace_id=expense_group.workspace_id,
-            expense_id=lineitem.id,
-            default_location_id=general_mappings.default_location_id,
-            default_location_name=general_mappings.default_location_name
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_LOCATION_APPLIED,
+            info={'default_location_id': general_mappings.default_location_id, 'default_location_name': general_mappings.default_location_name}
         )
         return general_mappings.default_location_id
 
@@ -354,12 +369,15 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
 
     # 2. Check Default Item from mappings
     if general_mappings and general_mappings.default_item_id:
-        SystemCommentHelper.add_default_item_applied(
-            system_comments,
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_ITEM_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
             workspace_id=expense_group.workspace_id,
-            expense_id=lineitem.id,
-            default_item_id=general_mappings.default_item_id,
-            default_item_name=general_mappings.default_item_name
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_ITEM_APPLIED,
+            info={'default_item_id': general_mappings.default_item_id, 'default_item_name': general_mappings.default_item_name}
         )
         return general_mappings.default_item_id
 
@@ -507,12 +525,15 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
 
     # 2. Check Default Class from mappings
     if general_mappings and general_mappings.default_class_id:
-        SystemCommentHelper.add_default_class_applied(
-            system_comments,
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_CLASS_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
             workspace_id=expense_group.workspace_id,
-            expense_id=lineitem.id,
-            default_class_id=general_mappings.default_class_id,
-            default_class_name=general_mappings.default_class_name
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_CLASS_APPLIED,
+            info={'default_class_id': general_mappings.default_class_id, 'default_class_name': general_mappings.default_class_name}
         )
         return general_mappings.default_class_id
 
@@ -541,12 +562,15 @@ def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = Non
     if system_comments is not None:
         general_mappings = GeneralMapping.objects.filter(workspace_id=expense_group.workspace_id).first()
         if general_mappings and general_mappings.default_tax_code_id:
-            SystemCommentHelper.add_default_tax_code_applied(
-                system_comments,
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.GET_TAX_CODE_ID,
+                intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                entity_type=SystemCommentEntityTypeEnum.EXPENSE,
                 workspace_id=expense_group.workspace_id,
-                expense_id=lineitem.id,
-                default_tax_code_id=general_mappings.default_tax_code_id,
-                default_tax_code_name=general_mappings.default_tax_code_name
+                entity_id=lineitem.id,
+                reason=SystemCommentReasonEnum.DEFAULT_TAX_CODE_APPLIED,
+                info={'default_tax_code_id': general_mappings.default_tax_code_id, 'default_tax_code_name': general_mappings.default_tax_code_name}
             )
 
     return tax_code
@@ -893,12 +917,15 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
     if employee_mapping and employee_mapping.destination_card_account:
         return employee_mapping.destination_card_account.destination_id
 
-    SystemCommentHelper.add_default_credit_card_applied(
-        system_comments,
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.GET_CCC_ACCOUNT_ID,
+        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
         workspace_id=general_mappings.workspace_id,
-        expense_id=expense.id,
-        default_charge_card_id=general_mappings.default_charge_card_id,
-        default_charge_card_name=general_mappings.default_charge_card_name
+        entity_id=expense.id,
+        reason=SystemCommentReasonEnum.DEFAULT_CREDIT_CARD_APPLIED,
+        info={'default_charge_card_id': general_mappings.default_charge_card_id, 'default_charge_card_name': general_mappings.default_charge_card_name}
     )
 
     return general_mappings.default_charge_card_id
@@ -977,12 +1004,15 @@ class Bill(models.Model):
                 vendor_id = ccc_mapping.destination.destination_id
             else:
                 vendor_id = general_mappings.default_ccc_vendor_id
-                SystemCommentHelper.add_default_ccc_vendor_applied(
-                    system_comments,
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_BILL,
+                    intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
                     workspace_id=expense_group.workspace_id,
-                    expense_group_id=expense_group.id,
-                    default_ccc_vendor_id=general_mappings.default_ccc_vendor_id,
-                    default_ccc_vendor_name=general_mappings.default_ccc_vendor_name
+                    entity_id=expense_group.id,
+                    reason=SystemCommentReasonEnum.DEFAULT_CCC_VENDOR_APPLIED,
+                    info={'default_ccc_vendor_id': general_mappings.default_ccc_vendor_id, 'default_ccc_vendor_name': general_mappings.default_ccc_vendor_name}
                 )
 
         bill_object, _ = Bill.objects.update_or_create(
@@ -1290,11 +1320,15 @@ class ExpenseReportLineitem(models.Model):
                     if vendor:
                         vendor_id = vendor.destination_id
                     else:
-                        SystemCommentHelper.add_vendor_not_found_for_reimbursable(
-                            system_comments,
+                        add_system_comment(
+                            system_comments=system_comments,
+                            source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT_LINEITEMS,
+                            intent=SystemCommentIntentEnum.VENDOR_NOT_FOUND,
+                            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
                             workspace_id=expense_group.workspace_id,
-                            expense_id=lineitem.id,
-                            merchant=merchant
+                            entity_id=lineitem.id,
+                            reason=SystemCommentReasonEnum.VENDOR_NOT_FOUND_FOR_REIMBURSABLE,
+                            info={'merchant': merchant}
                         )
             elif lineitem.fund_source == 'CCC':
                 # For CCC expenses: Get or create a Credit Card Vendor from the expense merchant
@@ -1302,12 +1336,15 @@ class ExpenseReportLineitem(models.Model):
                 if vendor:
                     vendor_id = vendor.destination_id
                 if vendor and is_fallback:
-                    SystemCommentHelper.add_credit_card_misc_vendor_applied(
-                        system_comments,
-                        workspace_id=expense_group.workspace_id,
-                        expense_id=lineitem.id,
+                    add_system_comment(
+                        system_comments=system_comments,
                         source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT_LINEITEMS,
-                        original_merchant=merchant
+                        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                        workspace_id=expense_group.workspace_id,
+                        entity_id=lineitem.id,
+                        reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                        info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
                     )
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
@@ -1481,12 +1518,15 @@ class JournalEntryLineitem(models.Model):
                     if vendor:
                         vendor_id = vendor.destination_id
                     if vendor and is_fallback:
-                        SystemCommentHelper.add_credit_card_misc_vendor_applied(
-                            system_comments,
-                            workspace_id=expense_group.workspace_id,
-                            expense_id=lineitem.id,
+                        add_system_comment(
+                            system_comments=system_comments,
                             source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
-                            original_merchant=lineitem.vendor
+                            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                            workspace_id=expense_group.workspace_id,
+                            entity_id=lineitem.id,
+                            reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                            info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'}
                         )
 
             else:
@@ -1502,17 +1542,20 @@ class JournalEntryLineitem(models.Model):
                     credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
                     if credit_card_misc_vendor:
                         vendor_id = credit_card_misc_vendor.destination_id
-                        SystemCommentHelper.add_credit_card_misc_vendor_applied(
-                            system_comments,
-                            workspace_id=expense_group.workspace_id,
-                            expense_id=lineitem.id,
+                        add_system_comment(
+                            system_comments=system_comments,
                             source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
-                            original_merchant=merchant
+                            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                            workspace_id=expense_group.workspace_id,
+                            entity_id=lineitem.id,
+                            reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                            info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
                         )
                     else:
                         raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
-
-                vendor_id = vendor.destination_id
+                else:
+                    vendor_id = vendor.destination_id
 
             class_id = get_class_id_or_none(expense_group, lineitem, general_mappings, system_comments)
 
@@ -1580,10 +1623,13 @@ class ChargeCardTransaction(models.Model):
         db_table = 'charge_card_transactions'
 
     @staticmethod
-    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None, supdoc_id: str = None) -> 'ChargeCardTransaction':
+    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None, supdoc_id: str = None, system_comments: list = None) -> 'ChargeCardTransaction':
         """
         Create create charge card transaction
         :param expense_group: ExpenseGroup
+        :param vendor_id: Vendor ID
+        :param supdoc_id: Supporting document ID
+        :param system_comments: Optional list to collect system comment data
         :return: ChargeCardTransaction object
         """
         description = expense_group.description
@@ -1605,6 +1651,16 @@ class ChargeCardTransaction(models.Model):
             credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
             if credit_card_misc_vendor:
                 vendor_id = credit_card_misc_vendor.destination_id
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+                    intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=expense_group.id,
+                    reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                    info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
+                )
             else:
                 raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
@@ -1731,12 +1787,15 @@ class ChargeCardTransactionLineitem(models.Model):
             if vendor:
                 vendor_id = vendor.destination_id
             if vendor and is_fallback:
-                SystemCommentHelper.add_credit_card_misc_vendor_applied(
-                    system_comments,
-                    workspace_id=expense_group.workspace_id,
-                    expense_id=lineitem.id,
+                add_system_comment(
+                    system_comments=system_comments,
                     source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
-                    original_merchant=lineitem.vendor
+                    intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                    info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'}
                 )
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(

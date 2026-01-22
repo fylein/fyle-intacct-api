@@ -14,8 +14,6 @@ from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.actions import update_last_export_details
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.models import Configuration, FeatureConfig
-from apps.workspaces.system_comments import SystemCommentHelper
-from fyle_accounting_library.system_comments.models import SystemComment
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 
 logger = logging.getLogger(__name__)
@@ -126,9 +124,8 @@ def schedule_journal_entries_creation(
         ))
 
         skip_export_count = 0
-        system_comments = []
         for index, expense_group in enumerate(expense_groups):
-            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group, system_comments=system_comments)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
                 skip_export_count = handle_skipped_exports(
                     expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
@@ -155,20 +152,16 @@ def schedule_journal_entries_creation(
                 args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
 
-        if system_comments:
-            SystemComment.bulk_create_comments(system_comments)
-
         if len(chain_tasks) > 0:
             __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
 
 
-def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_group: ExpenseGroup, system_comments: list = None) -> bool:
+def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_group: ExpenseGroup) -> bool:
     """
     Validate failing export
     :param is_auto_export: Is auto export
     :param interval_hours: Interval hours
     :param expense_group: Expense Group
-    :param system_comments: Optional list to collect system comment data
     :return: bool
     """
     mapping_error = Error.objects.filter(
@@ -177,13 +170,6 @@ def validate_failing_export(is_auto_export: bool, interval_hours: int, expense_g
         is_resolved=False
     ).first()
     if mapping_error:
-        SystemCommentHelper.add_export_skipped_mapping_errors(
-            system_comments=system_comments,
-            workspace_id=expense_group.workspace_id,
-            expense_group_id=expense_group.id,
-            error_id=mapping_error.id,
-            error_type=mapping_error.type if hasattr(mapping_error, 'type') else None
-        )
         return True
 
     return False
@@ -213,9 +199,8 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
         chain_tasks = []
 
         skip_export_count = 0
-        system_comments = []
         for index, expense_group in enumerate(expense_groups):
-            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group, system_comments=system_comments)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
                 skip_export_count = handle_skipped_exports(
                     expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
@@ -241,9 +226,6 @@ def schedule_expense_reports_creation(workspace_id: int, expense_group_ids: list
                 target='apps.sage_intacct.tasks.create_expense_report',
                 args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
-
-        if system_comments:
-            SystemComment.bulk_create_comments(system_comments)
 
         if len(chain_tasks) > 0:
             __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
@@ -279,9 +261,8 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
         ))
 
         skip_export_count = 0
-        system_comments = []
         for index, expense_group in enumerate(expense_groups):
-            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group, system_comments=system_comments)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
                 skip_export_count = handle_skipped_exports(
                     expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
@@ -307,9 +288,6 @@ def schedule_bills_creation(workspace_id: int, expense_group_ids: list[str], is_
                 target='apps.sage_intacct.tasks.create_bill',
                 args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
-
-        if system_comments:
-            SystemComment.bulk_create_comments(system_comments)
 
         if len(chain_tasks) > 0:
             __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)
@@ -346,9 +324,8 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
         ))
 
         skip_export_count = 0
-        system_comments = []
         for index, expense_group in enumerate(expense_groups):
-            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group, system_comments=system_comments)
+            skip_export = validate_failing_export(is_auto_export, interval_hours, expense_group)
             if skip_export:
                 skip_export_count = handle_skipped_exports(
                     expense_groups=expense_groups, index=index, skip_export_count=skip_export_count, expense_group=expense_group, triggered_by=triggered_by
@@ -374,9 +351,6 @@ def schedule_charge_card_transaction_creation(workspace_id: int, expense_group_i
                 target='apps.sage_intacct.tasks.create_charge_card_transaction',
                 args=[expense_group.id, task_log.id, is_auto_export, (expense_groups.count() == index + 1)]
             ))
-
-        if system_comments:
-            SystemComment.bulk_create_comments(system_comments)
 
         if len(chain_tasks) > 0:
             __create_chain_and_run(workspace_id, chain_tasks, run_in_rabbitmq_worker)

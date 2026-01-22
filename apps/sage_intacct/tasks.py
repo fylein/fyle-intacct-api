@@ -30,8 +30,8 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.exceptions import ValueErrorWithResponse
 from apps.fyle.models import Expense, ExpenseGroup
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.workspaces.enums import SystemCommentExportTypeEnum, SystemCommentSourceEnum
-from apps.workspaces.system_comments import SystemCommentHelper
+from apps.workspaces.enums import ExportTypeEnum, SystemCommentEntityTypeEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentSourceEnum
+from apps.workspaces.system_comments import add_system_comment
 from apps.sage_intacct.actions import update_last_export_details
 from apps.sage_intacct.connector import SageIntacctRestConnector
 from apps.sage_intacct.helpers import get_sage_intacct_connection
@@ -775,12 +775,15 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             merchant = expense_group.expenses.first().vendor
             vendor, is_fallback = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
             if vendor and is_fallback:
-                SystemCommentHelper.add_credit_card_misc_vendor_applied(
-                    system_comments,
-                    workspace_id=expense_group.workspace_id,
-                    expense_id=expense_group.expenses.first().id,
+                add_system_comment(
+                    system_comments=system_comments,
                     source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
-                    original_merchant=merchant
+                    intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=expense_group.id,
+                    reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                    info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
                 )
 
         __validate_employee_mapping(expense_group, configuration)
@@ -844,7 +847,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
                 batch_id = SystemComment.generate_batch_id()
                 for comment in system_comments:
                     comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = SystemCommentExportTypeEnum.JOURNAL_ENTRY
+                    comment['export_type'] = ExportTypeEnum.JOURNAL_ENTRY
                     comment['batch_id'] = batch_id
                 SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
 
@@ -1073,7 +1076,7 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
                 batch_id = SystemComment.generate_batch_id()
                 for comment in system_comments:
                     comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = SystemCommentExportTypeEnum.EXPENSE_REPORT
+                    comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
                     comment['batch_id'] = batch_id
                 SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
 
@@ -1298,7 +1301,7 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
                 batch_id = SystemComment.generate_batch_id()
                 for comment in system_comments:
                     comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = SystemCommentExportTypeEnum.BILL
+                    comment['export_type'] = ExportTypeEnum.BILL
                     comment['batch_id'] = batch_id
                 SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
 
@@ -1460,12 +1463,15 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         vendor, is_fallback = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
 
         if vendor and is_fallback:
-            SystemCommentHelper.add_credit_card_misc_vendor_applied(
-                system_comments,
-                workspace_id=expense_group.workspace_id,
-                expense_id=expense_group.expenses.first().id,
+            add_system_comment(
+                system_comments=system_comments,
                 source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
-                original_merchant=merchant
+                intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                workspace_id=expense_group.workspace_id,
+                entity_id=expense_group.id,
+                reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
             )
 
         vendor_id = vendor.destination_id if vendor else None
@@ -1483,7 +1489,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
 
         with transaction.atomic():
 
-            charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id, task_log.supdoc_id)
+            charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id, task_log.supdoc_id, system_comments)
 
             charge_card_transaction_lineitems_objects = ChargeCardTransactionLineitem. \
                 create_charge_card_transaction_lineitems(expense_group, configuration, sage_intacct_connection, system_comments)
@@ -1530,7 +1536,7 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
                 batch_id = SystemComment.generate_batch_id()
                 for comment in system_comments:
                     comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = SystemCommentExportTypeEnum.CHARGE_CARD_TRANSACTION
+                    comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
                     comment['batch_id'] = batch_id
                 SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
 

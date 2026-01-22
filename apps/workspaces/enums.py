@@ -33,7 +33,7 @@ class SystemCommentSourceEnum(str, Enum):
     CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS = 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
 
     # Import/sync functions
-    HANDLE_CATEGORY_CHANGE = 'HANDLE_CATEGORY_CHANGE'
+    HANDLE_EXPENSE_CATEGORY_CHANGE = 'HANDLE_EXPENSE_CATEGORY_CHANGE'
     HANDLE_FUND_SOURCE_CHANGE = 'HANDLE_FUND_SOURCE_CHANGE'
     HANDLE_REPORT_CHANGE = 'HANDLE_REPORT_CHANGE'
     RECREATE_EXPENSE_GROUPS = 'RECREATE_EXPENSE_GROUPS'
@@ -43,7 +43,6 @@ class SystemCommentSourceEnum(str, Enum):
     # Expense filtering functions
     FILTER_EXPENSE_GROUPS = 'FILTER_EXPENSE_GROUPS'
     GROUP_EXPENSES_AND_SAVE = 'GROUP_EXPENSES_AND_SAVE'
-    VALIDATE_FAILING_EXPORT = 'VALIDATE_FAILING_EXPORT'
 
 
 class SystemCommentIntentEnum(str, Enum):
@@ -60,7 +59,6 @@ class SystemCommentIntentEnum(str, Enum):
     DELETE_EXPENSES = 'DELETE_EXPENSES'
     VENDOR_NOT_FOUND = 'VENDOR_NOT_FOUND'
     SKIP_EXPENSE = 'SKIP_EXPENSE'
-    SKIP_EXPORT = 'SKIP_EXPORT'
 
 
 class SystemCommentReasonEnum(str, Enum):
@@ -94,13 +92,12 @@ class SystemCommentReasonEnum(str, Enum):
     CREDIT_CARD_MISC_VENDOR_APPLIED = 'Merchant not found in Sage Intacct. Using Credit Card Misc vendor as fallback.'
     VENDOR_NOT_FOUND_FOR_REIMBURSABLE = 'Vendor not found in Sage Intacct for reimbursable expense merchant. Vendor field left empty.'
 
-    # Expense skipping & filtering - explaining WHY
-    NEGATIVE_EXPENSE_SKIPPED = 'Expense skipped because it has a negative amount.'
-    NEGATIVE_REPORT_TOTAL_SKIPPED = 'Expense skipped because the report total is negative.'
+    # Expense skipping & filtering - explaining WHY (EXPENSE_REPORT export module)
+    NEGATIVE_EXPENSE_SKIPPED = 'Expense skipped during Expense Report export because it has a negative amount.'
+    NEGATIVE_REPORT_TOTAL_SKIPPED = 'Expense skipped during Expense Report export because the report total is negative.'
     EXPENSE_SKIPPED_AFTER_IMPORT = 'Expense skipped after import due to expense filter rules configured in workspace settings.'
     REIMBURSABLE_EXPENSE_NOT_CONFIGURED = 'Reimbursable expense skipped because reimbursable expense export is not configured.'
     CCC_EXPENSE_NOT_CONFIGURED = 'Corporate card expense skipped because corporate card expense export is not configured.'
-    UNRESOLVED_MAPPING_ERRORS = 'Export skipped due to unresolved mapping errors for this expense group.'
 
 
 class SystemCommentEntityTypeEnum(str, Enum):
@@ -111,9 +108,9 @@ class SystemCommentEntityTypeEnum(str, Enum):
     EXPENSE_GROUP = 'EXPENSE_GROUP'
 
 
-class SystemCommentExportTypeEnum(str, Enum):
+class ExportTypeEnum(str, Enum):
     """
-    Export type for the comment
+    Export type enum
     """
     BILL = 'BILL'
     EXPENSE_REPORT = 'EXPENSE_REPORT'
