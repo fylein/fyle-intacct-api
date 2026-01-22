@@ -56,7 +56,7 @@ def create_expense_report(db, mocker):
     expense_group = ExpenseGroup.objects.get(id=1)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
     expense_report = ExpenseReport.create_expense_report(expense_group)
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
     return expense_report,expense_report_lineitems
@@ -108,7 +108,7 @@ def create_charge_card_transaction(db, mocker):
 
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
     charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
 
     return charge_card_transaction,charge_card_transaction_lineitems

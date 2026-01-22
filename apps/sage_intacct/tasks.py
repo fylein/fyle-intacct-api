@@ -30,7 +30,8 @@ from fyle_intacct_api.exceptions import BulkError
 from apps.exceptions import ValueErrorWithResponse
 from apps.fyle.models import Expense, ExpenseGroup
 from apps.sage_intacct.utils import SageIntacctConnector
-from apps.workspaces.enums import SystemCommentExportTypeEnum
+from apps.workspaces.enums import SystemCommentExportTypeEnum, SystemCommentSourceEnum
+from apps.workspaces.system_comments import SystemCommentHelper
 from apps.sage_intacct.actions import update_last_export_details
 from apps.sage_intacct.connector import SageIntacctRestConnector
 from apps.sage_intacct.helpers import get_sage_intacct_connection
@@ -254,12 +255,13 @@ def create_or_update_employee_mapping(
                     )
 
 
-def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configuration, merchant: str = None, sage_intacct_connection: SageIntacctConnector | SageIntacctRestConnector = None) -> DestinationAttribute:
+def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configuration, merchant: str = None, sage_intacct_connection: SageIntacctConnector | SageIntacctRestConnector = None) -> tuple[DestinationAttribute, bool]:
     """
     Get or create default vendor
     :param merchant: Fyle Expense Merchant
     :param workspace_id: Workspace Id
-    :return: Destination Attribute for Vendor
+    :param sage_intacct_connection: Sage Intacct connection object
+    :return: Tuple of (Destination Attribute for Vendor, is_fallback_vendor)
     """
     if not sage_intacct_connection:
         sage_intacct_connection = get_sage_intacct_connection(workspace_id=workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
@@ -286,8 +288,9 @@ def get_or_create_credit_card_vendor(workspace_id: int, configuration: Configura
 
     if not vendor:
         vendor = sage_intacct_connection.get_or_create_vendor('Credit Card Misc', create=True)
+        return vendor, True
 
-    return vendor
+    return vendor, False
 
 
 def resolve_errors_for_exported_expense_group(expense_group: ExpenseGroup) -> None:
@@ -759,6 +762,8 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
+        system_comments = []
+
         if settings.BRAND_ID == 'fyle':
             if configuration.auto_map_employees and configuration.auto_create_destination_entity \
                 and configuration.auto_map_employees != 'EMPLOYEE_CODE':
@@ -768,7 +773,15 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
                 )
         else:
             merchant = expense_group.expenses.first().vendor
-            get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
+            vendor, is_fallback = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
+            if vendor and is_fallback:
+                SystemCommentHelper.add_credit_card_misc_vendor_applied(
+                    system_comments,
+                    workspace_id=expense_group.workspace_id,
+                    expense_id=expense_group.expenses.first().id,
+                    source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
+                    original_merchant=merchant
+                )
 
         __validate_employee_mapping(expense_group, configuration)
         worker_logger.info('Validated Employee mapping %s successfully', expense_group.id)
@@ -783,7 +796,6 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
                 task_log.save()
 
         with transaction.atomic():
-            system_comments = []
 
             journal_entry_object = JournalEntry.create_journal_entry(expense_group, task_log.supdoc_id)
 
@@ -1442,8 +1454,19 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
 
+        system_comments = []
+
         merchant = expense_group.expenses.first().vendor
-        vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
+        vendor, is_fallback = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
+
+        if vendor and is_fallback:
+            SystemCommentHelper.add_credit_card_misc_vendor_applied(
+                system_comments,
+                workspace_id=expense_group.workspace_id,
+                expense_id=expense_group.expenses.first().id,
+                source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+                original_merchant=merchant
+            )
 
         vendor_id = vendor.destination_id if vendor else None
         __validate_employee_mapping(expense_group, configuration)
@@ -1459,8 +1482,6 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
                 task_log.save()
 
         with transaction.atomic():
-
-            system_comments = []
 
             charge_card_transaction_object = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor_id, task_log.supdoc_id)
 

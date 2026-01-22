@@ -27,6 +27,11 @@ class SystemCommentSourceEnum(str, Enum):
     # Export functions
     CREATE_BILL = 'CREATE_BILL'
 
+    # Lineitem creation functions
+    CREATE_EXPENSE_REPORT_LINEITEMS = 'CREATE_EXPENSE_REPORT_LINEITEMS'
+    CREATE_JOURNAL_ENTRY_LINEITEMS = 'CREATE_JOURNAL_ENTRY_LINEITEMS'
+    CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS = 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+
     # Import/sync functions
     HANDLE_CATEGORY_CHANGE = 'HANDLE_CATEGORY_CHANGE'
     HANDLE_FUND_SOURCE_CHANGE = 'HANDLE_FUND_SOURCE_CHANGE'
@@ -34,6 +39,11 @@ class SystemCommentSourceEnum(str, Enum):
     RECREATE_EXPENSE_GROUPS = 'RECREATE_EXPENSE_GROUPS'
     DELETE_EXPENSE_GROUP_AND_RELATED_DATA = 'DELETE_EXPENSE_GROUP_AND_RELATED_DATA'
     DELETE_EXPENSES = 'DELETE_EXPENSES'
+
+    # Expense filtering functions
+    FILTER_EXPENSE_GROUPS = 'FILTER_EXPENSE_GROUPS'
+    GROUP_EXPENSES_AND_SAVE = 'GROUP_EXPENSES_AND_SAVE'
+    VALIDATE_FAILING_EXPORT = 'VALIDATE_FAILING_EXPORT'
 
 
 class SystemCommentIntentEnum(str, Enum):
@@ -48,6 +58,9 @@ class SystemCommentIntentEnum(str, Enum):
     RECREATE_EXPENSE_GROUPS = 'RECREATE_EXPENSE_GROUPS'
     DELETE_EXPENSE_GROUP = 'DELETE_EXPENSE_GROUP'
     DELETE_EXPENSES = 'DELETE_EXPENSES'
+    VENDOR_NOT_FOUND = 'VENDOR_NOT_FOUND'
+    SKIP_EXPENSE = 'SKIP_EXPENSE'
+    SKIP_EXPORT = 'SKIP_EXPORT'
 
 
 class SystemCommentReasonEnum(str, Enum):
@@ -76,6 +89,18 @@ class SystemCommentReasonEnum(str, Enum):
     EXPENSE_GROUPS_RECREATED = 'Expense groups were recreated after fund source change.'
     EXPENSE_GROUP_AND_RELATED_DATA_DELETED = 'Expense group and all related data (task logs, errors) were deleted.'
     EXPENSES_DELETED_NO_EXPORT_SETTING = 'Expenses were deleted because no export setting is configured for their fund source (reimbursable/corporate card).'
+
+    # Vendor & merchant handling - explaining WHY
+    CREDIT_CARD_MISC_VENDOR_APPLIED = 'Merchant not found in Sage Intacct. Using Credit Card Misc vendor as fallback.'
+    VENDOR_NOT_FOUND_FOR_REIMBURSABLE = 'Vendor not found in Sage Intacct for reimbursable expense merchant. Vendor field left empty.'
+
+    # Expense skipping & filtering - explaining WHY
+    NEGATIVE_EXPENSE_SKIPPED = 'Expense skipped because it has a negative amount.'
+    NEGATIVE_REPORT_TOTAL_SKIPPED = 'Expense skipped because the report total is negative.'
+    EXPENSE_SKIPPED_AFTER_IMPORT = 'Expense skipped after import due to expense filter rules configured in workspace settings.'
+    REIMBURSABLE_EXPENSE_NOT_CONFIGURED = 'Reimbursable expense skipped because reimbursable expense export is not configured.'
+    CCC_EXPENSE_NOT_CONFIGURED = 'Corporate card expense skipped because corporate card expense export is not configured.'
+    UNRESOLVED_MAPPING_ERRORS = 'Export skipped due to unresolved mapping errors for this expense group.'
 
 
 class SystemCommentEntityTypeEnum(str, Enum):

@@ -339,10 +339,10 @@ def test_get_or_create_credit_card_vendor(mocker, db):
     configuration.auto_create_merchants_as_vendors = True
     configuration.save()
 
-    contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
+    contact, is_fallback = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
     assert contact.value == 'Credit Card Misc'
 
-    contact = get_or_create_credit_card_vendor(workspace_id, configuration, '')
+    contact, is_fallback = get_or_create_credit_card_vendor(workspace_id, configuration, '')
     assert contact.value == 'Credit Card Misc'
 
     configuration.corporate_credit_card_expenses_object = 'CHARGE_CARD_TRANSACTION'
@@ -352,7 +352,7 @@ def test_get_or_create_credit_card_vendor(mocker, db):
     vendor.value = 'samp_merchant'
     vendor.save()
 
-    contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
+    contact, is_fallback = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant')
     assert contact.value == 'samp_merchant'
 
     configuration.corporate_credit_card_expenses_object = 'JOURNAL_ENTRY'
@@ -361,7 +361,7 @@ def test_get_or_create_credit_card_vendor(mocker, db):
     vendor.value = 'samp_merchant_2'
     vendor.save()
 
-    contact = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant_2')
+    contact, is_fallback = get_or_create_credit_card_vendor(workspace_id, configuration, 'samp_merchant_2')
     assert contact.value == 'samp_merchant_2'
 
     try:
@@ -1179,7 +1179,7 @@ def test_post_create_expense_report_exceptions(mocker, create_task_logs, db):
     mocker.patch(
         'apps.sage_intacct.tasks.create_sage_intacct_reimbursement',
     )
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
 
     with mock.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report') as mock_call:
         mock_call.side_effect = SageIntacctCredential.DoesNotExist()
@@ -2762,7 +2762,7 @@ def test_check_sage_intacct_bill_status_rest(mocker, db):
 
     expense_group = ExpenseGroup.objects.get(id=1)
     bill = Bill.create_bill(expense_group)
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     Configuration.objects.filter(workspace_id=workspace_id).update(
         corporate_credit_card_expenses_object='BILL'
     )

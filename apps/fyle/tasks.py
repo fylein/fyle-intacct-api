@@ -31,12 +31,7 @@ from apps.fyle.helpers import (
     update_task_log_post_import,
     construct_expense_filter_query
 )
-from apps.workspaces.enums import (
-    SystemCommentEntityTypeEnum,
-    SystemCommentIntentEnum,
-    SystemCommentReasonEnum,
-    SystemCommentSourceEnum
-)
+from apps.workspaces.system_comments import SystemCommentHelper
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -129,7 +124,11 @@ def create_expense_groups(workspace_id: int, fund_source: list[str], task_log: T
             if imported_from != ExpenseImportSourceEnum.CONFIGURATION_UPDATE:
                 workspace.save()
 
-            group_expenses_and_save(expenses, task_log, workspace, imported_from=imported_from)
+            system_comments = []
+            group_expenses_and_save(expenses, task_log, workspace, imported_from=imported_from, system_comments=system_comments)
+
+            if system_comments:
+                SystemComment.bulk_create_comments(system_comments)
 
     except NoPrivilegeError:
         logger.info('Invalid Fyle Credentials / Admin is disabled')
@@ -175,12 +174,14 @@ def skip_expenses_and_post_accounting_export_summary(expense_ids: list[int], wor
             logger.exception('Error posting accounting export summary for workspace_id: %s', workspace.id)
 
 
-def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, workspace: Workspace, imported_from: ExpenseImportSourceEnum = None) -> None:
+def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, workspace: Workspace, imported_from: ExpenseImportSourceEnum = None, system_comments: list = None) -> None:
     """
     Group expenses and save
     :param expenses: Expenses
     :param task_log: Task log object
     :param workspace: Workspace object
+    :param imported_from: Expense import source
+    :param system_comments: Optional list to collect system comment data
     :return: None
     """
     expense_objects = Expense.create_expense_objects(expenses, workspace.id, imported_from=imported_from)
@@ -192,6 +193,12 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, work
         reimbursable_expense_ids = [e.id for e in expense_objects if e.fund_source == 'PERSONAL']
 
         if reimbursable_expense_ids:
+            for expense_id in reimbursable_expense_ids:
+                SystemCommentHelper.add_reimbursable_expense_not_configured(
+                    system_comments=system_comments,
+                    workspace_id=workspace.id,
+                    expense_id=expense_id
+                )
             expense_objects = [e for e in expense_objects if e.id not in reimbursable_expense_ids]
             skip_expenses_and_post_accounting_export_summary(reimbursable_expense_ids, workspace)
 
@@ -200,6 +207,12 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, work
         ccc_expense_ids = [e.id for e in expense_objects if e.fund_source == 'CCC']
 
         if ccc_expense_ids:
+            for expense_id in ccc_expense_ids:
+                SystemCommentHelper.add_ccc_expense_not_configured(
+                    system_comments=system_comments,
+                    workspace_id=workspace.id,
+                    expense_id=expense_id
+                )
             expense_objects = [e for e in expense_objects if e.id not in ccc_expense_ids]
             skip_expenses_and_post_accounting_export_summary(ccc_expense_ids, workspace)
 
@@ -211,6 +224,12 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, work
 
         skipped_expenses = mark_expenses_as_skipped(final_query, expenses_object_ids, workspace)
         if skipped_expenses:
+            for expense in skipped_expenses:
+                SystemCommentHelper.add_expense_filter_rule_applied(
+                    system_comments=system_comments,
+                    workspace_id=workspace.id,
+                    expense_id=expense.id
+                )
             try:
                 post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
             except Exception:
@@ -224,7 +243,7 @@ def group_expenses_and_save(expenses: list[dict], task_log: TaskLog | None, work
         )
     filtered_expenses = [expense for expense in filtered_expenses if not expense.is_skipped]
     skipped_expense_ids = ExpenseGroup.create_expense_groups_by_report_id_fund_source(
-        filtered_expenses, configuration, workspace.id
+        filtered_expenses, configuration, workspace.id, system_comments
     )
 
     if skipped_expense_ids:
@@ -290,7 +309,11 @@ def import_and_export_expenses(report_id: str, org_id: str, is_state_change_even
             if is_state_change_event:
                 expenses = filter_expenses_based_on_state(expenses, expense_group_settings)
 
-            group_expenses_and_save(expenses, task_log, workspace, imported_from=imported_from)
+            system_comments = []
+            group_expenses_and_save(expenses, task_log, workspace, imported_from=imported_from, system_comments=system_comments)
+
+            if system_comments:
+                SystemComment.bulk_create_comments(system_comments)
 
         # Export only selected expense groups
         expense_ids = Expense.objects.filter(report_id=report_id, org_id=org_id).values_list('id', flat=True)
@@ -371,20 +394,13 @@ def update_non_exported_expenses(data: dict) -> None:
                 )
 
                 # Create system comment for fund source change
-                system_comments.append({
-                    'workspace_id': expense.workspace_id,
-                    'source': SystemCommentSourceEnum.HANDLE_FUND_SOURCE_CHANGE,
-                    'intent': SystemCommentIntentEnum.UPDATE_EXPENSE_FUND_SOURCE,
-                    'entity_type': SystemCommentEntityTypeEnum.EXPENSE,
-                    'entity_id': expense.id,
-                    'detail': {
-                        'reason': SystemCommentReasonEnum.FUND_SOURCE_CHANGED.value.format(old=old_fund_source, new=new_fund_source),
-                        'info': {
-                            'old_value': old_fund_source,
-                            'new_value': new_fund_source
-                        }
-                    }
-                })
+                SystemCommentHelper.add_fund_source_changed(
+                    system_comments,
+                    workspace_id=expense.workspace_id,
+                    expense_id=expense.id,
+                    old_fund_source=old_fund_source,
+                    new_fund_source=new_fund_source
+                )
 
             if old_category != new_category:
                 logger.info("Category changed for expense %s from %s to %s in workspace %s", expense.id, old_category, new_category, expense.workspace_id)
@@ -455,21 +471,13 @@ def handle_category_changes_for_expense(expense: Expense, new_category: str, sys
                         )
 
         # Create system comment for category change
-        if system_comments is not None:
-            system_comments.append({
-                'workspace_id': expense.workspace_id,
-                'source': SystemCommentSourceEnum.HANDLE_CATEGORY_CHANGE,
-                'intent': SystemCommentIntentEnum.UPDATE_EXPENSE_CATEGORY,
-                'entity_type': SystemCommentEntityTypeEnum.EXPENSE,
-                'entity_id': expense.id,
-                'detail': {
-                    'reason': SystemCommentReasonEnum.CATEGORY_CHANGED.value.format(old=expense.category, new=new_category),
-                    'info': {
-                        'old_value': expense.category,
-                        'new_value': new_category
-                    }
-                }
-            })
+        SystemCommentHelper.add_category_changed(
+            system_comments,
+            workspace_id=expense.workspace_id,
+            expense_id=expense.id,
+            old_category=expense.category,
+            new_category=new_category
+        )
 
 
 def re_run_skip_export_rule(workspace: Workspace) -> None:
@@ -488,12 +496,19 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
             Q(accounting_export_summary={}) | ~Q(accounting_export_summary__state="COMPLETE")
         )
         expense_ids = list(expenses.values_list('id', flat=True))
+        system_comments = []
         skipped_expenses = mark_expenses_as_skipped(
             filtered_expense_query,
             expense_ids,
             workspace
         )
         if skipped_expenses:
+            for expense in skipped_expenses:
+                SystemCommentHelper.add_expense_filter_rule_applied(
+                    system_comments=system_comments,
+                    workspace_id=workspace.id,
+                    expense_id=expense.id
+                )
             post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
             expense_groups = ExpenseGroup.objects.filter(exported_at__isnull=True, workspace_id=workspace.id, expenses__in=skipped_expenses)
             deleted_failed_expense_groups_count = 0
@@ -542,6 +557,9 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
                 post_accounting_export_summary(workspace_id=workspace.id, expense_ids=[expense.id for expense in skipped_expenses])
             except Exception:
                 logger.exception('Error posting accounting export summary for workspace_id: %s', workspace.id)
+
+            if system_comments:
+                SystemComment.bulk_create_comments(system_comments)
 
 
 def get_grouping_types(workspace_id: int) -> list[str]:
@@ -660,20 +678,13 @@ def handle_expense_fund_source_change(workspace_id: int, report_id: str, platfor
             old_fund_source = expense_id_fund_source_map[expense['id']]['fund_source']
             new_fund_source = EXPENSE_SOURCE_ACCOUNT_MAP[expense['source_account_type']]
 
-            system_comments.append({
-                'workspace_id': workspace_id,
-                'source': SystemCommentSourceEnum.HANDLE_FUND_SOURCE_CHANGE,
-                'intent': SystemCommentIntentEnum.UPDATE_EXPENSE_FUND_SOURCE,
-                'entity_type': SystemCommentEntityTypeEnum.EXPENSE,
-                'entity_id': expense_db_id,
-                'detail': {
-                    'reason': SystemCommentReasonEnum.FUND_SOURCE_CHANGED.value.format(old=old_fund_source, new=new_fund_source),
-                    'info': {
-                        'old_value': old_fund_source,
-                        'new_value': new_fund_source
-                    }
-                }
-            })
+            SystemCommentHelper.add_fund_source_changed(
+                system_comments,
+                workspace_id=workspace_id,
+                expense_id=expense_db_id,
+                old_fund_source=old_fund_source,
+                new_fund_source=new_fund_source
+            )
 
         if system_comments:
             SystemComment.bulk_create_comments(system_comments)
@@ -811,18 +822,11 @@ def delete_expense_group_and_related_data(expense_group: ExpenseGroup, workspace
     # Delete the expense group (this will also delete expense_group_expenses relationships)
     expense_group.delete()
     worker_logger.info("Deleted expense group %s in workspace %s", group_id, workspace_id)
-    if system_comments is not None:
-        system_comments.append({
-            'workspace_id': workspace_id,
-            'source': SystemCommentSourceEnum.DELETE_EXPENSE_GROUP_AND_RELATED_DATA,
-            'intent': SystemCommentIntentEnum.DELETE_EXPENSE_GROUP,
-            'entity_type': SystemCommentEntityTypeEnum.EXPENSE_GROUP,
-            'entity_id': group_id,
-            'detail': {
-                'reason': SystemCommentReasonEnum.EXPENSE_GROUP_AND_RELATED_DATA_DELETED.value,
-                'info': {}
-            }
-        })
+    SystemCommentHelper.add_expense_group_deleted(
+        system_comments,
+        workspace_id=workspace_id,
+        expense_group_id=group_id
+    )
 
 
 def recreate_expense_groups(workspace_id: int, expense_ids: list[int], system_comments: list | None = None) -> None:
@@ -892,20 +896,13 @@ def recreate_expense_groups(workspace_id: int, expense_ids: list[int], system_co
     worker_logger.info("Successfully recreated expense groups for %s expenses in workspace %s", len(expense_ids), workspace_id)
 
     # Create system comment for expense groups recreation
-    if system_comments is not None:
-        system_comments.append({
-            'workspace_id': workspace_id,
-            'source': SystemCommentSourceEnum.RECREATE_EXPENSE_GROUPS,
-            'intent': SystemCommentIntentEnum.RECREATE_EXPENSE_GROUPS,
-            'detail': {
-                'reason': SystemCommentReasonEnum.EXPENSE_GROUPS_RECREATED.value,
-                'info': {
-                    'expense_count': len(expense_ids),
-                    'expense_ids': expense_ids,
-                    'skipped_expense_ids': skipped_expense_ids
-                }
-            }
-        })
+    SystemCommentHelper.add_expense_groups_recreated(
+        system_comments,
+        workspace_id=workspace_id,
+        expense_count=len(expense_ids),
+        expense_ids=expense_ids,
+        skipped_expense_ids=skipped_expense_ids
+    )
 
 
 def schedule_task_for_expense_group_fund_source_change(changed_expense_ids: list[int], workspace_id: int, report_id: str, affected_fund_source_expense_ids: dict[str, list[int]]) -> None:
@@ -986,18 +983,11 @@ def delete_expenses_in_db(expense_ids: list[int], workspace_id: int, system_comm
     worker_logger.info("Deleted %s expenses in workspace %s", deleted_count, workspace_id)
 
     # Create system comment for expenses deleted
-    if system_comments is not None:
-        system_comments.append({
-            'workspace_id': workspace_id,
-            'source': SystemCommentSourceEnum.DELETE_EXPENSES,
-            'intent': SystemCommentIntentEnum.DELETE_EXPENSES,
-            'detail': {
-                'reason': SystemCommentReasonEnum.EXPENSES_DELETED_NO_EXPORT_SETTING.value,
-                'info': {
-                    'expense_ids': expense_ids
-                }
-            }
-        })
+    SystemCommentHelper.add_expenses_deleted(
+        system_comments,
+        workspace_id=workspace_id,
+        expense_ids=expense_ids
+    )
 
 
 def handle_expense_report_change(expense_data: dict, action_type: str) -> None:
@@ -1020,18 +1010,12 @@ def handle_expense_report_change(expense_data: dict, action_type: str) -> None:
         _delete_expense_groups_for_report(report_id, workspace, system_comments=system_comments)
 
         if Expense.objects.filter(report_id=report_id, workspace_id=workspace.id).exists():
-            system_comments.append({
-                'workspace_id': workspace.id,
-                'source': SystemCommentSourceEnum.HANDLE_REPORT_CHANGE,
-                'intent': SystemCommentIntentEnum.UPDATE_EXPENSE_REPORT,
-                'detail': {
-                    'reason': SystemCommentReasonEnum.EXPENSE_ADDED_TO_REPORT.value,
-                    'info': {
-                        'report_id': report_id,
-                        'expense_id': expense_id
-                    }
-                }
-            })
+            SystemCommentHelper.add_expense_added_to_report(
+                system_comments,
+                workspace_id=workspace.id,
+                report_id=report_id,
+                fyle_expense_id=expense_id
+            )
 
         if system_comments:
             SystemComment.bulk_create_comments(system_comments)
@@ -1166,21 +1150,13 @@ def _handle_expense_ejected_from_report(expense: Expense, expense_data: dict, wo
             worker_logger.info("Expense group %s still has expenses after removing %s", expense_group.id, expense.expense_id)
 
         # Create system comment for expense ejected from report
-        if system_comments is not None:
-            system_comments.append({
-                'workspace_id': workspace.id,
-                'source': SystemCommentSourceEnum.HANDLE_REPORT_CHANGE,
-                'intent': SystemCommentIntentEnum.UPDATE_EXPENSE_REPORT,
-                'entity_type': SystemCommentEntityTypeEnum.EXPENSE,
-                'entity_id': expense.id,
-                'detail': {
-                    'reason': SystemCommentReasonEnum.EXPENSE_EJECTED_FROM_REPORT.value,
-                    'info': {
-                        'report_id': expense.report_id,
-                        'is_expense_group_deleted': expense_group_deleted
-                    }
-                }
-            })
+        SystemCommentHelper.add_expense_ejected_from_report(
+            system_comments,
+            workspace_id=workspace.id,
+            expense_id=expense.id,
+            report_id=expense.report_id,
+            is_expense_group_deleted=expense_group_deleted
+        )
 
 
 def handle_org_setting_updated(workspace_id: int, org_settings: dict) -> None:

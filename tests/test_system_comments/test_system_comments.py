@@ -18,6 +18,86 @@ from apps.workspaces.enums import (
     SystemCommentIntentEnum,
     SystemCommentSourceEnum
 )
+from apps.workspaces.system_comments import SystemCommentHelper
+
+
+def test_system_comment_helper_add_default_project_applied():
+    """
+    Test SystemCommentHelper.add_default_project_applied creates correct dict
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_default_project_applied(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_id=100,
+        default_project_id='proj_123',
+        default_project_name='Test Project'
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['workspace_id'] == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.GET_PROJECT_ID
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE
+    assert system_comments[0]['entity_id'] == 100
+    assert system_comments[0]['detail']['info']['default_project_id'] == 'proj_123'
+    assert system_comments[0]['detail']['info']['default_project_name'] == 'Test Project'
+
+
+def test_system_comment_helper_handles_none_list():
+    """
+    Test SystemCommentHelper methods handle None list gracefully
+    """
+    SystemCommentHelper.add_default_project_applied(
+        system_comments=None,
+        workspace_id=1,
+        expense_id=100,
+        default_project_id='proj_123',
+        default_project_name='Test Project'
+    )
+
+
+def test_system_comment_helper_add_category_changed():
+    """
+    Test SystemCommentHelper.add_category_changed creates correct dict with formatted reason
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_category_changed(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_id=100,
+        old_category='Old Category',
+        new_category='New Category'
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.HANDLE_CATEGORY_CHANGE
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.UPDATE_EXPENSE_CATEGORY
+    assert 'Old Category' in system_comments[0]['detail']['reason']
+    assert 'New Category' in system_comments[0]['detail']['reason']
+    assert system_comments[0]['detail']['info']['old_category'] == 'Old Category'
+    assert system_comments[0]['detail']['info']['new_category'] == 'New Category'
+
+
+def test_system_comment_helper_add_expense_group_deleted():
+    """
+    Test SystemCommentHelper.add_expense_group_deleted creates correct dict
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_expense_group_deleted(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_group_id=50
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.DELETE_EXPENSE_GROUP_AND_RELATED_DATA
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.DELETE_EXPENSE_GROUP
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == 50
 
 
 def test_get_project_id_generates_comment_for_default(db, create_expense_group_expense):
@@ -239,3 +319,101 @@ def test_recreate_expense_groups_generates_comment(db, mocker, create_expense_gr
 
     assert len(recreate_comments) == 1
     assert recreate_comments[0]['intent'] == SystemCommentIntentEnum.RECREATE_EXPENSE_GROUPS
+
+
+def test_system_comment_helper_add_negative_expense_skipped():
+    """
+    Test SystemCommentHelper.add_negative_expense_skipped creates correct dict
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_negative_expense_skipped(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_id=100,
+        amount=-50.0,
+        is_grouped_by_expense=True
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.FILTER_EXPENSE_GROUPS
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.SKIP_EXPENSE
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE
+    assert system_comments[0]['entity_id'] == 100
+    assert system_comments[0]['detail']['info']['amount'] == -50.0
+    assert system_comments[0]['detail']['info']['is_grouped_by_expense'] is True
+
+
+def test_system_comment_helper_add_reimbursable_expense_not_configured():
+    """
+    Test SystemCommentHelper.add_reimbursable_expense_not_configured creates correct dict
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_reimbursable_expense_not_configured(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_id=100
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.GROUP_EXPENSES_AND_SAVE
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.SKIP_EXPENSE
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE
+
+
+def test_system_comment_helper_add_ccc_expense_not_configured():
+    """
+    Test SystemCommentHelper.add_ccc_expense_not_configured creates correct dict
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_ccc_expense_not_configured(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_id=100
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.GROUP_EXPENSES_AND_SAVE
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.SKIP_EXPENSE
+
+
+def test_system_comment_helper_add_expense_filter_rule_applied():
+    """
+    Test SystemCommentHelper.add_expense_filter_rule_applied creates correct dict
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_expense_filter_rule_applied(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_id=100
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.GROUP_EXPENSES_AND_SAVE
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.SKIP_EXPENSE
+
+
+def test_system_comment_helper_add_export_skipped_mapping_errors():
+    """
+    Test SystemCommentHelper.add_export_skipped_mapping_errors creates correct dict
+    """
+    system_comments = []
+
+    SystemCommentHelper.add_export_skipped_mapping_errors(
+        system_comments=system_comments,
+        workspace_id=1,
+        expense_group_id=50,
+        error_id=123,
+        error_type='EMPLOYEE_MAPPING'
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.VALIDATE_FAILING_EXPORT
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.SKIP_EXPORT
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == 50
+    assert system_comments[0]['detail']['info']['error_id'] == 123
+    assert system_comments[0]['detail']['info']['error_type'] == 'EMPLOYEE_MAPPING'

@@ -104,7 +104,7 @@ def test_expense_report(db, mocker):
     general_mappings.save()
 
     expense_report = ExpenseReport.create_expense_report(expense_group)
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
     for expense_report_lineitem in expense_report_lineitems:
@@ -144,7 +144,7 @@ def test_expense_report_lineitem_vendor_id_for_personal_expense(db, mocker):
             }
         )
 
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     ExpenseReport.create_expense_report(expense_group)
     expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
@@ -176,7 +176,7 @@ def test_expense_report_lineitem_vendor_id_none_when_vendor_not_exists(db, mocke
     expense.vendor = non_existent_vendor
     expense.save()
 
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     ExpenseReport.create_expense_report(expense_group)
     expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
@@ -203,10 +203,10 @@ def test_charge_card_transaction_lineitem_vendor_id(db, mocker):
 
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)
 
-    # Mock get_or_create_credit_card_vendor to return a vendor
+    # Mock get_or_create_credit_card_vendor to return a vendor tuple (vendor, is_fallback)
     mock_vendor = mocker.MagicMock()
     mock_vendor.destination_id = 'MOCK_VENDOR_ID'
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: mock_vendor)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (mock_vendor, False))
 
     ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
     charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
@@ -231,7 +231,7 @@ def test_expense_report_lineitem_employee_id(db, mocker):
         workspace_id=workspace_id
     ).first()
 
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     ExpenseReport.create_expense_report(expense_group)
     expense_report_lineitems = ExpenseReportLineitem.create_expense_report_lineitems(expense_group, workspace_general_settings)
 
@@ -269,7 +269,7 @@ def test_charge_card_transaction_lineitem_employee_id(db, mocker):
         workspace_id=workspace_id
     ).first()
 
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
     charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
 
@@ -298,7 +298,7 @@ def test_charge_card_transaction_lineitem_employee_id_skipped_for_bill(db, mocke
     workspace_general_settings.reimbursable_expenses_object = 'BILL'
     workspace_general_settings.save()
 
-    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: None)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
     ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Yash')
     charge_card_transaction_lineitems = ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(expense_group, workspace_general_settings)
 
@@ -429,7 +429,7 @@ def test_create_charge_card_transaction(mocker, db, create_expense_group_expense
     general_mappings.save()
 
     merchant = expense_group.expenses.first().vendor
-    vendor = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant)
+    vendor, _ = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant)
 
     charge_card_transaction = ChargeCardTransaction.create_charge_card_transaction(expense_group, vendor.destination_id)
     workspace_general_settings = Configuration.objects.get(workspace_id=workspace_id)

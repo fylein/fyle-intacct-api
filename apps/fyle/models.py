@@ -13,6 +13,7 @@ from fyle_accounting_mappings.models import ExpenseAttribute
 
 from apps.users.models import User
 from apps.workspaces.models import Configuration, Workspace
+from apps.workspaces.system_comments import SystemCommentHelper
 
 ALLOWED_FIELDS = [
     'employee_email', 'report_id', 'claim_number', 'settlement_id',
@@ -419,12 +420,14 @@ def filter_negative_expenses(filtered_expenses: list[Expense]) -> list:
     return list(filter(lambda expense: expense.amount > 0, filtered_expenses))
 
 
-def filter_expense_groups(expense_groups: dict, expenses: Expense, expense_group_fields: dict) -> tuple[list, list]:
+def filter_expense_groups(expense_groups: dict, expenses: Expense, expense_group_fields: dict, workspace_id: int = None, system_comments: list = None) -> tuple[list, list]:
     """
     Filter negative expenses from reimbursable expense groups for EXPENSE_REPORT export type.
     :param expense_groups: Expense Groups
     :param expenses: Expenses
     :param expense_group_fields: Expense Group Fields
+    :param workspace_id: Workspace ID for system comments
+    :param system_comments: Optional list to collect system comment data
     :return: Filtered Expense Groups and Skipped Expense IDs
     """
     filtered_expense_groups = []
@@ -439,7 +442,16 @@ def filter_expense_groups(expense_groups: dict, expenses: Expense, expense_group
 
         # Filter negative expenses if grouped by expense OR if grouped by report with negative total
         if is_grouped_by_expense or total_amount < 0:
-            skipped_expenses_ids.extend([expense.id for expense in filtered_expenses if expense.amount < 0])
+            negative_expenses = {expense.id: expense.amount for expense in filtered_expenses if expense.amount < 0}
+            skipped_expenses_ids.extend(negative_expenses.keys())
+            for expense_id in negative_expenses:
+                SystemCommentHelper.add_negative_expense_skipped(
+                    system_comments=system_comments,
+                    workspace_id=workspace_id,
+                    expense_id=expense_id,
+                    amount=negative_expenses[expense_id],
+                    is_grouped_by_expense=is_grouped_by_expense
+                )
             filtered_expenses = filter_negative_expenses(filtered_expenses)
 
         filtered_expense_ids = [item.id for item in filtered_expenses]
@@ -473,12 +485,13 @@ class ExpenseGroup(models.Model):
         db_table = 'expense_groups'
 
     @staticmethod
-    def create_expense_groups_by_report_id_fund_source(expense_objects: list[Expense], configuration: Configuration, workspace_id: int) -> None:
+    def create_expense_groups_by_report_id_fund_source(expense_objects: list[Expense], configuration: Configuration, workspace_id: int, system_comments: list = None) -> None:
         """
         Group expense by and fund_source
         :param expense_objects: Expense Objects
         :param configuration: Configuration
         :param workspace_id: Workspace Id
+        :param system_comments: Optional list to collect system comment data
         :return: None
         """
         expense_groups = []
@@ -493,7 +506,7 @@ class ExpenseGroup(models.Model):
 
         if configuration.reimbursable_expenses_object == 'EXPENSE_REPORT':
             reimbursable_expense_groups, reimbursable_skipped_expense_ids = filter_expense_groups(
-                reimbursable_expense_groups, reimbursable_expenses, reimbursable_expense_group_fields
+                reimbursable_expense_groups, reimbursable_expenses, reimbursable_expense_group_fields, workspace_id, system_comments
             )
             skipped_expense_ids.extend(reimbursable_skipped_expense_ids)
 
