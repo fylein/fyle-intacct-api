@@ -1,16 +1,17 @@
 from enum import Enum
+from typing import Union
 
 
 def add_system_comment(
     system_comments: list | None,
-    source,
-    intent,
-    entity_type,
+    source: Union[Enum, str],
+    intent: Union[Enum, str],
+    entity_type: Union[Enum, str],
     workspace_id: int,
     entity_id: int = None,
-    export_type=None,
-    is_user_visible=False,
-    reason=None,
+    export_type: Union[Enum, str] = None,
+    is_user_visible: bool = False,
+    reason: Union[Enum, str] = None,
     info: dict = None
 ) -> None:
     """
