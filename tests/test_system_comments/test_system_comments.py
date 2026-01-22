@@ -320,7 +320,7 @@ def test_category_change_generates_comment(db, add_category_test_expense, add_ca
     assert comment['intent'] == 'UPDATE_EXPENSE_CATEGORY'
     assert comment['entity_type'] == 'EXPENSE'
     assert comment['entity_id'] == expense.id
-    assert comment['detail']['reason'] == SystemCommentReasonEnum.CATEGORY_CHANGED.value
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.CATEGORY_CHANGED.value.format(old=old_category, new='New Test Category')
     assert comment['detail']['info']['old_category'] == old_category
     assert comment['detail']['info']['new_category'] == 'New Test Category'
 
