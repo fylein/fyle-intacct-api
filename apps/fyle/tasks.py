@@ -406,7 +406,6 @@ def update_non_exported_expenses(data: dict) -> None:
                     system_comments=system_comments
                 )
 
-                # Create system comment for fund source change
                 reason = SystemCommentReasonEnum.FUND_SOURCE_CHANGED.value.format(old=old_fund_source, new=new_fund_source)
                 add_system_comment(
                     system_comments=system_comments,
@@ -486,7 +485,6 @@ def handle_category_changes_for_expense(expense: Expense, new_category: str, sys
                             error_title=new_category_expense_attribute.value
                         )
 
-        # Create system comment for category change
         reason = SystemCommentReasonEnum.CATEGORY_CHANGED.value.format(old=expense.category, new=new_category)
         add_system_comment(
             system_comments=system_comments,
@@ -927,7 +925,6 @@ def recreate_expense_groups(workspace_id: int, expense_ids: list[int], system_co
 
     worker_logger.info("Successfully recreated expense groups for %s expenses in workspace %s", len(expense_ids), workspace_id)
 
-    # Create system comment for expense groups recreation
     add_system_comment(
         system_comments=system_comments,
         source=SystemCommentSourceEnum.RECREATE_EXPENSE_GROUPS,
@@ -1016,7 +1013,6 @@ def delete_expenses_in_db(expense_ids: list[int], workspace_id: int, system_comm
     deleted_count = Expense.objects.filter(id__in=expense_ids, workspace_id=workspace_id).delete()[0]
     worker_logger.info("Deleted %s expenses in workspace %s", deleted_count, workspace_id)
 
-    # Create system comment for expenses deleted
     add_system_comment(
         system_comments=system_comments,
         source=SystemCommentSourceEnum.DELETE_EXPENSES,
@@ -1190,7 +1186,6 @@ def _handle_expense_ejected_from_report(expense: Expense, expense_data: dict, wo
         else:
             worker_logger.info("Expense group %s still has expenses after removing %s", expense_group.id, expense.expense_id)
 
-        # Create system comment for expense ejected from report
         add_system_comment(
             system_comments=system_comments,
             source=SystemCommentSourceEnum.HANDLE_REPORT_CHANGE,

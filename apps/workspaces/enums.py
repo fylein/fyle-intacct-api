@@ -78,6 +78,7 @@ class SystemCommentReasonEnum(str, Enum):
     # Fallback values applied - explaining WHY
     EMPLOYEE_LOCATION_APPLIED = 'No location mapping found for expense. Using employee location from Sage Intacct as configured in general mappings.'
     EMPLOYEE_DEPARTMENT_APPLIED = 'No department mapping found for expense. Using employee department from Sage Intacct as configured in general mappings.'
+    EMPLOYEE_CCC_ACCOUNT_APPLIED = 'No corporate card mapping found. Using employee corporate card account from Sage Intacct.'
 
     # Fund source & report changes - explaining WHY
     FUND_SOURCE_CHANGED = 'Expense payment source was changed in Fyle from {old} to {new}.'

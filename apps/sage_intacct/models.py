@@ -559,20 +559,6 @@ def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = Non
     if mapping:
         return mapping.destination.destination_id
 
-    if system_comments is not None:
-        general_mappings = GeneralMapping.objects.filter(workspace_id=expense_group.workspace_id).first()
-        if general_mappings and general_mappings.default_tax_code_id:
-            add_system_comment(
-                system_comments=system_comments,
-                source=SystemCommentSourceEnum.GET_TAX_CODE_ID,
-                intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
-                entity_type=SystemCommentEntityTypeEnum.EXPENSE,
-                workspace_id=expense_group.workspace_id,
-                entity_id=lineitem.id,
-                reason=SystemCommentReasonEnum.DEFAULT_TAX_CODE_APPLIED,
-                info={'default_tax_code_id': general_mappings.default_tax_code_id, 'default_tax_code_name': general_mappings.default_tax_code_name}
-            )
-
     return tax_code
 
 
@@ -915,6 +901,17 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
     ).first()
 
     if employee_mapping and employee_mapping.destination_card_account:
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_CCC_ACCOUNT_ID,
+            intent=SystemCommentIntentEnum.EMPLOYEE_DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+            workspace_id=general_mappings.workspace_id,
+            entity_id=expense.id,
+            reason=SystemCommentReasonEnum.EMPLOYEE_CCC_ACCOUNT_APPLIED,
+            info={'employee_ccc_account_id': employee_mapping.destination_card_account.destination_id, 'employee_ccc_account_name': employee_mapping.destination_card_account.destination_name}
+        )
+
         return employee_mapping.destination_card_account.destination_id
 
     add_system_comment(
