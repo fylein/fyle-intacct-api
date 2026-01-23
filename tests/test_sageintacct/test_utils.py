@@ -2356,3 +2356,147 @@ def test_is_import_enabled_with_mapping_settings(db):
     assert result is True
     result = sage_intacct_connection.is_import_enabled('DEPARTMENT')
     assert result is False
+
+
+@pytest.mark.django_db
+def test_get_attribute_disable_callback_path(db):
+    """
+    Test get_attribute_disable_callback_path method
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    result = sage_intacct_connection.get_attribute_disable_callback_path('ACCOUNT')
+    assert result == 'fyle_integrations_imports.modules.categories.disable_categories'
+    result = sage_intacct_connection.get_attribute_disable_callback_path('VENDOR')
+    assert result == 'fyle_integrations_imports.modules.merchants.disable_merchants'
+    result = sage_intacct_connection.get_attribute_disable_callback_path('PROJECT')
+    assert result == 'fyle_integrations_imports.modules.projects.disable_projects'
+
+
+@pytest.mark.django_db
+def test_post_attachments_empty_list(db):
+    """
+    Test post_attachments with empty attachments list
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    result = sage_intacct_connection.post_attachments([], 'test_supdoc', 1)
+    assert result is False
+
+
+@pytest.mark.django_db
+def test_post_attachments_update_exception(mocker, db):
+    """
+    Test post_attachments when attachment update raises exception
+    """
+    workspace_id = 1
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.post',
+        return_value={'status': 'success', 'key': '3032'}
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.update',
+        side_effect=Exception('Update failed')
+    )
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    attachment = [{'download_url': 'url', 'name': 'file.pdf', 'id': 'att1'}]
+    sage_intacct_connection.post_attachments(attachment, 'supdoc1', 1)
+    result = sage_intacct_connection.post_attachments(attachment, 'supdoc1', 2)
+    assert result is False
+
+
+@pytest.mark.django_db
+def test_get_location_id_for_journal_entry(db):
+    """
+    Test __get_location_id_for_journal_entry method
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    GeneralMapping.objects.filter(workspace_id=workspace_id).update(default_location_id=None)
+    result = sage_intacct_connection._SageIntacctConnector__get_location_id_for_journal_entry(workspace_id)
+    location_entity = LocationEntityMapping.objects.filter(workspace_id=workspace_id).exclude(location_entity_name='Top Level').first()
+    if location_entity:
+        assert result == location_entity.destination_id
+    else:
+        assert result is None
+
+
+@pytest.mark.django_db
+def test_get_location_id_for_journal_entry_no_mappings(db):
+    """
+    Test __get_location_id_for_journal_entry when no mappings exist
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    GeneralMapping.objects.filter(workspace_id=workspace_id).update(default_location_id=None)
+    LocationEntityMapping.objects.filter(workspace_id=workspace_id).exclude(location_entity_name='Top Level').delete()
+    result = sage_intacct_connection._SageIntacctConnector__get_location_id_for_journal_entry(workspace_id)
+    assert result is None
+
+
+@pytest.mark.django_db
+def test_sync_cost_codes_with_last_synced_at(db, mocker, create_dependent_field_setting):
+    """
+    Test sync_cost_codes when dependent_field_setting.last_synced_at is set
+    """
+    from apps.fyle.models import DependentFieldSetting
+    workspace_id = 1
+    dependent_field_setting = DependentFieldSetting.objects.get(workspace_id=workspace_id)
+    dependent_field_setting.last_synced_at = datetime.now()
+    dependent_field_setting.save()
+    mocker.patch('sageintacctsdk.apis.Tasks.count', return_value=1)
+    cost_code_data = [[
+        {'RECORDNO': '40', 'TASKID': '112', 'NAME': 'TestCostCode', 'PROJECTID': '1173', 'PROJECTNAME': 'Test Project'}
+    ]]
+    mocker.patch('sageintacctsdk.apis.Tasks.get_all_generator', return_value=cost_code_data)
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    sage_intacct_connection.sync_cost_codes()
+    assert CostCode.objects.filter(workspace_id=workspace_id, task_id='112').exists()
+
+
+@pytest.mark.django_db
+def test_sync_allocations_empty_entries(mocker, db):
+    """
+    Test sync_allocations when allocation_entries is empty
+    """
+    workspace_id = 1
+
+    def mock_allocations_generator(field=None, value=None, updated_at=None):
+        yield [{'ALLOCATIONID': 'EMPTY_ALLOC', 'STATUS': 'active'}]
+
+    def mock_allocation_entry_generator(field, value):
+        yield []
+
+    mocker.patch('sageintacctsdk.apis.Allocations.count', return_value=1)
+    mocker.patch('sageintacctsdk.apis.Allocations.get_all_generator', side_effect=mock_allocations_generator)
+    mocker.patch('sageintacctsdk.apis.AllocationEntry.get_all_generator', side_effect=mock_allocation_entry_generator)
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    sage_intacct_connection.sync_allocations()
