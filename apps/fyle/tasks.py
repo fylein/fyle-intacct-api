@@ -412,6 +412,7 @@ def update_non_exported_expenses(data: dict) -> None:
                     source=SystemCommentSourceEnum.HANDLE_FUND_SOURCE_CHANGE,
                     intent=SystemCommentIntentEnum.UPDATE_EXPENSE_FUND_SOURCE,
                     workspace_id=expense.workspace_id,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
                     entity_id=expense.id,
                     reason=reason,
                     info={'old_fund_source': old_fund_source, 'new_fund_source': new_fund_source}
@@ -551,7 +552,7 @@ def re_run_skip_export_rule(workspace: Workspace) -> None:
                     expense_group_id=expense_group.id
                 ).first()
                 if error:
-                    logger.info('Deleting QBO error for expense group %s before export', expense_group.id)
+                    logger.info('Deleting Intacct error for expense group %s before export', expense_group.id)
                     error.delete()
 
                 expense_group.expenses.remove(*skipped_expenses)
