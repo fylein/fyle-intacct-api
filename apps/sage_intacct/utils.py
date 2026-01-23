@@ -15,9 +15,9 @@ from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribu
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
 
-from apps.sage_intacct.errors.helpers import retry
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
+from apps.sage_intacct.errors.helpers import retry
 from apps.sage_intacct.exports.helpers import get_source_entity_id
 from apps.sage_intacct.models import (
     APPayment,
@@ -1489,6 +1489,7 @@ class SageIntacctConnector:
                 'TRX_AMOUNT': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
                 'TOTALTRXAMOUNT': lineitem.amount,
                 'ENTRYDESCRIPTION': lineitem.memo,
+                'ALLOCATION': lineitem.allocation_id,
                 'LOCATIONID': lineitem.location_id,
                 'DEPARTMENTID': lineitem.department_id,
                 'PROJECTID': lineitem.project_id,
@@ -1498,7 +1499,6 @@ class SageIntacctConnector:
                 'COSTTYPEID': lineitem.cost_type_id,
                 'CLASSID': lineitem.class_id,
                 'BILLABLE': lineitem.billable,
-                'ALLOCATION': lineitem.allocation_id,
                 'TAXENTRIES': {
                     'TAXENTRY': {
                         'DETAILID': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id
@@ -1759,6 +1759,7 @@ class SageIntacctConnector:
         return {
             'currency': journal_entry.currency,
             'description': lineitem.memo,
+            'allocation': lineitem.allocation_id,
             'department': dimensions_values['department_id'],
             'location': dimensions_values['location_id'],
             'projectid': dimensions_values['project_id'],
@@ -1769,7 +1770,6 @@ class SageIntacctConnector:
             'itemid': dimensions_values['item_id'],
             'taskid': dimensions_values['task_id'],
             'costtypeid': dimensions_values['cost_type_id'],
-            'allocation': lineitem.allocation_id,
             'customfields': {
                 'customfield': [{
                     'customfieldname': 'FYLE_EXPENSE_URL',
