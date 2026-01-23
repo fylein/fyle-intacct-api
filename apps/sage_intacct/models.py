@@ -909,7 +909,7 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
             workspace_id=general_mappings.workspace_id,
             entity_id=expense.id,
             reason=SystemCommentReasonEnum.EMPLOYEE_CCC_ACCOUNT_APPLIED,
-            info={'employee_ccc_account_id': employee_mapping.destination_card_account.destination_id, 'employee_ccc_account_name': employee_mapping.destination_card_account.destination_name}
+            info={'employee_ccc_account_id': employee_mapping.destination_card_account.destination_id, 'employee_ccc_account_name': employee_mapping.destination_card_account.display_name}
         )
 
         return employee_mapping.destination_card_account.destination_id
