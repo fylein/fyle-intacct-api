@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.db.models import Q
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_mappings.models import ExpenseAttribute
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import status
@@ -24,6 +25,7 @@ from apps.fyle.helpers import (
     handle_import_exception,
     handle_refresh_dimensions,
     post_request,
+    sync_dimensions,
     update_dimension_details,
 )
 from apps.fyle.models import Expense, ExpenseFilter
@@ -899,3 +901,95 @@ def test_assert_valid_request_workspace_not_found(db):
     with pytest.raises(ValidationError) as excinfo:
         assert_valid_request(workspace_id=999, fyle_org_id='invalid_org_id')
     assert str(excinfo.value.detail[0]) == 'Workspace not found'
+
+
+def test_sync_dimensions_with_is_export_flag(db, mocker):
+    """
+    Test sync_dimensions with is_export=True syncs categories and projects
+    """
+    workspace_id = 1
+
+    categories_count_db = ExpenseAttribute.objects.filter(
+        attribute_type='CATEGORY',
+        workspace_id=workspace_id,
+        active=True
+    ).count()
+
+    projects_count_db = ExpenseAttribute.objects.filter(
+        attribute_type='PROJECT',
+        workspace_id=workspace_id,
+        active=True
+    ).count()
+
+    mock_platform = mocker.MagicMock()
+    mock_platform.categories.get_count.return_value = categories_count_db + 5
+    mock_platform.projects.get_count.return_value = projects_count_db + 3
+    mock_platform.categories.sync = mocker.MagicMock()
+    mock_platform.projects.sync = mocker.MagicMock()
+
+    mocker.patch('apps.fyle.helpers.PlatformConnector', return_value=mock_platform)
+    mocker.patch('apps.fyle.helpers.update_dimension_details', return_value=None)
+    mocker.patch('apps.fyle.helpers.import_string', return_value=mocker.MagicMock())
+
+    sync_dimensions(workspace_id=workspace_id, is_export=True)
+
+    mock_platform.categories.get_count.assert_called_once()
+    mock_platform.projects.get_count.assert_called_once()
+    mock_platform.categories.sync.assert_called_once()
+    mock_platform.projects.sync.assert_called_once()
+
+
+def test_sync_dimensions_with_is_export_flag_no_sync_needed(db, mocker):
+    """
+    Test sync_dimensions with is_export=True when counts match (no sync needed)
+    """
+    workspace_id = 1
+
+    categories_count_db = ExpenseAttribute.objects.filter(
+        attribute_type='CATEGORY',
+        workspace_id=workspace_id,
+        active=True
+    ).count()
+
+    projects_count_db = ExpenseAttribute.objects.filter(
+        attribute_type='PROJECT',
+        workspace_id=workspace_id,
+        active=True
+    ).count()
+
+    mock_platform = mocker.MagicMock()
+    mock_platform.categories.get_count.return_value = categories_count_db
+    mock_platform.projects.get_count.return_value = projects_count_db
+    mock_platform.categories.sync = mocker.MagicMock()
+    mock_platform.projects.sync = mocker.MagicMock()
+
+    mocker.patch('apps.fyle.helpers.PlatformConnector', return_value=mock_platform)
+    mocker.patch('apps.fyle.helpers.update_dimension_details', return_value=None)
+    mocker.patch('apps.fyle.helpers.import_string', return_value=mocker.MagicMock())
+
+    sync_dimensions(workspace_id=workspace_id, is_export=True)
+
+    mock_platform.categories.get_count.assert_called_once()
+    mock_platform.projects.get_count.assert_called_once()
+    mock_platform.categories.sync.assert_not_called()
+    mock_platform.projects.sync.assert_not_called()
+
+
+def test_sync_dimensions_without_is_export_flag(db, mocker):
+    """
+    Test sync_dimensions with is_export=False does not check categories/projects
+    """
+    workspace_id = 1
+
+    mock_platform = mocker.MagicMock()
+    mock_platform.categories.get_count = mocker.MagicMock()
+    mock_platform.projects.get_count = mocker.MagicMock()
+
+    mocker.patch('apps.fyle.helpers.PlatformConnector', return_value=mock_platform)
+    mocker.patch('apps.fyle.helpers.update_dimension_details', return_value=None)
+    mocker.patch('apps.fyle.helpers.import_string', return_value=mocker.MagicMock())
+
+    sync_dimensions(workspace_id=workspace_id, is_export=False)
+
+    mock_platform.categories.get_count.assert_not_called()
+    mock_platform.projects.get_count.assert_not_called()

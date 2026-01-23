@@ -11,6 +11,7 @@ from fyle_intacct_api.utils import get_access_token
 from tests.test_fyle.fixtures import data as fyle_data
 from apps.workspaces.models import FeatureConfig, Workspace
 from apps.fyle.models import Expense, ExpenseGroup
+from apps.mappings.models import GeneralMapping
 
 
 @pytest.fixture
@@ -240,3 +241,105 @@ def add_expense_report_data(db):
         'expenses': [expense1, expense2],
         'expense_group': expense_group
     }
+
+
+@pytest.fixture
+def create_expense_group_expense(db):
+    """
+    Create expense group and expense for system comments tests
+    """
+    workspace = Workspace.objects.get(id=1)
+
+    expense_group = ExpenseGroup.objects.create(
+        workspace_id=1,
+        fund_source='PERSONAL',
+        description={}
+    )
+
+    expense, _ = Expense.objects.update_or_create(
+        expense_id='tx_sys_comment_test',
+        defaults={
+            'employee_email': 'test@fyle.in',
+            'category': 'category',
+            'sub_category': 'sub_category',
+            'project': 'project',
+            'expense_number': 'E/2024/01/T/1',
+            'org_id': workspace.fyle_org_id,
+            'claim_number': 'C/2024/01/R/1',
+            'amount': 100.0,
+            'currency': 'USD',
+            'foreign_amount': 100.0,
+            'foreign_currency': 'USD',
+            'settlement_id': 'setl_test',
+            'reimbursable': True,
+            'billable': True,
+            'state': 'APPROVED',
+            'vendor': 'vendor',
+            'cost_center': 'cost_center',
+            'purpose': 'purpose',
+            'report_id': 'rp_test',
+            'report_title': 'Test Report',
+            'spent_at': datetime.now(tz=timezone.utc),
+            'approved_at': datetime.now(tz=timezone.utc),
+            'expense_created_at': datetime.now(tz=timezone.utc),
+            'expense_updated_at': datetime.now(tz=timezone.utc),
+            'fund_source': 'PERSONAL',
+            'verified_at': datetime.now(tz=timezone.utc),
+            'custom_properties': {},
+            'file_ids': [],
+            'workspace_id': 1
+        }
+    )
+    expense_group.expenses.add(expense)
+
+    GeneralMapping.objects.get_or_create(
+        workspace_id=1,
+        defaults={
+            'default_location_name': None,
+            'default_location_id': None,
+        }
+    )
+
+    return expense_group, expense
+
+
+@pytest.fixture
+def add_category_test_expense(db):
+    """
+    Create expense for category change tests
+    """
+    workspace = Workspace.objects.get(id=1)
+    expense = Expense.objects.create(
+        workspace_id=workspace.id,
+        expense_id='txCategoryTest',
+        employee_email='category.test@test.com',
+        employee_name='Category Test User',
+        category='Test Category',
+        amount=100,
+        currency='USD',
+        org_id=workspace.fyle_org_id,
+        settlement_id='setlCat',
+        report_id='rpCat',
+        spent_at='2024-01-01T00:00:00Z',
+        expense_created_at='2024-01-01T00:00:00Z',
+        expense_updated_at='2024-01-01T00:00:00Z',
+        fund_source='PERSONAL'
+    )
+    return expense
+
+
+@pytest.fixture
+def add_category_test_expense_group(db, add_category_test_expense):
+    """
+    Create expense group for category change tests
+    """
+    workspace = Workspace.objects.get(id=1)
+    expense = add_category_test_expense
+    expense_group = ExpenseGroup.objects.create(
+        workspace_id=workspace.id,
+        fund_source='PERSONAL',
+        description={'employee_email': expense.employee_email},
+        employee_name=expense.employee_name
+    )
+    expense_group.expenses.add(expense)
+    return expense_group
