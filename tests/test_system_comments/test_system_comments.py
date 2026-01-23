@@ -6,13 +6,17 @@ from apps.fyle.tasks import (
     handle_category_changes_for_expense,
 )
 from apps.mappings.models import GeneralMapping
+from fyle_accounting_mappings.models import Mapping, EmployeeMapping, DestinationAttribute, ExpenseAttribute
 from apps.sage_intacct.models import (
+    get_class_id_or_none,
+    get_ccc_account_id,
     get_department_id_or_none,
     get_item_id_or_none,
     get_location_id_or_none,
     get_project_id_or_none,
 )
 from apps.workspaces.enums import (
+    ExportTypeEnum,
     SystemCommentEntityTypeEnum,
     SystemCommentIntentEnum,
     SystemCommentReasonEnum,
@@ -353,3 +357,266 @@ def test_delete_expense_group_generates_comment(db, mocker):
     assert comment['entity_type'] == 'EXPENSE_GROUP'
     assert comment['entity_id'] == group_id
     assert comment['detail']['reason'] == SystemCommentReasonEnum.EXPENSE_GROUP_AND_RELATED_DATA_DELETED.value
+
+
+def test_add_system_comment_with_export_type():
+    """
+    Test add_system_comment with export_type parameter
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.CREATE_BILL,
+        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=1,
+        entity_id=100,
+        export_type=ExportTypeEnum.BILL,
+        reason=SystemCommentReasonEnum.DEFAULT_CLASS_APPLIED
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['export_type'] == 'BILL'
+
+
+def test_add_system_comment_with_export_type_string():
+    """
+    Test add_system_comment with export_type as string
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.CREATE_BILL,
+        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=1,
+        entity_id=100,
+        export_type='EXPENSE_REPORT',
+        reason=SystemCommentReasonEnum.DEFAULT_CLASS_APPLIED
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['export_type'] == 'EXPENSE_REPORT'
+
+
+def test_add_system_comment_with_is_user_visible():
+    """
+    Test add_system_comment with is_user_visible=True
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.HANDLE_REPORT_CHANGE,
+        intent=SystemCommentIntentEnum.UPDATE_EXPENSE_REPORT,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=1,
+        entity_id=100,
+        is_user_visible=True,
+        reason=SystemCommentReasonEnum.EXPENSE_ADDED_TO_REPORT
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['is_user_visible'] is True
+
+
+def test_add_system_comment_with_string_values():
+    """
+    Test add_system_comment with string values instead of enums
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source='CUSTOM_SOURCE',
+        intent='CUSTOM_INTENT',
+        entity_type='EXPENSE',
+        workspace_id=1,
+        entity_id=100,
+        reason='Custom reason string',
+        info={'custom_key': 'custom_value'}
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == 'CUSTOM_SOURCE'
+    assert system_comments[0]['intent'] == 'CUSTOM_INTENT'
+    assert system_comments[0]['entity_type'] == 'EXPENSE'
+    assert system_comments[0]['detail']['reason'] == 'Custom reason string'
+    assert system_comments[0]['detail']['info']['custom_key'] == 'custom_value'
+
+
+def test_add_system_comment_with_none_entity_id():
+    """
+    Test add_system_comment with None entity_id
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.DELETE_EXPENSES,
+        intent=SystemCommentIntentEnum.DELETE_EXPENSES,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=1,
+        entity_id=None,
+        reason=SystemCommentReasonEnum.EXPENSES_DELETED_NO_EXPORT_SETTING
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['entity_id'] is None
+
+
+def test_add_system_comment_with_none_reason():
+    """
+    Test add_system_comment with None reason
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.GET_PROJECT_ID,
+        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=1,
+        entity_id=100,
+        reason=None
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['detail']['reason'] is None
+
+
+def test_add_system_comment_with_none_info():
+    """
+    Test add_system_comment with None info (should use empty dict)
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.GET_PROJECT_ID,
+        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=1,
+        entity_id=100,
+        reason=SystemCommentReasonEnum.DEFAULT_PROJECT_APPLIED,
+        info=None
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['detail']['info'] == {}
+
+
+def test_add_system_comment_with_none_export_type():
+    """
+    Test add_system_comment with None export_type
+    """
+    system_comments = []
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.GET_PROJECT_ID,
+        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=1,
+        entity_id=100,
+        export_type=None,
+        reason=SystemCommentReasonEnum.DEFAULT_PROJECT_APPLIED
+    )
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['export_type'] is None
+
+
+def test_get_class_id_generates_comment(db, create_expense_group_expense):
+    """
+    Test get_class_id_or_none generates system comment when default class is used
+    """
+    expense_group, expense = create_expense_group_expense
+    general_mappings = GeneralMapping.objects.get(workspace_id=1)
+
+    general_mappings.default_class_id = 'default_class_123'
+    general_mappings.default_class_name = 'Default Class'
+    general_mappings.save()
+
+    system_comments = []
+
+    result = get_class_id_or_none(
+        expense_group=expense_group,
+        lineitem=expense,
+        general_mappings=general_mappings,
+        system_comments=system_comments
+    )
+
+    assert result == 'default_class_123'
+    assert len(system_comments) >= 1
+    comment = system_comments[0]
+    assert comment['source'] == 'GET_CLASS_ID'
+    assert comment['intent'] == 'DEFAULT_VALUE_APPLIED'
+    assert comment['entity_type'] == 'EXPENSE'
+    assert comment['entity_id'] == expense.id
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.DEFAULT_CLASS_APPLIED.value
+    assert comment['detail']['info']['default_class_id'] == 'default_class_123'
+    assert comment['detail']['info']['default_class_name'] == 'Default Class'
+
+
+def test_get_ccc_account_id_generates_comment(db, create_expense_group_expense, mocker):
+    """
+    Test get_ccc_account_id generates system comment when employee CCC account is used
+    """
+    expense_group, expense = create_expense_group_expense
+    general_mappings = GeneralMapping.objects.get(workspace_id=1)
+
+    employee_email = expense_group.description.get('employee_email', 'test@example.com')
+    expense_group.description['employee_email'] = employee_email
+    expense_group.save()
+
+    general_mappings.default_charge_card_id = None
+    general_mappings.save()
+
+    expense_attribute = ExpenseAttribute.objects.first()
+    expense_attribute.value = employee_email
+    expense_attribute.save()
+
+    destination_attr = DestinationAttribute.objects.first()
+    destination_attr.destination_id = 'ccc_account_123'
+    destination_attr.display_name = 'Employee CCC Account'
+    destination_attr.attribute_type = 'CHARGE_CARD_NUMBER'
+    destination_attr.save()
+
+    employee_mapping = EmployeeMapping.objects.first()
+    employee_mapping.source_employee = expense_attribute
+    employee_mapping.destination_card_account = destination_attr
+    employee_mapping.workspace_id = general_mappings.workspace
+    employee_mapping.save()
+
+    expense.corporate_card_id = 999
+    expense.save()
+
+    Mapping.objects.filter(
+        source_type='CORPORATE_CARD',
+        destination_type='CHARGE_CARD_NUMBER',
+        source__source_id=999,
+        workspace_id=general_mappings.workspace
+    ).delete()
+
+    system_comments = []
+
+    result = get_ccc_account_id(
+        general_mappings=general_mappings,
+        expense=expense,
+        description=expense_group.description,
+        system_comments=system_comments
+    )
+
+    assert result == 'ccc_account_123'
+    assert len(system_comments) >= 1
+    comment = system_comments[0]
+    assert comment['source'] == 'GET_CCC_ACCOUNT_ID'
+    assert comment['intent'] == 'EMPLOYEE_DEFAULT_VALUE_APPLIED'
+    assert comment['entity_type'] == 'EXPENSE'
+    assert comment['entity_id'] == expense.id
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.EMPLOYEE_CCC_ACCOUNT_APPLIED.value
+    assert comment['detail']['info']['employee_ccc_account_id'] == 'ccc_account_123'
+    assert comment['detail']['info']['employee_ccc_account_name'] == 'Employee CCC Account'
