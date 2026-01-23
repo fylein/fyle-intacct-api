@@ -2305,3 +2305,54 @@ def test_is_import_enabled_no_configuration(db):
     Configuration.objects.filter(workspace_id=workspace_id).delete()
     result = sage_intacct_connection.is_import_enabled('ACCOUNT')
     assert result is False
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_with_categories(db):
+    """
+    Test is_import_enabled method with import_categories enabled
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    Configuration.objects.filter(workspace_id=workspace_id).update(import_categories=True)
+    result = sage_intacct_connection.is_import_enabled('ACCOUNT')
+    assert result is True
+    result = sage_intacct_connection.is_import_enabled('EXPENSE_TYPE')
+    assert result is True
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_with_vendors_as_merchants(db):
+    """
+    Test is_import_enabled method with import_vendors_as_merchants enabled
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    Configuration.objects.filter(workspace_id=workspace_id).update(import_vendors_as_merchants=True)
+    result = sage_intacct_connection.is_import_enabled('VENDOR')
+    assert result is True
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_with_mapping_settings(db):
+    """
+    Test is_import_enabled method with mapping settings (PROJECT has import_to_fyle=True in fixtures)
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    result = sage_intacct_connection.is_import_enabled('PROJECT')
+    assert result is True
+    result = sage_intacct_connection.is_import_enabled('DEPARTMENT')
+    assert result is False
