@@ -2270,3 +2270,38 @@ def test_sync_methods_persist_count(mocker, db, create_dependent_field_setting):
     sage_intacct_connection.sync_payment_accounts()
     count_record.refresh_from_db()
     assert count_record.payment_accounts_count == 7
+
+
+@pytest.mark.django_db
+def test_is_duplicate_deletion_skipped(db):
+    """
+    Test is_duplicate_deletion_skipped method
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    for attribute_type in ['ACCOUNT', 'VENDOR', 'ITEM', 'CUSTOMER', 'DEPARTMENT', 'CLASS', 'EXPENSE_TYPE', 'PROJECT', 'LOCATION']:
+        result = sage_intacct_connection.is_duplicate_deletion_skipped(attribute_type)
+        assert result is False, f"Expected False for {attribute_type}"
+    for attribute_type in ['CUSTOM_FIELD', 'ALLOCATION', 'TAX_DETAIL']:
+        result = sage_intacct_connection.is_duplicate_deletion_skipped(attribute_type)
+        assert result is True, f"Expected True for {attribute_type}"
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_no_configuration(db):
+    """
+    Test is_import_enabled method when configuration doesn't exist
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    Configuration.objects.filter(workspace_id=workspace_id).delete()
+    result = sage_intacct_connection.is_import_enabled('ACCOUNT')
+    assert result is False
