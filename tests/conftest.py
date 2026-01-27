@@ -1,3 +1,4 @@
+from typing import Callable
 from unittest import mock
 from datetime import datetime, timezone
 
@@ -347,7 +348,7 @@ def add_category_test_expense_group(db, add_category_test_expense):
 
 
 @pytest.fixture
-def get_or_create_task_log(db):  # noqa: ANN204
+def get_or_create_task_log(db) -> Callable:
     """
     Fixture to get or create a TaskLog for an expense group
     Returns a function that can be called with expense_group and optional parameters
