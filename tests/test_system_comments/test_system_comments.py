@@ -1,13 +1,22 @@
-import pytest
+from datetime import datetime, timedelta, timezone
 
 from apps.fyle.models import ExpenseGroup
 from apps.fyle.tasks import (
     delete_expense_group_and_related_data,
     handle_category_changes_for_expense,
 )
+from apps.internal.tasks import retrigger_stuck_exports
 from apps.mappings.models import GeneralMapping
-from fyle_accounting_mappings.models import Mapping, EmployeeMapping, DestinationAttribute, ExpenseAttribute
 from apps.sage_intacct.models import (
+    Bill,
+    BillLineitem,
+    ChargeCardTransaction,
+    ChargeCardTransactionLineitem,
+    Configuration,
+    ExpenseReport,
+    ExpenseReportLineitem,
+    JournalEntry,
+    JournalEntryLineitem,
     get_class_id_or_none,
     get_ccc_account_id,
     get_department_id_or_none,
@@ -15,6 +24,19 @@ from apps.sage_intacct.models import (
     get_location_id_or_none,
     get_project_id_or_none,
 )
+from apps.sage_intacct.tasks import (
+    create_bill,
+    create_charge_card_transaction,
+    create_expense_report,
+)
+from sageintacctsdk.exceptions import NoPrivilegeError, WrongParamsError
+from intacctsdk.exceptions import (
+    BadRequestError as IntacctRESTBadRequestError,
+    InternalServerError as IntacctRESTInternalServerError
+)
+from fyle_intacct_api.exceptions import BulkError
+from fyle_accounting_library.system_comments.models import SystemComment
+from fyle_accounting_mappings.models import Mapping, EmployeeMapping, DestinationAttribute, ExpenseAttribute
 from apps.workspaces.enums import (
     ExportTypeEnum,
     SystemCommentEntityTypeEnum,
@@ -334,9 +356,7 @@ def test_delete_expense_group_generates_comment(db, mocker):
     Test delete_expense_group_and_related_data generates system comment
     """
     expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
-
-    if not expense_group:
-        pytest.skip("No expense group available for test")
+    assert expense_group is not None, "No expense group available for test"
 
     group_id = expense_group.id
 
@@ -620,3 +640,883 @@ def test_get_ccc_account_id_generates_comment(db, create_expense_group_expense, 
     assert comment['detail']['reason'] == SystemCommentReasonEnum.EMPLOYEE_CCC_ACCOUNT_APPLIED.value
     assert comment['detail']['info']['employee_ccc_account_id'] == 'ccc_account_123'
     assert comment['detail']['info']['employee_ccc_account_name'] == 'Employee CCC Account'
+
+
+def test_billable_disabled_expense_report_lineitem(db, create_expense_group_expense, mocker):
+    """
+    Test create_expense_report_lineitems generates system comment when billable is set to False due to missing customer_id or item_id
+    """
+    expense_group, expense = create_expense_group_expense
+
+    expense.billable = True
+    expense.save()
+
+    employee_email = 'test@fyle.in'
+    expense_group.description['employee_email'] = employee_email
+    expense_group.save()
+
+    expense_attribute = ExpenseAttribute.objects.first()
+    expense_attribute.value = employee_email
+    expense_attribute.save()
+
+    destination_attr = DestinationAttribute.objects.first()
+    destination_attr.destination_id = 'emp_123'
+    destination_attr.attribute_type = 'EMPLOYEE'
+    destination_attr.save()
+
+    employee_mapping = EmployeeMapping.objects.first()
+    employee_mapping.source_employee = expense_attribute
+    employee_mapping.destination_employee = destination_attr
+    employee_mapping.workspace_id = expense_group.workspace_id
+    employee_mapping.save()
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
+    mocker.patch('apps.sage_intacct.models.get_customer_id_or_none', return_value=None)
+    mocker.patch('apps.sage_intacct.models.get_item_id_or_none', return_value=None)
+
+    ExpenseReport.create_expense_report(expense_group)
+
+    system_comments = []
+
+    ExpenseReportLineitem.create_expense_report_lineitems(
+        expense_group=expense_group,
+        configuration=configuration,
+        system_comments=system_comments
+    )
+
+    billable_comments = [c for c in system_comments if c.get('intent') == 'BILLABLE_DISABLED']
+    assert len(billable_comments) >= 1
+    comment = billable_comments[0]
+    assert comment['source'] == 'CREATE_EXPENSE_REPORT_LINEITEMS'
+    assert comment['intent'] == 'BILLABLE_DISABLED'
+    assert comment['entity_type'] == 'EXPENSE'
+    assert comment['entity_id'] == expense.id
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS.value
+    assert 'missing_fields' in comment['detail']['info']
+    assert comment['detail']['info']['original_billable'] is True
+
+
+def test_billable_disabled_bill_lineitem(db, create_expense_group_expense, mocker):
+    """
+    Test create_bill_lineitems generates system comment when billable is set to False due to missing customer_id or item_id
+    """
+    expense_group, expense = create_expense_group_expense
+
+    expense.billable = True
+    expense.save()
+
+    employee_email = 'test@fyle.in'
+    expense_group.description['employee_email'] = employee_email
+    expense_group.save()
+
+    expense_attribute = ExpenseAttribute.objects.first()
+    expense_attribute.value = employee_email
+    expense_attribute.save()
+
+    destination_attr = DestinationAttribute.objects.first()
+    destination_attr.destination_id = 'vendor_123'
+    destination_attr.attribute_type = 'VENDOR'
+    destination_attr.save()
+
+    employee_mapping = EmployeeMapping.objects.first()
+    employee_mapping.source_employee = expense_attribute
+    employee_mapping.destination_vendor = destination_attr
+    employee_mapping.workspace_id = expense_group.workspace_id
+    employee_mapping.save()
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    mocker.patch('apps.sage_intacct.models.get_customer_id_or_none', return_value=None)
+    mocker.patch('apps.sage_intacct.models.get_item_id_or_none', return_value=None)
+
+    Bill.create_bill(expense_group)
+
+    system_comments = []
+
+    BillLineitem.create_bill_lineitems(
+        expense_group=expense_group,
+        configuration=configuration,
+        system_comments=system_comments
+    )
+
+    billable_comments = [c for c in system_comments if c.get('intent') == 'BILLABLE_DISABLED']
+    assert len(billable_comments) >= 1
+    comment = billable_comments[0]
+    assert comment['source'] == 'CREATE_BILL_LINEITEMS'
+    assert comment['intent'] == 'BILLABLE_DISABLED'
+    assert comment['entity_type'] == 'EXPENSE'
+    assert comment['entity_id'] == expense.id
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS.value
+    assert 'missing_fields' in comment['detail']['info']
+    assert comment['detail']['info']['original_billable'] is True
+
+
+def test_billable_disabled_journal_entry_lineitem(db, create_expense_group_expense, mocker):
+    """
+    Test create_journal_entry_lineitems generates system comment when billable is set to False due to missing customer_id or item_id
+    """
+    expense_group, expense = create_expense_group_expense
+
+    expense.billable = True
+    expense.save()
+
+    employee_email = 'test@fyle.in'
+    expense_group.description['employee_email'] = employee_email
+    expense_group.save()
+
+    expense_attribute = ExpenseAttribute.objects.first()
+    expense_attribute.value = employee_email
+    expense_attribute.save()
+
+    destination_attr = DestinationAttribute.objects.first()
+    destination_attr.destination_id = 'emp_123'
+    destination_attr.attribute_type = 'EMPLOYEE'
+    destination_attr.save()
+
+    employee_mapping = EmployeeMapping.objects.first()
+    employee_mapping.source_employee = expense_attribute
+    employee_mapping.destination_employee = destination_attr
+    employee_mapping.workspace_id = expense_group.workspace_id
+    employee_mapping.save()
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
+    mocker.patch('apps.sage_intacct.models.get_customer_id_or_none', return_value=None)
+    mocker.patch('apps.sage_intacct.models.get_item_id_or_none', return_value=None)
+
+    JournalEntry.create_journal_entry(expense_group)
+    sage_intacct_connection = mocker.MagicMock()
+
+    system_comments = []
+
+    JournalEntryLineitem.create_journal_entry_lineitems(
+        expense_group=expense_group,
+        configuration=configuration,
+        sage_intacct_connection=sage_intacct_connection,
+        system_comments=system_comments
+    )
+
+    billable_comments = [c for c in system_comments if c.get('intent') == 'BILLABLE_DISABLED']
+    assert len(billable_comments) >= 1
+    comment = billable_comments[0]
+    assert comment['source'] == 'CREATE_JOURNAL_ENTRY_LINEITEMS'
+    assert comment['intent'] == 'BILLABLE_DISABLED'
+    assert comment['entity_type'] == 'EXPENSE'
+    assert comment['entity_id'] == expense.id
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS.value
+    assert 'missing_fields' in comment['detail']['info']
+    assert comment['detail']['info']['original_billable'] is True
+
+
+def test_billable_disabled_charge_card_transaction_lineitem(db, create_expense_group_expense, mocker):
+    """
+    Test create_charge_card_transaction_lineitems generates system comment when billable is set to False due to missing customer_id or item_id
+    """
+    expense_group, expense = create_expense_group_expense
+
+    expense.billable = True
+    expense.save()
+
+    expense_group.description['employee_email'] = 'test@fyle.in'
+    expense_group.save()
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    mocker.patch('apps.sage_intacct.models.import_string', return_value=lambda *args, **kwargs: (None, False))
+    mocker.patch('apps.sage_intacct.models.get_customer_id_or_none', return_value=None)
+    mocker.patch('apps.sage_intacct.models.get_item_id_or_none', return_value=None)
+
+    ChargeCardTransaction.create_charge_card_transaction(expense_group, 'Test Vendor')
+    sage_intacct_connection = mocker.MagicMock()
+
+    system_comments = []
+
+    ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems(
+        expense_group=expense_group,
+        configuration=configuration,
+        sage_intacct_connection=sage_intacct_connection,
+        system_comments=system_comments
+    )
+
+    billable_comments = [c for c in system_comments if c.get('intent') == 'BILLABLE_DISABLED']
+    assert len(billable_comments) >= 1
+    comment = billable_comments[0]
+    assert comment['source'] == 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+    assert comment['intent'] == 'BILLABLE_DISABLED'
+    assert comment['entity_type'] == 'EXPENSE'
+    assert comment['entity_id'] == expense.id
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS.value
+    assert 'missing_fields' in comment['detail']['info']
+    assert comment['detail']['info']['original_billable'] is True
+
+
+def test_export_summary_not_updated_expense_report(db, mocker, get_or_create_task_log):
+    """
+    Test create_expense_report generates single system comment per expense group when previous export state is ERROR
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ExpenseReport.create_expense_report')
+    mocker.patch('apps.sage_intacct.models.ExpenseReportLineitem.create_expense_report_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report')
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_expense_report(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_EXPENSE_REPORT'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['entity_type'] == 'EXPENSE_GROUP'
+    assert comment['entity_id'] == expense_group.id
+    assert comment['export_type'] == 'EXPENSE_REPORT'
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE.value
+    assert comment['detail']['info']['previous_export_state'] == 'ERROR'
+    assert comment['detail']['info']['is_auto_export'] is True
+
+
+def test_export_summary_not_updated_bill(db, mocker, get_or_create_task_log):
+    """
+    Test create_bill generates single system comment per expense group when previous export state is ERROR
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.Bill.create_bill')
+    mocker.patch('apps.sage_intacct.models.BillLineitem.create_bill_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_bill')
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_bill(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_BILL'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['entity_type'] == 'EXPENSE_GROUP'
+    assert comment['entity_id'] == expense_group.id
+    assert comment['export_type'] == 'BILL'
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE.value
+    assert comment['detail']['info']['previous_export_state'] == 'ERROR'
+    assert comment['detail']['info']['is_auto_export'] is True
+
+
+def test_export_summary_not_updated_charge_card_transaction(db, mocker, get_or_create_task_log):
+    """
+    Test create_charge_card_transaction generates single system comment per expense group when previous export state is ERROR
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransaction.create_charge_card_transaction')
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_charge_card_transaction')
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_charge_card_transaction(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['entity_type'] == 'EXPENSE_GROUP'
+    assert comment['entity_id'] == expense_group.id
+    assert comment['export_type'] == 'CHARGE_CARD_TRANSACTION'
+    assert comment['detail']['reason'] == SystemCommentReasonEnum.EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE.value
+    assert comment['detail']['info']['previous_export_state'] == 'ERROR'
+    assert comment['detail']['info']['is_auto_export'] is True
+
+
+def test_retrigger_stuck_exports_system_comment(db, mocker, get_or_create_task_log):
+    """
+    Test retrigger_stuck_exports generates system comment with stuck_duration_seconds
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense_group.updated_at = datetime.now(timezone.utc) - timedelta(hours=2)
+    expense_group.save()
+
+    get_or_create_task_log(
+        expense_group,
+        task_type='FETCHING_EXPENSES',
+        status='ENQUEUED',
+        updated_at=datetime.now() - timedelta(minutes=90)
+    )
+
+    captured_comments = []
+    mocker.patch('apps.internal.tasks.export_to_intacct')
+    mocker.patch('apps.internal.tasks.update_failed_expenses')
+    mocker.patch('apps.internal.tasks.post_accounting_export_summary')
+    mocker.patch('apps.internal.tasks.Schedule.objects.filter', return_value=mocker.MagicMock(filter=mocker.MagicMock(return_value=None)))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    retrigger_stuck_exports()
+
+    retrigger_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_RETRIGGERED']
+    if retrigger_comments:
+        comment = retrigger_comments[0]
+        assert comment['source'] == 'RETRIGGER_STUCK_EXPORTS'
+        assert comment['intent'] == 'EXPORT_RETRIGGERED'
+        assert comment['entity_type'] == 'EXPENSE_GROUP'
+        assert comment['detail']['reason'] == SystemCommentReasonEnum.EXPORT_RETRIGGERED_STUCK.value
+        assert 'stuck_duration_seconds' in comment['detail']['info']
+        assert isinstance(comment['detail']['info']['stuck_duration_seconds'], (int, float))
+        assert comment['detail']['info']['stuck_duration_seconds'] > 0
+
+
+def test_export_summary_not_updated_expense_report_wrong_params_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_expense_report flushes system comments when WrongParamsError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ExpenseReport.create_expense_report')
+    mocker.patch('apps.sage_intacct.models.ExpenseReportLineitem.create_expense_report_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report', return_value={'key': '123'})
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_expense_report', side_effect=WrongParamsError('Some of the parameters are wrong', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_expense_report(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_EXPENSE_REPORT'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'EXPENSE_REPORT'
+
+
+def test_export_summary_not_updated_expense_report_bulk_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_expense_report flushes system comments when BulkError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ExpenseReport.create_expense_report')
+    mocker.patch('apps.sage_intacct.models.ExpenseReportLineitem.create_expense_report_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report', side_effect=BulkError({'error': ['Bulk error']}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_expense_report(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_EXPENSE_REPORT'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'EXPENSE_REPORT'
+
+
+def test_export_summary_not_updated_bill_wrong_params_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_bill flushes system comments when WrongParamsError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.Bill.create_bill')
+    mocker.patch('apps.sage_intacct.models.BillLineitem.create_bill_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_bill', return_value={'data': {'apbill': {'key': '123'}}})
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_bill', side_effect=WrongParamsError('Some of the parameters are wrong', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_bill(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_BILL'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'BILL'
+
+
+def test_export_summary_not_updated_bill_bulk_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_bill flushes system comments when BulkError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.Bill.create_bill')
+    mocker.patch('apps.sage_intacct.models.BillLineitem.create_bill_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_bill', side_effect=BulkError({'error': ['Bulk error']}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_bill(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_BILL'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'BILL'
+
+
+def test_export_summary_not_updated_charge_card_transaction_wrong_params_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_charge_card_transaction flushes system comments when WrongParamsError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransaction.create_charge_card_transaction')
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_charge_card_transaction', return_value={'data': {'cctransaction': {'key': '123'}}})
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_charge_card_transaction', side_effect=WrongParamsError('Some of the parameters are wrong', {}))
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor', return_value=(mocker.MagicMock(destination_id='vendor123'), False))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_charge_card_transaction(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'CHARGE_CARD_TRANSACTION'
+
+
+def test_export_summary_not_updated_charge_card_transaction_bulk_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_charge_card_transaction flushes system comments when BulkError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransaction.create_charge_card_transaction')
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_charge_card_transaction', side_effect=BulkError({'error': ['Bulk error']}))
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor', return_value=(mocker.MagicMock(destination_id='vendor123'), False))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_charge_card_transaction(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'CHARGE_CARD_TRANSACTION'
+
+
+def test_export_summary_not_updated_expense_report_no_privilege_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_expense_report flushes system comments when NoPrivilegeError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ExpenseReport.create_expense_report')
+    mocker.patch('apps.sage_intacct.models.ExpenseReportLineitem.create_expense_report_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report', side_effect=NoPrivilegeError('No privilege', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_expense_report(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_EXPENSE_REPORT'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'EXPENSE_REPORT'
+
+
+def test_export_summary_not_updated_bill_no_privilege_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_bill flushes system comments when NoPrivilegeError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.Bill.create_bill')
+    mocker.patch('apps.sage_intacct.models.BillLineitem.create_bill_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_bill', side_effect=NoPrivilegeError('No privilege', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_bill(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_BILL'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'BILL'
+
+
+def test_export_summary_not_updated_charge_card_transaction_no_privilege_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_charge_card_transaction flushes system comments when NoPrivilegeError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransaction.create_charge_card_transaction')
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_charge_card_transaction', side_effect=NoPrivilegeError('No privilege', {}))
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor', return_value=(mocker.MagicMock(destination_id='vendor123'), False))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_charge_card_transaction(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'CHARGE_CARD_TRANSACTION'
+
+
+def test_export_summary_not_updated_expense_report_rest_bad_request_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_expense_report flushes system comments when IntacctRESTBadRequestError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ExpenseReport.create_expense_report')
+    mocker.patch('apps.sage_intacct.models.ExpenseReportLineitem.create_expense_report_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report', side_effect=IntacctRESTBadRequestError('Bad request', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_expense_report(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_EXPENSE_REPORT'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'EXPENSE_REPORT'
+
+
+def test_export_summary_not_updated_bill_rest_bad_request_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_bill flushes system comments when IntacctRESTBadRequestError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.Bill.create_bill')
+    mocker.patch('apps.sage_intacct.models.BillLineitem.create_bill_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_bill', side_effect=IntacctRESTBadRequestError('Bad request', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_bill(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_BILL'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'BILL'
+
+
+def test_export_summary_not_updated_charge_card_transaction_rest_bad_request_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_charge_card_transaction flushes system comments when IntacctRESTBadRequestError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransaction.create_charge_card_transaction')
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_charge_card_transaction', side_effect=IntacctRESTBadRequestError('Bad request', {}))
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor', return_value=(mocker.MagicMock(destination_id='vendor123'), False))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_charge_card_transaction(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'CHARGE_CARD_TRANSACTION'
+
+
+def test_export_summary_not_updated_expense_report_rest_internal_server_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_expense_report flushes system comments when IntacctRESTInternalServerError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ExpenseReport.create_expense_report')
+    mocker.patch('apps.sage_intacct.models.ExpenseReportLineitem.create_expense_report_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_expense_report', side_effect=IntacctRESTInternalServerError('Internal server error', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_expense_report(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_EXPENSE_REPORT'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'EXPENSE_REPORT'
+
+
+def test_export_summary_not_updated_bill_rest_internal_server_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_bill flushes system comments when IntacctRESTInternalServerError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.Bill.create_bill')
+    mocker.patch('apps.sage_intacct.models.BillLineitem.create_bill_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_bill', side_effect=IntacctRESTInternalServerError('Internal server error', {}))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_bill(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_BILL'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'BILL'
+
+
+def test_export_summary_not_updated_charge_card_transaction_rest_internal_server_error(db, mocker, get_or_create_task_log):
+    """
+    Test create_charge_card_transaction flushes system comments when IntacctRESTInternalServerError occurs
+    """
+    expense_group = ExpenseGroup.objects.filter(workspace_id=1).first()
+    assert expense_group is not None, "No expense group available for test"
+
+    expense = expense_group.expenses.first()
+    expense.previous_export_state = 'ERROR'
+    expense.save()
+
+    task_log = get_or_create_task_log(expense_group)
+
+    captured_comments = []
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransaction.create_charge_card_transaction')
+    mocker.patch('apps.sage_intacct.models.ChargeCardTransactionLineitem.create_charge_card_transaction_lineitems')
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.post_charge_card_transaction', side_effect=IntacctRESTInternalServerError('Internal server error', {}))
+    mocker.patch('apps.sage_intacct.utils.SageIntacctConnector.get_or_create_vendor', return_value=(mocker.MagicMock(destination_id='vendor123'), False))
+    mocker.patch.object(SystemComment, 'bulk_create_comments', side_effect=lambda comments: captured_comments.extend(comments))
+
+    create_charge_card_transaction(
+        expense_group_id=expense_group.id,
+        task_log_id=task_log.id,
+        last_export=True,
+        is_auto_export=True
+    )
+
+    export_summary_comments = [c for c in captured_comments if c.get('intent') == 'EXPORT_SUMMARY_NOT_UPDATED']
+    assert len(export_summary_comments) == 1
+    comment = export_summary_comments[0]
+    assert comment['source'] == 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
+    assert comment['intent'] == 'EXPORT_SUMMARY_NOT_UPDATED'
+    assert comment['export_type'] == 'CHARGE_CARD_TRANSACTION'

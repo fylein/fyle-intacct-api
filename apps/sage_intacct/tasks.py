@@ -744,8 +744,21 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         return
 
     in_progress_expenses = []
+    system_comments = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
-    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+    if is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR':
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY,
+            intent=SystemCommentIntentEnum.EXPORT_SUMMARY_NOT_UPDATED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+            workspace_id=expense_group.workspace_id,
+            entity_id=expense_group.id,
+            export_type=ExportTypeEnum.JOURNAL_ENTRY,
+            reason=SystemCommentReasonEnum.EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE,
+            info={'previous_export_state': 'ERROR', 'is_auto_export': True}
+        )
+    else:
         try:
             in_progress_expenses.extend(expense_group.expenses.all())
             update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
@@ -761,8 +774,6 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
-
-        system_comments = []
 
         if settings.BRAND_ID == 'fyle':
             if configuration.auto_map_employees and configuration.auto_create_destination_entity \
@@ -843,13 +854,11 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
-            if system_comments:
-                batch_id = SystemComment.generate_batch_id()
-                for comment in system_comments:
-                    comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = ExportTypeEnum.JOURNAL_ENTRY
-                    comment['batch_id'] = batch_id
-                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.JOURNAL_ENTRY
+            SystemComment.bulk_create_comments(system_comments)
 
         try:
             generate_export_url_and_update_expense(expense_group)
@@ -986,8 +995,21 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         return
 
     in_progress_expenses = []
+    system_comments = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
-    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+    if is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR':
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT,
+            intent=SystemCommentIntentEnum.EXPORT_SUMMARY_NOT_UPDATED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+            workspace_id=expense_group.workspace_id,
+            entity_id=expense_group.id,
+            export_type=ExportTypeEnum.EXPENSE_REPORT,
+            reason=SystemCommentReasonEnum.EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE,
+            info={'previous_export_state': 'ERROR', 'is_auto_export': True}
+        )
+    else:
         try:
             in_progress_expenses.extend(expense_group.expenses.all())
             update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
@@ -1024,8 +1046,6 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
                 task_log.save()
 
         with transaction.atomic():
-            system_comments = []
-
             expense_report_object = ExpenseReport.create_expense_report(expense_group, task_log.supdoc_id)
 
             expense_report_lineitems_objects = ExpenseReportLineitem.create_expense_report_lineitems(
@@ -1072,13 +1092,11 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
-            if system_comments:
-                batch_id = SystemComment.generate_batch_id()
-                for comment in system_comments:
-                    comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
-                    comment['batch_id'] = batch_id
-                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
 
         try:
             generate_export_url_and_update_expense(expense_group)
@@ -1090,6 +1108,11 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             update_last_export_details(expense_group.workspace_id)
 
     except SageIntacctCredential.DoesNotExist:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
             expense_group.workspace_id,
@@ -1104,13 +1127,16 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
 
         task_log.save()
-        update_failed_expenses(expense_group.expenses.all(), True)
-        post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
         if last_export:
             last_export_failed = True
 
     except BulkError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
@@ -1126,18 +1152,33 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             last_export_failed = True
 
     except WrongParamsError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
         if last_export:
             last_export_failed = True
 
     except NoPrivilegeError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
         if last_export:
             last_export_failed = True
 
     except InvalidTokenError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Expense Reports')
 
@@ -1145,22 +1186,42 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
             last_export_failed = True
 
     except IntacctRESTBadRequestError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Expense Reports')
         if last_export:
             last_export_failed = True
 
     except IntacctRESTInvalidTokenError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Expense Reports')
         if last_export:
             last_export_failed = True
 
     except IntacctRESTInternalServerError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Expense Reports')
         if last_export:
             last_export_failed = True
 
     except Exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
+            SystemComment.bulk_create_comments(system_comments)
         error = traceback.format_exc()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
         detail = {
@@ -1216,8 +1277,21 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
         return
 
     in_progress_expenses = []
+    system_comments = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
-    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+    if is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR':
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.CREATE_BILL,
+            intent=SystemCommentIntentEnum.EXPORT_SUMMARY_NOT_UPDATED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+            workspace_id=expense_group.workspace_id,
+            entity_id=expense_group.id,
+            export_type=ExportTypeEnum.BILL,
+            reason=SystemCommentReasonEnum.EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE,
+            info={'previous_export_state': 'ERROR', 'is_auto_export': True}
+        )
+    else:
         try:
             in_progress_expenses.extend(expense_group.expenses.all())
             update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
@@ -1254,8 +1328,6 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
                 task_log.save()
 
         with transaction.atomic():
-            system_comments = []
-
             bill_object = Bill.create_bill(expense_group, task_log.supdoc_id, system_comments)
 
             bill_lineitems_objects = BillLineitem.create_bill_lineitems(expense_group, configuration, system_comments)
@@ -1297,13 +1369,11 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
-            if system_comments:
-                batch_id = SystemComment.generate_batch_id()
-                for comment in system_comments:
-                    comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = ExportTypeEnum.BILL
-                    comment['batch_id'] = batch_id
-                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
 
         try:
             generate_export_url_and_update_expense(expense_group)
@@ -1313,6 +1383,11 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             update_last_export_details(expense_group.workspace_id)
 
     except SageIntacctCredential.DoesNotExist:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
             expense_group.workspace_id,
@@ -1334,6 +1409,11 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             last_export_failed = True
 
     except BulkError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
@@ -1349,18 +1429,33 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             last_export_failed = True
 
     except WrongParamsError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
         if last_export:
             last_export_failed = True
 
     except NoPrivilegeError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
         if last_export:
             last_export_failed = True
 
     except InvalidTokenError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Bills')
 
@@ -1368,22 +1463,42 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
             last_export_failed = True
 
     except IntacctRESTBadRequestError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Bills')
         if last_export:
             last_export_failed = True
 
     except IntacctRESTInvalidTokenError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Bills')
         if last_export:
             last_export_failed = True
 
     except IntacctRESTInternalServerError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Bills')
         if last_export:
             last_export_failed = True
 
     except Exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.BILL
+            SystemComment.bulk_create_comments(system_comments)
         error = traceback.format_exc()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
         detail = {
@@ -1439,8 +1554,21 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         return
 
     in_progress_expenses = []
+    system_comments = []
     # Don't include expenses with previous export state as ERROR and it's an auto import/export run
-    if not (is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR'):
+    if is_auto_export and expense_group.expenses.first().previous_export_state == 'ERROR':
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+            intent=SystemCommentIntentEnum.EXPORT_SUMMARY_NOT_UPDATED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+            workspace_id=expense_group.workspace_id,
+            entity_id=expense_group.id,
+            export_type=ExportTypeEnum.CHARGE_CARD_TRANSACTION,
+            reason=SystemCommentReasonEnum.EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE,
+            info={'previous_export_state': 'ERROR', 'is_auto_export': True}
+        )
+    else:
         try:
             in_progress_expenses.extend(expense_group.expenses.all())
             update_expense_and_post_summary(in_progress_expenses, expense_group.workspace_id, expense_group.fund_source)
@@ -1456,8 +1584,6 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         worker_logger.info('Validated Expense Group %s successfully', expense_group.id)
         sage_intacct_credentials = SageIntacctCredential.get_active_sage_intacct_credentials(expense_group.workspace_id)
         sage_intacct_connection = get_sage_intacct_connection(workspace_id=expense_group.workspace_id, connection_type=SageIntacctRestConnectionTypeEnum.UPSERT.value)
-
-        system_comments = []
 
         merchant = expense_group.expenses.first().vendor
         vendor, is_fallback = get_or_create_credit_card_vendor(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
@@ -1532,13 +1658,11 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
-            if system_comments:
-                batch_id = SystemComment.generate_batch_id()
-                for comment in system_comments:
-                    comment['workspace_id'] = expense_group.workspace_id
-                    comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
-                    comment['batch_id'] = batch_id
-                SystemComment.bulk_create_comments(system_comments, batch_id=batch_id)
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
 
         try:
             generate_export_url_and_update_expense(expense_group)
@@ -1549,6 +1673,11 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             update_last_export_details(expense_group.workspace_id)
 
     except SageIntacctCredential.DoesNotExist:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         logger.info(
             'Sage Intacct Credentials not found for workspace_id %s / expense group %s',
             expense_group.workspace_id,
@@ -1570,6 +1699,11 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             last_export_failed = True
 
     except BulkError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         logger.info(exception.response)
         detail = exception.response
         task_log.status = 'FAILED'
@@ -1585,18 +1719,33 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             last_export_failed = True
 
     except WrongParamsError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
         if last_export:
             last_export_failed = True
 
     except NoPrivilegeError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
         if last_export:
             last_export_failed = True
 
     except InvalidTokenError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
@@ -1604,28 +1753,53 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
             last_export_failed = True
 
     except ValueErrorWithResponse as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_errors(exception, expense_group, task_log, 'Charge Card Transactions')
 
         if last_export:
             last_export_failed = True
 
     except IntacctRESTBadRequestError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Charge Card Transactions')
         if last_export:
             last_export_failed = True
 
     except IntacctRESTInvalidTokenError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         invalidate_sage_intacct_credentials(expense_group.workspace_id, sage_intacct_credentials)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Charge Card Transactions')
         if last_export:
             last_export_failed = True
 
     except IntacctRESTInternalServerError as exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         handle_sage_intacct_rest_errors(exception, expense_group, task_log, 'Charge Card Transactions')
         if last_export:
             last_export_failed = True
 
     except Exception:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
+            SystemComment.bulk_create_comments(system_comments)
         error = traceback.format_exc()
         logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id, error)
         detail = {
@@ -1675,34 +1849,64 @@ def check_expenses_reimbursement_status(expenses: list[Expense], workspace_id: i
     return is_paid
 
 
-def validate_for_skipping_payment(export_module: Bill | ExpenseReport, workspace_id: int, type: str) -> bool:
+def validate_for_skipping_payment(export_module: Bill | ExpenseReport, workspace_id: int, type: str, system_comments: list = None) -> bool:
     """
     Validate for skipping payment
     :param export_module: Export Module
     :param workspace_id: Workspace Id
     :param type: Type
+    :param system_comments: optional list to collect system comment data
     :return: True if payment is to be skipped, False otherwise
     """
+    should_skip = False
     task_log = TaskLog.objects.filter(task_id='PAYMENT_{}'.format(export_module.expense_group.id), workspace_id=workspace_id, type=type).first()
+
     if task_log:
         now = timezone.now()
+        reason = None
+        info = {'task_log_created_at': str(task_log.created_at), 'task_log_updated_at': str(task_log.updated_at)}
 
         if now - relativedelta(months=2) > task_log.created_at:
             export_module.is_retired = True
             export_module.save()
-            return True
+            should_skip = True
+            reason = SystemCommentReasonEnum.PAYMENT_SKIPPED_TASK_LOG_RETIRED
+            info = {'task_log_created_at': str(task_log.created_at)}
 
         elif now - relativedelta(months=1) > task_log.created_at and now - relativedelta(months=2) < task_log.created_at:
             # if updated_at is within 1 months will be skipped
             if task_log.updated_at > now - relativedelta(months=1):
-                return True
+                should_skip = True
+                reason = SystemCommentReasonEnum.PAYMENT_SKIPPED_TASK_LOG_RECENT_UPDATE
+                info = {'task_log_created_at': str(task_log.created_at), 'task_log_updated_at': str(task_log.updated_at), 'age_months': '1-2', 'updated_within': '1 month'}
+
         # If created is within 1 month
         elif now - relativedelta(months=1) < task_log.created_at:
             # Skip if updated within the last week
             if task_log.updated_at > now - relativedelta(weeks=1):
-                return True
+                should_skip = True
+                reason = SystemCommentReasonEnum.PAYMENT_SKIPPED_TASK_LOG_RECENT_UPDATE
+                info = {'task_log_created_at': str(task_log.created_at), 'task_log_updated_at': str(task_log.updated_at), 'age_months': '<1', 'updated_within': '1 week'}
 
-    return False
+        if should_skip:
+            if system_comments is not None:
+                export_type = ExportTypeEnum.BILL if isinstance(export_module, Bill) else ExportTypeEnum.EXPENSE_REPORT
+                source = SystemCommentSourceEnum.CREATE_EXPENSE_REPORT if isinstance(export_module, ExpenseReport) else SystemCommentSourceEnum.CREATE_BILL
+                info['export_type'] = export_type
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=source,
+                    intent=SystemCommentIntentEnum.EXPORT_MODULE_RETIRED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                    workspace_id=workspace_id,
+                    entity_id=export_module.expense_group.id,
+                    export_type=export_type,
+                    reason=reason,
+                    info=info
+                )
+            return should_skip
+
+    return should_skip
 
 
 def create_ap_payment(workspace_id: int) -> None:
@@ -1714,6 +1918,7 @@ def create_ap_payment(workspace_id: int) -> None:
     fyle_credentials = FyleCredential.objects.get(workspace_id=workspace_id)
     platform = PlatformConnector(fyle_credentials)
     filter_credit_expenses = False
+    system_comments = []
 
     bills = Bill.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
@@ -1730,7 +1935,7 @@ def create_ap_payment(workspace_id: int) -> None:
             )
 
             if expense_group_reimbursement_status:
-                skip_payment = validate_for_skipping_payment(export_module=bill, workspace_id=workspace_id, type='CREATING_AP_PAYMENT')
+                skip_payment = validate_for_skipping_payment(export_module=bill, workspace_id=workspace_id, type='CREATING_AP_PAYMENT', system_comments=system_comments)
 
                 if skip_payment:
                     continue
@@ -1878,6 +2083,9 @@ def create_ap_payment(workspace_id: int) -> None:
                     logger.exception('Something unexpected happened workspace_id: %s %s', task_log.workspace_id,
                                  task_log.detail)
 
+    if system_comments:
+        SystemComment.bulk_create_comments(system_comments)
+
 
 def create_sage_intacct_reimbursement(workspace_id: int) -> None:
     """
@@ -1893,6 +2101,7 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
         return
 
     filter_credit_expenses = False
+    system_comments = []
 
     expense_reports: list[ExpenseReport] = ExpenseReport.objects.filter(
         payment_synced=False, expense_group__workspace_id=workspace_id,
@@ -1904,7 +2113,7 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
             expense_report.expense_group.expenses.all(), workspace_id=workspace_id, platform=platform, filter_credit_expenses=filter_credit_expenses)
         if expense_group_reimbursement_status:
 
-            skip_reimbursement = validate_for_skipping_payment(export_module=expense_report, workspace_id=workspace_id, type='CREATING_REIMBURSEMENT')
+            skip_reimbursement = validate_for_skipping_payment(export_module=expense_report, workspace_id=workspace_id, type='CREATING_REIMBURSEMENT', system_comments=system_comments)
             if skip_reimbursement:
                 continue
 
@@ -2050,6 +2259,9 @@ def create_sage_intacct_reimbursement(workspace_id: int) -> None:
                     task_log.workspace_id,
                     task_log.detail
                 )
+
+    if system_comments:
+        SystemComment.bulk_create_comments(system_comments)
 
 
 def get_all_sage_intacct_bill_ids(sage_objects: Bill) -> dict:
