@@ -1,5 +1,5 @@
 from unittest import mock
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 import pytest
 from fyle.platform import Platform
@@ -347,7 +347,7 @@ def add_category_test_expense_group(db, add_category_test_expense):
 
 
 @pytest.fixture
-def get_or_create_task_log(db):
+def get_or_create_task_log(db):  # noqa: ANN204
     """
     Fixture to get or create a TaskLog for an expense group
     Returns a function that can be called with expense_group and optional parameters
