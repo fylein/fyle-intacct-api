@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 from unittest import mock
 from datetime import datetime, timezone
 
@@ -353,7 +353,12 @@ def get_or_create_task_log(db) -> Callable:
     Fixture to get or create a TaskLog for an expense group
     Returns a function that can be called with expense_group and optional parameters
     """
-    def _get_or_create_task_log(expense_group, task_type='FETCHING_EXPENSES', status='COMPLETE', updated_at=None):
+    def _get_or_create_task_log(
+        expense_group: ExpenseGroup,
+        task_type: str = 'FETCHING_EXPENSES',
+        status: str = 'COMPLETE',
+        updated_at: Optional[datetime] = None
+    ) -> TaskLog:
         task_log = TaskLog.objects.filter(expense_group_id=expense_group.id).first()
         if not task_log:
             task_log = TaskLog.objects.create(
