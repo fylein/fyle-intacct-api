@@ -1126,6 +1126,23 @@ class BillLineitem(models.Model):
                 allocation_dimensions = set(allocation_detail.keys())
                 user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
 
+            if lineitem.billable and not (dimensions_values['customer_id'] and dimensions_values['item_id']):
+                missing_fields = []
+                if not dimensions_values['customer_id']:
+                    missing_fields.append('customer_id')
+                if not dimensions_values['item_id']:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_BILL_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
+
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
                 expense_id=lineitem.id,
@@ -1343,6 +1360,23 @@ class ExpenseReportLineitem(models.Model):
                         reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
                         info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
                     )
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
@@ -1567,6 +1601,23 @@ class JournalEntryLineitem(models.Model):
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             allocation_id, _ = get_allocation_id_or_none(expense_group=expense_group, lineitem=lineitem)
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
@@ -1793,6 +1844,23 @@ class ChargeCardTransactionLineitem(models.Model):
                     entity_id=lineitem.id,
                     reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
                     info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'}
+                )
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
                 )
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
