@@ -143,3 +143,16 @@ class Error(models.Model):
             error.mapping_error_expense_group_ids = list(set(error.mapping_error_expense_group_ids + [expense_group.id]))
             error.save(update_fields=['mapping_error_expense_group_ids'])
         return error, created
+
+
+class TestingPublication(models.Model):
+    """
+    Table to store testing
+    """
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255, help_text='Name')
+    created_at = models.DateTimeField(auto_now_add=True, help_text='Created at datetime')
+    updated_at = models.DateTimeField(auto_now=True, help_text='Updated at datetime')
+
+    class Meta:
+        db_table = 'testing_publication'
