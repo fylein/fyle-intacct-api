@@ -27,6 +27,7 @@ from fyle_rest_auth.models import AuthToken
 from fyle_rest_auth.utils import AuthUtils
 from fyle.platform import exceptions as fyle_exc
 from fyle_rest_auth.helpers import get_fyle_admin
+from fyle_accounting_library.system_comments.models import SystemComment
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import ExpenseAttribute, FyleSyncTimestamp
 
@@ -57,9 +58,8 @@ from apps.workspaces.serializers import (
     LastExportDetailSerializer,
     SageIntacctCredentialSerializer,
 )
-from apps.workspaces.enums import SystemCommentSourceEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentEntityTypeEnum
 from apps.workspaces.system_comments import add_system_comment
-from fyle_accounting_library.system_comments.models import SystemComment
+from apps.workspaces.enums import SystemCommentSourceEnum, SystemCommentIntentEnum
 
 
 User = get_user_model()
