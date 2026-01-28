@@ -57,6 +57,9 @@ from apps.workspaces.serializers import (
     LastExportDetailSerializer,
     SageIntacctCredentialSerializer,
 )
+from apps.workspaces.enums import SystemCommentSourceEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentEntityTypeEnum
+from apps.workspaces.system_comments import add_system_comment
+from fyle_accounting_library.system_comments.models import SystemComment
 
 
 User = get_user_model()
@@ -415,6 +418,7 @@ class ConnectSageIntacctView(viewsets.ViewSet):
         :param si_user_password: Sage Intacct user password
         :return: None
         """
+        system_comments = []
         try:
             sage_intacct_credentials = SageIntacctCredential.objects.filter(workspace=workspace).first()
 
@@ -472,6 +476,16 @@ class ConnectSageIntacctView(viewsets.ViewSet):
 
         except SageIntacctRestInvalidTokenError as e:
             logger.info('Something went wrong while connecting to Sage Intacct - %s', e.response)
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.HANDLE_SAGE_INTACCT_REST_API_CONNECTION,
+                intent=SystemCommentIntentEnum.CONNECTION_FAILED,
+                entity_type=None,
+                workspace_id=workspace.id,
+                entity_id=None,
+                reason='Sage Intacct REST API connection failed: Invalid token error',
+                info={'error': str(e.response), 'error_type': 'InvalidTokenError'}
+            )
             return Response(
                 {
                     'message': e.response
@@ -481,6 +495,16 @@ class ConnectSageIntacctView(viewsets.ViewSet):
 
         except SageIntacctRESTBadRequestError as e:
             logger.info('Something went wrong while connecting to Sage Intacct - %s', e.response)
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.HANDLE_SAGE_INTACCT_REST_API_CONNECTION,
+                intent=SystemCommentIntentEnum.CONNECTION_FAILED,
+                entity_type=None,
+                workspace_id=workspace.id,
+                entity_id=None,
+                reason='Sage Intacct REST API connection failed: Bad request error',
+                info={'error': str(e.response), 'error_type': 'BadRequestError'}
+            )
             return Response(
                 {
                     'message': e.response
@@ -489,12 +513,25 @@ class ConnectSageIntacctView(viewsets.ViewSet):
             )
         except SageIntacctRESTInternalServerError as e:
             logger.info('Something went wrong while connecting to Sage Intacct - %s', e.response)
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.HANDLE_SAGE_INTACCT_REST_API_CONNECTION,
+                intent=SystemCommentIntentEnum.CONNECTION_FAILED,
+                entity_type=None,
+                workspace_id=workspace.id,
+                entity_id=None,
+                reason='Sage Intacct REST API connection failed: Internal server error',
+                info={'error': str(e.response), 'error_type': 'InternalServerError'}
+            )
             return Response(
                 {
                     'message': 'Something went wrong while connecting to Sage Intacct'
                 },
                 status=status.HTTP_401_UNAUTHORIZED
             )
+        finally:
+            if system_comments:
+                SystemComment.bulk_create_comments(system_comments)
 
     def handle_sage_intacct_soap_api_connection(
         self,
