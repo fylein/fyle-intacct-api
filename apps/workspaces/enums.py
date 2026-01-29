@@ -53,6 +53,12 @@ class SystemCommentSourceEnum(str, Enum):
     # Connection handling
     HANDLE_SAGE_INTACCT_REST_API_CONNECTION = 'HANDLE_SAGE_INTACCT_REST_API_CONNECTION'
 
+    # Connector methods
+    POST_EXPENSE_REPORT = 'POST_EXPENSE_REPORT'
+    POST_BILL = 'POST_BILL'
+    POST_CHARGE_CARD_TRANSACTION = 'POST_CHARGE_CARD_TRANSACTION'
+    POST_JOURNAL_ENTRY = 'POST_JOURNAL_ENTRY'
+
 
 class SystemCommentIntentEnum(str, Enum):
     """
@@ -73,6 +79,7 @@ class SystemCommentIntentEnum(str, Enum):
     EXPORT_RETRIGGERED = 'EXPORT_RETRIGGERED'
     EXPORT_MODULE_RETIRED = 'EXPORT_MODULE_RETIRED'
     CONNECTION_FAILED = 'CONNECTION_FAILED'
+    ACCOUNTING_PERIOD_ADJUSTED = 'ACCOUNTING_PERIOD_ADJUSTED'
 
 
 class SystemCommentReasonEnum(str, Enum):
@@ -122,6 +129,9 @@ class SystemCommentReasonEnum(str, Enum):
     EXPORT_RETRIGGERED_STUCK = 'Export was re-triggered because it was stuck in ENQUEUED or IN_PROGRESS state for more than 60 minutes.'
     PAYMENT_SKIPPED_TASK_LOG_RETIRED = 'Payment was skipped because task log is older than 2 months.'
     PAYMENT_SKIPPED_TASK_LOG_RECENT_UPDATE = 'Payment was skipped because task log was recently updated (within 1 month for logs 1-2 months old, or within 1 week for logs less than 1 month old).'
+
+    # Accounting period handling - explaining WHY
+    ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED = 'Accounting period was closed. Transaction date was adjusted to the first day of the current month to allow posting.'
 
 
 class SystemCommentEntityTypeEnum(str, Enum):
