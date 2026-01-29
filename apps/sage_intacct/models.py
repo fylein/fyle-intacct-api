@@ -147,6 +147,7 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
             entity_type=SystemCommentEntityTypeEnum.EXPENSE,
             workspace_id=expense_group.workspace_id,
             entity_id=lineitem.id,
+            persist_without_export=False,
             reason=SystemCommentReasonEnum.DEFAULT_PROJECT_APPLIED,
             info={'default_project_id': general_mappings.default_project_id, 'default_project_name': general_mappings.default_project_name}
         )
@@ -200,7 +201,8 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
                 workspace_id=expense_group.workspace_id,
                 entity_id=lineitem.id,
                 reason=SystemCommentReasonEnum.EMPLOYEE_DEPARTMENT_APPLIED,
-                info={'employee_department_id': employee_department, 'employee_department_name': employee_department}
+                info={'employee_department_id': employee_department, 'employee_department_name': employee_department},
+                persist_without_export=False
             )
             return employee_department
 
@@ -214,7 +216,8 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
             workspace_id=expense_group.workspace_id,
             entity_id=lineitem.id,
             reason=SystemCommentReasonEnum.DEFAULT_DEPARTMENT_APPLIED,
-            info={'default_department_id': general_mappings.default_department_id, 'default_department_name': general_mappings.default_department_name}
+            info={'default_department_id': general_mappings.default_department_id, 'default_department_name': general_mappings.default_department_name},
+            persist_without_export=False
         )
         return general_mappings.default_department_id
 
@@ -266,7 +269,8 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
                 workspace_id=expense_group.workspace_id,
                 entity_id=lineitem.id,
                 reason=SystemCommentReasonEnum.EMPLOYEE_LOCATION_APPLIED,
-                info={'employee_location_id': employee_location, 'employee_location_name': employee_location}
+                info={'employee_location_id': employee_location, 'employee_location_name': employee_location},
+                persist_without_export=False
             )
             return employee_location
 
@@ -280,7 +284,8 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
             workspace_id=expense_group.workspace_id,
             entity_id=lineitem.id,
             reason=SystemCommentReasonEnum.DEFAULT_LOCATION_APPLIED,
-            info={'default_location_id': general_mappings.default_location_id, 'default_location_name': general_mappings.default_location_name}
+            info={'default_location_id': general_mappings.default_location_id, 'default_location_name': general_mappings.default_location_name},
+            persist_without_export=False
         )
         return general_mappings.default_location_id
 
@@ -377,6 +382,7 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
             workspace_id=expense_group.workspace_id,
             entity_id=lineitem.id,
             reason=SystemCommentReasonEnum.DEFAULT_ITEM_APPLIED,
+            persist_without_export=False,
             info={'default_item_id': general_mappings.default_item_id, 'default_item_name': general_mappings.default_item_name}
         )
         return general_mappings.default_item_id
@@ -533,7 +539,8 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
             workspace_id=expense_group.workspace_id,
             entity_id=lineitem.id,
             reason=SystemCommentReasonEnum.DEFAULT_CLASS_APPLIED,
-            info={'default_class_id': general_mappings.default_class_id, 'default_class_name': general_mappings.default_class_name}
+            info={'default_class_id': general_mappings.default_class_id, 'default_class_name': general_mappings.default_class_name},
+            persist_without_export=False
         )
         return general_mappings.default_class_id
 
@@ -909,7 +916,8 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
             workspace_id=general_mappings.workspace_id,
             entity_id=expense.id,
             reason=SystemCommentReasonEnum.EMPLOYEE_CCC_ACCOUNT_APPLIED,
-            info={'employee_ccc_account_id': employee_mapping.destination_card_account.destination_id, 'employee_ccc_account_name': employee_mapping.destination_card_account.display_name}
+            info={'employee_ccc_account_id': employee_mapping.destination_card_account.destination_id, 'employee_ccc_account_name': employee_mapping.destination_card_account.display_name},
+            persist_without_export=False
         )
 
         return employee_mapping.destination_card_account.destination_id
@@ -922,7 +930,8 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
         workspace_id=general_mappings.workspace_id,
         entity_id=expense.id,
         reason=SystemCommentReasonEnum.DEFAULT_CREDIT_CARD_APPLIED,
-        info={'default_charge_card_id': general_mappings.default_charge_card_id, 'default_charge_card_name': general_mappings.default_charge_card_name}
+        info={'default_charge_card_id': general_mappings.default_charge_card_id, 'default_charge_card_name': general_mappings.default_charge_card_name},
+        persist_without_export=False
     )
 
     return general_mappings.default_charge_card_id
@@ -1009,7 +1018,8 @@ class Bill(models.Model):
                     workspace_id=expense_group.workspace_id,
                     entity_id=expense_group.id,
                     reason=SystemCommentReasonEnum.DEFAULT_CCC_VENDOR_APPLIED,
-                    info={'default_ccc_vendor_id': general_mappings.default_ccc_vendor_id, 'default_ccc_vendor_name': general_mappings.default_ccc_vendor_name}
+                    info={'default_ccc_vendor_id': general_mappings.default_ccc_vendor_id, 'default_ccc_vendor_name': general_mappings.default_ccc_vendor_name},
+                    persist_without_export=False
                 )
 
         bill_object, _ = Bill.objects.update_or_create(
@@ -1125,6 +1135,23 @@ class BillLineitem(models.Model):
 
                 allocation_dimensions = set(allocation_detail.keys())
                 user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
+
+            if lineitem.billable and not (dimensions_values['customer_id'] and dimensions_values['item_id']):
+                missing_fields = []
+                if not dimensions_values['customer_id']:
+                    missing_fields.append('customer_id')
+                if not dimensions_values['item_id']:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_BILL_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
@@ -1341,8 +1368,26 @@ class ExpenseReportLineitem(models.Model):
                         workspace_id=expense_group.workspace_id,
                         entity_id=lineitem.id,
                         reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
-                        info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
+                        info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                        persist_without_export=False
                     )
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
@@ -1523,7 +1568,8 @@ class JournalEntryLineitem(models.Model):
                             workspace_id=expense_group.workspace_id,
                             entity_id=lineitem.id,
                             reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
-                            info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'}
+                            info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'},
+                            persist_without_export=False
                         )
 
             else:
@@ -1547,7 +1593,8 @@ class JournalEntryLineitem(models.Model):
                             workspace_id=expense_group.workspace_id,
                             entity_id=lineitem.id,
                             reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
-                            info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
+                            info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                            persist_without_export=False
                         )
                     else:
                         raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
@@ -1567,6 +1614,23 @@ class JournalEntryLineitem(models.Model):
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             allocation_id, _ = get_allocation_id_or_none(expense_group=expense_group, lineitem=lineitem)
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
@@ -1656,7 +1720,8 @@ class ChargeCardTransaction(models.Model):
                     workspace_id=expense_group.workspace_id,
                     entity_id=expense_group.id,
                     reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
-                    info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
+                    info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                    persist_without_export=False
                 )
             else:
                 raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
@@ -1792,7 +1857,25 @@ class ChargeCardTransactionLineitem(models.Model):
                     workspace_id=expense_group.workspace_id,
                     entity_id=lineitem.id,
                     reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
-                    info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'}
+                    info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'},
+                    persist_without_export=False
+                )
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
                 )
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(

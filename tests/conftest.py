@@ -1,3 +1,4 @@
+from typing import Callable, Optional
 from unittest import mock
 from datetime import datetime, timezone
 
@@ -12,6 +13,7 @@ from tests.test_fyle.fixtures import data as fyle_data
 from apps.workspaces.models import FeatureConfig, Workspace
 from apps.fyle.models import Expense, ExpenseGroup
 from apps.mappings.models import GeneralMapping
+from apps.tasks.models import TaskLog
 
 
 @pytest.fixture
@@ -343,3 +345,28 @@ def add_category_test_expense_group(db, add_category_test_expense):
     )
     expense_group.expenses.add(expense)
     return expense_group
+
+
+@pytest.fixture
+def get_or_create_task_log(db) -> Callable:
+    """
+    Fixture to get or create a TaskLog for an expense group
+    Returns a function that can be called with expense_group and optional parameters
+    """
+    def _get_or_create_task_log(
+        expense_group: ExpenseGroup,
+        task_type: str = 'FETCHING_EXPENSES',
+        status: str = 'COMPLETE',
+        updated_at: Optional[datetime] = None
+    ) -> TaskLog:
+        task_log = TaskLog.objects.filter(expense_group_id=expense_group.id).first()
+        if not task_log:
+            task_log = TaskLog.objects.create(
+                expense_group_id=expense_group.id,
+                workspace_id=expense_group.workspace_id,
+                type=task_type,
+                status=status,
+                updated_at=updated_at
+            )
+        return task_log
+    return _get_or_create_task_log

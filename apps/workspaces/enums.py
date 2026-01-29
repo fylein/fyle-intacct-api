@@ -28,6 +28,7 @@ class SystemCommentSourceEnum(str, Enum):
     CREATE_BILL = 'CREATE_BILL'
 
     # Lineitem creation functions
+    CREATE_BILL_LINEITEMS = 'CREATE_BILL_LINEITEMS'
     CREATE_EXPENSE_REPORT_LINEITEMS = 'CREATE_EXPENSE_REPORT_LINEITEMS'
     CREATE_JOURNAL_ENTRY_LINEITEMS = 'CREATE_JOURNAL_ENTRY_LINEITEMS'
     CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS = 'CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS'
@@ -44,6 +45,14 @@ class SystemCommentSourceEnum(str, Enum):
     FILTER_EXPENSE_GROUPS = 'FILTER_EXPENSE_GROUPS'
     GROUP_EXPENSES_AND_SAVE = 'GROUP_EXPENSES_AND_SAVE'
 
+    # Export state & retry handling
+    CREATE_JOURNAL_ENTRY = 'CREATE_JOURNAL_ENTRY'
+    CREATE_EXPENSE_REPORT = 'CREATE_EXPENSE_REPORT'
+    RETRIGGER_STUCK_EXPORTS = 'RETRIGGER_STUCK_EXPORTS'
+
+    # Connection handling
+    HANDLE_SAGE_INTACCT_REST_API_CONNECTION = 'HANDLE_SAGE_INTACCT_REST_API_CONNECTION'
+
 
 class SystemCommentIntentEnum(str, Enum):
     """
@@ -59,6 +68,11 @@ class SystemCommentIntentEnum(str, Enum):
     DELETE_EXPENSES = 'DELETE_EXPENSES'
     VENDOR_NOT_FOUND = 'VENDOR_NOT_FOUND'
     SKIP_EXPENSE = 'SKIP_EXPENSE'
+    BILLABLE_DISABLED = 'BILLABLE_DISABLED'
+    EXPORT_SUMMARY_NOT_UPDATED = 'EXPORT_SUMMARY_NOT_UPDATED'
+    EXPORT_RETRIGGERED = 'EXPORT_RETRIGGERED'
+    EXPORT_MODULE_RETIRED = 'EXPORT_MODULE_RETIRED'
+    CONNECTION_FAILED = 'CONNECTION_FAILED'
 
 
 class SystemCommentReasonEnum(str, Enum):
@@ -99,6 +113,15 @@ class SystemCommentReasonEnum(str, Enum):
     EXPENSE_SKIPPED_AFTER_IMPORT = 'Expense skipped after import due to expense filter rules configured in workspace settings.'
     REIMBURSABLE_EXPENSE_NOT_CONFIGURED = 'Reimbursable expense skipped because reimbursable expense export is not configured.'
     CCC_EXPENSE_NOT_CONFIGURED = 'Corporate card expense skipped because corporate card expense export is not configured.'
+
+    # Billable handling - explaining WHY
+    BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS = 'Billable was set to false because customer_id or item_id is missing. Both customer and item are required for billable expenses.'
+
+    # Export state & retry handling - explaining WHY
+    EXPORT_SUMMARY_NOT_UPDATED_ERROR_STATE = 'Export summary not updated because expense group had a previous export state of ERROR during auto-export.'
+    EXPORT_RETRIGGERED_STUCK = 'Export was re-triggered because it was stuck in ENQUEUED or IN_PROGRESS state for more than 60 minutes.'
+    PAYMENT_SKIPPED_TASK_LOG_RETIRED = 'Payment was skipped because task log is older than 2 months.'
+    PAYMENT_SKIPPED_TASK_LOG_RECENT_UPDATE = 'Payment was skipped because task log was recently updated (within 1 month for logs 1-2 months old, or within 1 week for logs less than 1 month old).'
 
 
 class SystemCommentEntityTypeEnum(str, Enum):

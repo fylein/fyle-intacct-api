@@ -18,6 +18,8 @@ from intacctsdk.exceptions import (
 from apps.sage_intacct.models import SageIntacctAttributesCount
 from apps.tasks.models import TaskLog
 from apps.workspaces.models import Configuration, FeatureConfig, LastExportDetail, SageIntacctCredential, Workspace
+from apps.workspaces.enums import SystemCommentIntentEnum, SystemCommentSourceEnum
+from fyle_accounting_library.system_comments.models import SystemComment
 from fyle_integrations_imports.models import ImportLog
 from tests.helper import dict_compare_keys
 from tests.test_fyle.fixtures import data as fyle_data
@@ -871,7 +873,7 @@ def test_handle_sage_intacct_rest_api_connection_existing_credentials(mocker, ap
 
 def test_handle_sage_intacct_rest_api_connection_invalid_token_error(mocker, api_client, test_connection):
     """
-    Test handle_sage_intacct_rest_api_connection handles invalid token error
+    Test handle_sage_intacct_rest_api_connection handles invalid token error and creates system comment
     """
     workspace_id = 1
 
@@ -882,6 +884,8 @@ def test_handle_sage_intacct_rest_api_connection_invalid_token_error(mocker, api
 
     # Delete existing credentials to trigger new connection path
     SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    SystemComment.objects.filter(workspace_id=workspace_id, intent=SystemCommentIntentEnum.CONNECTION_FAILED).delete()
 
     # Mock IntacctRESTSDK to raise InvalidTokenError
     mocker.patch(
@@ -903,6 +907,20 @@ def test_handle_sage_intacct_rest_api_connection_invalid_token_error(mocker, api
 
     assert response.status_code == 401
 
+    system_comments = SystemComment.objects.filter(
+        workspace_id=workspace_id,
+        source=SystemCommentSourceEnum.HANDLE_SAGE_INTACCT_REST_API_CONNECTION,
+        intent=SystemCommentIntentEnum.CONNECTION_FAILED
+    )
+    assert system_comments.count() == 1
+
+    comment = system_comments.first()
+    assert comment.workspace_id == workspace_id
+    assert comment.entity_type is None
+    assert comment.entity_id is None
+    assert 'Invalid token error' in comment.detail['reason']
+    assert comment.detail['info']['error_type'] == 'InvalidTokenError'
+
     # Reset feature config
     feature_config.migrated_to_rest_api = False
     feature_config.save()
@@ -910,7 +928,7 @@ def test_handle_sage_intacct_rest_api_connection_invalid_token_error(mocker, api
 
 def test_handle_sage_intacct_rest_api_connection_bad_request_error(mocker, api_client, test_connection):
     """
-    Test handle_sage_intacct_rest_api_connection handles bad request error
+    Test handle_sage_intacct_rest_api_connection handles bad request error and creates system comment
     """
     workspace_id = 1
 
@@ -921,6 +939,8 @@ def test_handle_sage_intacct_rest_api_connection_bad_request_error(mocker, api_c
 
     # Delete existing credentials to trigger new connection path
     SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    SystemComment.objects.filter(workspace_id=workspace_id, intent=SystemCommentIntentEnum.CONNECTION_FAILED).delete()
 
     # Mock IntacctRESTSDK to raise BadRequestError
     mocker.patch(
@@ -942,6 +962,20 @@ def test_handle_sage_intacct_rest_api_connection_bad_request_error(mocker, api_c
 
     assert response.status_code == 400
 
+    system_comments = SystemComment.objects.filter(
+        workspace_id=workspace_id,
+        source=SystemCommentSourceEnum.HANDLE_SAGE_INTACCT_REST_API_CONNECTION,
+        intent=SystemCommentIntentEnum.CONNECTION_FAILED
+    )
+    assert system_comments.count() == 1
+
+    comment = system_comments.first()
+    assert comment.workspace_id == workspace_id
+    assert comment.entity_type is None
+    assert comment.entity_id is None
+    assert 'Bad request error' in comment.detail['reason']
+    assert comment.detail['info']['error_type'] == 'BadRequestError'
+
     # Reset feature config
     feature_config.migrated_to_rest_api = False
     feature_config.save()
@@ -949,7 +983,7 @@ def test_handle_sage_intacct_rest_api_connection_bad_request_error(mocker, api_c
 
 def test_handle_sage_intacct_rest_api_connection_internal_server_error(mocker, api_client, test_connection):
     """
-    Test handle_sage_intacct_rest_api_connection handles internal server error
+    Test handle_sage_intacct_rest_api_connection handles internal server error and creates system comment
     """
     workspace_id = 1
 
@@ -960,6 +994,8 @@ def test_handle_sage_intacct_rest_api_connection_internal_server_error(mocker, a
 
     # Delete existing credentials to trigger new connection path
     SageIntacctCredential.objects.filter(workspace_id=workspace_id).delete()
+
+    SystemComment.objects.filter(workspace_id=workspace_id, intent=SystemCommentIntentEnum.CONNECTION_FAILED).delete()
 
     # Mock IntacctRESTSDK to raise InternalServerError
     mocker.patch(
@@ -981,6 +1017,20 @@ def test_handle_sage_intacct_rest_api_connection_internal_server_error(mocker, a
 
     assert response.status_code == 401
     assert response.data['message'] == 'Something went wrong while connecting to Sage Intacct'
+
+    system_comments = SystemComment.objects.filter(
+        workspace_id=workspace_id,
+        source=SystemCommentSourceEnum.HANDLE_SAGE_INTACCT_REST_API_CONNECTION,
+        intent=SystemCommentIntentEnum.CONNECTION_FAILED
+    )
+    assert system_comments.count() == 1
+
+    comment = system_comments.first()
+    assert comment.workspace_id == workspace_id
+    assert comment.entity_type is None
+    assert comment.entity_id is None
+    assert 'Internal server error' in comment.detail['reason']
+    assert comment.detail['info']['error_type'] == 'InternalServerError'
 
     # Reset feature config
     feature_config.migrated_to_rest_api = False
