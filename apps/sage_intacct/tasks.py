@@ -854,12 +854,6 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
             resolve_errors_for_exported_expense_group(expense_group)
             worker_logger.info('Resolved errors for exported expense group %s for workspace id %s', expense_group.id, expense_group.workspace_id)
 
-        if system_comments:
-            for comment in system_comments:
-                comment['workspace_id'] = expense_group.workspace_id
-                comment['export_type'] = ExportTypeEnum.JOURNAL_ENTRY
-            SystemComment.bulk_create_comments(system_comments)
-
         try:
             generate_export_url_and_update_expense(expense_group)
         except Exception as e:
@@ -958,6 +952,13 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         task_log.save()
         update_failed_expenses(expense_group.expenses.all(), True)
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
+
+    finally:
+        if system_comments:
+            for comment in system_comments:
+                comment['workspace_id'] = expense_group.workspace_id
+                comment['export_type'] = ExportTypeEnum.JOURNAL_ENTRY
+            SystemComment.bulk_create_comments(system_comments)
 
     if last_export and last_export_failed:
         update_last_export_details(expense_group.workspace_id)

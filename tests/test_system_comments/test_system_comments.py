@@ -1750,9 +1750,6 @@ def test_retrigger_stuck_exports_with_expense_groups_found(db, mocker, get_or_cr
     expense_group.workspace.save(update_fields=['name'])
     expense_group.save()
 
-    expense_group.updated_at = datetime.now(timezone.utc) - timedelta(hours=2)
-    expense_group.save()
-
     task_log = get_or_create_task_log(
         expense_group,
         task_type='CREATING_BILLS',

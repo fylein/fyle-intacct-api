@@ -71,6 +71,7 @@ def retrigger_stuck_exports() -> None:
         for expense_group in expense_groups:
             expenses.extend(expense_group.expenses.all())
         workspace_ids_list = list(workspace_ids)
+        task_logs_dict = {tl.expense_group_id: tl for tl in task_logs}
         task_logs.update(status='FAILED', updated_at=datetime.now(), re_attempt_export=True)
         for workspace_id in workspace_ids_list:
             errored_expenses = [expense for expense in expenses if expense.workspace_id == workspace_id]
@@ -91,7 +92,7 @@ def retrigger_stuck_exports() -> None:
 
                     for expense_group_id in export_expense_group_ids:
                         expense_group = expense_groups.filter(id=expense_group_id, workspace_id=workspace_id).first()
-                        task_log = task_logs.filter(expense_group_id=expense_group_id).first()
+                        task_log = task_logs_dict.get(expense_group_id)
                         if expense_group and task_log:
                             stuck_duration_seconds = (datetime.now(timezone.utc) - task_log.updated_at.replace(tzinfo=timezone.utc)).total_seconds()
                             add_system_comment(
