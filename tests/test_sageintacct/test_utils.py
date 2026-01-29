@@ -10,6 +10,14 @@ from sageintacctsdk.exceptions import WrongParamsError
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.models import CostCode, CostType, SageIntacctAttributesCount
 from apps.sage_intacct.utils import Configuration, SageIntacctConnector, SageIntacctCredential, Workspace
+from apps.workspaces.enums import (
+    ExportTypeEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentSourceEnum,
+    SystemCommentEntityTypeEnum
+)
+from fyle_accounting_library.system_comments.models import SystemComment
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from tests.helper import dict_compare_keys
 from tests.test_sageintacct.fixtures import data
@@ -1112,6 +1120,12 @@ def test_post_bill_exception(mocker, db, create_bill):
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
+    SystemComment.objects.filter(
+        workspace_id=bill.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
     with mock.patch('sageintacctsdk.apis.Bills.post') as mock_call:
         mock_call.return_value = data['bill_response']
         mock_call.side_effect = [WrongParamsError(
@@ -1121,7 +1135,17 @@ def test_post_bill_exception(mocker, db, create_bill):
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
                 'type': 'Invalid_params'
             }), None]
-        sage_intacct_connection.post_bill(bill, bill_lineitems)
+        sage_intacct_connection.post_bill(bill, bill_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_BILL
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == bill.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.BILL
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_sage_intacct_reimbursement_exception(mocker, db, create_sage_intacct_reimbursement):
@@ -1161,18 +1185,31 @@ def test_post_expense_report_exception(mocker, db, create_expense_report):
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
-    try:
-        with mock.patch('sageintacctsdk.apis.ExpenseReports.post') as mock_call:
-            mock_call.side_effect = [WrongParamsError(
-                msg = {
-                    'Message': 'Invalid parametrs'
-                }, response={
-                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                    'type': 'Invalid_params'
-                }), None]
-            sage_intacct_connection.post_expense_report(expense_report, expense_report_lineitems)
-    except Exception:
-        logger.info("Account period error")
+    SystemComment.objects.filter(
+        workspace_id=expense_report.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
+    with mock.patch('sageintacctsdk.apis.ExpenseReports.post') as mock_call:
+        mock_call.side_effect = [WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                'type': 'Invalid_params'
+            }), data['expense_report_post_response']]
+        sage_intacct_connection.post_expense_report(expense_report, expense_report_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_EXPENSE_REPORT
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == expense_report.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.EXPENSE_REPORT
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_charge_card_transaction_exception(mocker, db, create_charge_card_transaction):
@@ -1194,18 +1231,31 @@ def test_post_charge_card_transaction_exception(mocker, db, create_charge_card_t
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
-    try:
-        with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.post') as mock_call:
-            mock_call.side_effect = [WrongParamsError(
-                msg = {
-                    'Message': 'Invalid parametrs'
-                }, response={
-                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                    'type': 'Invalid_params'
-                }), None]
-            sage_intacct_connection.post_charge_card_transaction(charge_card_transaction, charge_card_transaction_lineitems)
-    except Exception:
-        logger.info("Account period error")
+    SystemComment.objects.filter(
+        workspace_id=charge_card_transaction.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
+    with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.post') as mock_call:
+        mock_call.side_effect = [WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                'type': 'Invalid_params'
+            }), data['credit_card_response']]
+        sage_intacct_connection.post_charge_card_transaction(charge_card_transaction, charge_card_transaction_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_CHARGE_CARD_TRANSACTION
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == charge_card_transaction.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.CHARGE_CARD_TRANSACTION
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_journal_entry_exception(mocker, db, create_journal_entry):
@@ -1227,18 +1277,31 @@ def test_post_journal_entry_exception(mocker, db, create_journal_entry):
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
-    try:
-        with mock.patch('sageintacctsdk.apis.JournalEntries.post') as mock_call:
-            mock_call.side_effect = [WrongParamsError(
-                msg={
-                    'Message': 'Invalid parametrs'
-                }, response={
-                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                    'type': 'Invalid_params'
-                }), None]
-            sage_intacct_connection.post_journal_entry(journal_entry, journal_entry_lineitems)
-    except Exception:
-        logger.info("Account period error")
+    SystemComment.objects.filter(
+        workspace_id=journal_entry.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
+    with mock.patch('sageintacctsdk.apis.JournalEntries.post') as mock_call:
+        mock_call.side_effect = [WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                'type': 'Invalid_params'
+            }), data['journal_entry_response']]
+        sage_intacct_connection.post_journal_entry(journal_entry, journal_entry_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_JOURNAL_ENTRY
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == journal_entry.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.JOURNAL_ENTRY
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_ap_payment(mocker, db, create_ap_payment):
