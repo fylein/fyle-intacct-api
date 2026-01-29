@@ -91,8 +91,9 @@ def retrigger_stuck_exports() -> None:
 
                     for expense_group_id in export_expense_group_ids:
                         expense_group = expense_groups.filter(id=expense_group_id, workspace_id=workspace_id).first()
-                        if expense_group:
-                            stuck_duration_seconds = (datetime.now(timezone.utc) - expense_group.updated_at.replace(tzinfo=timezone.utc)).total_seconds()
+                        task_log = task_logs.filter(expense_group_id=expense_group_id).first()
+                        if expense_group and task_log:
+                            stuck_duration_seconds = (datetime.now(timezone.utc) - task_log.updated_at.replace(tzinfo=timezone.utc)).total_seconds()
                             add_system_comment(
                                 system_comments=system_comments,
                                 source=SystemCommentSourceEnum.RETRIGGER_STUCK_EXPORTS,

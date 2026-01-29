@@ -1116,6 +1116,8 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         task_log.re_attempt_export = False  # this is to reset back re_attempt_export to false if it's retried from internal job
 
         task_log.save()
+        update_failed_expenses(expense_group.expenses.all(), True)
+        post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
         if last_export:
             last_export_failed = True
