@@ -31,7 +31,7 @@ from apps.exceptions import ValueErrorWithResponse
 from apps.fyle.models import Expense, ExpenseGroup
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.workspaces.enums import ExportTypeEnum, SystemCommentEntityTypeEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentSourceEnum
-from apps.workspaces.system_comments import add_system_comment
+from apps.workspaces.system_comments import add_system_comment, create_filtered_system_comments
 from apps.sage_intacct.actions import update_last_export_details
 from apps.sage_intacct.connector import SageIntacctRestConnector
 from apps.sage_intacct.helpers import get_sage_intacct_connection
@@ -794,7 +794,8 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
                     workspace_id=expense_group.workspace_id,
                     entity_id=expense_group.id,
                     reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
-                    info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
+                    info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                    persist_without_export=False
                 )
 
         __validate_employee_mapping(expense_group, configuration)
@@ -954,11 +955,12 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
     finally:
-        if system_comments:
-            for comment in system_comments:
-                comment['workspace_id'] = expense_group.workspace_id
-                comment['export_type'] = ExportTypeEnum.JOURNAL_ENTRY
-            SystemComment.bulk_create_comments(system_comments)
+        create_filtered_system_comments(
+            system_comments=system_comments,
+            workspace_id=expense_group.workspace_id,
+            export_type=ExportTypeEnum.JOURNAL_ENTRY,
+            is_exported_to_intacct=is_exported_to_intacct
+        )
 
     if last_export and last_export_failed:
         update_last_export_details(expense_group.workspace_id)
@@ -1190,11 +1192,12 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
     finally:
-        if system_comments:
-            for comment in system_comments:
-                comment['workspace_id'] = expense_group.workspace_id
-                comment['export_type'] = ExportTypeEnum.EXPENSE_REPORT
-            SystemComment.bulk_create_comments(system_comments)
+        create_filtered_system_comments(
+            system_comments=system_comments,
+            workspace_id=expense_group.workspace_id,
+            export_type=ExportTypeEnum.EXPENSE_REPORT,
+            is_exported_to_intacct=is_exported_to_intacct
+        )
 
     if last_export:
         if last_export_failed:
@@ -1424,11 +1427,12 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
     finally:
-        if system_comments:
-            for comment in system_comments:
-                comment['workspace_id'] = expense_group.workspace_id
-                comment['export_type'] = ExportTypeEnum.BILL
-            SystemComment.bulk_create_comments(system_comments)
+        create_filtered_system_comments(
+            system_comments=system_comments,
+            workspace_id=expense_group.workspace_id,
+            export_type=ExportTypeEnum.BILL,
+            is_exported_to_intacct=is_exported_to_intacct
+        )
 
     if last_export:
         if last_export_failed:
@@ -1512,7 +1516,8 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
                 workspace_id=expense_group.workspace_id,
                 entity_id=expense_group.id,
                 reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
-                info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'}
+                info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                persist_without_export=False
             )
 
         vendor_id = vendor.destination_id if vendor else None
@@ -1675,11 +1680,12 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
         post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
     finally:
-        if system_comments:
-            for comment in system_comments:
-                comment['workspace_id'] = expense_group.workspace_id
-                comment['export_type'] = ExportTypeEnum.CHARGE_CARD_TRANSACTION
-            SystemComment.bulk_create_comments(system_comments)
+        create_filtered_system_comments(
+            system_comments=system_comments,
+            workspace_id=expense_group.workspace_id,
+            export_type=ExportTypeEnum.CHARGE_CARD_TRANSACTION,
+            is_exported_to_intacct=is_exported_to_intacct
+        )
 
     if last_export and last_export_failed:
         update_last_export_details(expense_group.workspace_id)
