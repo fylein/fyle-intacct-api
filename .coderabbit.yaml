@@ -1,35 +1,41 @@
+language: "en-US"
+tone_instructions: ""
+
 reviews:
-  profile: concise
+  profile: "chill"
   high_level_summary: false
+  high_level_summary_in_walkthrough: false
   review_status: false
-  poem: false
   collapse_walkthrough: true
+  changed_files_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  auto_apply_labels: false
+  in_progress_fortune: false
 
-tone:
-  verbosity: low
-  explain_code: false
-  explain_concepts: false
+  path_filters:
+    - "!**/migrations/**"
+    - "!**/*.md"
+    - "!**/tests/**"
 
-review:
-  min_severity: medium
-  focus:
-    - correctness
-    - bugs
-    - security
-  ignore:
-    - style
-    - naming
-    - formatting
-    - comments
+  auto_review:
+    enabled: false
+    drafts: false
+    ignore_title_keywords: []
+    labels: []
+    base_branches: []
+    ignore_usernames: []
+    
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
 
 chat:
   auto_reply: false
 
-knowledge_base:
-  enabled: false
-
-path_filters:
-  exclude:
-    - "**/migrations/**"
-    - "**/*.md"
-    - "**/generated/**"
