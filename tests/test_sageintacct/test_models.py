@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping, MappingSetting
 
 from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
@@ -797,13 +799,29 @@ def test_get_user_defined_dimension_object(mocker, db):
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
+    custom_destination = DestinationAttribute.objects.create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        display_name='Custom Project Dimension',
+        value='Custom Project',
+        destination_id='10061',
+        active=True
+    )
+
+    DimensionDetail.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value,
+        defaults={'display_name': 'PROJECT'}
+    )
+
     mapping_setting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='PROJECT'
     ).first()
 
     mapping_setting.source_field = 'PROJECT'
-    mapping_setting.destination_field = 'CLASS'
+    mapping_setting.destination_field = 'CUSTOM_PROJECT_DIM'
     mapping_setting.save()
 
     mapping = Mapping.objects.filter(
@@ -812,7 +830,8 @@ def test_get_user_defined_dimension_object(mocker, db):
     ).first()
 
     for lineitem in expenses:
-        mapping.destination_type = 'CLASS'
+        mapping.destination_type = 'CUSTOM_PROJECT_DIM'
+        mapping.destination = custom_destination
         mapping.source = ExpenseAttribute.objects.get(value=lineitem.project)
         mapping.save()
 
@@ -1514,13 +1533,29 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
     mapping.source = expense_attribute
     mapping.save()
 
+    custom_destination = DestinationAttribute.objects.create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        display_name='Custom Project Dimension',
+        value='Custom Project',
+        destination_id='10061',
+        active=True
+    )
+
+    DimensionDetail.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value,
+        defaults={'display_name': 'PROJECT'}
+    )
+
     mapping_setting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='PROJECT'
     ).first()
 
     mapping_setting.source_field = 'PROJECT'
-    mapping_setting.destination_field = 'CLASS'
+    mapping_setting.destination_field = 'CUSTOM_PROJECT_DIM'
     mapping_setting.save()
 
     mapping = Mapping.objects.filter(
@@ -1528,7 +1563,8 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
         workspace_id=expense_group.workspace_id
     ).first()
 
-    mapping.destination_type = 'CLASS'
+    mapping.destination_type = 'CUSTOM_PROJECT_DIM'
+    mapping.destination = custom_destination
     mapping.source = ExpenseAttribute.objects.get(value=expense.project)
     mapping.save()
 
