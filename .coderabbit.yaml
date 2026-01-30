@@ -1,0 +1,35 @@
+reviews:
+  profile: concise
+  high_level_summary: false
+  review_status: false
+  poem: false
+  collapse_walkthrough: true
+
+tone:
+  verbosity: low
+  explain_code: false
+  explain_concepts: false
+
+review:
+  min_severity: medium
+  focus:
+    - correctness
+    - bugs
+    - security
+  ignore:
+    - style
+    - naming
+    - formatting
+    - comments
+
+chat:
+  auto_reply: false
+
+knowledge_base:
+  enabled: false
+
+path_filters:
+  exclude:
+    - "**/migrations/**"
+    - "**/*.md"
+    - "**/generated/**"
