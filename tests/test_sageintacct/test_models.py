@@ -1,6 +1,8 @@
 import logging
 from datetime import datetime
 
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_library.common_resources.models import DimensionDetail
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping, MappingSetting
 
 from apps.fyle.models import Expense, ExpenseGroup, ExpenseGroupSettings
@@ -797,24 +799,53 @@ def test_get_user_defined_dimension_object(mocker, db):
     expense_group = ExpenseGroup.objects.get(id=1)
     expenses = expense_group.expenses.all()
 
+    custom_destination = DestinationAttribute.objects.create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        display_name='Custom Project Dimension',
+        value='Custom Project',
+        destination_id='10061',
+        active=True
+    )
+
+    DimensionDetail.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value,
+        defaults={'display_name': 'PROJECT'}
+    )
+
     mapping_setting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='PROJECT'
     ).first()
 
     mapping_setting.source_field = 'PROJECT'
-    mapping_setting.destination_field = 'CLASS'
+    mapping_setting.destination_field = 'CUSTOM_PROJECT_DIM'
     mapping_setting.save()
 
-    mapping = Mapping.objects.filter(
-        source_type='PROJECT',
-        workspace_id=expense_group.workspace_id
-    ).first()
-
     for lineitem in expenses:
-        mapping.destination_type = 'CLASS'
-        mapping.source = ExpenseAttribute.objects.get(value=lineitem.project)
-        mapping.save()
+        expense_attribute = ExpenseAttribute.objects.get(value=lineitem.project)
+
+        # Update or create mapping with correct attributes
+        mapping = Mapping.objects.filter(
+            source_type='PROJECT',
+            workspace_id=expense_group.workspace_id
+        ).first()
+
+        if mapping:
+            mapping.destination_type = 'CUSTOM_PROJECT_DIM'
+            mapping.destination = custom_destination
+            mapping.source = expense_attribute
+            mapping.save()
+        else:
+            mapping = Mapping.objects.create(
+                source_type='PROJECT',
+                destination_type='CUSTOM_PROJECT_DIM',
+                source=expense_attribute,
+                destination=custom_destination,
+                workspace_id=expense_group.workspace_id
+            )
 
         location_id = get_user_defined_dimension_object(expense_group, lineitem)
         assert location_id == [{'GLDIMPROJECT': '10061'}]
@@ -1514,35 +1545,52 @@ def test_bill_with_allocation_and_user_dimensions(db, mocker, create_expense_gro
     mapping.source = expense_attribute
     mapping.save()
 
+    custom_destination = DestinationAttribute.objects.create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        display_name='Custom Project Dimension',
+        value='Custom Project',
+        destination_id='10061',
+        active=True
+    )
+
+    DimensionDetail.objects.update_or_create(
+        workspace_id=expense_group.workspace_id,
+        attribute_type='CUSTOM_PROJECT_DIM',
+        source_type=DimensionDetailSourceTypeEnum.ACCOUNTING.value,
+        defaults={'display_name': 'Custom Project Dimension'}
+    )
+
     mapping_setting = MappingSetting.objects.filter(
         workspace_id=expense_group.workspace_id,
         destination_field='PROJECT'
     ).first()
 
     mapping_setting.source_field = 'PROJECT'
-    mapping_setting.destination_field = 'CLASS'
+    mapping_setting.destination_field = 'CUSTOM_PROJECT_DIM'
     mapping_setting.save()
 
-    mapping = Mapping.objects.filter(
-        source_type='PROJECT',
-        workspace_id=expense_group.workspace_id
-    ).first()
+    project_expense_attribute = ExpenseAttribute.objects.get(value=expense.project)
 
-    mapping.destination_type = 'CLASS'
-    mapping.source = ExpenseAttribute.objects.get(value=expense.project)
-    mapping.save()
+    Mapping.objects.update_or_create(
+        source_type='PROJECT',
+        destination_type='CUSTOM_PROJECT_DIM',
+        source=project_expense_attribute,
+        workspace_id=expense_group.workspace_id,
+        defaults={'destination': custom_destination}
+    )
 
     location_id = get_user_defined_dimension_object(expense_group, expense)
-    assert location_id == [{'GLDIMPROJECT': '10061'}]
+    assert location_id == [{'GLDIMCUSTOM_PROJECT_DIMENSION': '10061'}]
 
     _ = Bill.create_bill(expense_group)
     bill_lineitems = BillLineitem.create_bill_lineitems(expense_group, workspace_general_settings)
 
     for bill_lineitem in bill_lineitems:
-        assert bill_lineitem.user_defined_dimensions == []
+        assert bill_lineitem.user_defined_dimensions == [{'GLDIMCUSTOM_PROJECT_DIMENSION': '10061'}]
         assert bill_lineitem.project_id == '10061'
         assert bill_lineitem.location_id == '600'
-        assert bill_lineitem.class_id == '10061'
+        assert bill_lineitem.class_id == '600'
         assert bill_lineitem.department_id == '300'
         assert bill_lineitem.customer_id == '10061'
         assert bill_lineitem.item_id == '1012'
