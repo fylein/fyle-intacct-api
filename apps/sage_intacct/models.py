@@ -809,7 +809,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
 
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
-    default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
+    default_destination_attributes = ['CLASS', 'DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
                                       'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE', 'ALLOCATION']
 
     migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=expense_group.workspace_id, key='migrated_to_rest_api')
