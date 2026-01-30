@@ -53,6 +53,14 @@ from apps.workspaces.models import (
     SageIntacctCredential,
     IntacctSyncedTimestamp
 )
+from apps.workspaces.enums import (
+    ExportTypeEnum,
+    SystemCommentSourceEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentEntityTypeEnum
+)
+from apps.workspaces.system_comments import add_system_comment
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -1813,7 +1821,8 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     def post_expense_report(
         self,
         expense_report: ExpenseReport,
-        expense_report_line_items: list[ExpenseReportLineitem]
+        expense_report_line_items: list[ExpenseReportLineitem],
+        system_comments: list = None
     ) -> None:
         """
         Post expense report to Sage Intacct
@@ -1853,6 +1862,21 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                             expense_report=expense_report,
                             expense_report_line_items=expense_report_line_items
                         )
+                        original_date = expense_report_payload.get('createdDate', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_EXPENSE_REPORT,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                workspace_id=self.workspace_id,
+                                entity_id=expense_report.expense_group.id,
+                                export_type=ExportTypeEnum.EXPENSE_REPORT,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         expense_report_payload['createdDate'] = first_day_of_month.strftime('%Y-%m-%d'),
                         created_expense_report = self.connection.expense_reports.post(expense_report_payload)
                         is_exception_handled = True
@@ -1865,7 +1889,8 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     def post_bill(
         self,
         bill: Bill,
-        bill_line_items: list[BillLineitem]
+        bill_line_items: list[BillLineitem],
+        system_comments: list = None
     ) -> dict:
         """
         Post bill to Sage Intacct
@@ -1905,6 +1930,21 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                             bill=bill,
                             bill_line_items=bill_line_items
                         )
+                        original_date = bill_payload.get('createdDate', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_BILL,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                entity_id=bill.expense_group.id,
+                                workspace_id=self.workspace_id,
+                                export_type=ExportTypeEnum.BILL,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         bill_payload['createdDate'] = first_day_of_month.strftime('%Y-%m-%d')
                         created_bill = self.connection.bills.post(bill_payload)
                         is_exception_handled = True
@@ -1917,7 +1957,8 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     def post_charge_card_transaction(
         self,
         charge_card_transaction: ChargeCardTransaction,
-        charge_card_transaction_line_items: list[ChargeCardTransactionLineitem]
+        charge_card_transaction_line_items: list[ChargeCardTransactionLineitem],
+        system_comments: list = None
     ) -> dict:
         """
         Post charge card transaction to Sage Intacct
@@ -1957,6 +1998,21 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                             charge_card_transaction=charge_card_transaction,
                             charge_card_transaction_line_items=charge_card_transaction_line_items
                         )
+                        original_date = charge_card_transaction_payload.get('txnDate', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_CHARGE_CARD_TRANSACTION,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                workspace_id=self.workspace_id,
+                                entity_id=charge_card_transaction.expense_group.id,
+                                export_type=ExportTypeEnum.CHARGE_CARD_TRANSACTION,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         charge_card_transaction_payload['txnDate'] = first_day_of_month.strftime('%Y-%m-%d')
                         created_charge_card_transaction = self.connection.charge_card_transactions.post(charge_card_transaction_payload)
                         is_exception_handled = True
@@ -1969,7 +2025,8 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     def post_journal_entry(
         self,
         journal_entry: JournalEntry,
-        journal_entry_line_items: list[JournalEntryLineitem]
+        journal_entry_line_items: list[JournalEntryLineitem],
+        system_comments: list = None
     ) -> dict:
         """
         Post journal_entry  to Sage Intacct
@@ -2008,6 +2065,21 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                             journal_entry=journal_entry,
                             journal_entry_line_items=journal_entry_line_items
                         )
+                        original_date = journal_entry_payload.get('postingDate', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_JOURNAL_ENTRY,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                workspace_id=self.workspace_id,
+                                entity_id=journal_entry.expense_group.id,
+                                export_type=ExportTypeEnum.JOURNAL_ENTRY,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         journal_entry_payload['postingDate'] = first_day_of_month.strftime('%Y-%m-%d')
                         created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
                         is_exception_handled = True

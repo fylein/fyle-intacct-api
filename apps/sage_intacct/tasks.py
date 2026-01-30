@@ -816,7 +816,7 @@ def create_journal_entry(expense_group_id: int, task_log_id: int, is_auto_export
 
             journal_entry_lineitem_object = JournalEntryLineitem.create_journal_entry_lineitems(expense_group, configuration, sage_intacct_connection, system_comments)
 
-            created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object, journal_entry_lineitem_object)
+            created_journal_entry = sage_intacct_connection.post_journal_entry(journal_entry_object, journal_entry_lineitem_object, system_comments)
 
             is_exported_to_intacct = True
 
@@ -1057,7 +1057,8 @@ def create_expense_report(expense_group_id: int, task_log_id: int, is_auto_expor
 
             created_expense_report = sage_intacct_connection.post_expense_report(
                 expense_report_object,
-                expense_report_lineitems_objects
+                expense_report_lineitems_objects,
+                system_comments
             )
 
             is_exported_to_intacct = True
@@ -1296,7 +1297,8 @@ def create_bill(expense_group_id: int, task_log_id: int, is_auto_export: bool, l
 
             created_bill = sage_intacct_connection.post_bill(
                 bill_object,
-                bill_lineitems_objects
+                bill_lineitems_objects,
+                system_comments
             )
 
             is_exported_to_intacct = True
@@ -1542,7 +1544,8 @@ def create_charge_card_transaction(expense_group_id: int, task_log_id: int, is_a
 
             created_charge_card_transaction = sage_intacct_connection.post_charge_card_transaction(
                 charge_card_transaction_object,
-                charge_card_transaction_lineitems_objects
+                charge_card_transaction_lineitems_objects,
+                system_comments
             )
 
             is_exported_to_intacct = True

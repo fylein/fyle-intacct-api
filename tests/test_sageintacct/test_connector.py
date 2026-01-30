@@ -13,6 +13,14 @@ from apps.workspaces.models import (
     SageIntacctCredential,
     Configuration,
 )
+from fyle_accounting_library.system_comments.models import SystemComment
+from apps.workspaces.enums import (
+    ExportTypeEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentSourceEnum,
+    SystemCommentEntityTypeEnum
+)
 from apps.sage_intacct.models import DependentFieldSetting
 from apps.sage_intacct.connector import (
     SageIntacctRestConnector,
@@ -2364,3 +2372,232 @@ def test_post_journal_entry_non_closed_period_error_re_raises(db, mock_intacct_s
 
     with pytest.raises(BadRequestError):
         manager.post_journal_entry(journal_entry=journal_entry, journal_entry_line_items=journal_entry_lineitems)
+
+
+def test_post_expense_report_with_closed_period_creates_system_comment(db, mock_intacct_sdk, create_expense_report):
+    """
+    Test posting an expense report creates system comment when accounting period is adjusted
+    """
+    _, mock_instance = mock_intacct_sdk
+    expense_report, expense_report_lineitems = create_expense_report
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    configuration.change_accounting_period = True
+    configuration.save()
+
+    SystemComment.objects.filter(
+        workspace_id=expense_report.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    error_response = {
+        'ia::result': {
+            'ia::error': {
+                'details': 'period is closed'
+            }
+        }
+    }
+
+    mock_instance.expense_reports.post.side_effect = [
+        BadRequestError(msg='Closed period', response=json.dumps(error_response)),
+        {'ia::result': {'id': '12345', 'key': '12345', 'href': '/objects/expense-management/expense-report/12345'}}
+    ]
+
+    system_comments = []
+    manager = SageIntacctObjectCreationManager(workspace_id=1)
+    result = manager.post_expense_report(
+        expense_report=expense_report,
+        expense_report_line_items=expense_report_lineitems,
+        system_comments=system_comments
+    )
+
+    assert result is not None
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_EXPENSE_REPORT
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == expense_report.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.EXPENSE_REPORT
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
+
+
+def test_post_bill_with_closed_period_creates_system_comment(db, mock_intacct_sdk, create_bill):
+    """
+    Test posting a bill creates system comment when accounting period is adjusted
+    """
+    _, mock_instance = mock_intacct_sdk
+    bill, bill_lineitems = create_bill
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    configuration.change_accounting_period = True
+    configuration.save()
+
+    SystemComment.objects.filter(
+        workspace_id=bill.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    error_response = {
+        'ia::result': {
+            'ia::error': {
+                'details': 'period is closed'
+            }
+        }
+    }
+
+    mock_instance.bills.post.side_effect = [
+        BadRequestError(msg='Closed period', response=json.dumps(error_response)),
+        {'ia::result': {'id': '81035', 'key': '81035', 'href': '/objects/accounts-payable/bill/81035'}}
+    ]
+
+    system_comments = []
+    manager = SageIntacctObjectCreationManager(workspace_id=1)
+    result = manager.post_bill(bill=bill, bill_line_items=bill_lineitems, system_comments=system_comments)
+
+    assert result is not None
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_BILL
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == bill.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.BILL
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
+
+
+def test_post_charge_card_transaction_with_closed_period_creates_system_comment(db, mock_intacct_sdk, create_charge_card_transaction):
+    """
+    Test posting a charge card transaction creates system comment when accounting period is adjusted
+    """
+    _, mock_instance = mock_intacct_sdk
+    cct, cct_lineitems = create_charge_card_transaction
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    configuration.change_accounting_period = True
+    configuration.save()
+
+    SystemComment.objects.filter(
+        workspace_id=cct.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    error_response = {
+        'ia::result': {
+            'ia::error': {
+                'details': 'period is closed'
+            }
+        }
+    }
+
+    mock_instance.charge_card_transactions.post.side_effect = [
+        BadRequestError(msg='Closed period', response=json.dumps(error_response)),
+        {'ia::result': {'id': '81033', 'key': '81033', 'href': '/objects/cash-management/credit-card-txn/81033'}}
+    ]
+
+    system_comments = []
+    manager = SageIntacctObjectCreationManager(workspace_id=1)
+    result = manager.post_charge_card_transaction(
+        charge_card_transaction=cct,
+        charge_card_transaction_line_items=cct_lineitems,
+        system_comments=system_comments
+    )
+
+    assert result is not None
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_CHARGE_CARD_TRANSACTION
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == cct.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.CHARGE_CARD_TRANSACTION
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
+
+
+def test_post_journal_entry_with_closed_period_creates_system_comment(db, mock_intacct_sdk, create_journal_entry):
+    """
+    Test posting a journal entry creates system comment when accounting period is adjusted
+    """
+    _, mock_instance = mock_intacct_sdk
+    journal_entry, journal_entry_lineitems = create_journal_entry
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    configuration.change_accounting_period = True
+    configuration.save()
+
+    SystemComment.objects.filter(
+        workspace_id=journal_entry.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    error_response = {
+        'ia::result': {
+            'ia::error': {
+                'details': 'period is closed'
+            }
+        }
+    }
+
+    mock_instance.journal_entries.post.side_effect = [
+        BadRequestError(msg='Closed period', response=json.dumps(error_response)),
+        {'ia::result': {'id': '120680', 'key': '120680', 'href': '/objects/general-ledger/journal-entry/120680'}}
+    ]
+
+    system_comments = []
+    manager = SageIntacctObjectCreationManager(workspace_id=1)
+    result = manager.post_journal_entry(
+        journal_entry=journal_entry,
+        journal_entry_line_items=journal_entry_lineitems,
+        system_comments=system_comments
+    )
+
+    assert result is not None
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_JOURNAL_ENTRY
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == journal_entry.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.JOURNAL_ENTRY
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
+
+
+def test_post_expense_report_with_closed_period_no_system_comment_when_change_accounting_period_false(db, mock_intacct_sdk, create_expense_report):
+    """
+    Test posting an expense report does not create system comment when change_accounting_period is False
+    """
+    _, mock_instance = mock_intacct_sdk
+    expense_report, expense_report_lineitems = create_expense_report
+
+    configuration = Configuration.objects.get(workspace_id=1)
+    configuration.change_accounting_period = False
+    configuration.save()
+
+    error_response = {
+        'ia::result': {
+            'ia::error': {
+                'details': 'period is closed'
+            }
+        }
+    }
+
+    mock_instance.expense_reports.post.side_effect = BadRequestError(
+        msg='Closed period',
+        response=json.dumps(error_response)
+    )
+
+    system_comments = []
+    manager = SageIntacctObjectCreationManager(workspace_id=1)
+
+    with pytest.raises(BadRequestError):
+        manager.post_expense_report(
+            expense_report=expense_report,
+            expense_report_line_items=expense_report_lineitems,
+            system_comments=system_comments
+        )
+
+    assert len(system_comments) == 0
