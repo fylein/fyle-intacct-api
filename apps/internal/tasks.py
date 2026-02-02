@@ -1,21 +1,25 @@
 import logging
-from random import randint
 from datetime import datetime, timedelta, timezone
+from random import randint
 
-from django.db.models import Q
+from django.db.models import F, Q
 from django_q.models import OrmQ, Schedule
-
-from fyle_accounting_library.system_comments.models import SystemComment
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_library.system_comments.models import SystemComment
 
-from apps.tasks.models import TaskLog
+from apps.fyle.actions import post_accounting_export_summary, update_failed_expenses
 from apps.fyle.models import ExpenseGroup
+from apps.tasks.models import TaskLog
 from apps.workspaces.actions import export_to_intacct
+from apps.workspaces.enums import (
+    SystemCommentEntityTypeEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentSourceEnum,
+)
 from apps.workspaces.models import LastExportDetail, Workspace
 from apps.workspaces.system_comments import add_system_comment
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
-from apps.fyle.actions import post_accounting_export_summary, update_failed_expenses
-from apps.workspaces.enums import SystemCommentEntityTypeEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentSourceEnum
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -49,7 +53,8 @@ def retrigger_stuck_exports() -> None:
         updated_at__lt=datetime.now() - timedelta(minutes=60),
         updated_at__gt=datetime.now() - timedelta(days=7),
         expense_group_id__isnull=False,
-        workspace_id__in=prod_workspace_ids
+        workspace_id__in=prod_workspace_ids,
+        stuck_export_re_attempt_count__lt=2
     )
     if task_logs.count() > 0:
         logger.info('Re-exporting stuck task_logs')
@@ -72,7 +77,7 @@ def retrigger_stuck_exports() -> None:
             expenses.extend(expense_group.expenses.all())
         workspace_ids_list = list(workspace_ids)
         task_logs_dict = {tl.expense_group_id: tl for tl in task_logs}
-        task_logs.update(status='FAILED', updated_at=datetime.now(), re_attempt_export=True)
+        task_logs.update(status='FAILED', updated_at=datetime.now(), re_attempt_export=True, stuck_export_re_attempt_count=F('stuck_export_re_attempt_count') + 1)
         for workspace_id in workspace_ids_list:
             errored_expenses = [expense for expense in expenses if expense.workspace_id == workspace_id]
             update_failed_expenses(errored_expenses, True)
