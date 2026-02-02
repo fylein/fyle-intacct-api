@@ -8,6 +8,7 @@ from apps.workspaces.models import Workspace
 
 @pytest.fixture
 def create_workspace_for_stuck_export(db):
+    """Create a production workspace for stuck export tests."""
     workspace, _ = Workspace.objects.update_or_create(
         id=100,
         defaults={
@@ -20,6 +21,7 @@ def create_workspace_for_stuck_export(db):
 
 @pytest.fixture
 def create_test_workspace(db):
+    """Create a test workspace that should be excluded from stuck export processing."""
     workspace, _ = Workspace.objects.update_or_create(
         id=101,
         defaults={
@@ -32,6 +34,7 @@ def create_test_workspace(db):
 
 @pytest.fixture
 def create_expense_group_with_expenses(db, create_workspace_for_stuck_export):
+    """Create an expense group with expenses for stuck export tests."""
     workspace = create_workspace_for_stuck_export
 
     expense = Expense.objects.create(

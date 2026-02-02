@@ -7,6 +7,7 @@ from apps.tasks.models import TaskLog
 
 
 def test_no_stuck_exports(db, mocker):
+    """Test that no action is taken when there are no stuck exports."""
     mock_export = mocker.patch('apps.internal.tasks.export_to_intacct')
     mock_update_failed = mocker.patch('apps.internal.tasks.update_failed_expenses')
     mock_post_summary = mocker.patch('apps.internal.tasks.post_accounting_export_summary')
@@ -21,6 +22,7 @@ def test_no_stuck_exports(db, mocker):
 def test_stuck_export_found_and_reexported(
     db, mocker, create_workspace_for_stuck_export, create_expense_group_with_expenses
 ):
+    """Test that stuck exports are found and re-exported successfully."""
     workspace = create_workspace_for_stuck_export
     expense_group = create_expense_group_with_expenses
 
@@ -56,6 +58,7 @@ def test_stuck_export_found_and_reexported(
 def test_max_attempts_limit_excludes_task(
     db, mocker, create_workspace_for_stuck_export, create_expense_group_with_expenses
 ):
+    """Test that tasks with max attempts reached are excluded from re-export."""
     workspace = create_workspace_for_stuck_export
     expense_group = create_expense_group_with_expenses
 
@@ -85,6 +88,7 @@ def test_max_attempts_limit_excludes_task(
 
 
 def test_test_workspace_excluded(db, mocker, create_test_workspace):
+    """Test that test workspaces are excluded from stuck export processing."""
     workspace = create_test_workspace
 
     expense_group = ExpenseGroup.objects.create(
@@ -118,6 +122,7 @@ def test_test_workspace_excluded(db, mocker, create_test_workspace):
 def test_in_progress_status_also_considered_stuck(
     db, mocker, create_workspace_for_stuck_export, create_expense_group_with_expenses
 ):
+    """Test that IN_PROGRESS status tasks are also considered stuck."""
     workspace = create_workspace_for_stuck_export
     expense_group = create_expense_group_with_expenses
 
@@ -148,6 +153,7 @@ def test_in_progress_status_also_considered_stuck(
 def test_task_updated_recently_not_considered_stuck(
     db, mocker, create_workspace_for_stuck_export, create_expense_group_with_expenses
 ):
+    """Test that recently updated tasks are not considered stuck."""
     workspace = create_workspace_for_stuck_export
     expense_group = create_expense_group_with_expenses
 
@@ -174,6 +180,7 @@ def test_task_updated_recently_not_considered_stuck(
 def test_task_older_than_7_days_not_considered(
     db, mocker, create_workspace_for_stuck_export, create_expense_group_with_expenses
 ):
+    """Test that tasks older than 7 days are not considered for re-export."""
     workspace = create_workspace_for_stuck_export
     expense_group = create_expense_group_with_expenses
 
@@ -200,6 +207,7 @@ def test_task_older_than_7_days_not_considered(
 def test_attempt_count_increments_on_each_retry(
     db, mocker, create_workspace_for_stuck_export, create_expense_group_with_expenses
 ):
+    """Test that the attempt count increments on each retry."""
     workspace = create_workspace_for_stuck_export
     expense_group = create_expense_group_with_expenses
 
