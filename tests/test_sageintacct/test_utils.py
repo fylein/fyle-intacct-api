@@ -10,6 +10,14 @@ from sageintacctsdk.exceptions import WrongParamsError
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.models import CostCode, CostType, SageIntacctAttributesCount
 from apps.sage_intacct.utils import Configuration, SageIntacctConnector, SageIntacctCredential, Workspace
+from apps.workspaces.enums import (
+    ExportTypeEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentSourceEnum,
+    SystemCommentEntityTypeEnum
+)
+from fyle_accounting_library.system_comments.models import SystemComment
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from tests.helper import dict_compare_keys
 from tests.test_sageintacct.fixtures import data
@@ -1112,6 +1120,12 @@ def test_post_bill_exception(mocker, db, create_bill):
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
+    SystemComment.objects.filter(
+        workspace_id=bill.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
     with mock.patch('sageintacctsdk.apis.Bills.post') as mock_call:
         mock_call.return_value = data['bill_response']
         mock_call.side_effect = [WrongParamsError(
@@ -1121,7 +1135,17 @@ def test_post_bill_exception(mocker, db, create_bill):
                 'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
                 'type': 'Invalid_params'
             }), None]
-        sage_intacct_connection.post_bill(bill, bill_lineitems)
+        sage_intacct_connection.post_bill(bill, bill_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_BILL
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == bill.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.BILL
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_sage_intacct_reimbursement_exception(mocker, db, create_sage_intacct_reimbursement):
@@ -1161,18 +1185,31 @@ def test_post_expense_report_exception(mocker, db, create_expense_report):
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
-    try:
-        with mock.patch('sageintacctsdk.apis.ExpenseReports.post') as mock_call:
-            mock_call.side_effect = [WrongParamsError(
-                msg = {
-                    'Message': 'Invalid parametrs'
-                }, response={
-                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                    'type': 'Invalid_params'
-                }), None]
-            sage_intacct_connection.post_expense_report(expense_report, expense_report_lineitems)
-    except Exception:
-        logger.info("Account period error")
+    SystemComment.objects.filter(
+        workspace_id=expense_report.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
+    with mock.patch('sageintacctsdk.apis.ExpenseReports.post') as mock_call:
+        mock_call.side_effect = [WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                'type': 'Invalid_params'
+            }), data['expense_report_post_response']]
+        sage_intacct_connection.post_expense_report(expense_report, expense_report_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_EXPENSE_REPORT
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == expense_report.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.EXPENSE_REPORT
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_charge_card_transaction_exception(mocker, db, create_charge_card_transaction):
@@ -1194,18 +1231,31 @@ def test_post_charge_card_transaction_exception(mocker, db, create_charge_card_t
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
-    try:
-        with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.post') as mock_call:
-            mock_call.side_effect = [WrongParamsError(
-                msg = {
-                    'Message': 'Invalid parametrs'
-                }, response={
-                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                    'type': 'Invalid_params'
-                }), None]
-            sage_intacct_connection.post_charge_card_transaction(charge_card_transaction, charge_card_transaction_lineitems)
-    except Exception:
-        logger.info("Account period error")
+    SystemComment.objects.filter(
+        workspace_id=charge_card_transaction.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
+    with mock.patch('sageintacctsdk.apis.ChargeCardTransactions.post') as mock_call:
+        mock_call.side_effect = [WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                'type': 'Invalid_params'
+            }), data['credit_card_response']]
+        sage_intacct_connection.post_charge_card_transaction(charge_card_transaction, charge_card_transaction_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_CHARGE_CARD_TRANSACTION
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == charge_card_transaction.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.CHARGE_CARD_TRANSACTION
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_journal_entry_exception(mocker, db, create_journal_entry):
@@ -1227,18 +1277,31 @@ def test_post_journal_entry_exception(mocker, db, create_journal_entry):
     workspace_general_setting.change_accounting_period = True
     workspace_general_setting.save()
 
-    try:
-        with mock.patch('sageintacctsdk.apis.JournalEntries.post') as mock_call:
-            mock_call.side_effect = [WrongParamsError(
-                msg={
-                    'Message': 'Invalid parametrs'
-                }, response={
-                    'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
-                    'type': 'Invalid_params'
-                }), None]
-            sage_intacct_connection.post_journal_entry(journal_entry, journal_entry_lineitems)
-    except Exception:
-        logger.info("Account period error")
+    SystemComment.objects.filter(
+        workspace_id=journal_entry.expense_group.workspace_id,
+        intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    ).delete()
+
+    system_comments = []
+    with mock.patch('sageintacctsdk.apis.JournalEntries.post') as mock_call:
+        mock_call.side_effect = [WrongParamsError(
+            msg={
+                'Message': 'Invalid parametrs'
+            }, response={
+                'error': [{'code': 400, 'Message': 'Invalid parametrs', 'Detail': 'Invalid parametrs', 'description': '', 'description2': 'Date must be on or after', 'correction': ''}],
+                'type': 'Invalid_params'
+            }), data['journal_entry_response']]
+        sage_intacct_connection.post_journal_entry(journal_entry, journal_entry_lineitems, system_comments)
+
+    assert len(system_comments) == 1
+    assert system_comments[0]['source'] == SystemCommentSourceEnum.POST_JOURNAL_ENTRY
+    assert system_comments[0]['intent'] == SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED
+    assert system_comments[0]['entity_type'] == SystemCommentEntityTypeEnum.EXPENSE_GROUP
+    assert system_comments[0]['entity_id'] == journal_entry.expense_group.id
+    assert system_comments[0]['export_type'] == ExportTypeEnum.JOURNAL_ENTRY
+    assert system_comments[0]['detail']['reason'] == SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED
+    assert 'original_date' in system_comments[0]['detail']['info']
+    assert 'adjusted_date' in system_comments[0]['detail']['info']
 
 
 def test_post_ap_payment(mocker, db, create_ap_payment):
@@ -1396,6 +1459,24 @@ def test_get_or_create_vendor(mocker, db):
 
     vendor = sage_intacct_connection.get_or_create_vendor('non exiSting VENDOR iN intacct UsE aLl CaSeS', create=True)
     assert vendor.destination_id == 'non exiSting VENDOR iN intacct UsE aLl CaSeS'
+
+
+def test_get_or_create_vendor_with_none_sanitized_name(mocker, db):
+    """
+    Test get or create vendor returns None when sanitize_vendor_name returns None
+    """
+    workspace_id = 1
+    mocker.patch(
+        'sageintacctsdk.apis.Vendors.get',
+        return_value={}
+    )
+
+    intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=intacct_credentials, workspace_id=workspace_id)
+
+    # Test with vendor name that becomes empty after sanitization (only special chars)
+    vendor = sage_intacct_connection.get_or_create_vendor('!@#$%^&*()', create=True)
+    assert vendor is None
 
 
 def test_get_or_create_employee(mocker, db):
@@ -2252,3 +2333,233 @@ def test_sync_methods_persist_count(mocker, db, create_dependent_field_setting):
     sage_intacct_connection.sync_payment_accounts()
     count_record.refresh_from_db()
     assert count_record.payment_accounts_count == 7
+
+
+@pytest.mark.django_db
+def test_is_duplicate_deletion_skipped(db):
+    """
+    Test is_duplicate_deletion_skipped method
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    for attribute_type in ['ACCOUNT', 'VENDOR', 'ITEM', 'CUSTOMER', 'DEPARTMENT', 'CLASS', 'EXPENSE_TYPE', 'PROJECT', 'LOCATION']:
+        result = sage_intacct_connection.is_duplicate_deletion_skipped(attribute_type)
+        assert result is False, f"Expected False for {attribute_type}"
+    for attribute_type in ['CUSTOM_FIELD', 'ALLOCATION', 'TAX_DETAIL']:
+        result = sage_intacct_connection.is_duplicate_deletion_skipped(attribute_type)
+        assert result is True, f"Expected True for {attribute_type}"
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_no_configuration(db):
+    """
+    Test is_import_enabled method when configuration doesn't exist
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    Configuration.objects.filter(workspace_id=workspace_id).delete()
+    result = sage_intacct_connection.is_import_enabled('ACCOUNT')
+    assert result is False
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_with_categories(db):
+    """
+    Test is_import_enabled method with import_categories enabled
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    Configuration.objects.filter(workspace_id=workspace_id).update(import_categories=True)
+    result = sage_intacct_connection.is_import_enabled('ACCOUNT')
+    assert result is True
+    result = sage_intacct_connection.is_import_enabled('EXPENSE_TYPE')
+    assert result is True
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_with_vendors_as_merchants(db):
+    """
+    Test is_import_enabled method with import_vendors_as_merchants enabled
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    Configuration.objects.filter(workspace_id=workspace_id).update(import_vendors_as_merchants=True)
+    result = sage_intacct_connection.is_import_enabled('VENDOR')
+    assert result is True
+
+
+@pytest.mark.django_db
+def test_is_import_enabled_with_mapping_settings(db):
+    """
+    Test is_import_enabled method with mapping settings (PROJECT has import_to_fyle=True in fixtures)
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    result = sage_intacct_connection.is_import_enabled('PROJECT')
+    assert result is True
+    result = sage_intacct_connection.is_import_enabled('DEPARTMENT')
+    assert result is False
+
+
+@pytest.mark.django_db
+def test_get_attribute_disable_callback_path(db):
+    """
+    Test get_attribute_disable_callback_path method
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    result = sage_intacct_connection.get_attribute_disable_callback_path('ACCOUNT')
+    assert result == 'fyle_integrations_imports.modules.categories.disable_categories'
+    result = sage_intacct_connection.get_attribute_disable_callback_path('VENDOR')
+    assert result == 'fyle_integrations_imports.modules.merchants.disable_merchants'
+    result = sage_intacct_connection.get_attribute_disable_callback_path('PROJECT')
+    assert result == 'fyle_integrations_imports.modules.projects.disable_projects'
+
+
+@pytest.mark.django_db
+def test_post_attachments_empty_list(db):
+    """
+    Test post_attachments with empty attachments list
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    result = sage_intacct_connection.post_attachments([], 'test_supdoc', 1)
+    assert result is False
+
+
+@pytest.mark.django_db
+def test_post_attachments_update_exception(mocker, db):
+    """
+    Test post_attachments when attachment update raises exception
+    """
+    workspace_id = 1
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.post',
+        return_value={'status': 'success', 'key': '3032'}
+    )
+    mocker.patch(
+        'sageintacctsdk.apis.Attachments.update',
+        side_effect=Exception('Update failed')
+    )
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    attachment = [{'download_url': 'url', 'name': 'file.pdf', 'id': 'att1'}]
+    sage_intacct_connection.post_attachments(attachment, 'supdoc1', 1)
+    result = sage_intacct_connection.post_attachments(attachment, 'supdoc1', 2)
+    assert result is False
+
+
+@pytest.mark.django_db
+def test_get_location_id_for_journal_entry(db):
+    """
+    Test __get_location_id_for_journal_entry method
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    GeneralMapping.objects.filter(workspace_id=workspace_id).update(default_location_id=None)
+    result = sage_intacct_connection._SageIntacctConnector__get_location_id_for_journal_entry(workspace_id)
+    location_entity = LocationEntityMapping.objects.filter(workspace_id=workspace_id).exclude(location_entity_name='Top Level').first()
+    if location_entity:
+        assert result == location_entity.destination_id
+    else:
+        assert result is None
+
+
+@pytest.mark.django_db
+def test_get_location_id_for_journal_entry_no_mappings(db):
+    """
+    Test __get_location_id_for_journal_entry when no mappings exist
+    """
+    workspace_id = 1
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    GeneralMapping.objects.filter(workspace_id=workspace_id).update(default_location_id=None)
+    LocationEntityMapping.objects.filter(workspace_id=workspace_id).exclude(location_entity_name='Top Level').delete()
+    result = sage_intacct_connection._SageIntacctConnector__get_location_id_for_journal_entry(workspace_id)
+    assert result is None
+
+
+@pytest.mark.django_db
+def test_sync_cost_codes_with_last_synced_at(db, mocker, create_dependent_field_setting):
+    """
+    Test sync_cost_codes when dependent_field_setting.last_synced_at is set
+    """
+    from apps.fyle.models import DependentFieldSetting
+    workspace_id = 1
+    dependent_field_setting = DependentFieldSetting.objects.get(workspace_id=workspace_id)
+    dependent_field_setting.last_synced_at = datetime.now()
+    dependent_field_setting.save()
+    mocker.patch('sageintacctsdk.apis.Tasks.count', return_value=1)
+    cost_code_data = [[
+        {'RECORDNO': '40', 'TASKID': '112', 'NAME': 'TestCostCode', 'PROJECTID': '1173', 'PROJECTNAME': 'Test Project'}
+    ]]
+    mocker.patch('sageintacctsdk.apis.Tasks.get_all_generator', return_value=cost_code_data)
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    sage_intacct_connection.sync_cost_codes()
+    assert CostCode.objects.filter(workspace_id=workspace_id, task_id='112').exists()
+
+
+@pytest.mark.django_db
+def test_sync_allocations_empty_entries(mocker, db):
+    """
+    Test sync_allocations when allocation_entries is empty
+    """
+    workspace_id = 1
+
+    def mock_allocations_generator(field=None, value=None, updated_at=None):
+        yield [{'ALLOCATIONID': 'EMPTY_ALLOC', 'STATUS': 'active'}]
+
+    def mock_allocation_entry_generator(field, value):
+        yield []
+
+    mocker.patch('sageintacctsdk.apis.Allocations.count', return_value=1)
+    mocker.patch('sageintacctsdk.apis.Allocations.get_all_generator', side_effect=mock_allocations_generator)
+    mocker.patch('sageintacctsdk.apis.AllocationEntry.get_all_generator', side_effect=mock_allocation_entry_generator)
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(
+        credentials_object=sage_intacct_credentials,
+        workspace_id=workspace_id
+    )
+    sage_intacct_connection.sync_allocations()

@@ -16,10 +16,10 @@ from sageintacctsdk.exceptions import WrongParamsError
 from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
 from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 
-from apps.sage_intacct.errors.helpers import retry
 from apps.fyle.models import DependentFieldSetting
-from apps.sage_intacct.exports.helpers import get_source_entity_id
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
+from apps.sage_intacct.errors.helpers import retry
+from apps.sage_intacct.exports.helpers import get_source_entity_id
 from apps.sage_intacct.models import (
     Bill,
     CostCode,
@@ -39,6 +39,14 @@ from apps.sage_intacct.models import (
     SageIntacctReimbursementLineitem
 )
 from apps.workspaces.helpers import get_app_name
+from apps.workspaces.enums import (
+    ExportTypeEnum,
+    SystemCommentSourceEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentEntityTypeEnum
+)
+from apps.workspaces.system_comments import add_system_comment
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
 from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
 from apps.mappings.helpers import get_project_billable_map, sync_changed_project_billable_to_fyle_on_intacct_sync
@@ -1196,6 +1204,8 @@ class SageIntacctConnector:
         try:
             if create:
                 vendor_id = self.sanitize_vendor_name(vendor_name)
+                if not vendor_id:
+                    return None
                 if len(vendor_id) > 20:
                     vendor_id = vendor_id[:17] + str(random.randint(100, 999))
                 created_vendor = self.post_vendor(vendor_id, vendor_name, email)
@@ -1503,6 +1513,7 @@ class SageIntacctConnector:
                 'TRX_AMOUNT': lineitem.amount - lineitem.tax_amount if (lineitem.tax_code and lineitem.tax_amount) else tax_exclusive_amount,
                 'TOTALTRXAMOUNT': lineitem.amount,
                 'ENTRYDESCRIPTION': lineitem.memo,
+                'ALLOCATION': lineitem.allocation_id,
                 'LOCATIONID': lineitem.location_id,
                 'DEPARTMENTID': lineitem.department_id,
                 'PROJECTID': lineitem.project_id,
@@ -1512,7 +1523,6 @@ class SageIntacctConnector:
                 'COSTTYPEID': lineitem.cost_type_id,
                 'CLASSID': lineitem.class_id,
                 'BILLABLE': lineitem.billable,
-                'ALLOCATION': lineitem.allocation_id,
                 'TAXENTRIES': {
                     'TAXENTRY': {
                         'DETAILID': lineitem.tax_code if (lineitem.tax_code and lineitem.tax_amount) else general_mappings.default_tax_code_id
@@ -1773,6 +1783,7 @@ class SageIntacctConnector:
         return {
             'currency': journal_entry.currency,
             'description': lineitem.memo,
+            'allocation': lineitem.allocation_id,
             'department': dimensions_values['department_id'],
             'location': dimensions_values['location_id'],
             'projectid': dimensions_values['project_id'],
@@ -1783,7 +1794,6 @@ class SageIntacctConnector:
             'itemid': dimensions_values['item_id'],
             'taskid': dimensions_values['task_id'],
             'costtypeid': dimensions_values['cost_type_id'],
-            'allocation': lineitem.allocation_id,
             'customfields': {
                 'customfield': [{
                     'customfieldname': 'FYLE_EXPENSE_URL',
@@ -1926,7 +1936,7 @@ class SageIntacctConnector:
         ))
         return journal_entry_payload
 
-    def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: list[ExpenseReportLineitem]) -> dict:
+    def post_expense_report(self, expense_report: ExpenseReport, expense_report_lineitems: list[ExpenseReportLineitem], system_comments: list = None) -> dict:
         """
         Post expense report to Sage Intacct
         :param expense_report: ExpenseReport object extracted from database
@@ -1947,6 +1957,21 @@ class SageIntacctConnector:
                     if configuration.change_accounting_period:
                         first_day_of_month = datetime.today().date().replace(day=1)
                         expense_report_payload = self.__construct_expense_report(expense_report, expense_report_lineitems)
+                        original_date = expense_report_payload.get('datecreated', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_EXPENSE_REPORT,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                workspace_id=expense_report.expense_group.workspace_id,
+                                entity_id=expense_report.expense_group.id,
+                                export_type=ExportTypeEnum.EXPENSE_REPORT,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         expense_report_payload['datecreated'] = {
                             'year': first_day_of_month.year,
                             'month': first_day_of_month.month,
@@ -1961,7 +1986,7 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def post_bill(self, bill: Bill, bill_lineitems: list[BillLineitem]) -> dict:
+    def post_bill(self, bill: Bill, bill_lineitems: list[BillLineitem], system_comments: list = None) -> dict:
         """
         Post expense report to Sage Intacct
         :param bill: Bill object
@@ -1983,6 +2008,21 @@ class SageIntacctConnector:
                     if configuration.change_accounting_period:
                         first_day_of_month = datetime.today().date().replace(day=1)
                         bill_payload = self.__construct_bill(bill, bill_lineitems)
+                        original_date = bill_payload.get('WHENCREATED', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_BILL,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                workspace_id=bill.expense_group.workspace_id,
+                                entity_id=bill.expense_group.id,
+                                export_type=ExportTypeEnum.BILL,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         bill_payload['WHENCREATED'] = first_day_of_month
                         created_bill = self.connection.bills.post(bill_payload)
                         return created_bill
@@ -1993,7 +2033,7 @@ class SageIntacctConnector:
             else:
                 raise
 
-    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem]) -> dict:
+    def post_journal_entry(self, journal_entry: JournalEntry, journal_entry_lineitems: list[JournalEntryLineitem], system_comments: list = None) -> dict:
         """
         Post journal_entry  to Sage Intacct
         :param journal_entry: JournalEntry object
@@ -2015,6 +2055,21 @@ class SageIntacctConnector:
                     if configuration.change_accounting_period:
                         first_day_of_month = datetime.today().date().replace(day=1)
                         journal_entry_payload = self.__construct_journal_entry(journal_entry, journal_entry_lineitems)
+                        original_date = journal_entry_payload.get('batch_date', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_JOURNAL_ENTRY,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                workspace_id=journal_entry.expense_group.workspace_id,
+                                entity_id=journal_entry.expense_group.id,
+                                export_type=ExportTypeEnum.JOURNAL_ENTRY,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         journal_entry_payload['batch_date'] = first_day_of_month
                         created_journal_entry = self.connection.journal_entries.post(journal_entry_payload)
                         return created_journal_entry
@@ -2087,7 +2142,8 @@ class SageIntacctConnector:
     def post_charge_card_transaction(
         self,
         charge_card_transaction: ChargeCardTransaction,
-        charge_card_transaction_lineitems: list[ChargeCardTransactionLineitem]
+        charge_card_transaction_lineitems: list[ChargeCardTransactionLineitem],
+        system_comments: list = None
     ) -> dict:
         """
         Post charge card transaction to Sage Intacct
@@ -2115,6 +2171,21 @@ class SageIntacctConnector:
                         charge_card_transaction_payload = self.__construct_charge_card_transaction(
                             charge_card_transaction, charge_card_transaction_lineitems
                         )
+                        original_date = charge_card_transaction_payload.get('paymentdate', '')
+
+                        if system_comments is not None:
+                            add_system_comment(
+                                system_comments=system_comments,
+                                source=SystemCommentSourceEnum.POST_CHARGE_CARD_TRANSACTION,
+                                intent=SystemCommentIntentEnum.ACCOUNTING_PERIOD_ADJUSTED,
+                                entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                                workspace_id=charge_card_transaction.expense_group.workspace_id,
+                                entity_id=charge_card_transaction.expense_group.id,
+                                export_type=ExportTypeEnum.CHARGE_CARD_TRANSACTION,
+                                reason=SystemCommentReasonEnum.ACCOUNTING_PERIOD_CLOSED_DATE_ADJUSTED,
+                                info={'original_date': str(original_date), 'adjusted_date': first_day_of_month.strftime('%Y-%m-%d')}
+                            )
+
                         charge_card_transaction_payload['paymentdate'] = {
                             'year': first_day_of_month.year,
                             'month': first_day_of_month.month,

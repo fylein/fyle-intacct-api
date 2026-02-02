@@ -1,26 +1,35 @@
 from datetime import datetime
 from typing import Optional, Union
 
-from django.conf import settings
 from django.db import models
-from django.db.models import CharField, JSONField, Value
+from django.conf import settings
 from django.db.models.functions import Concat
 from django.utils.module_loading import import_string
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_library.common_resources.models import DimensionDetail
-from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, Mapping, MappingSetting
+from django.db.models import CharField, JSONField, Value
 
+from fyle_accounting_library.common_resources.models import DimensionDetail
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_mappings.models import (
+    Mapping,
+    MappingSetting,
+    CategoryMapping,
+    EmployeeMapping,
+    DestinationAttribute
+)
+
+from apps.mappings.models import GeneralMapping
 from apps.exceptions import ValueErrorWithResponse
+from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, Workspace
 from apps.fyle.models import (
     DependentFieldSetting,
     Expense,
-    ExpenseAttribute,
     ExpenseGroup,
-    ExpenseGroupSettings,
     Reimbursement,
+    ExpenseAttribute,
+    ExpenseGroupSettings
 )
-from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, Workspace
+from apps.workspaces.enums import SystemCommentEntityTypeEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentSourceEnum
+from apps.workspaces.system_comments import add_system_comment
 
 allocation_mapping = {
     'LOCATIONID': 'location_id',
@@ -96,13 +105,13 @@ def _get_custom_field_value(lineitem: Expense, field_name: str, workspace_id: in
     return (lineitem.custom_properties or {}).get(display_name) if display_name else None
 
 
-def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
+def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, system_comments: list = None) -> Optional[str]:
     """
     Get project id or none with priority:
-
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
+    :param system_comments: optional list to collect system comment data
     :return: project id or none
     """
     # 1. Check mapping settings first
@@ -131,17 +140,29 @@ def get_project_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gener
 
     # 2. Check Default Project from mappings
     if general_mappings and general_mappings.default_project_id:
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_PROJECT_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+            workspace_id=expense_group.workspace_id,
+            entity_id=lineitem.id,
+            persist_without_export=False,
+            reason=SystemCommentReasonEnum.DEFAULT_PROJECT_APPLIED,
+            info={'default_project_id': general_mappings.default_project_id, 'default_project_name': general_mappings.default_project_name}
+        )
         return general_mappings.default_project_id
 
     return None
 
 
-def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
+def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, system_comments: list = None) -> Optional[str]:
     """
     Get department id or none with priority:
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
+    :param system_comments: optional list to collect system comment data
     :return: department id or none
     """
     # 1. Check mapping settings first
@@ -172,21 +193,44 @@ def get_department_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, ge
     if general_mappings and general_mappings.use_intacct_employee_departments:
         employee_department = get_intacct_employee_object('department_id', expense_group)
         if employee_department:
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.GET_DEPARTMENT_ID,
+                intent=SystemCommentIntentEnum.EMPLOYEE_DEFAULT_VALUE_APPLIED,
+                entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                workspace_id=expense_group.workspace_id,
+                entity_id=lineitem.id,
+                reason=SystemCommentReasonEnum.EMPLOYEE_DEPARTMENT_APPLIED,
+                info={'employee_department_id': employee_department, 'employee_department_name': employee_department},
+                persist_without_export=False
+            )
             return employee_department
 
     # 3. Check Default Department from mappings
     if general_mappings and general_mappings.default_department_id:
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_DEPARTMENT_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+            workspace_id=expense_group.workspace_id,
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_DEPARTMENT_APPLIED,
+            info={'default_department_id': general_mappings.default_department_id, 'default_department_name': general_mappings.default_department_name},
+            persist_without_export=False
+        )
         return general_mappings.default_department_id
 
     return None
 
 
-def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
+def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, system_comments: list = None) -> Optional[str]:
     """
     Get location id or none with priority:
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
+    :param system_comments: optional list to collect system comment data
     :return: location id or none
     """
     # 1. Check mapping settings first
@@ -217,10 +261,32 @@ def get_location_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     if general_mappings and general_mappings.use_intacct_employee_locations:
         employee_location = get_intacct_employee_object('location_id', expense_group)
         if employee_location:
+            add_system_comment(
+                system_comments=system_comments,
+                source=SystemCommentSourceEnum.GET_LOCATION_ID,
+                intent=SystemCommentIntentEnum.EMPLOYEE_DEFAULT_VALUE_APPLIED,
+                entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                workspace_id=expense_group.workspace_id,
+                entity_id=lineitem.id,
+                reason=SystemCommentReasonEnum.EMPLOYEE_LOCATION_APPLIED,
+                info={'employee_location_id': employee_location, 'employee_location_name': employee_location},
+                persist_without_export=False
+            )
             return employee_location
 
     # 3. Check Default Location from mappings
     if general_mappings and general_mappings.default_location_id:
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_LOCATION_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+            workspace_id=expense_group.workspace_id,
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_LOCATION_APPLIED,
+            info={'default_location_id': general_mappings.default_location_id, 'default_location_name': general_mappings.default_location_name},
+            persist_without_export=False
+        )
         return general_mappings.default_location_id
 
     return None
@@ -273,12 +339,13 @@ def get_customer_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, gene
     return customer_id
 
 
-def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
+def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, system_comments: list = None) -> Optional[str]:
     """
-    Get item id or none
+    Get item id or none with priority:
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
+    :param system_comments: optional list to collect system comment data
     :return: item id or none
     """
     # 1. Check mapping settings first
@@ -307,6 +374,17 @@ def get_item_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_
 
     # 2. Check Default Item from mappings
     if general_mappings and general_mappings.default_item_id:
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_ITEM_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+            workspace_id=expense_group.workspace_id,
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_ITEM_APPLIED,
+            persist_without_export=False,
+            info={'default_item_id': general_mappings.default_item_id, 'default_item_name': general_mappings.default_item_name}
+        )
         return general_mappings.default_item_id
 
     return None
@@ -418,12 +496,13 @@ def get_task_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, dependen
     return task_id
 
 
-def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping) -> Optional[str]:
+def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general_mappings: GeneralMapping, system_comments: list = None) -> Optional[str]:
     """
     Get class id or none
     :param expense_group: expense group
     :param lineitem: expense
     :param general_mappings: general mappings
+    :param system_comments: optional list to collect system comment data
     :return: class id or none
     """
     # 1. Check mapping settings first
@@ -452,16 +531,28 @@ def get_class_id_or_none(expense_group: ExpenseGroup, lineitem: Expense, general
 
     # 2. Check Default Class from mappings
     if general_mappings and general_mappings.default_class_id:
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_CLASS_ID,
+            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+            workspace_id=expense_group.workspace_id,
+            entity_id=lineitem.id,
+            reason=SystemCommentReasonEnum.DEFAULT_CLASS_APPLIED,
+            info={'default_class_id': general_mappings.default_class_id, 'default_class_name': general_mappings.default_class_name},
+            persist_without_export=False
+        )
         return general_mappings.default_class_id
 
     return None
 
 
-def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None) -> Optional[str]:
+def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = None, system_comments: list = None) -> Optional[str]:
     """
     Get tax code id or none
     :param expense_group: expense group
     :param lineitem: expense
+    :param system_comments: optional list to collect system comment data
     :return: tax code id or none
     """
     tax_code = None
@@ -471,8 +562,9 @@ def get_tax_code_id_or_none(expense_group: ExpenseGroup, lineitem: Expense = Non
         source__source_id=lineitem.tax_group_id,
         workspace_id=expense_group.workspace_id
     ).first()
+
     if mapping:
-        tax_code = mapping.destination.destination_id
+        return mapping.destination.destination_id
 
     return tax_code
 
@@ -717,7 +809,7 @@ def get_user_defined_dimension_object(expense_group: ExpenseGroup, lineitem: Exp
 
     user_dimensions = []
     default_expense_attributes = ['CATEGORY', 'EMPLOYEE']
-    default_destination_attributes = ['DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
+    default_destination_attributes = ['CLASS', 'DEPARTMENT', 'LOCATION', 'PROJECT', 'EXPENSE_TYPE', 'CHARGE_CARD_NUMBER',
                                       'VENDOR', 'ACCOUNT', 'CCC_ACCOUNT', 'CUSTOMER', 'TASK', 'COST_TYPE', 'ALLOCATION']
 
     migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=expense_group.workspace_id, key='migrated_to_rest_api')
@@ -791,12 +883,13 @@ def get_intacct_employee_object(object_type: str, expense_group: ExpenseGroup) -
             return default_employee_object
 
 
-def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, description: str) -> str:
+def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, description: str, system_comments: list = None) -> str:
     """
     Get default charge card account id
     :param general_mappings: General mappings
     :param expense: Expense
     :param description: Description
+    :param system_comments: optional list to collect system comment data
     :return: Default charge card account id
     """
     card_mapping = Mapping.objects.filter(
@@ -808,13 +901,38 @@ def get_ccc_account_id(general_mappings: GeneralMapping, expense: Expense, descr
 
     if card_mapping:
         return card_mapping.destination.destination_id
-    else:
-        employee_mapping: EmployeeMapping = EmployeeMapping.objects.filter(
-            source_employee__value=description.get('employee_email'),
-            workspace_id=general_mappings.workspace
-        ).first()
-        if employee_mapping and employee_mapping.destination_card_account:
-            return employee_mapping.destination_card_account.destination_id
+
+    employee_mapping: EmployeeMapping = EmployeeMapping.objects.filter(
+        source_employee__value=description.get('employee_email'),
+        workspace_id=general_mappings.workspace
+    ).first()
+
+    if employee_mapping and employee_mapping.destination_card_account:
+        add_system_comment(
+            system_comments=system_comments,
+            source=SystemCommentSourceEnum.GET_CCC_ACCOUNT_ID,
+            intent=SystemCommentIntentEnum.EMPLOYEE_DEFAULT_VALUE_APPLIED,
+            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+            workspace_id=general_mappings.workspace_id,
+            entity_id=expense.id,
+            reason=SystemCommentReasonEnum.EMPLOYEE_CCC_ACCOUNT_APPLIED,
+            info={'employee_ccc_account_id': employee_mapping.destination_card_account.destination_id, 'employee_ccc_account_name': employee_mapping.destination_card_account.display_name},
+            persist_without_export=False
+        )
+
+        return employee_mapping.destination_card_account.destination_id
+
+    add_system_comment(
+        system_comments=system_comments,
+        source=SystemCommentSourceEnum.GET_CCC_ACCOUNT_ID,
+        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+        workspace_id=general_mappings.workspace_id,
+        entity_id=expense.id,
+        reason=SystemCommentReasonEnum.DEFAULT_CREDIT_CARD_APPLIED,
+        info={'default_charge_card_id': general_mappings.default_charge_card_id, 'default_charge_card_name': general_mappings.default_charge_card_name},
+        persist_without_export=False
+    )
 
     return general_mappings.default_charge_card_id
 
@@ -855,10 +973,12 @@ class Bill(models.Model):
         db_table = 'bills'
 
     @staticmethod
-    def create_bill(expense_group: ExpenseGroup, supdoc_id: str = None) -> 'Bill':
+    def create_bill(expense_group: ExpenseGroup, supdoc_id: str = None, system_comments: list = None) -> 'Bill':
         """
         Create bill
         :param expense_group: expense group
+        :param supdoc_id: supporting document id
+        :param system_comments: optional list to collect system comment data
         :return: bill object
         """
         description = expense_group.description
@@ -890,6 +1010,17 @@ class Bill(models.Model):
                 vendor_id = ccc_mapping.destination.destination_id
             else:
                 vendor_id = general_mappings.default_ccc_vendor_id
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_BILL,
+                    intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=expense_group.id,
+                    reason=SystemCommentReasonEnum.DEFAULT_CCC_VENDOR_APPLIED,
+                    info={'default_ccc_vendor_id': general_mappings.default_ccc_vendor_id, 'default_ccc_vendor_name': general_mappings.default_ccc_vendor_name},
+                    persist_without_export=False
+                )
 
         bill_object, _ = Bill.objects.update_or_create(
             expense_group=expense_group,
@@ -936,11 +1067,12 @@ class BillLineitem(models.Model):
         db_table = 'bill_lineitems'
 
     @staticmethod
-    def create_bill_lineitems(expense_group: ExpenseGroup,  configuration: Configuration) -> list['BillLineitem']:
+    def create_bill_lineitems(expense_group: ExpenseGroup, configuration: Configuration, system_comments: list = None) -> list['BillLineitem']:
         """
         Create bill lineitems
         :param expense_group: expense group
         :param configuration: Workspace Configuration Settings
+        :param system_comments: optional list to collect system comment data
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -965,12 +1097,12 @@ class BillLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
-            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings, system_comments)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
-            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings, system_comments)
 
             if dependent_field_setting:
                 prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
@@ -1004,6 +1136,23 @@ class BillLineitem(models.Model):
                 allocation_dimensions = set(allocation_detail.keys())
                 user_defined_dimensions = [user_defined_dimension for user_defined_dimension in user_defined_dimensions if list(user_defined_dimension.keys())[0] not in allocation_dimensions]
 
+            if lineitem.billable and not (dimensions_values['customer_id'] and dimensions_values['item_id']):
+                missing_fields = []
+                if not dimensions_values['customer_id']:
+                    missing_fields.append('customer_id')
+                if not dimensions_values['item_id']:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_BILL_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
+
             bill_lineitem_object, _ = BillLineitem.objects.update_or_create(
                 bill=bill,
                 expense_id=lineitem.id,
@@ -1022,7 +1171,7 @@ class BillLineitem(models.Model):
                     'cost_type_id': dimensions_values['cost_type_id'],
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
-                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem, system_comments),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
@@ -1123,12 +1272,13 @@ class ExpenseReportLineitem(models.Model):
         db_table = 'expense_report_lineitems'
 
     @staticmethod
-    def create_expense_report_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any = None) -> list['ExpenseReportLineitem']:
+    def create_expense_report_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any = None, system_comments: list = None) -> list['ExpenseReportLineitem']:
         """
         Create expense report lineitems
         :param expense_group: expense group
         :param configuration: Workspace Configuration Settings
         :param sage_intacct_connection: Sage Intacct connection object
+        :param system_comments: optional list to collect system comment data
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -1153,12 +1303,12 @@ class ExpenseReportLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
-            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings, system_comments)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
-            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings, system_comments)
 
             if dependent_field_setting:
                 prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
@@ -1193,11 +1343,51 @@ class ExpenseReportLineitem(models.Model):
                     ).first()
                     if vendor:
                         vendor_id = vendor.destination_id
+                    else:
+                        add_system_comment(
+                            system_comments=system_comments,
+                            source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT_LINEITEMS,
+                            intent=SystemCommentIntentEnum.VENDOR_NOT_FOUND,
+                            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                            workspace_id=expense_group.workspace_id,
+                            entity_id=lineitem.id,
+                            reason=SystemCommentReasonEnum.VENDOR_NOT_FOUND_FOR_REIMBURSABLE,
+                            info={'merchant': merchant}
+                        )
             elif lineitem.fund_source == 'CCC':
                 # For CCC expenses: Get or create a Credit Card Vendor from the expense merchant
-                vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
+                vendor, is_fallback = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, merchant, sage_intacct_connection)
                 if vendor:
                     vendor_id = vendor.destination_id
+                if vendor and is_fallback:
+                    add_system_comment(
+                        system_comments=system_comments,
+                        source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT_LINEITEMS,
+                        intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                        entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                        workspace_id=expense_group.workspace_id,
+                        entity_id=lineitem.id,
+                        reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                        info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                        persist_without_export=False
+                    )
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_EXPENSE_REPORT_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             expense_report_lineitem_object, _ = ExpenseReportLineitem.objects.update_or_create(
                 expense_report=expense_report,
@@ -1219,7 +1409,7 @@ class ExpenseReportLineitem(models.Model):
                     'user_defined_dimensions': user_defined_dimensions,
                     'transaction_date': lineitem.spent_at,
                     'amount': lineitem.amount,
-                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem, system_comments),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'expense_payment_type': expense_payment_type,
@@ -1313,10 +1503,13 @@ class JournalEntryLineitem(models.Model):
         db_table = 'journal_entry_lineitems'
 
     @staticmethod
-    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any) -> list['JournalEntryLineitem']:
+    def create_journal_entry_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any, system_comments: list = None) -> list['JournalEntryLineitem']:
         """
         Create journal entry lineitems
         :param expense_group: expense group
+        :param configuration: Workspace Configuration Settings
+        :param sage_intacct_connection: Sage Intacct connection object
+        :param system_comments: optional list to collect system comment data
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -1345,9 +1538,9 @@ class JournalEntryLineitem(models.Model):
 
             employee_mapping_setting = configuration.employee_field_mapping
 
-            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings, system_comments)
 
             employee_id = None
 
@@ -1363,9 +1556,21 @@ class JournalEntryLineitem(models.Model):
 
                 if lineitem.fund_source == 'CCC' and configuration.use_merchant_in_journal_line:
                     # here it would create a Credit Card Vendor if the expene vendor is not present
-                    vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
+                    vendor, is_fallback = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
                     if vendor:
                         vendor_id = vendor.destination_id
+                    if vendor and is_fallback:
+                        add_system_comment(
+                            system_comments=system_comments,
+                            source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
+                            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                            workspace_id=expense_group.workspace_id,
+                            entity_id=lineitem.id,
+                            reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                            info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'},
+                            persist_without_export=False
+                        )
 
             else:
                 vendor = None
@@ -1380,12 +1585,23 @@ class JournalEntryLineitem(models.Model):
                     credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
                     if credit_card_misc_vendor:
                         vendor_id = credit_card_misc_vendor.destination_id
+                        add_system_comment(
+                            system_comments=system_comments,
+                            source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
+                            intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                            entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                            workspace_id=expense_group.workspace_id,
+                            entity_id=lineitem.id,
+                            reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                            info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                            persist_without_export=False
+                        )
                     else:
                         raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
+                else:
+                    vendor_id = vendor.destination_id
 
-                vendor_id = vendor.destination_id
-
-            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings, system_comments)
 
             if dependent_field_setting:
                 prepend_code_to_task = True if 'COST_CODE' in configuration.import_code_fields else False
@@ -1394,10 +1610,27 @@ class JournalEntryLineitem(models.Model):
                 cost_type_id = get_cost_type_id_or_none(expense_group, lineitem, dependent_field_setting, project_id, task_id, prepend_code_to_cost_type)
 
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
-            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings, system_comments)
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
             allocation_id, _ = get_allocation_id_or_none(expense_group=expense_group, lineitem=lineitem)
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_JOURNAL_ENTRY_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             journal_entry_lineitem_object, _ = JournalEntryLineitem.objects.update_or_create(
                 journal_entry=journal_entry,
@@ -1417,7 +1650,7 @@ class JournalEntryLineitem(models.Model):
                     'cost_type_id': cost_type_id,
                     'user_defined_dimensions': user_defined_dimensions,
                     'amount': lineitem.amount,
-                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem, system_comments),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),
@@ -1451,10 +1684,13 @@ class ChargeCardTransaction(models.Model):
         db_table = 'charge_card_transactions'
 
     @staticmethod
-    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None, supdoc_id: str = None) -> 'ChargeCardTransaction':
+    def create_charge_card_transaction(expense_group: ExpenseGroup, vendor_id: str = None, supdoc_id: str = None, system_comments: list = None) -> 'ChargeCardTransaction':
         """
         Create create charge card transaction
         :param expense_group: ExpenseGroup
+        :param vendor_id: Vendor ID
+        :param supdoc_id: Supporting document ID
+        :param system_comments: Optional list to collect system comment data
         :return: ChargeCardTransaction object
         """
         description = expense_group.description
@@ -1476,6 +1712,17 @@ class ChargeCardTransaction(models.Model):
             credit_card_misc_vendor = DestinationAttribute.objects.filter(value='Credit Card Misc', workspace_id=expense_group.workspace_id).first()
             if credit_card_misc_vendor:
                 vendor_id = credit_card_misc_vendor.destination_id
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+                    intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE_GROUP,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=expense_group.id,
+                    reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                    info={'original_merchant': merchant, 'vendor_used': 'Credit Card Misc'},
+                    persist_without_export=False
+                )
             else:
                 raise ValueErrorWithResponse(message='Something Went Wrong', response='Credit Card Misc vendor not found')
 
@@ -1533,12 +1780,13 @@ class ChargeCardTransactionLineitem(models.Model):
         db_table = 'charge_card_transaction_lineitems'
 
     @staticmethod
-    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any = None) -> list['ChargeCardTransactionLineitem']:
+    def create_charge_card_transaction_lineitems(expense_group: ExpenseGroup, configuration: Configuration, sage_intacct_connection: any = None, system_comments: list = None) -> list['ChargeCardTransactionLineitem']:
         """
         Create charge card transaction lineitems
         :param expense_group: expense group
         :param configuration: Workspace Configuration Settings
         :param sage_intacct_connection: Sage Intacct connection object
+        :param system_comments: optional list to collect system comment data
         :return: lineitems objects
         """
         expenses = expense_group.expenses.all()
@@ -1564,12 +1812,12 @@ class ChargeCardTransactionLineitem(models.Model):
                 workspace_id=expense_group.workspace_id
             ).first()
 
-            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings)
-            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings)
-            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings)
-            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings)
+            project_id = get_project_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            department_id = get_department_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            location_id = get_location_id_or_none(expense_group, lineitem, general_mappings, system_comments)
+            class_id = get_class_id_or_none(expense_group, lineitem, general_mappings, system_comments)
             customer_id = get_customer_id_or_none(expense_group, lineitem, general_mappings, project_id)
-            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings)
+            item_id = get_item_id_or_none(expense_group, lineitem, general_mappings, system_comments)
 
             user_defined_dimensions = get_user_defined_dimension_object(expense_group, lineitem)
 
@@ -1597,9 +1845,38 @@ class ChargeCardTransactionLineitem(models.Model):
 
             # Get or create a Credit Card Vendor from the expense merchant for CCT lineitems
             vendor_id = None
-            vendor = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
+            vendor, is_fallback = import_string('apps.sage_intacct.tasks.get_or_create_credit_card_vendor')(expense_group.workspace_id, configuration, lineitem.vendor, sage_intacct_connection)
             if vendor:
                 vendor_id = vendor.destination_id
+            if vendor and is_fallback:
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+                    intent=SystemCommentIntentEnum.DEFAULT_VALUE_APPLIED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.CREDIT_CARD_MISC_VENDOR_APPLIED,
+                    info={'original_merchant': lineitem.vendor, 'vendor_used': 'Credit Card Misc'},
+                    persist_without_export=False
+                )
+
+            if lineitem.billable and not (customer_id and item_id):
+                missing_fields = []
+                if not customer_id:
+                    missing_fields.append('customer_id')
+                if not item_id:
+                    missing_fields.append('item_id')
+                add_system_comment(
+                    system_comments=system_comments,
+                    source=SystemCommentSourceEnum.CREATE_CHARGE_CARD_TRANSACTION_LINEITEMS,
+                    intent=SystemCommentIntentEnum.BILLABLE_DISABLED,
+                    entity_type=SystemCommentEntityTypeEnum.EXPENSE,
+                    workspace_id=expense_group.workspace_id,
+                    entity_id=lineitem.id,
+                    reason=SystemCommentReasonEnum.BILLABLE_SET_TO_FALSE_MISSING_DIMENSIONS,
+                    info={'missing_fields': missing_fields, 'original_billable': lineitem.billable}
+                )
 
             charge_card_transaction_lineitem_object, _ = ChargeCardTransactionLineitem.objects.update_or_create(
                 charge_card_transaction=charge_card_transaction,
@@ -1617,7 +1894,7 @@ class ChargeCardTransactionLineitem(models.Model):
                     'task_id': task_id,
                     'cost_type_id': cost_type_id,
                     'amount': lineitem.amount,
-                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem),
+                    'tax_code': get_tax_code_id_or_none(expense_group, lineitem, system_comments),
                     'tax_amount': lineitem.tax_amount,
                     'billable': lineitem.billable if customer_id and item_id else False,
                     'memo': get_memo_or_purpose(expense_group.workspace_id, lineitem, category, configuration),

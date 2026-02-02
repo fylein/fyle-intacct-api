@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://docs.coderabbit.ai/schema/schema.v2.json
+
+language: "en-US"
+
+tone_instructions: >
+  Be concise. Only comment when there is a real issue such as a bug,
+  logic error, incorrect behavior, security risk, performance problem,
+  or missing error handling. Do not give style advice, refactoring
+  suggestions, or educational explanations.
+
+reviews:
+  profile: "chill"
+
+  # Remove summary noise
+  high_level_summary: false
+  high_level_summary_in_walkthrough: false
+  review_status: false
+  changed_files_summary: false
+
+  # Remove extra generated content
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
+  suggested_reviewers: false
+  auto_apply_labels: false
+  in_progress_fortune: false
+
+  # Review only meaningful code areas
+  path_filters:
+    - "!**/migrations/**"
+    - "!**/*.md"
+    - "!**/tests/**"
+    - "!**/generated/**"
+
+  # AUTO REVIEW ENABLED (but controlled)
+  auto_review:
+    enabled: true        # automatic reviews
+    drafts: false        # skip draft PRs
+    ignore_title_keywords: ["wip", "draft"]
+    labels: []
+    base_branches: []
+    ignore_usernames: []
+
+  # Stop doc/test suggestions
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+
+chat:
+  auto_reply: false
