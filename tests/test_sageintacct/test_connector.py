@@ -714,6 +714,49 @@ def test_get_or_create_attachments_folder(db, mock_intacct_sdk):
     mock_instance.attachment_folders.post.assert_called_once()
 
 
+def test_get_accounting_fields_rest_api(db, mock_intacct_sdk):
+    """
+    Test get_accounting_fields method in REST connector
+    """
+    _, mock_instance = mock_intacct_sdk
+    mock_instance.sessions.get_session_id.return_value = {'sessionId': 'mock_session_id'}
+
+    mock_instance.employees.get_all_generator.return_value = iter([
+        [{'id': 'EMP001', 'name': 'Employee One', 'status': 'active'}],
+        [{'id': 'EMP002', 'name': 'Employee Two', 'status': 'active'}]
+    ])
+
+    connector = SageIntacctDimensionSyncManager(workspace_id=1)
+    result = connector.get_accounting_fields('employees')
+
+    assert result is not None
+    assert len(result) == 2
+    assert result[0]['id'] == 'EMP001'
+    assert result[1]['id'] == 'EMP002'
+    mock_instance.employees.get_all_generator.assert_called_once()
+
+
+def test_get_exported_entry_rest_api_with_id(db, mock_intacct_sdk, mocker):
+    """
+    Test get_exported_entry method in REST connector using 'id' field
+    """
+    _, mock_instance = mock_intacct_sdk
+    mock_instance.sessions.get_session_id.return_value = {'sessionId': 'mock_session_id'}
+
+    bill_data = {'id': 'BILL001', 'key': 'BILL001', 'state': 'paid', 'amount': 100.0}
+    mock_instance.bills.get_all_generator.return_value = iter([
+        [bill_data]
+    ])
+
+    connector = SageIntacctObjectCreationManager(workspace_id=1)
+    mocker.patch.object(connector, 'get_bill', return_value=bill_data)
+    result = connector.get_exported_entry('bill', 'BILL001')
+
+    assert result is not None
+    assert result['id'] == 'BILL001'
+    assert result['amount'] == 100.0
+
+
 def test_post_attachments(db, mock_intacct_sdk):
     """
     Test posting attachments to Sage Intacct
