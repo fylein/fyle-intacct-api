@@ -1,3 +1,5 @@
+import pytest
+
 from apps.internal.actions import delete_integration_record, get_accounting_fields, get_exported_entry
 from apps.sage_intacct.connector import SageIntacctObjectCreationManager
 from tests.test_sageintacct.fixtures import data
@@ -162,6 +164,69 @@ def test_get_exported_entry_rest_api_with_key_field(db, mocker):
     assert entry is not None
     assert entry['id'] == 'EMP001'
     assert entry['name'] == 'Employee One'
+
+
+def test_get_accounting_fields_rest_api_unsupported_resource(db, mocker):
+    """
+    Test get_accounting_fields function with REST API when unsupported resource type is provided
+    """
+    query_params = {
+        'org_id': 'or79Cob97KSh',
+        'resource_type': 'unsupported_resource',
+    }
+
+    mocker.patch(
+        'apps.sage_intacct.helpers.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+
+    mock_sessions = mocker.Mock()
+    mock_sessions.get_session_id.return_value = {'sessionId': 'mock_session'}
+
+    mock_rest_sdk = mocker.Mock(spec=['access_token', 'access_token_expires_in', 'sessions', 'employees', 'bills'])
+    mock_rest_sdk.access_token = 'mock_token'
+    mock_rest_sdk.access_token_expires_in = 21600
+    mock_rest_sdk.sessions = mock_sessions
+
+    mocker.patch(
+        'apps.sage_intacct.connector.IntacctRESTSDK',
+        return_value=mock_rest_sdk
+    )
+
+    with pytest.raises(ValueError, match="Resource type 'unsupported_resource' is not supported"):
+        get_accounting_fields(query_params)
+
+
+def test_get_exported_entry_rest_api_unsupported_resource(db, mocker):
+    """
+    Test get_exported_entry function with REST API when unsupported resource type is provided
+    """
+    query_params = {
+        'org_id': 'or79Cob97KSh',
+        'resource_type': 'unsupported_resource',
+        'internal_id': 'ID001'
+    }
+
+    mocker.patch(
+        'apps.sage_intacct.helpers.FeatureConfig.get_feature_config',
+        return_value=True
+    )
+
+    mock_sessions = mocker.Mock()
+    mock_sessions.get_session_id.return_value = {'sessionId': 'mock_session'}
+
+    mock_rest_sdk = mocker.Mock(spec=['access_token', 'access_token_expires_in', 'sessions', 'employees', 'bills'])
+    mock_rest_sdk.access_token = 'mock_token'
+    mock_rest_sdk.access_token_expires_in = 21600
+    mock_rest_sdk.sessions = mock_sessions
+
+    mocker.patch(
+        'apps.sage_intacct.connector.IntacctRESTSDK',
+        return_value=mock_rest_sdk
+    )
+
+    with pytest.raises(ValueError, match="Resource type 'unsupported_resource' is not supported"):
+        get_exported_entry(query_params)
 
 
 def test_delete_integration_record(db, mocker):
