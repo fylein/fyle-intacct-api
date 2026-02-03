@@ -1,44 +1,44 @@
-import json
-import logging
-import random
 import re
-from datetime import datetime, timedelta
+import json
+import random
+import logging
 from typing import Optional
+from datetime import datetime, timedelta
 
 import text_unidecode
-from cryptography.fernet import Fernet
-from django.conf import settings
 from django.db.models import Q
+from django.conf import settings
 from django.utils import timezone
-from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
-from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
+from cryptography.fernet import Fernet
+
 from sageintacctsdk import SageIntacctSDK
 from sageintacctsdk.exceptions import WrongParamsError
+from fyle_accounting_library.common_resources.enums import DimensionDetailSourceTypeEnum
+from fyle_accounting_mappings.models import DestinationAttribute, ExpenseAttribute, MappingSetting
 
 from apps.fyle.models import DependentFieldSetting
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
 from apps.sage_intacct.errors.helpers import retry
 from apps.sage_intacct.exports.helpers import get_source_entity_id
 from apps.sage_intacct.models import (
-    APPayment,
-    APPaymentLineitem,
     Bill,
-    BillLineitem,
-    ChargeCardTransaction,
-    ChargeCardTransactionLineitem,
     CostCode,
     CostType,
-    DimensionDetail,
-    ExpenseReport,
-    ExpenseReportLineitem,
+    APPayment,
+    BillLineitem,
     JournalEntry,
+    ExpenseReport,
+    DimensionDetail,
+    APPaymentLineitem,
     JournalEntryLineitem,
-    SageIntacctAttributesCount,
+    ChargeCardTransaction,
+    ExpenseReportLineitem,
     SageIntacctReimbursement,
-    SageIntacctReimbursementLineitem,
+    SageIntacctAttributesCount,
+    ChargeCardTransactionLineitem,
+    SageIntacctReimbursementLineitem
 )
 from apps.workspaces.helpers import get_app_name
-from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
 from apps.workspaces.enums import (
     ExportTypeEnum,
     SystemCommentSourceEnum,
@@ -48,6 +48,8 @@ from apps.workspaces.enums import (
 )
 from apps.workspaces.system_comments import add_system_comment
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.workspaces.models import Configuration, FyleCredential, SageIntacctCredential, Workspace
+from apps.mappings.helpers import get_project_billable_map, sync_changed_project_billable_to_fyle_on_intacct_sync
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -571,10 +573,16 @@ class SageIntacctConnector:
                         self.workspace_id, attribute_count, SYNC_UPPER_LIMIT)
             return
 
+        is_project_import_enabled = self.is_import_enabled(attribute_type='PROJECT')
+
+        # Capture existing billable values before sync
+        existing_billable_map = {}
+        if is_project_import_enabled:
+            existing_billable_map = get_project_billable_map(workspace_id=self.workspace_id)
+
         fields = ['CUSTOMERID', 'CUSTOMERNAME', 'NAME', 'PROJECTID', 'STATUS', 'BILLABLEEXPDEFAULT', 'BILLABLEAPPODEFAULT']
 
         latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='PROJECT')
-        is_project_import_enabled = self.is_import_enabled('PROJECT')
 
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         project_generator = self.connection.projects.get_all_generator(**params)
@@ -609,6 +617,14 @@ class SageIntacctConnector:
                 attribute_disable_callback_path=self.get_attribute_disable_callback_path('PROJECT'),
                 is_import_to_fyle_enabled=is_project_import_enabled,
                 skip_deletion=self.is_duplicate_deletion_skipped('PROJECT')
+            )
+
+        # Detect and sync billable changes to Fyle
+        if is_project_import_enabled and existing_billable_map:
+            sync_changed_project_billable_to_fyle_on_intacct_sync(
+                workspace_id=self.workspace_id,
+                project_attributes=project_attributes,
+                existing_billable_map=existing_billable_map
             )
 
         return []

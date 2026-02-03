@@ -1,9 +1,11 @@
 from fyle_accounting_library.fyle_platform.enums import ExpenseStateEnum
+from fyle_accounting_mappings.models import MappingSetting
 
 from apps.fyle.models import ExpenseGroup, ExpenseGroupSettings
 from apps.tasks.models import Error, TaskLog
 from apps.workspaces.apis.export_settings.triggers import ExportSettingsTrigger
-from apps.workspaces.models import Configuration
+from apps.workspaces.models import Configuration, FeatureConfig
+from workers.helpers import WorkerActionEnum
 
 
 def test_post_save_configuration_trigger(mocker, db):
@@ -200,5 +202,237 @@ def test_run_pre_save_expense_group_setting_triggers_no_state_change(db, mocker)
     )
     export_trigger.post_save_expense_group_settings(new_expense_group_settings)
 
-    # Verify no async tasks were called since states didn't change
     mock_publish.assert_not_called()
+
+
+def test_post_save_configuration_triggers_billable_sync_on_export_type_change(db, mocker):
+    """
+    Test that billable sync is triggered when export type changes
+    """
+    workspace_id = 1
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = True
+    feature_config.save()
+
+    MappingSetting.objects.update_or_create(
+        workspace_id=workspace_id,
+        source_field='PROJECT',
+        destination_field='PROJECT',
+        defaults={'import_to_fyle': True, 'is_custom': False}
+    )
+
+    configuration, _ = Configuration.objects.update_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'reimbursable_expenses_object': 'BILL',
+            'corporate_credit_card_expenses_object': None
+        }
+    )
+
+    old_configurations = {
+        'reimbursable_expenses_object': 'EXPENSE_REPORT',
+        'corporate_credit_card_expenses_object': None
+    }
+
+    mock_publish = mocker.patch('apps.workspaces.apis.export_settings.triggers.publish_to_rabbitmq')
+
+    export_trigger = ExportSettingsTrigger(
+        configuration=configuration,
+        workspace_id=workspace_id,
+        old_configurations=old_configurations
+    )
+    export_trigger.post_save_configurations(False)
+
+    billable_sync_calls = [
+        call for call in mock_publish.call_args_list
+        if call.kwargs.get('payload', {}).get('action') == WorkerActionEnum.SYNC_PROJECT_BILLABLE_TO_FYLE.value
+    ]
+
+    assert len(billable_sync_calls) == 1
+    payload = billable_sync_calls[0].kwargs['payload']
+    assert payload['data']['workspace_id'] == workspace_id
+    assert payload['data']['billable_field'] == 'default_bill_billable'
+
+
+def test_post_save_configuration_no_billable_sync_when_export_type_unchanged(db, mocker):
+    """
+    Test that billable sync is NOT triggered when export type doesn't change
+    """
+    workspace_id = 1
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = True
+    feature_config.save()
+
+    MappingSetting.objects.update_or_create(
+        workspace_id=workspace_id,
+        source_field='PROJECT',
+        destination_field='PROJECT',
+        defaults={'import_to_fyle': True, 'is_custom': False}
+    )
+
+    configuration, _ = Configuration.objects.update_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'reimbursable_expenses_object': 'BILL',
+            'corporate_credit_card_expenses_object': None
+        }
+    )
+
+    old_configurations = {
+        'reimbursable_expenses_object': 'BILL',
+        'corporate_credit_card_expenses_object': None
+    }
+
+    mock_publish = mocker.patch('apps.workspaces.apis.export_settings.triggers.publish_to_rabbitmq')
+
+    export_trigger = ExportSettingsTrigger(
+        configuration=configuration,
+        workspace_id=workspace_id,
+        old_configurations=old_configurations
+    )
+    export_trigger.post_save_configurations(False)
+
+    billable_sync_calls = [
+        call for call in mock_publish.call_args_list
+        if call.kwargs.get('payload', {}).get('action') == WorkerActionEnum.SYNC_PROJECT_BILLABLE_TO_FYLE.value
+    ]
+
+    assert len(billable_sync_calls) == 0
+
+
+def test_post_save_configuration_no_billable_sync_when_feature_disabled(db, mocker):
+    """
+    Test that billable sync is NOT triggered when feature is disabled
+    """
+    workspace_id = 1
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = False
+    feature_config.save()
+
+    configuration, _ = Configuration.objects.update_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'reimbursable_expenses_object': 'BILL',
+            'corporate_credit_card_expenses_object': None
+        }
+    )
+
+    old_configurations = {
+        'reimbursable_expenses_object': 'EXPENSE_REPORT',
+        'corporate_credit_card_expenses_object': None
+    }
+
+    mock_publish = mocker.patch('apps.workspaces.apis.export_settings.triggers.publish_to_rabbitmq')
+
+    export_trigger = ExportSettingsTrigger(
+        configuration=configuration,
+        workspace_id=workspace_id,
+        old_configurations=old_configurations
+    )
+    export_trigger.post_save_configurations(False)
+
+    billable_sync_calls = [
+        call for call in mock_publish.call_args_list
+        if call.kwargs.get('payload', {}).get('action') == WorkerActionEnum.SYNC_PROJECT_BILLABLE_TO_FYLE.value
+    ]
+
+    assert len(billable_sync_calls) == 0
+
+
+def test_post_save_configuration_no_billable_sync_without_project_mapping(db, mocker):
+    """
+    Test that billable sync is NOT triggered when PROJECT mapping setting doesn't exist
+    """
+    workspace_id = 1
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = True
+    feature_config.save()
+
+    MappingSetting.objects.filter(
+        workspace_id=workspace_id,
+        source_field='PROJECT',
+        destination_field='PROJECT'
+    ).delete()
+
+    configuration, _ = Configuration.objects.update_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'reimbursable_expenses_object': 'BILL',
+            'corporate_credit_card_expenses_object': None
+        }
+    )
+
+    old_configurations = {
+        'reimbursable_expenses_object': 'EXPENSE_REPORT',
+        'corporate_credit_card_expenses_object': None
+    }
+
+    mock_publish = mocker.patch('apps.workspaces.apis.export_settings.triggers.publish_to_rabbitmq')
+
+    export_trigger = ExportSettingsTrigger(
+        configuration=configuration,
+        workspace_id=workspace_id,
+        old_configurations=old_configurations
+    )
+    export_trigger.post_save_configurations(False)
+
+    billable_sync_calls = [
+        call for call in mock_publish.call_args_list
+        if call.kwargs.get('payload', {}).get('action') == WorkerActionEnum.SYNC_PROJECT_BILLABLE_TO_FYLE.value
+    ]
+
+    assert len(billable_sync_calls) == 0
+
+
+def test_post_save_configuration_triggers_billable_sync_ccc_change(db, mocker):
+    """
+    Test that billable sync is triggered when CCC export type changes
+    """
+    workspace_id = 1
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.import_billable_field_for_projects = True
+    feature_config.save()
+
+    MappingSetting.objects.update_or_create(
+        workspace_id=workspace_id,
+        source_field='PROJECT',
+        destination_field='PROJECT',
+        defaults={'import_to_fyle': True, 'is_custom': False}
+    )
+
+    configuration, _ = Configuration.objects.update_or_create(
+        workspace_id=workspace_id,
+        defaults={
+            'reimbursable_expenses_object': None,
+            'corporate_credit_card_expenses_object': 'EXPENSE_REPORT'
+        }
+    )
+
+    old_configurations = {
+        'reimbursable_expenses_object': None,
+        'corporate_credit_card_expenses_object': 'JOURNAL_ENTRY'
+    }
+
+    mock_publish = mocker.patch('apps.workspaces.apis.export_settings.triggers.publish_to_rabbitmq')
+
+    export_trigger = ExportSettingsTrigger(
+        configuration=configuration,
+        workspace_id=workspace_id,
+        old_configurations=old_configurations
+    )
+    export_trigger.post_save_configurations(False)
+
+    billable_sync_calls = [
+        call for call in mock_publish.call_args_list
+        if call.kwargs.get('payload', {}).get('action') == WorkerActionEnum.SYNC_PROJECT_BILLABLE_TO_FYLE.value
+    ]
+
+    assert len(billable_sync_calls) == 1
+    payload = billable_sync_calls[0].kwargs['payload']
+    assert payload['data']['workspace_id'] == workspace_id
+    assert payload['data']['billable_field'] == 'default_expense_report_billable'
