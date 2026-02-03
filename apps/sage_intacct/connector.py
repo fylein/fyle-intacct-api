@@ -1376,6 +1376,58 @@ class SageIntacctDimensionSyncManager(SageIntacctRestConnector):
 
         return expense_report
 
+    def get_field_list(self, resource_type: str) -> list:
+        """
+        Get field list for a specific resource type using REST API.
+        This is for internal API use only.
+        :param resource_type: The type of resource to fetch field list for.
+        :return: Field list
+        """
+        field_list_dict = {
+            'accounts': ['id', 'name', 'accountType', 'status'],
+            'departments': ['id', 'name', 'status'],
+            'expense_types': ['id', 'description', 'glAccount.id', 'glAccount.name', 'status'],
+            'charge_card_accounts': ['id', 'status'],
+            'checking_accounts': ['id', 'bankAccountDetails.bankName', 'status'],
+            'cost_types': ['id', 'key', 'name', 'status', 'project.id', 'project.name', 'project.key', 'task.id', 'task.name', 'task.key', 'audit.createdDateTime', 'audit.modifiedDateTime'],
+            'tasks': ['key', 'name', 'project.key', 'project.name'],
+            'projects': ['id', 'name', 'status', 'customer.id', 'customer.name', 'isBillableEmployeeExpense', 'isBillablePurchasingAPExpense'],
+            'items': ['id', 'name', 'status', 'itemType'],
+            'locations': ['id', 'name', 'status'],
+            'expense_payment_types': ['key', 'id', 'isNonReimbursable'],
+            'employees': ['id', 'name', 'status', 'primaryContact.email1', 'primaryContact.printAs', 'department.id', 'location.id'],
+            'classes': ['id', 'name', 'status'],
+            'customers': ['id', 'name', 'status'],
+            'tax_details': ['taxPercent', 'id', 'taxSolution.id', 'status', 'taxType'],
+            'vendors': ['id', 'name', 'status', 'contacts.default.email1'],
+            'dimensions': ['id', 'name'],
+            'allocations': ['id', 'status', 'key'],
+            'location_entities': ['id', 'name', 'operatingCountry'],
+        }
+        return field_list_dict.get(resource_type, [])
+
+    def get_accounting_fields(self, resource_type: str) -> dict:
+        """
+        Retrieve accounting fields for a specific resource type using REST API.
+        This is for internal API use only.
+        :param resource_type: The type of resource to fetch accounting fields for.
+        :return: Parsed JSON representation of the accounting fields.
+        """
+        try:
+            fields = self.get_field_list(resource_type)
+            module = getattr(self.connection, resource_type)
+        except AttributeError:
+            raise ValueError(f"Resource type '{resource_type}' is not supported")
+
+        fields = self.get_field_list(resource_type)
+        generator = module.get_all_generator(fields=fields)
+
+        response = []
+        for batch in generator:
+            response.extend(batch)
+
+        return json.loads(json.dumps(response, default=str))
+
 
 class SageIntacctObjectCreationManager(SageIntacctRestConnector):
     """
@@ -2294,3 +2346,16 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
         expense_report = soap_sdk_connection.expense_reports.get(field='RECORDNO', value=expense_report_id, fields=fields)
 
         return expense_report
+
+    def get_exported_entry(self, resource_type: str, export_id: str) -> dict:
+        """
+        Retrieve a specific resource by internal ID using REST API.
+        :param resource_type: The type of resource to fetch.
+        :param export_id: The internal ID of the resource to fetch.
+        :return: Parsed JSON representation of the resource data.
+        """
+        try:
+            response = getattr(self, 'get_{}'.format(resource_type))(export_id)
+            return json.loads(json.dumps(response, default=str))
+        except AttributeError:
+            raise ValueError(f"Resource type '{resource_type}' is not supported")
