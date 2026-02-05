@@ -12,8 +12,31 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 import sys
 
+# Mock Fernet when ENCRYPTION_KEY is not available (e.g., Dependabot PRs)
+_encryption_key_from_env = os.environ.get('ENCRYPTION_KEY')
+if not _encryption_key_from_env:
+    class MockFernet:
+        """Mock Fernet class for tests when ENCRYPTION_KEY is not available."""
+        def __init__(self, key):
+            pass
+
+        def decrypt(self, data):
+            return b'mock_decrypted_password'
+
+        def encrypt(self, data):
+            return b'mock_encrypted_password'
+
+        @staticmethod
+        def generate_key():
+            return b'mock_generated_key_that_is_32bytes!'
+
+    import cryptography.fernet
+    cryptography.fernet.Fernet = MockFernet
+    Fernet = MockFernet
+else:
+    from cryptography.fernet import Fernet
+
 import dj_database_url
-from cryptography.fernet import Fernet
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,7 +54,7 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS').split(',')
 
 # Generate a dummy Fernet key for testing if ENCRYPTION_KEY is not set
 # This allows tests to run on fork branches where secrets are not available
-ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY')
+ENCRYPTION_KEY = _encryption_key_from_env
 if not ENCRYPTION_KEY:
     ENCRYPTION_KEY = Fernet.generate_key().decode()
 
