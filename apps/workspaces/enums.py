@@ -102,10 +102,10 @@ class SystemCommentReasonEnum(str, Enum):
     EMPLOYEE_CCC_ACCOUNT_APPLIED = 'No corporate card mapping found. Using employee corporate card account from Sage Intacct.'
 
     # Fund source & report changes - explaining WHY
-    FUND_SOURCE_CHANGED = 'Expense payment source was changed in Fyle from {old} to {new}.'
-    CATEGORY_CHANGED = 'Expense category was updated in Fyle from {old} to {new}.'
-    EXPENSE_ADDED_TO_REPORT = 'Expense was added to a report in Fyle.'
-    EXPENSE_EJECTED_FROM_REPORT = 'Expense was removed from its report in Fyle. Expense has been removed from its expense group.'
+    FUND_SOURCE_CHANGED = 'Expense payment source was changed from {old} to {new}.'
+    CATEGORY_CHANGED = 'Expense category was updated from {old} to {new}.'
+    EXPENSE_ADDED_TO_REPORT = 'Expense was added to a report.'
+    EXPENSE_EJECTED_FROM_REPORT = 'Expense was removed from its report. Expense has been removed from its expense group.'
     EXPENSE_GROUPS_RECREATED = 'Expense groups were recreated after fund source change.'
     EXPENSE_GROUP_AND_RELATED_DATA_DELETED = 'Expense group and all related data (task logs, errors) were deleted.'
     EXPENSES_DELETED_NO_EXPORT_SETTING = 'Expenses were deleted because no export setting is configured for their fund source (reimbursable/corporate card).'
