@@ -151,7 +151,7 @@ class WorkspaceView(viewsets.ViewSet):
             FeatureConfig.objects.create(
                 workspace_id=workspace.id,
                 migrated_to_rest_api=settings.BRAND_ID == 'fyle',
-                # import_billable_field_for_projects=settings.BRAND_ID == 'fyle'
+                import_billable_field_for_projects=settings.BRAND_ID == 'fyle'
             )
             FyleSyncTimestamp.objects.create(workspace_id=workspace.id)
             IntacctSyncedTimestamp.objects.create(workspace_id=workspace.id)
