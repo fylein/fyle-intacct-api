@@ -2,6 +2,7 @@ import logging
 import traceback
 from datetime import datetime, timezone
 
+from django.conf import settings
 from django_q.models import Schedule
 
 from apps.fyle.models import DependentFieldSetting
@@ -146,6 +147,9 @@ def validate_rest_api_connection(workspace_id: int) -> None:
     :param workspace_id: Workspace ID
     :return: None
     """
+    if settings.BRAND_ID != 'fyle':
+        return
+
     migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
     if migrated_to_rest_api:
         return

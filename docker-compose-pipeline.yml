@@ -22,6 +22,7 @@ services:
       API_URL: ${API_URL}
       DATABASE_URL: postgres://postgres:postgres@db:5432/intacct_db
       DB_HOST: db
+      BRAND_ID: fyle
       FYLE_BASE_URL: 'https://sample.fyle.tech'
       FYLE_CLIENT_ID: 'sample'
       FYLE_CLIENT_SECRET: 'sample'
