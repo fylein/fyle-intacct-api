@@ -2,12 +2,13 @@ from apps.sage_intacct.helpers import (
     check_interval_and_sync_dimension,
     is_dependent_field_import_enabled,
     schedule_payment_sync,
+    validate_rest_api_connection
 )
 from apps.sage_intacct.exports.helpers import get_source_entity_id
 from apps.sage_intacct.exports.journal_entries import construct_journal_entry_payload
 from apps.fyle.models import ExpenseGroup
 from apps.mappings.models import GeneralMapping, LocationEntityMapping
-from apps.workspaces.models import Configuration, FyleCredential, Workspace
+from apps.workspaces.models import Configuration, FyleCredential, Workspace, FeatureConfig
 from apps.workspaces.tasks import patch_integration_settings
 
 
@@ -194,3 +195,81 @@ def test_construct_journal_entry_payload_with_source_entity(db, mocker, create_j
 
     assert 'baseLocation' in payload
     assert payload['baseLocation']['id'] == 'LOC123'
+
+
+def test_validate_rest_api_connection_already_migrated(db, mocker):
+    """
+    Test validate_rest_api_connection when already migrated to REST API
+    Should return early without attempting connection
+    """
+    workspace_id = 1
+
+    mocker.patch('apps.sage_intacct.helpers.FeatureConfig.get_feature_config', return_value=True)
+    mock_connector = mocker.patch('apps.sage_intacct.helpers.SageIntacctRestConnector')
+    mock_sync_dimensions = mocker.patch('apps.sage_intacct.helpers.sync_dimensions')
+
+    validate_rest_api_connection(workspace_id)
+
+    mock_connector.assert_not_called()
+    mock_sync_dimensions.assert_not_called()
+
+
+def test_validate_rest_api_connection_successful_migration(db, mocker):
+    """
+    Test validate_rest_api_connection when REST API connection is successful
+    Should update FeatureConfig and call sync_dimensions
+    """
+    workspace_id = 1
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.migrated_to_rest_api = False
+    feature_config.save()
+
+    mocker.patch('apps.sage_intacct.helpers.FeatureConfig.get_feature_config', return_value=False)
+
+    mock_connector_instance = mocker.Mock()
+    mock_connector_instance.connection.locations.count.return_value = 10
+    mock_connector = mocker.patch('apps.sage_intacct.helpers.SageIntacctRestConnector', return_value=mock_connector_instance)
+    mock_sync_dimensions = mocker.patch('apps.sage_intacct.helpers.sync_dimensions')
+
+    validate_rest_api_connection(workspace_id)
+
+    mock_connector.assert_called_once_with(workspace_id=workspace_id)
+    mock_connector_instance.connection.locations.count.assert_called_once()
+    mock_sync_dimensions.assert_called_once_with(workspace_id=workspace_id)
+
+    feature_config.refresh_from_db()
+    assert feature_config.migrated_to_rest_api is True
+
+
+def test_validate_rest_api_connection_failed_connection(db, mocker):
+    """
+    Test validate_rest_api_connection when REST API connection fails
+    Should log error and not update FeatureConfig
+    """
+    workspace_id = 1
+
+    feature_config = FeatureConfig.objects.get(workspace_id=workspace_id)
+    feature_config.migrated_to_rest_api = False
+    feature_config.save()
+
+    mocker.patch('apps.sage_intacct.helpers.FeatureConfig.get_feature_config', return_value=False)
+
+    mock_connector_instance = mocker.Mock()
+    mock_connector_instance.connection.locations.count.side_effect = Exception('Connection failed')
+    mock_connector = mocker.patch('apps.sage_intacct.helpers.SageIntacctRestConnector', return_value=mock_connector_instance)
+    mock_sync_dimensions = mocker.patch('apps.sage_intacct.helpers.sync_dimensions')
+    logger_mock = mocker.patch('apps.sage_intacct.helpers.logger')
+
+    validate_rest_api_connection(workspace_id)
+
+    mock_connector.assert_called_once_with(workspace_id=workspace_id)
+    mock_connector_instance.connection.locations.count.assert_called_once()
+    mock_sync_dimensions.assert_not_called()
+    logger_mock.info.assert_called_once()
+    call_args = logger_mock.info.call_args[0]
+    assert 'REST API is not working' in call_args[0]
+    assert str(workspace_id) in str(call_args)
+
+    feature_config.refresh_from_db()
+    assert feature_config.migrated_to_rest_api is False

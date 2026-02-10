@@ -21,11 +21,11 @@ from apps.mappings.constants import SYNC_METHODS
 from apps.fyle.models import DependentFieldSetting
 from fyle_integrations_imports.models import ImportLog
 from fyle_integrations_imports.dataclasses import TaskSetting
-from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
 from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 from fyle_integrations_imports.queues import chain_import_fields_to_fyle
 from workers.helpers import RoutingKeyEnum, WorkerActionEnum, publish_to_rabbitmq
+from apps.sage_intacct.helpers import get_sage_intacct_connection, validate_rest_api_connection
 from apps.mappings.helpers import get_project_billable_field_detail_key, is_project_billable_sync_allowed
 from apps.workspaces.models import (
     Configuration,
@@ -306,6 +306,7 @@ def initiate_import_to_fyle(workspace_id: int, run_in_rabbitmq_worker: bool = Fa
     :param workspace_id: Workspace Id
     :return: None
     """
+    validate_rest_api_connection(workspace_id=workspace_id)
     mapping_settings = MappingSetting.objects.filter(workspace_id=workspace_id, import_to_fyle=True)
     configuration = Configuration.objects.get(workspace_id=workspace_id)
     dependent_fields = DependentFieldSetting.objects.filter(workspace_id=workspace_id, is_import_enabled=True).first()
