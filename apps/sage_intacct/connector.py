@@ -2228,6 +2228,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
             return False, None
 
         for attachment in attachments:
+            attachment_extension = attachment['name'].split('.')[-1]
             payload = {
                 'id': str(attachment_id),
                 'name': str(attachment_id),
@@ -2235,7 +2236,7 @@ class SageIntacctObjectCreationManager(SageIntacctRestConnector):
                     'id': 'FyleAttachments'
                 },
                 'files': [{
-                    'name': f'{attachment["id"]} - {attachment_number}',
+                    'name': f'{attachment["id"]} - {attachment_number}.{attachment_extension}',
                     'data': attachment['download_url'],
                 }]
             }
