@@ -767,7 +767,7 @@ def test_post_attachments(db, mock_intacct_sdk):
         'ia::result': {'key': 'ATT123'}
     }
 
-    attachments = [{'id': 'att1', 'download_url': 'https://example.com/file.pdf'}]
+    attachments = [{'id': 'att1', 'name': 'file.pdf', 'download_url': 'https://example.com/file.pdf'}]
     manager = SageIntacctObjectCreationManager(workspace_id=1)
     result, key = manager.post_attachments(
         attachments=attachments,
@@ -1607,7 +1607,7 @@ def test_post_attachments_update_existing(db, mock_intacct_sdk):
 
     mock_instance.attachments.update.return_value = {'success': True}
 
-    attachments = [{'id': 'att1', 'download_url': 'https://example.com/file.pdf'}]
+    attachments = [{'id': 'att1', 'name': 'file.pdf', 'download_url': 'https://example.com/file.pdf'}]
     manager = SageIntacctObjectCreationManager(workspace_id=1)
     result, key = manager.post_attachments(
         attachments=attachments,
@@ -1632,7 +1632,7 @@ def test_post_attachments_update_with_error(db, mock_intacct_sdk):
 
     mock_instance.attachments.update.side_effect = MockException('Update failed')
 
-    attachments = [{'id': 'att1', 'download_url': 'https://example.com/file.pdf'}]
+    attachments = [{'id': 'att1', 'name': 'file.pdf', 'download_url': 'https://example.com/file.pdf'}]
     manager = SageIntacctObjectCreationManager(workspace_id=1)
     result, key = manager.post_attachments(
         attachments=attachments,
