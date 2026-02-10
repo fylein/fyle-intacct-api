@@ -1,4 +1,5 @@
 import logging
+import traceback
 from datetime import datetime, timezone
 from time import sleep
 
@@ -218,7 +219,8 @@ def post_dependent_cost_code(import_log: ImportLog, dependent_field_setting: Dep
                         platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
                         posted_cost_codes.update(cost_code_names)
                         processed_batches += 1
-                    except Exception as exception:
+                    except Exception:
+                        exception = traceback.format_exc()
                         is_errored = True
                         logger.error(f'Exception while posting dependent cost code | Error: {exception} | Payload: {payload}')
 
@@ -308,7 +310,8 @@ def post_dependent_cost_type(import_log: ImportLog, dependent_field_setting: Dep
                     platform.dependent_fields.bulk_post_dependent_expense_field_values(payload_set)
                     CostType.objects.filter(task_name=cost_types['task_name'], task_id=cost_types['task_id'], workspace_id=dependent_field_setting.workspace_id).update(is_imported=True, updated_at=datetime.now(timezone.utc))
                     processed_batches += 1
-                except Exception as exception:
+                except Exception:
+                    exception = traceback.format_exc()
                     is_errored = True
                     logger.error(f'Exception while posting dependent cost type | Error: {exception} | Payload: {payload}')
 
@@ -439,8 +442,8 @@ def import_dependent_fields_to_fyle(workspace_id: str) -> None:
     except SageIntacctSDKError as e:
         exception = "Sage Intacct SDK Error"
         logger.info('Sage Intacct SDK Error - %s', e)
-    except Exception as e:
-        exception = e.__str__()
+    except Exception:
+        exception = traceback.format_exc()
         logger.error('Exception while importing dependent fields to fyle - %s', exception)
     finally:
         if cost_type_import_log and cost_type_import_log.status == 'IN_PROGRESS':
