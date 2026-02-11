@@ -2,8 +2,11 @@ import logging
 import traceback
 from datetime import datetime, timezone
 
+from django.conf import settings
 from django_q.models import Schedule
+from django.core.cache import cache
 
+from apps.workspaces.enums import CacheKeyEnum
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
@@ -84,6 +87,7 @@ def check_interval_and_sync_dimension(workspace_id: int, **kwargs) -> bool:
     """
     workspace = Workspace.objects.get(pk=workspace_id)
     try:
+        validate_rest_api_connection(workspace_id=workspace_id)
         if workspace.destination_synced_at:
             time_interval = datetime.now(timezone.utc) - workspace.source_synced_at
 
@@ -137,3 +141,29 @@ def sync_dimensions(workspace_id: int, dimensions: list = []) -> None:
 
         workspace.destination_synced_at = datetime.now()
         workspace.save(update_fields=['destination_synced_at'])
+
+
+def validate_rest_api_connection(workspace_id: int) -> None:
+    """
+    Validate REST API connection for orgs and migrated them to rest api
+    :param workspace_id: Workspace ID
+    :return: None
+    """
+    if settings.BRAND_ID != 'fyle':
+        return
+
+    migrated_to_rest_api = FeatureConfig.get_feature_config(workspace_id=workspace_id, key='migrated_to_rest_api')
+    if migrated_to_rest_api:
+        return
+
+    try:
+        sage_intacct_connection = SageIntacctRestConnector(workspace_id=workspace_id)
+        sage_intacct_connection.connection.locations.count()
+        FeatureConfig.objects.filter(workspace_id=workspace_id, migrated_to_rest_api=False).update(
+            migrated_to_rest_api=True,
+            updated_at=datetime.now(timezone.utc)
+        )
+        sync_dimensions(workspace_id=workspace_id)
+        cache.set(CacheKeyEnum.FEATURE_CONFIG_MIGRATED_TO_REST_API.value.format(workspace_id=workspace_id), True, 172800)
+    except Exception as e:
+        logger.info('REST API is not working for workspace_id - %s, error - %s', workspace_id, e)
