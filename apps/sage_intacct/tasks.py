@@ -3,74 +3,69 @@ import logging
 import traceback
 from datetime import datetime
 
-from django.conf import settings
-from django.db import transaction
-from django.utils import timezone
-from django.core.cache import cache
-from django.db.models.functions import Lower
 from dateutil.relativedelta import relativedelta
-
+from django.conf import settings
+from django.core.cache import cache
+from django.db import transaction
+from django.db.models.functions import Lower
+from django.utils import timezone
+from fyle.platform.exceptions import InternalServerError as FyleInternalServerError
+from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_library.system_comments.models import SystemComment
+from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
 from fyle_integrations_platform_connector import PlatformConnector
 from intacctsdk.exceptions import BadRequestError as IntacctRESTBadRequestError
-from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
-from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 from intacctsdk.exceptions import InternalServerError as IntacctRESTInternalServerError
+from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
-from fyle_accounting_mappings.models import (
-    Mapping,
-    CategoryMapping,
-    EmployeeMapping,
-    ExpenseAttribute,
-    DestinationAttribute
-)
 
-from apps.tasks.models import Error, TaskLog
-from apps.mappings.models import GeneralMapping
-from fyle_intacct_api.exceptions import BulkError
 from apps.exceptions import ValueErrorWithResponse
-from apps.fyle.models import Expense, ExpenseGroup
-from apps.sage_intacct.utils import SageIntacctConnector
-from apps.workspaces.enums import ExportTypeEnum, SystemCommentEntityTypeEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentSourceEnum
-from apps.workspaces.system_comments import add_system_comment, create_filtered_system_comments
-from apps.sage_intacct.actions import update_last_export_details
-from apps.sage_intacct.connector import SageIntacctRestConnector
-from apps.sage_intacct.helpers import get_sage_intacct_connection
-from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
-from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
-from fyle_accounting_library.system_comments.models import SystemComment
-from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
-from apps.workspaces.models import (
-    Configuration,
-    FeatureConfig,
-    FyleCredential,
-    SageIntacctCredential
-)
 from apps.fyle.actions import (
-    update_failed_expenses,
+    post_accounting_export_summary,
     update_complete_expenses,
     update_expenses_in_progress,
-    post_accounting_export_summary
+    update_failed_expenses,
 )
+from apps.fyle.models import Expense, ExpenseGroup
+from apps.mappings.models import GeneralMapping
+from apps.sage_intacct.actions import update_last_export_details
+from apps.sage_intacct.connector import SageIntacctRestConnector
+from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
 from apps.sage_intacct.errors.helpers import (
     error_matcher,
     get_entity_values,
     remove_support_id,
-    replace_destination_id_with_values
+    replace_destination_id_with_values,
 )
+from apps.sage_intacct.helpers import get_sage_intacct_connection
 from apps.sage_intacct.models import (
-    Bill,
     APPayment,
-    BillLineitem,
-    JournalEntry,
-    ExpenseReport,
     APPaymentLineitem,
-    JournalEntryLineitem,
+    Bill,
+    BillLineitem,
     ChargeCardTransaction,
-    ExpenseReportLineitem,
-    SageIntacctReimbursement,
     ChargeCardTransactionLineitem,
-    SageIntacctReimbursementLineitem
+    ExpenseReport,
+    ExpenseReportLineitem,
+    JournalEntry,
+    JournalEntryLineitem,
+    SageIntacctReimbursement,
+    SageIntacctReimbursementLineitem,
 )
+from apps.sage_intacct.utils import SageIntacctConnector
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.enums import (
+    ExportTypeEnum,
+    SystemCommentEntityTypeEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentSourceEnum,
+)
+from apps.workspaces.models import Configuration, FeatureConfig, FyleCredential, SageIntacctCredential
+from apps.workspaces.system_comments import add_system_comment, create_filtered_system_comments
+from fyle_intacct_api.exceptions import BulkError
+from fyle_intacct_api.logging_middleware import get_caller_info, get_logger
+from fyle_intacct_api.utils import invalidate_sage_intacct_credentials
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -152,11 +147,13 @@ def create_or_update_employee_mapping(
             raise EmployeeMapping.DoesNotExist
 
     except EmployeeMapping.DoesNotExist:
-        source_employee = ExpenseAttribute.objects.get(
-            workspace_id=expense_group.workspace_id,
-            attribute_type='EMPLOYEE',
-            value=expense_group.description.get('employee_email')
-        )
+        source_employee = get_employee_expense_attribute(expense_group.description.get('employee_email'), expense_group.workspace_id)
+
+        if not source_employee:
+            source_employee = sync_inactive_employee(expense_group)
+
+        if not source_employee:
+            return
 
         try:
             if auto_map_employees_preference == 'EMAIL':
@@ -532,6 +529,54 @@ def handle_sage_intacct_rest_errors(exception: Exception, expense_group: Expense
     post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
 
+def get_employee_expense_attribute(value: str, workspace_id: int) -> ExpenseAttribute:
+    """
+    Get employee expense attribute
+    :param value: value
+    :param workspace_id: workspace id
+    """
+    return ExpenseAttribute.objects.filter(
+        attribute_type='EMPLOYEE',
+        value=value,
+        workspace_id=workspace_id
+    ).first()
+
+
+def sync_inactive_employee(expense_group: ExpenseGroup) -> ExpenseAttribute:
+    try:
+        fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
+        platform = PlatformConnector(fyle_credentials=fyle_credentials)
+
+        fyle_employee = platform.employees.get_employee_by_email(expense_group.description.get('employee_email'))
+        if len(fyle_employee):
+            fyle_employee = fyle_employee[0]
+            attribute = {
+                'attribute_type': 'EMPLOYEE',
+                'display_name': 'Employee',
+                'value': fyle_employee['user']['email'],
+                'source_id': fyle_employee['id'],
+                'active': True if fyle_employee['is_enabled'] and fyle_employee['has_accepted_invite'] else False,
+                'detail': {
+                    'user_id': fyle_employee['user_id'],
+                    'employee_code': fyle_employee['code'],
+                    'full_name': fyle_employee['user']['full_name'],
+                    'location': fyle_employee['location'],
+                    'department': fyle_employee['department']['name'] if fyle_employee['department'] else None,
+                    'department_id': fyle_employee['department_id'],
+                    'department_code': fyle_employee['department']['code'] if fyle_employee['department'] else None
+                }
+            }
+            ExpenseAttribute.bulk_create_or_update_expense_attributes([attribute], 'EMPLOYEE', expense_group.workspace_id, True)
+            return get_employee_expense_attribute(expense_group.description.get('employee_email'), expense_group.workspace_id)
+    except (FyleInvalidTokenError, FyleInternalServerError) as e:
+        logger.info('Invalid Fyle refresh token or internal server error for workspace %s: %s', expense_group.workspace_id, str(e))
+        return None
+
+    except Exception as e:
+        logger.error('Error syncing inactive employee for workspace_id %s: %s', expense_group.workspace_id, str(e))
+        return None
+
+
 def get_employee_mapping(employee_email: str, workspace_id: int, configuration: Configuration) -> EmployeeMapping:
     """
     Get employee mapping
@@ -564,6 +609,9 @@ def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Conf
         workspace_id=workspace_id,
         attribute_type='EMPLOYEE'
     ).first()
+
+    if not employee_attribute:
+        employee_attribute = sync_inactive_employee(expense_group)
 
     try:
         if expense_group.fund_source == 'PERSONAL':
