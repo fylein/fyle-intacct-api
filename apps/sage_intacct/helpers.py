@@ -4,7 +4,9 @@ from datetime import datetime, timezone
 
 from django.conf import settings
 from django_q.models import Schedule
+from django.core.cache import cache
 
+from apps.workspaces.enums import CacheKeyEnum
 from apps.fyle.models import DependentFieldSetting
 from apps.sage_intacct.utils import SageIntacctConnector
 from apps.sage_intacct.enums import SageIntacctRestConnectionTypeEnum
@@ -162,5 +164,6 @@ def validate_rest_api_connection(workspace_id: int) -> None:
             updated_at=datetime.now(timezone.utc)
         )
         sync_dimensions(workspace_id=workspace_id)
+        cache.set(CacheKeyEnum.FEATURE_CONFIG_MIGRATED_TO_REST_API.value.format(workspace_id=workspace_id), True, 172800)
     except Exception as e:
         logger.info('REST API is not working for workspace_id - %s, error - %s', workspace_id, e)
