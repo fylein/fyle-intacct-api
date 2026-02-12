@@ -163,7 +163,7 @@ def validate_rest_api_connection(workspace_id: int) -> None:
             migrated_to_rest_api=True,
             updated_at=datetime.now(timezone.utc)
         )
-        sync_dimensions(workspace_id=workspace_id)
         cache.set(CacheKeyEnum.FEATURE_CONFIG_MIGRATED_TO_REST_API.value.format(workspace_id=workspace_id), True, 172800)
+        sync_dimensions(workspace_id=workspace_id)
     except Exception as e:
         logger.info('REST API is not working for workspace_id - %s, error - %s', workspace_id, e)
