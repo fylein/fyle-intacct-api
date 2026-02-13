@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
@@ -2061,20 +2061,88 @@ def test_invalidate_sage_intacct_credentials(mocker, db):
     invalidate_sage_intacct_credentials(workspace_id)
     assert not mocked_patch.called
 
-    # TODO: Uncomment this when we have a FE Changes ready
-    # # Should call patch_integration_settings with the correct arguments if sage_intacct_credentials.is_expired is False
-    # sage_intacct_credentials.is_expired = False
-    # sage_intacct_credentials.save()
 
-    # invalidate_sage_intacct_credentials(workspace_id)
+def test_invalidate_sage_intacct_credentials_clears_tokens(mocker, db):
+    """
+    Test that invalidate_sage_intacct_credentials clears access_token and access_token_expires_at,
+    calls patch_integration_settings when is_expired was False, and does not change is_expired.
+    """
+    workspace_id = 1
 
-    # args, kwargs = mocked_patch.call_args
-    # assert args[0] == workspace_id
-    # assert kwargs['is_token_expired'] == True
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_credentials.is_expired = False
+    sage_intacct_credentials.access_token = 'some-access-token'
+    sage_intacct_credentials.access_token_expires_at = datetime.now(tz=timezone.utc) + timedelta(hours=5)
+    sage_intacct_credentials.save()
 
-    # # Verify the credentials were marked as expired
-    # sage_intacct_credentials.refresh_from_db()
-    # assert sage_intacct_credentials.is_expired == True
+    mocked_patch = mocker.MagicMock()
+    mocker.patch('apps.workspaces.tasks.patch_integration_settings', side_effect=mocked_patch)
+
+    invalidate_sage_intacct_credentials(workspace_id)
+
+    sage_intacct_credentials.refresh_from_db()
+
+    mocked_patch.assert_called_once_with(workspace_id, is_token_expired=True)
+
+    assert sage_intacct_credentials.is_expired is False
+
+    assert sage_intacct_credentials.access_token is None
+    assert sage_intacct_credentials.access_token_expires_at is None
+
+
+def test_invalidate_sage_intacct_credentials_with_passed_credentials(mocker, db):
+    """
+    Test invalidate_sage_intacct_credentials when credentials object is passed directly
+    (as done by TokenHealthView and export tasks).
+    """
+    workspace_id = 1
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_credentials.is_expired = False
+    sage_intacct_credentials.access_token = 'some-access-token'
+    sage_intacct_credentials.access_token_expires_at = datetime.now(tz=timezone.utc) + timedelta(hours=5)
+    sage_intacct_credentials.save()
+
+    mocked_patch = mocker.MagicMock()
+    mocker.patch('apps.workspaces.tasks.patch_integration_settings', side_effect=mocked_patch)
+
+    # Pass credentials object directly (simulates how TokenHealthView calls it)
+    invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
+
+    sage_intacct_credentials.refresh_from_db()
+
+    mocked_patch.assert_called_once_with(workspace_id, is_token_expired=True)
+
+    assert sage_intacct_credentials.is_expired is False
+
+    assert sage_intacct_credentials.access_token is None
+    assert sage_intacct_credentials.access_token_expires_at is None
+
+
+def test_invalidate_sage_intacct_credentials_already_expired_passed_directly(mocker, db):
+    """
+    Test invalidate_sage_intacct_credentials when already-expired credentials are passed directly.
+    Should not call patch_integration_settings but should still clear tokens.
+    """
+    workspace_id = 1
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_credentials.is_expired = True
+    sage_intacct_credentials.access_token = 'stale-access-token'
+    sage_intacct_credentials.access_token_expires_at = datetime.now(tz=timezone.utc) + timedelta(hours=3)
+    sage_intacct_credentials.save()
+
+    mocked_patch = mocker.MagicMock()
+    mocker.patch('apps.workspaces.tasks.patch_integration_settings', side_effect=mocked_patch)
+
+    invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials)
+
+    sage_intacct_credentials.refresh_from_db()
+
+    assert not mocked_patch.called
+
+    assert sage_intacct_credentials.access_token is None
+    assert sage_intacct_credentials.access_token_expires_at is None
 
 
 def test_get_or_create_vendor_fallback_creation_error(mocker, db):
