@@ -543,6 +543,11 @@ def get_employee_expense_attribute(value: str, workspace_id: int) -> ExpenseAttr
 
 
 def sync_inactive_employee(expense_group: ExpenseGroup) -> ExpenseAttribute:
+    """
+    Sync inactive employee
+    :param expense_group: Expense Group
+    :return: Expense Attribute
+    """
     try:
         fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
         platform = PlatformConnector(fyle_credentials=fyle_credentials)
