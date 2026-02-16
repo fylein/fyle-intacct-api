@@ -115,5 +115,7 @@ def invalidate_sage_intacct_credentials(workspace_id, sage_intacct_credentials=N
     if sage_intacct_credentials:
         if not sage_intacct_credentials.is_expired:
             import_string('apps.workspaces.tasks.patch_integration_settings')(workspace_id, is_token_expired=True)
-        sage_intacct_credentials.is_expired = True
+        
+        sage_intacct_credentials.access_token = None
+        sage_intacct_credentials.access_token_expires_at = None
         sage_intacct_credentials.save()
