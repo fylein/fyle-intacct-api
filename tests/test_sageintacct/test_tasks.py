@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.utils import timezone as django_timezone
 from django_q.models import Schedule
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_library.fyle_platform.actions import sync_inactive_employee
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
 from intacctsdk.exceptions import BadRequestError as IntacctRESTBadRequestError
@@ -61,7 +62,6 @@ from apps.sage_intacct.tasks import (
     mark_paid_on_fyle,
     process_fyle_reimbursements,
     search_and_upsert_vendors,
-    sync_inactive_employee,
     validate_for_skipping_payment,
 )
 from apps.sage_intacct.utils import SageIntacctConnector
@@ -3481,9 +3481,6 @@ def test_create_charge_card_transaction_skips_exported_to_intacct_status(mocker,
 def test_sync_inactive_employee(mocker, db):
     """Covers sync_inactive_employee happy path, FyleInvalidTokenError, and generic exception"""
     workspace_id = 1
-    expense_group = ExpenseGroup.objects.get(id=1)
-    expense_group.description.update({'employee_email': 'inactive_user@fyle.in'})
-    expense_group.save()
 
     mock_fyle_employee = [{
         'id': 'ouHnjo38H12',
@@ -3497,25 +3494,25 @@ def test_sync_inactive_employee(mocker, db):
         'department_id': 'deptHnjo38H12'
     }]
 
-    mocker.patch('apps.sage_intacct.tasks.FyleCredential.objects.get')
-    mock_platform = mocker.patch('apps.sage_intacct.tasks.PlatformConnector')
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.FyleCredential.objects.get')
+    mock_platform = mocker.patch('fyle_accounting_library.fyle_platform.actions.PlatformConnector')
     mock_platform.return_value.employees.get_employee_by_email.return_value = mock_fyle_employee
-    mocker.patch('apps.sage_intacct.tasks.ExpenseAttribute.bulk_create_or_update_expense_attributes')
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.ExpenseAttribute.bulk_create_or_update_expense_attributes')
 
     ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', value='inactive_user@fyle.in', workspace_id=workspace_id).delete()
     ExpenseAttribute.objects.create(workspace_id=workspace_id, attribute_type='EMPLOYEE', display_name='Employee', value='inactive_user@fyle.in', source_id='ouHnjo38H12', active=False)
 
-    result = sync_inactive_employee(expense_group)
+    result = sync_inactive_employee('inactive_user@fyle.in', workspace_id)
     assert result is not None
     assert result.value == 'inactive_user@fyle.in'
 
     # FyleInvalidTokenError path
-    mocker.patch('apps.sage_intacct.tasks.FyleCredential.objects.get', side_effect=FyleInvalidTokenError('Invalid token'))
-    assert sync_inactive_employee(expense_group) is None
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.FyleCredential.objects.get', side_effect=FyleInvalidTokenError('Invalid token'))
+    assert sync_inactive_employee('inactive_user@fyle.in', workspace_id) is None
 
     # Generic exception path
-    mocker.patch('apps.sage_intacct.tasks.FyleCredential.objects.get', side_effect=ValueError('bad value'))
-    assert sync_inactive_employee(expense_group) is None
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.FyleCredential.objects.get', side_effect=ValueError('bad value'))
+    assert sync_inactive_employee('inactive_user@fyle.in', workspace_id) is None
 
 
 def test_create_or_update_employee_mapping_sync_fallback(mocker, db):
@@ -3542,7 +3539,7 @@ def test_create_or_update_employee_mapping_sync_fallback(mocker, db):
         employee_field_mapping=configuration.employee_field_mapping
     )
 
-    mock_sync.assert_called_once_with(expense_group)
+    mock_sync.assert_called_once_with('missing@fyle.in', workspace_id)
 
 
 def test__validate_employee_mapping_sync_inactive_employee(mocker, db):
@@ -3566,4 +3563,4 @@ def test__validate_employee_mapping_sync_inactive_employee(mocker, db):
     except (BulkError, Exception):
         pass
 
-    mock_sync.assert_called_once_with(expense_group)
+    mock_sync.assert_called_once_with('nonexistent@fyle.in', workspace_id)

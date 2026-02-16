@@ -9,8 +9,8 @@ from django.core.cache import cache
 from django.db import transaction
 from django.db.models.functions import Lower
 from django.utils import timezone
-from fyle.platform.exceptions import InternalServerError as FyleInternalServerError
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_library.fyle_platform.actions import get_employee_expense_attribute, sync_inactive_employee
 from fyle_accounting_library.system_comments.models import SystemComment
 from fyle_accounting_mappings.models import CategoryMapping, DestinationAttribute, EmployeeMapping, ExpenseAttribute, Mapping
 from fyle_integrations_platform_connector import PlatformConnector
@@ -150,7 +150,7 @@ def create_or_update_employee_mapping(
         source_employee = get_employee_expense_attribute(expense_group.description.get('employee_email'), expense_group.workspace_id)
 
         if not source_employee:
-            source_employee = sync_inactive_employee(expense_group)
+            source_employee = sync_inactive_employee(expense_group.description.get('employee_email'), expense_group.workspace_id)
 
         if not source_employee:
             return
@@ -529,59 +529,6 @@ def handle_sage_intacct_rest_errors(exception: Exception, expense_group: Expense
     post_accounting_export_summary(workspace_id=expense_group.workspace_id, expense_ids=[expense.id for expense in expense_group.expenses.all()], fund_source=expense_group.fund_source, is_failed=True)
 
 
-def get_employee_expense_attribute(value: str, workspace_id: int) -> ExpenseAttribute:
-    """
-    Get employee expense attribute
-    :param value: value
-    :param workspace_id: workspace id
-    """
-    return ExpenseAttribute.objects.filter(
-        attribute_type='EMPLOYEE',
-        value=value,
-        workspace_id=workspace_id
-    ).first()
-
-
-def sync_inactive_employee(expense_group: ExpenseGroup) -> ExpenseAttribute:
-    """
-    Sync inactive employee
-    :param expense_group: Expense Group
-    :return: Expense Attribute
-    """
-    try:
-        fyle_credentials = FyleCredential.objects.get(workspace_id=expense_group.workspace_id)
-        platform = PlatformConnector(fyle_credentials=fyle_credentials)
-
-        fyle_employee = platform.employees.get_employee_by_email(expense_group.description.get('employee_email'))
-        if len(fyle_employee):
-            fyle_employee = fyle_employee[0]
-            attribute = {
-                'attribute_type': 'EMPLOYEE',
-                'display_name': 'Employee',
-                'value': fyle_employee['user']['email'],
-                'source_id': fyle_employee['id'],
-                'active': True if fyle_employee['is_enabled'] and fyle_employee['has_accepted_invite'] else False,
-                'detail': {
-                    'user_id': fyle_employee['user_id'],
-                    'employee_code': fyle_employee['code'],
-                    'full_name': fyle_employee['user']['full_name'],
-                    'location': fyle_employee['location'],
-                    'department': fyle_employee['department']['name'] if fyle_employee['department'] else None,
-                    'department_id': fyle_employee['department_id'],
-                    'department_code': fyle_employee['department']['code'] if fyle_employee['department'] else None
-                }
-            }
-            ExpenseAttribute.bulk_create_or_update_expense_attributes([attribute], 'EMPLOYEE', expense_group.workspace_id, True)
-            return get_employee_expense_attribute(expense_group.description.get('employee_email'), expense_group.workspace_id)
-    except (FyleInvalidTokenError, FyleInternalServerError) as e:
-        logger.info('Invalid Fyle refresh token or internal server error for workspace %s: %s', expense_group.workspace_id, str(e))
-        return None
-
-    except Exception as e:
-        logger.error('Error syncing inactive employee for workspace_id %s: %s', expense_group.workspace_id, str(e))
-        return None
-
-
 def get_employee_mapping(employee_email: str, workspace_id: int, configuration: Configuration) -> EmployeeMapping:
     """
     Get employee mapping
@@ -616,7 +563,7 @@ def __validate_employee_mapping(expense_group: ExpenseGroup, configuration: Conf
     ).first()
 
     if not employee_attribute:
-        employee_attribute = sync_inactive_employee(expense_group)
+        employee_attribute = sync_inactive_employee(employee_email, workspace_id)
 
     try:
         if expense_group.fund_source == 'PERSONAL':
