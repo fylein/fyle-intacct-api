@@ -4,6 +4,7 @@ from random import randint
 
 from django.db.models import F, Q
 from django_q.models import OrmQ, Schedule
+from fyle_accounting_library.fyle_platform.actions import reset_stuck_imports
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_library.system_comments.models import SystemComment
 
@@ -117,6 +118,8 @@ def retrigger_stuck_exports() -> None:
 
         if system_comments:
             SystemComment.bulk_create_comments(system_comments)
+
+    reset_stuck_imports(prod_workspace_ids)
 
 
 def pause_and_resume_export_schedules() -> None:
