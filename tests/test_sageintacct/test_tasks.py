@@ -10,14 +10,13 @@ from django.core.cache import cache
 from django.utils import timezone as django_timezone
 from django_q.models import Schedule
 from fyle.platform.exceptions import InvalidTokenError as FyleInvalidTokenError
+from fyle_accounting_library.fyle_platform.actions import sync_inactive_employee
 from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
 from fyle_accounting_mappings.models import DestinationAttribute, EmployeeMapping, ExpenseAttribute
+from intacctsdk.exceptions import BadRequestError as IntacctRESTBadRequestError
+from intacctsdk.exceptions import InternalServerError as IntacctRESTInternalServerError
+from intacctsdk.exceptions import InvalidTokenError as IntacctRESTInvalidTokenError
 from sageintacctsdk.exceptions import InvalidTokenError, NoPrivilegeError, WrongParamsError
-from intacctsdk.exceptions import (
-    BadRequestError as IntacctRESTBadRequestError,
-    InvalidTokenError as IntacctRESTInvalidTokenError,
-    InternalServerError as IntacctRESTInternalServerError
-)
 
 from apps.exceptions import ValueErrorWithResponse
 from apps.fyle.models import Expense, ExpenseGroup, Reimbursement
@@ -44,10 +43,10 @@ from apps.sage_intacct.tasks import (
     __validate_employee_mapping,
     __validate_expense_group,
     check_cache_and_search_vendors,
-    check_sage_intacct_object_status,
-    check_sage_intacct_object_status_rest,
     check_sage_intacct_bill_status_rest,
     check_sage_intacct_expense_report_status_rest,
+    check_sage_intacct_object_status,
+    check_sage_intacct_object_status_rest,
     create_ap_payment,
     create_bill,
     create_charge_card_transaction,
@@ -3477,3 +3476,91 @@ def test_create_charge_card_transaction_skips_exported_to_intacct_status(mocker,
     mock_post.assert_not_called()
     task_log.refresh_from_db()
     assert task_log.status == 'EXPORTED_TO_INTACCT'
+
+
+def test_sync_inactive_employee(mocker, db):
+    """Covers sync_inactive_employee happy path, FyleInvalidTokenError, and generic exception"""
+    workspace_id = 1
+
+    mock_fyle_employee = [{
+        'id': 'ouHnjo38H12',
+        'user_id': 'usabcdef1234',
+        'user': {'email': 'inactive_user@fyle.in', 'full_name': 'Inactive User'},
+        'code': 'EMP001',
+        'is_enabled': False,
+        'has_accepted_invite': True,
+        'location': 'San Francisco',
+        'department': {'name': 'Engineering', 'code': 'ENG'},
+        'department_id': 'deptHnjo38H12'
+    }]
+
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.FyleCredential.objects.get')
+    mock_platform = mocker.patch('fyle_accounting_library.fyle_platform.actions.PlatformConnector')
+    mock_platform.return_value.employees.get_employee_by_email.return_value = mock_fyle_employee
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.ExpenseAttribute.bulk_create_or_update_expense_attributes')
+
+    ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', value='inactive_user@fyle.in', workspace_id=workspace_id).delete()
+    ExpenseAttribute.objects.create(workspace_id=workspace_id, attribute_type='EMPLOYEE', display_name='Employee', value='inactive_user@fyle.in', source_id='ouHnjo38H12', active=False)
+
+    result = sync_inactive_employee('inactive_user@fyle.in', workspace_id)
+    assert result is not None
+    assert result.value == 'inactive_user@fyle.in'
+
+    # FyleInvalidTokenError path
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.FyleCredential.objects.get', side_effect=FyleInvalidTokenError('Invalid token'))
+    assert sync_inactive_employee('inactive_user@fyle.in', workspace_id) is None
+
+    # Generic exception path
+    mocker.patch('fyle_accounting_library.fyle_platform.actions.FyleCredential.objects.get', side_effect=ValueError('bad value'))
+    assert sync_inactive_employee('inactive_user@fyle.in', workspace_id) is None
+
+
+def test_create_or_update_employee_mapping_sync_fallback(mocker, db):
+    """Covers sync_inactive_employee call in create_or_update_employee_mapping"""
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.description.update({'employee_email': 'missing@fyle.in'})
+    expense_group.save()
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+
+    ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', value='missing@fyle.in', workspace_id=workspace_id).delete()
+    EmployeeMapping.objects.filter(source_employee__value='missing@fyle.in', workspace_id=workspace_id).delete()
+
+    mock_sync = mocker.patch('apps.sage_intacct.tasks.sync_inactive_employee', return_value=None)
+
+    sage_intacct_credentials = SageIntacctCredential.objects.get(workspace_id=workspace_id)
+    sage_intacct_connection = SageIntacctConnector(credentials_object=sage_intacct_credentials, workspace_id=workspace_id)
+
+    create_or_update_employee_mapping(
+        expense_group=expense_group,
+        sage_intacct_connection=sage_intacct_connection,
+        auto_map_employees_preference='EMAIL',
+        employee_field_mapping=configuration.employee_field_mapping
+    )
+
+    mock_sync.assert_called_once_with('missing@fyle.in', workspace_id)
+
+
+def test__validate_employee_mapping_sync_inactive_employee(mocker, db):
+    """Covers sync_inactive_employee call in __validate_employee_mapping"""
+    workspace_id = 1
+    expense_group = ExpenseGroup.objects.get(id=1)
+    expense_group.description.update({'employee_email': 'nonexistent@fyle.in'})
+    expense_group.fund_source = 'PERSONAL'
+    expense_group.save()
+
+    configuration = Configuration.objects.get(workspace_id=workspace_id)
+    configuration.employee_field_mapping = 'EMPLOYEE'
+    configuration.save()
+
+    ExpenseAttribute.objects.filter(attribute_type='EMPLOYEE', value='nonexistent@fyle.in', workspace_id=workspace_id).delete()
+
+    mock_sync = mocker.patch('apps.sage_intacct.tasks.sync_inactive_employee', return_value=None)
+
+    try:
+        __validate_employee_mapping(expense_group, configuration)
+    except (BulkError, Exception):
+        pass
+
+    mock_sync.assert_called_once_with('nonexistent@fyle.in', workspace_id)
