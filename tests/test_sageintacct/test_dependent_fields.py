@@ -268,6 +268,26 @@ def test_import_dependent_fields_to_fyle(db, mocker, create_cost_type, create_de
         assert cost_type_import_log.error_log == 'Sage Intacct SDK Error'
 
 
+def test_import_dependent_fields_to_fyle_generic_exception(db, mocker, create_cost_type, create_dependent_field_setting):
+    """
+    Test import_dependent_fields_to_fyle with generic exception to cover traceback.format_exc()
+    """
+    workspace_id = 1
+
+    mocker.patch('apps.sage_intacct.dependent_fields.connect_to_platform', return_value=mocker.MagicMock())
+    mocker.patch('apps.sage_intacct.dependent_fields.sync_sage_intacct_attributes', side_effect=Exception('Unexpected error'))
+
+    import_dependent_fields_to_fyle(workspace_id)
+
+    cost_code_import_log = ImportLog.objects.filter(attribute_type='COST_CODE', workspace_id=workspace_id).first()
+    assert cost_code_import_log.status == 'FAILED'
+    assert 'Unexpected error' in cost_code_import_log.error_log
+
+    cost_type_import_log = ImportLog.objects.filter(attribute_type='COST_TYPE', workspace_id=workspace_id).first()
+    assert cost_type_import_log.status == 'FAILED'
+    assert 'Unexpected error' in cost_type_import_log.error_log
+
+
 def test_construct_custom_field_placeholder():
     """
     Test construct_custom_field_placeholder
