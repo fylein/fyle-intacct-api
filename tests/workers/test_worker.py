@@ -43,6 +43,26 @@ def test_process_message_success(export_worker):
     Test process message success
     """
     with patch('workers.worker.handle_tasks') as mock_handle_tasks:
+        routing_key = 'test.routing.key'
+        payload_dict = {
+            'data': {'some': 'data'},
+            'workspace_id': 123
+        }
+        event = BaseEvent()
+        event.from_dict({'new': payload_dict})
+
+        export_worker.process_message(routing_key, event, 1)
+
+        mock_handle_tasks.assert_called_once_with({'data': {'some': 'data'}, 'workspace_id': 123})
+        export_worker.qconnector.acknowledge_message.assert_called_once_with(1)
+
+
+@pytest.mark.django_db
+def test_process_message_exception(export_worker):
+    """
+    Test process message handles exception
+    """
+    with patch('workers.worker.handle_tasks') as mock_handle_tasks:
         mock_handle_tasks.side_effect = Exception('Test error')
 
         routing_key = 'test.routing.key'
