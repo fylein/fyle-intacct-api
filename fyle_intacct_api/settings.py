@@ -15,7 +15,7 @@ from logging.config import dictConfig
 
 import dj_database_url
 
-from .logging_middleware import WorkerIDFilter
+from .logging_middleware import WorkerIDFilter, WorkspaceIDFilter
 from .sentry import Sentry
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -70,6 +70,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'fyle_intacct_api.logging_middleware.WorkspaceIDMiddleware',
     'request_logging.middleware.LoggingMiddleware',
     'fyle_intacct_api.logging_middleware.LogPostRequestMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -139,7 +140,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'standard': {
-            'format': '{levelname} %s {asctime} {name} {worker_id} {message}' % SERVICE_NAME, 'style': '{'
+            'format': '{levelname} %s {asctime} {name} {worker_id} {workspace_id} {message}' % SERVICE_NAME, 'style': '{'
         },
         'verbose': {
             'format': '{levelname} %s {asctime} {module} {message} ' % SERVICE_NAME, 'style': '{'
@@ -152,12 +153,15 @@ LOGGING = {
         'worker_id': {
             '()': WorkerIDFilter,
         },
+        'workspace_id': {
+            '()': WorkspaceIDFilter,
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'standard',
-            'filters': ['worker_id'],
+            'filters': ['worker_id', 'workspace_id'],
         },
         'request_logs': {
             'class': 'logging.StreamHandler',
