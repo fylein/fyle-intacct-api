@@ -1,15 +1,17 @@
 import logging
-from datetime import datetime
 
 from django.conf import settings
-
 from fyle_accounting_mappings.models import DestinationAttribute
 
 from apps.mappings.models import GeneralMapping
-from apps.workspaces.models import Configuration
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
+from apps.sage_intacct.exports.helpers import (
+    get_location_id_for_journal_entry,
+    get_source_entity_id,
+    get_tax_exclusive_amount,
+)
 from apps.sage_intacct.models import JournalEntry, JournalEntryLineitem
-from apps.sage_intacct.exports.helpers import get_location_id_for_journal_entry, get_source_entity_id, get_tax_exclusive_amount
+from apps.workspaces.models import Configuration
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -44,13 +46,11 @@ def construct_journal_entry_payload(
         general_mappings=general_mappings
     )
 
-    today_date = datetime.today().strftime('%Y-%m-%d')
-
     journal_entry_payload = {
         'glJournal': {
             'id': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
         },
-        'postingDate': today_date,
+        'postingDate': journal_entry.transaction_date,
         'description': journal_entry.memo,
         'attachment': {
             'id': str(journal_entry.supdoc_id) if journal_entry.supdoc_id else None,
