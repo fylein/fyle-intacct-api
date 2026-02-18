@@ -1,13 +1,32 @@
 import json
 import logging
+import re
 import traceback
 import inspect
 import os
 import random
 import string
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from django.http import HttpResponse
 from django.conf import settings
+
+_workspace_id: ContextVar[str] = ContextVar('workspace_id', default='')
+
+
+@contextmanager
+def workspace_id_context(workspace_id):
+    """
+    Context manager to set workspace_id in the logging context.
+    Used by HTTP middleware and background task entry points.
+    """
+    token = _workspace_id.set(str(workspace_id) if workspace_id else '')
+    try:
+        yield
+    finally:
+        _workspace_id.reset(token)
+
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -75,6 +94,25 @@ class WorkerIDFilter(logging.Filter):
         worker_id = getattr(record, 'worker_id', '')
         record.worker_id = worker_id
         return True
+
+
+class WorkspaceIDFilter(logging.Filter):
+    def filter(self, record):
+        workspace_id = _workspace_id.get()
+        record.workspace_id = 'workspace_id_{}'.format(workspace_id) if workspace_id else ''
+        return True
+
+
+class WorkspaceIDMiddleware:
+    WORKSPACE_ID_PATTERN = re.compile(r'/api/(?:v2/)?workspaces/(?P<workspace_id>\d+)/')
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        match = self.WORKSPACE_ID_PATTERN.search(request.path)
+        with workspace_id_context(match.group('workspace_id') if match else ''):
+            return self.get_response(request)
 
 class LogPostRequestMiddleware:
     def __init__(self, get_response):

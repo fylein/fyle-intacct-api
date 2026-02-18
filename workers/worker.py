@@ -17,6 +17,7 @@ from fyle_accounting_library.rabbitmq.data_class import RabbitMQData
 from fyle_accounting_library.rabbitmq.enums import RabbitMQExchangeEnum
 from fyle_accounting_library.rabbitmq.helpers import create_cache_table
 
+from fyle_intacct_api.logging_middleware import workspace_id_context
 from workers.helpers import get_routing_key
 
 logger = logging.getLogger('workers')
@@ -37,14 +38,15 @@ class Worker(EventConsumer):
         Process message
         """
         payload_dict = event.new
-        try:
-            logger.info('Processing task for workspace - %s with routing key - %s and payload - %s with delivery tag - %s', payload_dict.get('workspace_id'), routing_key, payload_dict, delivery_tag)
+        with workspace_id_context(payload_dict.get('workspace_id')):
+            try:
+                logger.info('Processing task for workspace - %s with routing key - %s and payload - %s with delivery tag - %s', payload_dict.get('workspace_id'), routing_key, payload_dict, delivery_tag)
 
-            handle_tasks(payload_dict)
-            self.qconnector.acknowledge_message(delivery_tag)
-            logger.info('Task processed successfully for workspace - %s with routing key - %s and delivery tag - %s', payload_dict.get('workspace_id'), routing_key, delivery_tag)
-        except Exception as e:
-            self.handle_exception(routing_key, payload_dict, e, delivery_tag)
+                handle_tasks(payload_dict)
+                self.qconnector.acknowledge_message(delivery_tag)
+                logger.info('Task processed successfully for workspace - %s with routing key - %s and delivery tag - %s', payload_dict.get('workspace_id'), routing_key, delivery_tag)
+            except Exception as e:
+                self.handle_exception(routing_key, payload_dict, e, delivery_tag)
 
     def handle_exception(self, routing_key: str, payload_dict: dict, error: Exception, delivery_tag: int) -> None:
         """
