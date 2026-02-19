@@ -6,9 +6,10 @@ from fyle_accounting_mappings.models import DestinationAttribute
 from apps.mappings.models import GeneralMapping
 from apps.sage_intacct.enums import DestinationAttributeTypeEnum
 from apps.sage_intacct.exports.helpers import (
-    get_location_id_for_journal_entry,
+    format_transaction_date,
     get_source_entity_id,
     get_tax_exclusive_amount,
+    get_location_id_for_journal_entry
 )
 from apps.sage_intacct.models import JournalEntry, JournalEntryLineitem
 from apps.workspaces.models import Configuration
@@ -46,11 +47,13 @@ def construct_journal_entry_payload(
         general_mappings=general_mappings
     )
 
+    transaction_date = format_transaction_date(journal_entry.transaction_date)
+
     journal_entry_payload = {
         'glJournal': {
             'id': 'FYLE_JE' if settings.BRAND_ID == 'fyle' else 'EM_JOURNAL',
         },
-        'postingDate': journal_entry.transaction_date,
+        'postingDate': transaction_date,
         'description': journal_entry.memo,
         'attachment': {
             'id': str(journal_entry.supdoc_id) if journal_entry.supdoc_id else None,
