@@ -33,7 +33,7 @@ from apps.fyle.tasks import (
     update_non_exported_expenses,
 )
 from apps.tasks.models import Error, TaskLog
-from apps.workspaces.models import Configuration, FyleCredential, Workspace
+from apps.workspaces.models import Configuration, FyleCredential, Workspace, WorkspaceSchedule
 from tests.helper import dict_compare_keys
 from tests.test_fyle.fixtures import data
 
@@ -340,6 +340,49 @@ def test_import_and_export_expenses_with_export_call(mocker, db, test_connection
     assert kwargs['triggered_by'] == ExpenseImportSourceEnum.DASHBOARD_SYNC
     assert kwargs['run_in_rabbitmq_worker'] == True
     assert len(kwargs['expense_group_ids']) > 0
+
+
+def test_import_and_export_expenses_real_time_export_disabled(mocker, db, test_connection):
+    """
+    Test import_and_export_expenses returns early when is_state_change_event=True
+    but real time export is not enabled
+    """
+    workspace_id = 1
+    workspace = Workspace.objects.get(id=workspace_id)
+
+    mocker.patch(
+        'fyle_integrations_platform_connector.apis.Expenses.get',
+        return_value=data['expenses_webhook']
+    )
+
+    mock_export_to_intacct = mocker.patch(
+        'apps.fyle.tasks.export_to_intacct'
+    )
+
+    ExpenseGroup.objects.create(
+        workspace=workspace,
+        fund_source='PERSONAL',
+        description={
+            'report_id': 'rp1s1L3QtMpF',
+            'claim_number': 'C/2021/12/R/1',
+            'settlement_id': 'setqMAs7J5eOH',
+            'employee_email': 'user1@fylefortesting.in'
+        }
+    )
+
+    WorkspaceSchedule.objects.update_or_create(
+        workspace=workspace,
+        defaults={'is_real_time_export_enabled': False}
+    )
+
+    import_and_export_expenses(
+        report_id='rp1s1L3QtMpF',
+        org_id=workspace.fyle_org_id,
+        is_state_change_event=True,
+        imported_from=ExpenseImportSourceEnum.DASHBOARD_SYNC
+    )
+
+    assert mock_export_to_intacct.call_count == 0
 
 
 def test_skip_expenses_and_post_accounting_export_summary(mocker, db):

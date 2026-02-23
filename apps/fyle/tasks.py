@@ -7,32 +7,35 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django_q.models import Schedule
 from django_q.tasks import schedule
-
-from fyle_integrations_platform_connector import PlatformConnector
+from fyle.platform.exceptions import InternalServerError, InvalidTokenError, NoPrivilegeError, RetryException
+from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
+from fyle_accounting_library.fyle_platform.helpers import filter_expenses_based_on_state, get_expense_import_states
 from fyle_accounting_library.system_comments.models import SystemComment
 from fyle_accounting_mappings.models import CategoryMapping, ExpenseAttribute
-from fyle_accounting_library.fyle_platform.enums import ExpenseImportSourceEnum
-from fyle_accounting_library.fyle_platform.branding import feature_configuration
+from fyle_integrations_platform_connector import PlatformConnector
 from fyle_integrations_platform_connector.apis.expenses import Expenses as FyleExpenses
-from fyle.platform.exceptions import InternalServerError, InvalidTokenError, NoPrivilegeError, RetryException
-from fyle_accounting_library.fyle_platform.helpers import filter_expenses_based_on_state, get_expense_import_states
 
-from apps.tasks.models import Error, TaskLog
-from apps.workspaces.actions import export_to_intacct
-from fyle_intacct_api.logging_middleware import get_logger
-from apps.fyle.models import SOURCE_ACCOUNT_MAP as EXPENSE_SOURCE_ACCOUNT_MAP
 from apps.fyle.actions import mark_expenses_as_skipped, post_accounting_export_summary
-from apps.fyle.models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
-from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, Workspace, WorkspaceSchedule
 from apps.fyle.helpers import (
+    construct_expense_filter_query,
     get_fund_source,
     get_source_account_type,
     handle_import_exception,
     update_task_log_post_import,
-    construct_expense_filter_query
 )
+from apps.fyle.models import SOURCE_ACCOUNT_MAP as EXPENSE_SOURCE_ACCOUNT_MAP
+from apps.fyle.models import Expense, ExpenseFilter, ExpenseGroup, ExpenseGroupSettings
+from apps.tasks.models import Error, TaskLog
+from apps.workspaces.actions import export_to_intacct
+from apps.workspaces.enums import (
+    SystemCommentEntityTypeEnum,
+    SystemCommentIntentEnum,
+    SystemCommentReasonEnum,
+    SystemCommentSourceEnum,
+)
+from apps.workspaces.models import Configuration, FyleCredential, LastExportDetail, Workspace, WorkspaceSchedule
 from apps.workspaces.system_comments import add_system_comment
-from apps.workspaces.enums import SystemCommentEntityTypeEnum, SystemCommentIntentEnum, SystemCommentReasonEnum, SystemCommentSourceEnum
+from fyle_intacct_api.logging_middleware import get_logger
 
 logger = logging.getLogger(__name__)
 logger.level = logging.INFO
@@ -338,8 +341,8 @@ def import_and_export_expenses(report_id: str, org_id: str, is_state_change_even
                 # Trigger export immediately for customers who have enabled real time export
                 is_real_time_export_enabled = WorkspaceSchedule.objects.filter(workspace_id=workspace.id, is_real_time_export_enabled=True).exists()
 
-                # Don't allow real time export if it's not supported for the branded app / setting not enabled
-                if not is_real_time_export_enabled or not feature_configuration.feature.real_time_export_1hr_orgs:
+                # Don't allow real time export if setting not enabled
+                if not is_real_time_export_enabled:
                     return
 
             logger.info(f'Exporting expenses for workspace {workspace.id} with expense group ids {expense_group_ids}, triggered by {imported_from}')
