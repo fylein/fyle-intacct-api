@@ -1342,7 +1342,7 @@ class SageIntacctConnector:
             return
 
         fields = ['DISPLAYCONTACT.EMAIL1', 'NAME', 'VENDORID', 'STATUS']
-        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='ACCOUNT')
+        latest_updated_at = self.get_latest_sync(workspace_id=self.workspace_id, attribute_type='VENDOR')
         params = self.construct_get_all_generator_params(fields=fields, latest_updated_at=latest_updated_at)
         vendor_generator = self.connection.vendors.get_all_generator(**params)
         vendor_attributes = []
